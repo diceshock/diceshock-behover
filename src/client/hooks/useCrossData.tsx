@@ -42,6 +42,8 @@ export const useCrossDataRegister = () => {
         console.error("Error decoding server data", e);
     }
 
+    console.log("decoded", decoded);
+
     const parsedMeta = injectCrossDataZ.safeParse(decoded);
 
     useHydrateOptionalAtom(ServerDataA, parsedMeta.data, parsedMeta.success);

@@ -1,4 +1,4 @@
-import ZdogComponent from "./Zdog";
+import ZdogComponent from "@/client/components/Zdog";
 
 const END_SLASH = (
     <span className="absolute top-1 -right-7 rotate-12 size-8 bg-base-200 border-l-2" />

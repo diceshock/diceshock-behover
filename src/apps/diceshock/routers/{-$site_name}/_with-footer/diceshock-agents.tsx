@@ -1,7 +1,7 @@
 import Agents from "@/client/components/diceshock/Agents";
 import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/{-$site_name}/diceshock-agents")({
+export const Route = createFileRoute("/{-$site_name}/_with-footer/diceshock-agents")({
     component: RouteComponent,
 });
 

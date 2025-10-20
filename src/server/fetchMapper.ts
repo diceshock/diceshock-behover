@@ -11,15 +11,13 @@ const fetchMapper: (
         const url = new URL(request.url);
         const { hostname, pathname } = url;
 
-        console.log(hostname, pathname);
-
         let prefix: string | null = null;
 
         if (
             hostname === "api.diceshock.com" ||
             hostname === "api.runespark.org"
         )
-            prefix = "/apis";
+            prefix = "/api";
 
         if (
             hostname === "edge.diceshock.com" ||
@@ -31,7 +29,7 @@ const fetchMapper: (
 
         if (hostname === "runespark.org") prefix = "/runespark";
 
-        if (pathname.startsWith("/apis") || pathname.startsWith("/edge"))
+        if (pathname.startsWith("/api") || pathname.startsWith("/edge"))
             prefix = "";
 
         if (import.meta.env.DEV) prefix = "/";

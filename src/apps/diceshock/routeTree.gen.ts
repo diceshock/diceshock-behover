@@ -10,83 +10,117 @@
 
 import { Route as rootRouteImport } from './routers/__root'
 import { Route as Char123Site_nameChar125RouteImport } from './routers/{-$site_name}'
-import { Route as Char123Site_nameChar125IndexRouteImport } from './routers/{-$site_name}/index'
-import { Route as Char123Site_nameChar125InventoryRouteImport } from './routers/{-$site_name}/inventory'
-import { Route as Char123Site_nameChar125DiceshockAgentsRouteImport } from './routers/{-$site_name}/diceshock-agents'
-import { Route as Char123Site_nameChar125ContactUsRouteImport } from './routers/{-$site_name}/contact-us'
+import { Route as Char123Site_nameChar125MailSendRouteImport } from './routers/{-$site_name}/mail-send'
+import { Route as Char123Site_nameChar125AuthRouteImport } from './routers/{-$site_name}/auth'
+import { Route as Char123Site_nameChar125WithFooterRouteImport } from './routers/{-$site_name}/_with-footer'
+import { Route as Char123Site_nameChar125WithFooterIndexRouteImport } from './routers/{-$site_name}/_with-footer/index'
+import { Route as Char123Site_nameChar125WithFooterInventoryRouteImport } from './routers/{-$site_name}/_with-footer/inventory'
+import { Route as Char123Site_nameChar125WithFooterDiceshockAgentsRouteImport } from './routers/{-$site_name}/_with-footer/diceshock-agents'
+import { Route as Char123Site_nameChar125WithFooterContactUsRouteImport } from './routers/{-$site_name}/_with-footer/contact-us'
 
 const Char123Site_nameChar125Route = Char123Site_nameChar125RouteImport.update({
   id: '/{-$site_name}',
   path: '/{-$site_name}',
   getParentRoute: () => rootRouteImport,
 } as any)
-const Char123Site_nameChar125IndexRoute =
-  Char123Site_nameChar125IndexRouteImport.update({
+const Char123Site_nameChar125MailSendRoute =
+  Char123Site_nameChar125MailSendRouteImport.update({
+    id: '/mail-send',
+    path: '/mail-send',
+    getParentRoute: () => Char123Site_nameChar125Route,
+  } as any)
+const Char123Site_nameChar125AuthRoute =
+  Char123Site_nameChar125AuthRouteImport.update({
+    id: '/auth',
+    path: '/auth',
+    getParentRoute: () => Char123Site_nameChar125Route,
+  } as any)
+const Char123Site_nameChar125WithFooterRoute =
+  Char123Site_nameChar125WithFooterRouteImport.update({
+    id: '/_with-footer',
+    getParentRoute: () => Char123Site_nameChar125Route,
+  } as any)
+const Char123Site_nameChar125WithFooterIndexRoute =
+  Char123Site_nameChar125WithFooterIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () => Char123Site_nameChar125Route,
+    getParentRoute: () => Char123Site_nameChar125WithFooterRoute,
   } as any)
-const Char123Site_nameChar125InventoryRoute =
-  Char123Site_nameChar125InventoryRouteImport.update({
+const Char123Site_nameChar125WithFooterInventoryRoute =
+  Char123Site_nameChar125WithFooterInventoryRouteImport.update({
     id: '/inventory',
     path: '/inventory',
-    getParentRoute: () => Char123Site_nameChar125Route,
+    getParentRoute: () => Char123Site_nameChar125WithFooterRoute,
   } as any)
-const Char123Site_nameChar125DiceshockAgentsRoute =
-  Char123Site_nameChar125DiceshockAgentsRouteImport.update({
+const Char123Site_nameChar125WithFooterDiceshockAgentsRoute =
+  Char123Site_nameChar125WithFooterDiceshockAgentsRouteImport.update({
     id: '/diceshock-agents',
     path: '/diceshock-agents',
-    getParentRoute: () => Char123Site_nameChar125Route,
+    getParentRoute: () => Char123Site_nameChar125WithFooterRoute,
   } as any)
-const Char123Site_nameChar125ContactUsRoute =
-  Char123Site_nameChar125ContactUsRouteImport.update({
+const Char123Site_nameChar125WithFooterContactUsRoute =
+  Char123Site_nameChar125WithFooterContactUsRouteImport.update({
     id: '/contact-us',
     path: '/contact-us',
-    getParentRoute: () => Char123Site_nameChar125Route,
+    getParentRoute: () => Char123Site_nameChar125WithFooterRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/{-$site_name}': typeof Char123Site_nameChar125RouteWithChildren
-  '/{-$site_name}/contact-us': typeof Char123Site_nameChar125ContactUsRoute
-  '/{-$site_name}/diceshock-agents': typeof Char123Site_nameChar125DiceshockAgentsRoute
-  '/{-$site_name}/inventory': typeof Char123Site_nameChar125InventoryRoute
-  '/{-$site_name}/': typeof Char123Site_nameChar125IndexRoute
+  '/{-$site_name}': typeof Char123Site_nameChar125WithFooterRouteWithChildren
+  '/{-$site_name}/auth': typeof Char123Site_nameChar125AuthRoute
+  '/{-$site_name}/mail-send': typeof Char123Site_nameChar125MailSendRoute
+  '/{-$site_name}/contact-us': typeof Char123Site_nameChar125WithFooterContactUsRoute
+  '/{-$site_name}/diceshock-agents': typeof Char123Site_nameChar125WithFooterDiceshockAgentsRoute
+  '/{-$site_name}/inventory': typeof Char123Site_nameChar125WithFooterInventoryRoute
+  '/{-$site_name}/': typeof Char123Site_nameChar125WithFooterIndexRoute
 }
 export interface FileRoutesByTo {
-  '/{-$site_name}/contact-us': typeof Char123Site_nameChar125ContactUsRoute
-  '/{-$site_name}/diceshock-agents': typeof Char123Site_nameChar125DiceshockAgentsRoute
-  '/{-$site_name}/inventory': typeof Char123Site_nameChar125InventoryRoute
-  '/{-$site_name}': typeof Char123Site_nameChar125IndexRoute
+  '/{-$site_name}': typeof Char123Site_nameChar125WithFooterIndexRoute
+  '/{-$site_name}/auth': typeof Char123Site_nameChar125AuthRoute
+  '/{-$site_name}/mail-send': typeof Char123Site_nameChar125MailSendRoute
+  '/{-$site_name}/contact-us': typeof Char123Site_nameChar125WithFooterContactUsRoute
+  '/{-$site_name}/diceshock-agents': typeof Char123Site_nameChar125WithFooterDiceshockAgentsRoute
+  '/{-$site_name}/inventory': typeof Char123Site_nameChar125WithFooterInventoryRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/{-$site_name}': typeof Char123Site_nameChar125RouteWithChildren
-  '/{-$site_name}/contact-us': typeof Char123Site_nameChar125ContactUsRoute
-  '/{-$site_name}/diceshock-agents': typeof Char123Site_nameChar125DiceshockAgentsRoute
-  '/{-$site_name}/inventory': typeof Char123Site_nameChar125InventoryRoute
-  '/{-$site_name}/': typeof Char123Site_nameChar125IndexRoute
+  '/{-$site_name}/_with-footer': typeof Char123Site_nameChar125WithFooterRouteWithChildren
+  '/{-$site_name}/auth': typeof Char123Site_nameChar125AuthRoute
+  '/{-$site_name}/mail-send': typeof Char123Site_nameChar125MailSendRoute
+  '/{-$site_name}/_with-footer/contact-us': typeof Char123Site_nameChar125WithFooterContactUsRoute
+  '/{-$site_name}/_with-footer/diceshock-agents': typeof Char123Site_nameChar125WithFooterDiceshockAgentsRoute
+  '/{-$site_name}/_with-footer/inventory': typeof Char123Site_nameChar125WithFooterInventoryRoute
+  '/{-$site_name}/_with-footer/': typeof Char123Site_nameChar125WithFooterIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/{-$site_name}'
+    | '/{-$site_name}/auth'
+    | '/{-$site_name}/mail-send'
     | '/{-$site_name}/contact-us'
     | '/{-$site_name}/diceshock-agents'
     | '/{-$site_name}/inventory'
     | '/{-$site_name}/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/{-$site_name}'
+    | '/{-$site_name}/auth'
+    | '/{-$site_name}/mail-send'
     | '/{-$site_name}/contact-us'
     | '/{-$site_name}/diceshock-agents'
     | '/{-$site_name}/inventory'
-    | '/{-$site_name}'
   id:
     | '__root__'
     | '/{-$site_name}'
-    | '/{-$site_name}/contact-us'
-    | '/{-$site_name}/diceshock-agents'
-    | '/{-$site_name}/inventory'
-    | '/{-$site_name}/'
+    | '/{-$site_name}/_with-footer'
+    | '/{-$site_name}/auth'
+    | '/{-$site_name}/mail-send'
+    | '/{-$site_name}/_with-footer/contact-us'
+    | '/{-$site_name}/_with-footer/diceshock-agents'
+    | '/{-$site_name}/_with-footer/inventory'
+    | '/{-$site_name}/_with-footer/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -102,53 +136,94 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char123Site_nameChar125RouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/{-$site_name}/': {
-      id: '/{-$site_name}/'
+    '/{-$site_name}/mail-send': {
+      id: '/{-$site_name}/mail-send'
+      path: '/mail-send'
+      fullPath: '/{-$site_name}/mail-send'
+      preLoaderRoute: typeof Char123Site_nameChar125MailSendRouteImport
+      parentRoute: typeof Char123Site_nameChar125Route
+    }
+    '/{-$site_name}/auth': {
+      id: '/{-$site_name}/auth'
+      path: '/auth'
+      fullPath: '/{-$site_name}/auth'
+      preLoaderRoute: typeof Char123Site_nameChar125AuthRouteImport
+      parentRoute: typeof Char123Site_nameChar125Route
+    }
+    '/{-$site_name}/_with-footer': {
+      id: '/{-$site_name}/_with-footer'
+      path: ''
+      fullPath: '/{-$site_name}'
+      preLoaderRoute: typeof Char123Site_nameChar125WithFooterRouteImport
+      parentRoute: typeof Char123Site_nameChar125Route
+    }
+    '/{-$site_name}/_with-footer/': {
+      id: '/{-$site_name}/_with-footer/'
       path: '/'
       fullPath: '/{-$site_name}/'
-      preLoaderRoute: typeof Char123Site_nameChar125IndexRouteImport
-      parentRoute: typeof Char123Site_nameChar125Route
+      preLoaderRoute: typeof Char123Site_nameChar125WithFooterIndexRouteImport
+      parentRoute: typeof Char123Site_nameChar125WithFooterRoute
     }
-    '/{-$site_name}/inventory': {
-      id: '/{-$site_name}/inventory'
+    '/{-$site_name}/_with-footer/inventory': {
+      id: '/{-$site_name}/_with-footer/inventory'
       path: '/inventory'
       fullPath: '/{-$site_name}/inventory'
-      preLoaderRoute: typeof Char123Site_nameChar125InventoryRouteImport
-      parentRoute: typeof Char123Site_nameChar125Route
+      preLoaderRoute: typeof Char123Site_nameChar125WithFooterInventoryRouteImport
+      parentRoute: typeof Char123Site_nameChar125WithFooterRoute
     }
-    '/{-$site_name}/diceshock-agents': {
-      id: '/{-$site_name}/diceshock-agents'
+    '/{-$site_name}/_with-footer/diceshock-agents': {
+      id: '/{-$site_name}/_with-footer/diceshock-agents'
       path: '/diceshock-agents'
       fullPath: '/{-$site_name}/diceshock-agents'
-      preLoaderRoute: typeof Char123Site_nameChar125DiceshockAgentsRouteImport
-      parentRoute: typeof Char123Site_nameChar125Route
+      preLoaderRoute: typeof Char123Site_nameChar125WithFooterDiceshockAgentsRouteImport
+      parentRoute: typeof Char123Site_nameChar125WithFooterRoute
     }
-    '/{-$site_name}/contact-us': {
-      id: '/{-$site_name}/contact-us'
+    '/{-$site_name}/_with-footer/contact-us': {
+      id: '/{-$site_name}/_with-footer/contact-us'
       path: '/contact-us'
       fullPath: '/{-$site_name}/contact-us'
-      preLoaderRoute: typeof Char123Site_nameChar125ContactUsRouteImport
-      parentRoute: typeof Char123Site_nameChar125Route
+      preLoaderRoute: typeof Char123Site_nameChar125WithFooterContactUsRouteImport
+      parentRoute: typeof Char123Site_nameChar125WithFooterRoute
     }
   }
 }
 
+interface Char123Site_nameChar125WithFooterRouteChildren {
+  Char123Site_nameChar125WithFooterContactUsRoute: typeof Char123Site_nameChar125WithFooterContactUsRoute
+  Char123Site_nameChar125WithFooterDiceshockAgentsRoute: typeof Char123Site_nameChar125WithFooterDiceshockAgentsRoute
+  Char123Site_nameChar125WithFooterInventoryRoute: typeof Char123Site_nameChar125WithFooterInventoryRoute
+  Char123Site_nameChar125WithFooterIndexRoute: typeof Char123Site_nameChar125WithFooterIndexRoute
+}
+
+const Char123Site_nameChar125WithFooterRouteChildren: Char123Site_nameChar125WithFooterRouteChildren =
+  {
+    Char123Site_nameChar125WithFooterContactUsRoute:
+      Char123Site_nameChar125WithFooterContactUsRoute,
+    Char123Site_nameChar125WithFooterDiceshockAgentsRoute:
+      Char123Site_nameChar125WithFooterDiceshockAgentsRoute,
+    Char123Site_nameChar125WithFooterInventoryRoute:
+      Char123Site_nameChar125WithFooterInventoryRoute,
+    Char123Site_nameChar125WithFooterIndexRoute:
+      Char123Site_nameChar125WithFooterIndexRoute,
+  }
+
+const Char123Site_nameChar125WithFooterRouteWithChildren =
+  Char123Site_nameChar125WithFooterRoute._addFileChildren(
+    Char123Site_nameChar125WithFooterRouteChildren,
+  )
+
 interface Char123Site_nameChar125RouteChildren {
-  Char123Site_nameChar125ContactUsRoute: typeof Char123Site_nameChar125ContactUsRoute
-  Char123Site_nameChar125DiceshockAgentsRoute: typeof Char123Site_nameChar125DiceshockAgentsRoute
-  Char123Site_nameChar125InventoryRoute: typeof Char123Site_nameChar125InventoryRoute
-  Char123Site_nameChar125IndexRoute: typeof Char123Site_nameChar125IndexRoute
+  Char123Site_nameChar125WithFooterRoute: typeof Char123Site_nameChar125WithFooterRouteWithChildren
+  Char123Site_nameChar125AuthRoute: typeof Char123Site_nameChar125AuthRoute
+  Char123Site_nameChar125MailSendRoute: typeof Char123Site_nameChar125MailSendRoute
 }
 
 const Char123Site_nameChar125RouteChildren: Char123Site_nameChar125RouteChildren =
   {
-    Char123Site_nameChar125ContactUsRoute:
-      Char123Site_nameChar125ContactUsRoute,
-    Char123Site_nameChar125DiceshockAgentsRoute:
-      Char123Site_nameChar125DiceshockAgentsRoute,
-    Char123Site_nameChar125InventoryRoute:
-      Char123Site_nameChar125InventoryRoute,
-    Char123Site_nameChar125IndexRoute: Char123Site_nameChar125IndexRoute,
+    Char123Site_nameChar125WithFooterRoute:
+      Char123Site_nameChar125WithFooterRouteWithChildren,
+    Char123Site_nameChar125AuthRoute: Char123Site_nameChar125AuthRoute,
+    Char123Site_nameChar125MailSendRoute: Char123Site_nameChar125MailSendRoute,
   }
 
 const Char123Site_nameChar125RouteWithChildren =

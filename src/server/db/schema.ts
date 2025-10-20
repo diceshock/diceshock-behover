@@ -25,3 +25,11 @@ export const boardGamesTable = drizzle.sqliteTable("board_games_table", {
     best_player_num: drizzle.text({ mode: "json" }).$type<number[]>(),
     content: drizzle.blob({ mode: "json" }).$type<BoardGame>(),
 });
+
+export const users = drizzle.sqliteTable("users", {
+    id: drizzle.text("id").primaryKey(),
+    name: drizzle.text("name"),
+    email: drizzle.text("email").unique(),
+    image: drizzle.text("image"),
+    emailVerified: drizzle.integer("emailVerified", { mode: "timestamp_ms" }),
+});

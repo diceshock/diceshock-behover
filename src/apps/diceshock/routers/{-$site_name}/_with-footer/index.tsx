@@ -11,7 +11,7 @@ import VideoGame from "@/client/components/diceshock/HomePage/VideoGame";
 import VideoGameList from "@/client/components/diceshock/HomePage/VideoGameList";
 import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/{-$site_name}/")({
+export const Route = createFileRoute("/{-$site_name}/_with-footer/")({
     component: Home,
 });
 
@@ -53,7 +53,7 @@ function Home() {
 
             <VideoGameList />
 
-            <Agents className="pt-[30rem]" />
+            <Agents className="pt-120" />
 
             <Credits />
         </main>
