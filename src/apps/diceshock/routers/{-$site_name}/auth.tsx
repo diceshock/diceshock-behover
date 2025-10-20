@@ -14,7 +14,7 @@ function RouteComponent() {
     const [activeTab, setActiveTab] = useState<"email" | "phone">("email");
 
     return (
-        <main className="w-full h-[calc(100vh-5rem)] flex">
+        <main className="w-full h-[calc(100vh-5rem)] flex px-4">
             <div className="hidden sm:block size-full relative overflow-hidden">
                 <ZdogComponent />
 
@@ -34,7 +34,7 @@ function RouteComponent() {
             <div
                 className={clsx(
                     "sm:w-120 w-full h-full bg-base-200 shrink-0 p-6",
-                    "flex flex-col gap-6 rounded-lg mr-4"
+                    "flex flex-col gap-6 rounded-lg"
                 )}
             >
                 <h1 className="text-5xl font-bold">
