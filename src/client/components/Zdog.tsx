@@ -38,7 +38,7 @@ export default function ZdogComponent({ className }: { className?: string }) {
         });
 
         const white = "white";
-        const black = "#333";
+        const black = "#80F697";
         let isSpinning = true;
         const TAU = Zdog.TAU;
         const initRotate = { y: TAU / 4 };

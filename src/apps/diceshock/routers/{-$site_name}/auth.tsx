@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { ClientOnly, createFileRoute } from "@tanstack/react-router";
 import ZdogComponent from "@/client/components/Zdog";
 import InPixelFilter from "@/client/components/svg-filters/in-pixel";
 import clsx from "clsx";
@@ -16,7 +16,9 @@ function RouteComponent() {
     return (
         <main className="w-full h-[calc(100vh-5rem)] flex px-4">
             <div className="hidden sm:block size-full relative overflow-hidden">
-                <ZdogComponent />
+                <ClientOnly>
+                    <ZdogComponent />
+                </ClientOnly>
 
                 <div className="size-[300%] absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 [backdrop-filter:url(#inPixelF)] pointer-events-none" />
 
