@@ -9,155 +9,104 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routers/__root'
-import { Route as Char123Site_nameChar125RouteImport } from './routers/{-$site_name}'
-import { Route as Char123Site_nameChar125IndexRouteImport } from './routers/{-$site_name}/index'
-import { Route as Char123Site_nameChar125InventoryRouteImport } from './routers/{-$site_name}/inventory'
-import { Route as Char123Site_nameChar125DiceshockAgentsRouteImport } from './routers/{-$site_name}/diceshock-agents'
-import { Route as Char123Site_nameChar125ContactUsRouteImport } from './routers/{-$site_name}/contact-us'
+import { Route as InventoryRouteImport } from './routers/inventory'
+import { Route as DiceshockAgentsRouteImport } from './routers/diceshock-agents'
+import { Route as ContactUsRouteImport } from './routers/contact-us'
+import { Route as IndexRouteImport } from './routers/index'
 
-const Char123Site_nameChar125Route = Char123Site_nameChar125RouteImport.update({
-  id: '/{-$site_name}',
-  path: '/{-$site_name}',
+const InventoryRoute = InventoryRouteImport.update({
+  id: '/inventory',
+  path: '/inventory',
   getParentRoute: () => rootRouteImport,
 } as any)
-const Char123Site_nameChar125IndexRoute =
-  Char123Site_nameChar125IndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => Char123Site_nameChar125Route,
-  } as any)
-const Char123Site_nameChar125InventoryRoute =
-  Char123Site_nameChar125InventoryRouteImport.update({
-    id: '/inventory',
-    path: '/inventory',
-    getParentRoute: () => Char123Site_nameChar125Route,
-  } as any)
-const Char123Site_nameChar125DiceshockAgentsRoute =
-  Char123Site_nameChar125DiceshockAgentsRouteImport.update({
-    id: '/diceshock-agents',
-    path: '/diceshock-agents',
-    getParentRoute: () => Char123Site_nameChar125Route,
-  } as any)
-const Char123Site_nameChar125ContactUsRoute =
-  Char123Site_nameChar125ContactUsRouteImport.update({
-    id: '/contact-us',
-    path: '/contact-us',
-    getParentRoute: () => Char123Site_nameChar125Route,
-  } as any)
+const DiceshockAgentsRoute = DiceshockAgentsRouteImport.update({
+  id: '/diceshock-agents',
+  path: '/diceshock-agents',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactUsRoute = ContactUsRouteImport.update({
+  id: '/contact-us',
+  path: '/contact-us',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
-  '/{-$site_name}': typeof Char123Site_nameChar125RouteWithChildren
-  '/{-$site_name}/contact-us': typeof Char123Site_nameChar125ContactUsRoute
-  '/{-$site_name}/diceshock-agents': typeof Char123Site_nameChar125DiceshockAgentsRoute
-  '/{-$site_name}/inventory': typeof Char123Site_nameChar125InventoryRoute
-  '/{-$site_name}/': typeof Char123Site_nameChar125IndexRoute
+  '/': typeof IndexRoute
+  '/contact-us': typeof ContactUsRoute
+  '/diceshock-agents': typeof DiceshockAgentsRoute
+  '/inventory': typeof InventoryRoute
 }
 export interface FileRoutesByTo {
-  '/{-$site_name}/contact-us': typeof Char123Site_nameChar125ContactUsRoute
-  '/{-$site_name}/diceshock-agents': typeof Char123Site_nameChar125DiceshockAgentsRoute
-  '/{-$site_name}/inventory': typeof Char123Site_nameChar125InventoryRoute
-  '/{-$site_name}': typeof Char123Site_nameChar125IndexRoute
+  '/': typeof IndexRoute
+  '/contact-us': typeof ContactUsRoute
+  '/diceshock-agents': typeof DiceshockAgentsRoute
+  '/inventory': typeof InventoryRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/{-$site_name}': typeof Char123Site_nameChar125RouteWithChildren
-  '/{-$site_name}/contact-us': typeof Char123Site_nameChar125ContactUsRoute
-  '/{-$site_name}/diceshock-agents': typeof Char123Site_nameChar125DiceshockAgentsRoute
-  '/{-$site_name}/inventory': typeof Char123Site_nameChar125InventoryRoute
-  '/{-$site_name}/': typeof Char123Site_nameChar125IndexRoute
+  '/': typeof IndexRoute
+  '/contact-us': typeof ContactUsRoute
+  '/diceshock-agents': typeof DiceshockAgentsRoute
+  '/inventory': typeof InventoryRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/{-$site_name}'
-    | '/{-$site_name}/contact-us'
-    | '/{-$site_name}/diceshock-agents'
-    | '/{-$site_name}/inventory'
-    | '/{-$site_name}/'
+  fullPaths: '/' | '/contact-us' | '/diceshock-agents' | '/inventory'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/{-$site_name}/contact-us'
-    | '/{-$site_name}/diceshock-agents'
-    | '/{-$site_name}/inventory'
-    | '/{-$site_name}'
-  id:
-    | '__root__'
-    | '/{-$site_name}'
-    | '/{-$site_name}/contact-us'
-    | '/{-$site_name}/diceshock-agents'
-    | '/{-$site_name}/inventory'
-    | '/{-$site_name}/'
+  to: '/' | '/contact-us' | '/diceshock-agents' | '/inventory'
+  id: '__root__' | '/' | '/contact-us' | '/diceshock-agents' | '/inventory'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  Char123Site_nameChar125Route: typeof Char123Site_nameChar125RouteWithChildren
+  IndexRoute: typeof IndexRoute
+  ContactUsRoute: typeof ContactUsRoute
+  DiceshockAgentsRoute: typeof DiceshockAgentsRoute
+  InventoryRoute: typeof InventoryRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/{-$site_name}': {
-      id: '/{-$site_name}'
-      path: '/{-$site_name}'
-      fullPath: '/{-$site_name}'
-      preLoaderRoute: typeof Char123Site_nameChar125RouteImport
+    '/inventory': {
+      id: '/inventory'
+      path: '/inventory'
+      fullPath: '/inventory'
+      preLoaderRoute: typeof InventoryRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/{-$site_name}/': {
-      id: '/{-$site_name}/'
-      path: '/'
-      fullPath: '/{-$site_name}/'
-      preLoaderRoute: typeof Char123Site_nameChar125IndexRouteImport
-      parentRoute: typeof Char123Site_nameChar125Route
-    }
-    '/{-$site_name}/inventory': {
-      id: '/{-$site_name}/inventory'
-      path: '/inventory'
-      fullPath: '/{-$site_name}/inventory'
-      preLoaderRoute: typeof Char123Site_nameChar125InventoryRouteImport
-      parentRoute: typeof Char123Site_nameChar125Route
-    }
-    '/{-$site_name}/diceshock-agents': {
-      id: '/{-$site_name}/diceshock-agents'
+    '/diceshock-agents': {
+      id: '/diceshock-agents'
       path: '/diceshock-agents'
-      fullPath: '/{-$site_name}/diceshock-agents'
-      preLoaderRoute: typeof Char123Site_nameChar125DiceshockAgentsRouteImport
-      parentRoute: typeof Char123Site_nameChar125Route
+      fullPath: '/diceshock-agents'
+      preLoaderRoute: typeof DiceshockAgentsRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/{-$site_name}/contact-us': {
-      id: '/{-$site_name}/contact-us'
+    '/contact-us': {
+      id: '/contact-us'
       path: '/contact-us'
-      fullPath: '/{-$site_name}/contact-us'
-      preLoaderRoute: typeof Char123Site_nameChar125ContactUsRouteImport
-      parentRoute: typeof Char123Site_nameChar125Route
+      fullPath: '/contact-us'
+      preLoaderRoute: typeof ContactUsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
-
-interface Char123Site_nameChar125RouteChildren {
-  Char123Site_nameChar125ContactUsRoute: typeof Char123Site_nameChar125ContactUsRoute
-  Char123Site_nameChar125DiceshockAgentsRoute: typeof Char123Site_nameChar125DiceshockAgentsRoute
-  Char123Site_nameChar125InventoryRoute: typeof Char123Site_nameChar125InventoryRoute
-  Char123Site_nameChar125IndexRoute: typeof Char123Site_nameChar125IndexRoute
-}
-
-const Char123Site_nameChar125RouteChildren: Char123Site_nameChar125RouteChildren =
-  {
-    Char123Site_nameChar125ContactUsRoute:
-      Char123Site_nameChar125ContactUsRoute,
-    Char123Site_nameChar125DiceshockAgentsRoute:
-      Char123Site_nameChar125DiceshockAgentsRoute,
-    Char123Site_nameChar125InventoryRoute:
-      Char123Site_nameChar125InventoryRoute,
-    Char123Site_nameChar125IndexRoute: Char123Site_nameChar125IndexRoute,
-  }
-
-const Char123Site_nameChar125RouteWithChildren =
-  Char123Site_nameChar125Route._addFileChildren(
-    Char123Site_nameChar125RouteChildren,
-  )
 
 const rootRouteChildren: RootRouteChildren = {
-  Char123Site_nameChar125Route: Char123Site_nameChar125RouteWithChildren,
+  IndexRoute: IndexRoute,
+  ContactUsRoute: ContactUsRoute,
+  DiceshockAgentsRoute: DiceshockAgentsRoute,
+  InventoryRoute: InventoryRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

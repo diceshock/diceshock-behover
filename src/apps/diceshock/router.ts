@@ -2,17 +2,17 @@ import { createRouter as createTanstackRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 import GlobalError from "../../client/components/GlobalError";
 
-export function createRouter(): ReturnType<typeof createTanstackRouter<any>> {
-    const router = createTanstackRouter({
-        routeTree,
-        defaultErrorComponent: GlobalError,
-    });
+export function createRouter() {
+  const router = createTanstackRouter({
+    routeTree,
+    defaultErrorComponent: GlobalError,
+  });
 
-    return router;
+  return router;
 }
 
 declare module "@tanstack/react-router" {
-    interface Register {
-        router: ReturnType<typeof createRouter>;
-    }
+  interface Register {
+    router: ReturnType<typeof createRouter>;
+  }
 }

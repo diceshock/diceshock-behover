@@ -1,7 +1,7 @@
 import GameList from "@/client/components/diceshock/GameList";
 import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/{-$site_name}/inventory")({
+export const Route = createFileRoute("/inventory")({
     component: RouteComponent,
 });
 
