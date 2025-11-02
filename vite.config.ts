@@ -17,12 +17,6 @@ export default defineConfig({
             routesDirectory: "src/apps/diceshock/routers",
             generatedRouteTree: "src/apps/diceshock/routeTree.gen.ts",
         }),
-        tanstackRouter({
-            target: "react",
-            autoCodeSplitting: true,
-            routesDirectory: "src/apps/runespark/routers",
-            generatedRouteTree: "src/apps/runespark/routeTree.gen.ts",
-        }),
         cloudflare(),
         ssrPlugin({
             hotReload: {
