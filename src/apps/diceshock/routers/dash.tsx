@@ -2,6 +2,7 @@ import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import {
   GaugeIcon,
   PackageIcon,
+  SignOutIcon,
   SignpostIcon,
   UsersIcon,
 } from "@phosphor-icons/react/dist/ssr";
@@ -49,6 +50,16 @@ function RouteComponent() {
               <ThemeSwap />
               主题
             </label>
+          </li>
+
+          <li>
+            <a
+              href="https://diceshock.cloudflareaccess.com/cdn-cgi/access/logout"
+              className="gap-12"
+            >
+              <SignOutIcon />
+              登出
+            </a>
           </li>
         </ul>
       </aside>
