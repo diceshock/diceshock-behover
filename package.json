@@ -24,6 +24,7 @@
     "@tanstack/react-router-devtools": "^1.132.23",
     "@trpc/client": "^11.6.0",
     "@trpc/server": "^11.6.0",
+    "@uiw/react-md-editor": "^4.0.8",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.44.6",

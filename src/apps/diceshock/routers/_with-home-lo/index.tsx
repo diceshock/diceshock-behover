@@ -11,7 +11,7 @@ import VideoGame from "@/client/components/diceshock/HomePage/VideoGame";
 import VideoGameList from "@/client/components/diceshock/HomePage/VideoGameList";
 import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_with-home-lo/")({
     component: Home,
 });
 

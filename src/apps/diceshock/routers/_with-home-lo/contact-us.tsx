@@ -6,7 +6,7 @@ import HookHole from "@/client/assets/svg/hook-hole.svg?react";
 import Swing from "@/client/components/diceshock/Swing";
 import CopyItem from "@/client/components/diceshock/CopyItem";
 
-export const Route = createFileRoute("/contact-us")({
+export const Route = createFileRoute("/_with-home-lo/contact-us")({
     component: RouteComponent,
 });
 
