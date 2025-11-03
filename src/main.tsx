@@ -4,11 +4,13 @@ import type { HonoCtxEnv } from "@/shared/types";
 import edgeRoot from "@/server/apis/edgeRoot";
 import apisRoot from "@/server/apis/apisRoot";
 import diceshockRouter from "@/server/apis/diceshock";
-import trpcServer from "./server/middlewares/trpcServer";
+import trpcServerPublic from "./server/middlewares/trpcServerPublic";
+import trpcServerDash from "./server/middlewares/trpcServerDash";
 
 export const app = new Hono<{ Bindings: HonoCtxEnv }>();
 
-app.use("/apis/*", trpcServer);
+app.use("/apis/dash/*", trpcServerDash);
+app.use("/apis/*", trpcServerPublic);
 
 app.get("/*", diceshockRouter);
 
@@ -22,4 +24,4 @@ app.post("/apis/*", apisRoot);
 app.put("/apis/*", apisRoot);
 app.delete("/apis/*", apisRoot);
 
-export default app
+export default app;

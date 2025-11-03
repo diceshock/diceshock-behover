@@ -147,7 +147,7 @@ const Filter: React.FC<{ className?: string }> = ({ className }) => {
                             </div>
 
                             <div>
-                                <div className="flex items-center flex-shrink-0 m-2 p-2 bg-base-100 rounded-b-none md:rounded-b-lg rounded-lg">
+                                <div className="flex items-center shrink-0 m-2 p-2 bg-base-100 rounded-b-none md:rounded-b-lg rounded-lg">
                                     <input
                                         type="range"
                                         step={1}
@@ -164,7 +164,7 @@ const Filter: React.FC<{ className?: string }> = ({ className }) => {
                                                           );
                                             })
                                         }
-                                        className="range range-lg w-[14rem] sm:w-[20rem] mx-2"
+                                        className="range range-lg w-56 sm:w-[20rem] mx-2"
                                     />
 
                                     <button
@@ -262,7 +262,7 @@ const Filter: React.FC<{ className?: string }> = ({ className }) => {
                     </label>
                 </div>
 
-                <div className="hidden lg:flex items-center flex-shrink-0 mt-2 px-1 bg-base-100 rounded-b-none md:rounded-b-lg rounded-lg">
+                <div className="hidden lg:flex items-center shrink-0 mt-2 px-1 bg-base-100 rounded-b-none md:rounded-b-lg rounded-lg">
                     <div className="form-control hidden md:flex">
                         <label className="btn btn-md">
                             <input
@@ -294,7 +294,7 @@ const Filter: React.FC<{ className?: string }> = ({ className }) => {
                                         : Number.parseInt(evt.target.value);
                             })
                         }
-                        className="range range-lg w-[14rem] sm:w-[20rem] mx-2"
+                        className="range range-lg w-56 sm:w-[20rem] mx-2"
                     />
 
                     <button

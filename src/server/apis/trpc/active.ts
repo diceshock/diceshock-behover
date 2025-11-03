@@ -1,5 +1,5 @@
 import { pagedZ } from "@/shared/types/kits";
-import { publicProcedure } from "./trpc";
+import { publicProcedurePublic } from "./trpc";
 import db from "@/server/db";
 import z4 from "zod/v4";
 
@@ -10,7 +10,7 @@ export const getFilterZ = z4.object({
   tags: z4.array(z4.string()).optional(),
 });
 
-const get = publicProcedure
+const get = publicProcedurePublic
   .input(pagedZ(getFilterZ))
   .query(async ({ input, ctx }) => {
     const {
