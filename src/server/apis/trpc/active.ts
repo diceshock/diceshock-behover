@@ -1,7 +1,15 @@
 import { pagedZ } from "@/shared/types/kits";
-import { publicProcedurePublic } from "./trpc";
 import db from "@/server/db";
-import z4 from "zod/v4";
+import * as drizzle from "drizzle-orm";
+import z4, { z } from "zod/v4";
+import { publicProcedureDash } from "./router-dash";
+import {
+  activesTable,
+  activeTagMappingsTable,
+  activeTagsTable,
+} from "@/server/db/schema";
+import * as _ from "lodash";
+import { pickBy } from "@/server/utils";
 
 export const getFilterZ = z4.object({
   searchWords: z4.string().nonempty().optional(),
@@ -10,7 +18,7 @@ export const getFilterZ = z4.object({
   tags: z4.array(z4.string()).optional(),
 });
 
-const get = publicProcedurePublic
+const get = publicProcedureDash
   .input(pagedZ(getFilterZ))
   .query(async ({ input, ctx }) => {
     const {
@@ -48,4 +56,107 @@ const get = publicProcedurePublic
     return actives;
   });
 
-export default { get };
+const updateZ = z.object({
+  id: z.string(),
+  name: z.string().optional(),
+  is_published: z.boolean().optional(),
+  is_deleted: z.boolean().optional(),
+  description: z.string().optional(),
+  content: z.string().optional(),
+  tags: z.string().array().optional(),
+});
+
+const insertZ = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+  content: z.string().optional(),
+  tags: z.string().array(),
+});
+
+export const postInputZ = insertZ.or(updateZ);
+
+const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
+  const tdb = db(env.DB);
+
+  const {
+    id,
+    name,
+    is_deleted,
+    is_published,
+    description,
+    content,
+    tags: tagIds,
+  } = input;
+
+  return await tdb.transaction(async (tx) => {
+    const acitves = await tx
+      .update(activesTable)
+      .set({ name, is_deleted, is_published, description, content })
+      .where(drizzle.eq(activesTable.id, id))
+      .returning();
+
+    if (!acitves.length || !tagIds) return acitves;
+
+    await tx
+      .delete(activeTagMappingsTable)
+      .where(drizzle.eq(activeTagMappingsTable.active_id, id));
+
+    const tags = await tx.query.activeTagsTable.findMany({
+      where: (t, { inArray }) => inArray(t.id, tagIds),
+    });
+
+    await tx
+      .insert(activeTagMappingsTable)
+      .values(tags.map((t) => ({ active_id: id, tag_id: t.id })));
+
+    await tx
+      .delete(activeTagsTable)
+      .where(
+        drizzle.notInArray(
+          activesTable.id,
+          tx
+            .select({ tag_id: activeTagMappingsTable.tag_id })
+            .from(activeTagMappingsTable)
+            .groupBy(activeTagMappingsTable.tag_id)
+        )
+      );
+
+    return acitves;
+  });
+};
+
+const insert = async (env: Cloudflare.Env, input: z.infer<typeof insertZ>) => {
+  const tdb = db(env.DB);
+
+  const { name, description, content, tags: tagIds } = input;
+
+  return await tdb.transaction(async (tx) => {
+    const tags = await tx.query.activeTagsTable.findMany({
+      where: (t, { inArray }) => inArray(t.id, tagIds),
+    });
+
+    const newActive = await tx
+      .insert(activesTable)
+      .values({ name, description, content })
+      .returning();
+
+    await tx
+      .insert(activeTagMappingsTable)
+      .values(
+        newActive.flatMap(({ id: active_id }) =>
+          tags.map(({ id: tag_id }) => ({ active_id, tag_id }))
+        )
+      );
+
+    return newActive;
+  });
+};
+
+const mutation = publicProcedureDash
+  .input(postInputZ)
+  .mutation(async ({ input, ctx }) => {
+    if ("id" in input) return update(ctx.env, input);
+    return insert(ctx.env, input);
+  });
+
+export default { get, mutation };

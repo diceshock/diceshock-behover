@@ -1,9 +1,7 @@
 import { pagedZ } from "@/shared/types/kits";
-import { publicProcedurePublic } from "./trpc";
 import { filterCfgZ } from "@/client/components/diceshock/GameList/Filter";
 import db from "@/server/db";
-import { boardGamesTable } from "@/server/db/schema";
-import { BoardGame } from "@/shared/types/BoardGame";
+import { publicProcedurePublic } from "./router-public";
 
 const get = publicProcedurePublic
   .input(pagedZ(filterCfgZ))
