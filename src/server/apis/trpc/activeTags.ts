@@ -1,1 +1,63 @@
-export default {};
+import { pagedZ } from "@/shared/types/kits";
+import db from "@/server/db";
+import * as drizzle from "drizzle-orm";
+import z4, { z } from "zod/v4";
+
+import {
+  activesTable,
+  activeTagMappingsTable,
+  activeTagsTable,
+} from "@/server/db/schema";
+import { publicProcedure } from "./baseTRPC";
+
+const get = publicProcedure.query(async ({ ctx }) =>
+  db(ctx.env.DB).query.activeTagsTable.findMany()
+);
+
+export const activeTagTitleZ = z.object({
+  tx: z.emoji().nonempty(),
+  emoji: z.string().nonempty(),
+});
+const insertZ = z
+  .object({ activeId: z.string(), title: activeTagTitleZ })
+  .array();
+
+const insert = publicProcedure.input(insertZ).mutation(async ({ input, ctx }) =>
+  db(ctx.env.DB).transaction(async (tx) =>
+    Promise.all(
+      input.map(async ({ activeId, title }) => {
+        const active = await tx.query.activesTable.findFirst({
+          where: (a, { eq }) => eq(a.id, activeId),
+        });
+
+        if (!active) return { message: "Active not found", ok: false } as const;
+
+        const [tag] = await tx
+          .insert(activeTagsTable)
+          .values({ title })
+          .returning();
+
+        if (tag) return { message: "Tag creation failed", ok: false } as const;
+
+        const [relation] = await tx
+          .insert(activeTagMappingsTable)
+          .values({
+            active_id: activeId,
+            tag_id: tag,
+          })
+          .returning();
+
+        if (!relation)
+          return {
+            message: "Tag mapping creation failed",
+            ok: false,
+            tag,
+          } as const;
+
+        return tag;
+      })
+    )
+  )
+);
+
+export default { get, insert };

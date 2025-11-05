@@ -1,9 +1,9 @@
 import { pagedZ } from "@/shared/types/kits";
 import { filterCfgZ } from "@/client/components/diceshock/GameList/Filter";
 import db from "@/server/db";
-import { publicProcedurePublic } from "./router-public";
+import { publicProcedure } from "./baseTRPC";
 
-const get = publicProcedurePublic
+const get = publicProcedure
   .input(pagedZ(filterCfgZ))
   .query(async ({ input, ctx }) => {
     const { page, pageSize, params } = input;
@@ -60,6 +60,4 @@ const get = publicProcedurePublic
     return games;
   });
 
-export default {
-  get,
-};
+export default { get };

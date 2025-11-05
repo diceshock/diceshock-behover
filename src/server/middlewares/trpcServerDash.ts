@@ -1,4 +1,4 @@
-import { appRouterDash } from "@/server/apis/trpc/router-dash";
+import { appRouterDash } from "@/server/apis/trpc";
 import { trpcServer } from "@hono/trpc-server";
 
 const trpcServerDash = trpcServer({ router: appRouterDash });

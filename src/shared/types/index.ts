@@ -1,8 +1,7 @@
 /*global NodeJS */
 
 import { userAgentMetaZ } from "@/server/middlewares/serverMetaInj";
-import type * as trpcServerPublic from "@/server/apis/trpc/router-public";
-import type * as trpcServerDash from "@/server/apis/trpc/router-dash";
+import type * as trpcServer from "@/server/apis/trpc";
 import { Env } from "hono";
 import z from "zod";
 
@@ -16,5 +15,5 @@ export interface HonoCtxEnv extends Env {
   Variables: { InjectCrossData?: InjectCrossData };
 }
 
-export type ApiRouterPublic = typeof trpcServerPublic.appRouterPublic;
-export type ApiRouterDash = typeof trpcServerDash.appRouterDash;
+export type ApiRouterPublic = typeof trpcServer.appRouterPublic;
+export type ApiRouterDash = typeof trpcServer.appRouterDash;

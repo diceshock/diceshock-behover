@@ -2,14 +2,13 @@ import { pagedZ } from "@/shared/types/kits";
 import db from "@/server/db";
 import * as drizzle from "drizzle-orm";
 import z4, { z } from "zod/v4";
-import { publicProcedureDash } from "./router-dash";
+
 import {
   activesTable,
   activeTagMappingsTable,
   activeTagsTable,
 } from "@/server/db/schema";
-import * as _ from "lodash";
-import { pickBy } from "@/server/utils";
+import { publicProcedure } from "./baseTRPC";
 
 export const getFilterZ = z4.object({
   searchWords: z4.string().nonempty().optional(),
@@ -18,7 +17,7 @@ export const getFilterZ = z4.object({
   tags: z4.array(z4.string()).optional(),
 });
 
-const get = publicProcedureDash
+const get = publicProcedure
   .input(pagedZ(getFilterZ))
   .query(async ({ input, ctx }) => {
     const {
@@ -152,7 +151,7 @@ const insert = async (env: Cloudflare.Env, input: z.infer<typeof insertZ>) => {
   });
 };
 
-const mutation = publicProcedureDash
+const mutation = publicProcedure
   .input(postInputZ)
   .mutation(async ({ input, ctx }) => {
     if ("id" in input) return update(ctx.env, input);
