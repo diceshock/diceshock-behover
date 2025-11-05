@@ -11,7 +11,24 @@ import {
 import { publicProcedure } from "./baseTRPC";
 
 const get = publicProcedure.query(async ({ ctx }) =>
-  db(ctx.env.DB).query.activeTagsTable.findMany()
+  db(ctx.env.DB).transaction(async (tx) =>
+    tx
+      .select({
+        id: activeTagsTable.id,
+        title: activeTagsTable.title,
+      })
+      .from(activeTagsTable)
+      .leftJoin(
+        activeTagMappingsTable,
+        drizzle.eq(activeTagsTable.id, activeTagMappingsTable.tag_id)
+      )
+      .leftJoin(
+        activesTable,
+        drizzle.eq(activeTagMappingsTable.active_id, activesTable.id)
+      )
+      .where(drizzle.eq(activesTable.is_deleted, false))
+      .groupBy(activeTagsTable.id)
+  )
 );
 
 export const activeTagTitleZ = z.object({

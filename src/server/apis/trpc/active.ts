@@ -23,7 +23,7 @@ const get = publicProcedure
     const {
       page,
       pageSize,
-      params: { isDeleted, isPublished, searchWords, tags },
+      params: { isDeleted = false, isPublished, searchWords, tags },
     } = input;
 
     const actives = db(ctx.env.DB).query.activesTable.findMany({
