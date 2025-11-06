@@ -1,0 +1,28 @@
+"$schema" = "node_modules/wrangler/config-schema.json"
+
+name = "diceshock-behover"
+compatibility_date = "2025-09-24"
+main = "./src/main.tsx"
+compatibility_flags = ["nodejs_compat"]
+
+[version_metadata]
+binding = "CF_VERSION_METADATA"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "diceshock"
+database_id = "24c01d5e-c4d7-4b13-bb59-5ad3373971e9"
+migrations_dir = "drizzle"
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "diceshock"
+preview_bucket_name = "diceshock-preview"
+
+[[routes]]
+pattern = "www.diceshock.com"
+custom_domain = true
+
+[[routes]]
+pattern = "diceshock.com"
+custom_domain = true
