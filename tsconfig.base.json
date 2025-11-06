@@ -1,0 +1,25 @@
+{
+  "files": [],
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "allowJs": false,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "types": ["node"],
+    "lib": ["ESNext", "DOM"],
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "noEmit": false,
+    "baseUrl": ".",
+    "outDir": "dist",
+    "paths": {
+      "@lib/*": ["libs/*/src"],
+      "@/*": ["${configDir}/src/*"]
+    }
+  },
+  "include": ["${configDir}/**/*", "libs/*/src/**/*", "vite.base.ts"]
+}
