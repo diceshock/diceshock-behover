@@ -1,43 +1,42 @@
-import { useEffect, useMemo } from "react";
 import { useInView, useScroll } from "@react-spring/web";
+import { useEffect, useMemo } from "react";
 
 const useSticky = () => {
-    const [ref, inView] = useInView();
-    const { scrollY } = useScroll();
+  const [ref, inView] = useInView();
+  const { scrollY } = useScroll();
 
-    const progress = useMemo(
-        () =>
-            scrollY.to((y) => {
-                if (!ref.current) return 0;
+  const progress = useMemo(
+    () =>
+      scrollY.to((y) => {
+        if (!ref.current) return 0;
 
-                const { offsetTop, scrollHeight } =
-                    ref.current as HTMLDivElement;
+        const { offsetTop, scrollHeight } = ref.current as HTMLDivElement;
 
-                return (y - offsetTop) / scrollHeight;
-            }),
-        [ref, scrollY]
+        return (y - offsetTop) / scrollHeight;
+      }),
+    [ref, scrollY],
+  );
+
+  useEffect(() => {
+    if (!inView) return;
+
+    const ctrler = new AbortController();
+    const container = document.scrollingElement;
+
+    if (!container) return;
+
+    container.addEventListener(
+      "scroll",
+      () => scrollY.start(container.scrollTop),
+      {
+        signal: ctrler.signal,
+      },
     );
 
-    useEffect(() => {
-        if (!inView) return;
+    return () => ctrler.abort();
+  }, [inView, scrollY]);
 
-        const ctrler = new AbortController();
-        const container = document.scrollingElement;
-
-        if (!container) return;
-
-        container.addEventListener(
-            "scroll",
-            () => scrollY.start(container.scrollTop),
-            {
-                signal: ctrler.signal,
-            }
-        );
-
-        return () => ctrler.abort();
-    }, [inView, scrollY]);
-
-    return { ref, progress, inView };
+  return { ref, progress, inView };
 };
 
 export default useSticky;

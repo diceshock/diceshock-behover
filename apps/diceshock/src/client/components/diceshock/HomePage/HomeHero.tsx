@@ -1,13 +1,11 @@
-import _ from 'lodash';
-import { CopyrightIcon } from '@phosphor-icons/react/dist/ssr';
-
-import Rainbow from '@/client/components/diceshock/Rainbow';
-
-import LongTextLogo from '@/client/assets/svg/long-text-logo.svg?react';
-import BlackSimplifyLogo from '@/client/assets/svg/black-simplify-logo.svg?react';
-import Lighting from '@/client/assets/svg/lighting.svg?react';
-import Gradient from '../Gradient';
-import { Link } from '@tanstack/react-router';
+import { CopyrightIcon } from "@phosphor-icons/react/dist/ssr";
+import { Link } from "@tanstack/react-router";
+import _ from "lodash";
+import BlackSimplifyLogo from "@/client/assets/svg/black-simplify-logo.svg?react";
+import Lighting from "@/client/assets/svg/lighting.svg?react";
+import LongTextLogo from "@/client/assets/svg/long-text-logo.svg?react";
+import Rainbow from "@/client/components/diceshock/Rainbow";
+import Gradient from "../Gradient";
 
 const HomeHero = () => (
   <>
@@ -127,9 +125,9 @@ const HomeHero = () => (
     <Gradient
       direction="col"
       className={{
-        main: 'w-full h-40 bg-base-content hidden lg:flex',
-        a: 'bg-base-100',
-        b: 'bg-base-content',
+        main: "w-full h-40 bg-base-content hidden lg:flex",
+        a: "bg-base-100",
+        b: "bg-base-content",
       }}
     />
   </>

@@ -14,6 +14,11 @@ const config = defineConfig({
     tailwindcss(),
     tanstackRouter({
       target: "react",
+      routeTreeFileHeader: [
+        "// biome-ignore-all lint: gen",
+        "/* eslint-disable */",
+        "// @ts-nocheck",
+      ],
       autoCodeSplitting: true,
       routesDirectory: path.resolve(__dirname, "./src/apps/diceshock/routers"),
       generatedRouteTree: path.resolve(

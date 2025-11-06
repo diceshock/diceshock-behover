@@ -1,13 +1,12 @@
+import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import Footer from "@/client/components/diceshock/Footer";
 import Header from "@/client/components/diceshock/Header";
 import Msg from "@/client/components/diceshock/Msg";
 
-import { createFileRoute,Outlet, Link } from '@tanstack/react-router'
-
-export const Route = createFileRoute('/_with-home-lo')({
-    notFoundComponent: NotFound,
+export const Route = createFileRoute("/_with-home-lo")({
+  notFoundComponent: NotFound,
   component: _Home,
-})
+});
 
 function _Home() {
   return (

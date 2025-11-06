@@ -1,6 +1,6 @@
 import { createRouter as createTanstackRouter } from "@tanstack/react-router";
-import { routeTree } from "./routeTree.gen";
 import GlobalError from "../../client/components/GlobalError";
+import { routeTree } from "./routeTree.gen";
 
 export function createRouter() {
   const router = createTanstackRouter({

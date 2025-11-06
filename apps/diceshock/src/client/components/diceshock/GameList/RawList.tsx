@@ -1,14 +1,15 @@
-import React from 'react';
-import Swing from '../Swing';
+import type { BoardGame } from "@lib/db";
+import _ from "lodash";
+import type React from "react";
+import Swing from "../Swing";
+import LoadingImg from "./LoadingImg";
 
-import LoadingImg from './LoadingImg';
-import _ from 'lodash';
-import { BoardGame } from '@lib/db';
-
-const RawList: React.FC<{ games: BoardGame.BoardGameCol[] | null }> = ({ games }) => {
+const RawList: React.FC<{ games: BoardGame.BoardGameCol[] | null }> = ({
+  games,
+}) => {
   if (!games) return;
 
-  return _.unionBy(games, 'id').map(
+  return _.unionBy(games, "id").map(
     ({
       id,
       sch_name,
@@ -22,14 +23,14 @@ const RawList: React.FC<{ games: BoardGame.BoardGameCol[] | null }> = ({ games }
       <div
         key={id}
         className="tooltip tooltip-bottom"
-        data-tip={`${sch_name || eng_name}${sch_name ? ` (${eng_name})` : ''}`}
+        data-tip={`${sch_name || eng_name}${sch_name ? ` (${eng_name})` : ""}`}
       >
         <Swing
           className={{
             outer:
-              'size-min place-self-center [&_.game-meta]:hover:flex [&_.cover]:hover:flex hover:z-10',
+              "size-min place-self-center [&_.game-meta]:hover:flex [&_.cover]:hover:flex hover:z-10",
             inner:
-              'size-min m-2 w-[7.6rem] h-[8rem] sm:w-[12rem] sm:h-[15rem] lg:w-[18vw] lg:h-[22.5vw] max-w-[24rem] max-h-[30rem] [transform-style:preserve-3d] ',
+              "size-min m-2 w-[7.6rem] h-[8rem] sm:w-[12rem] sm:h-[15rem] lg:w-[18vw] lg:h-[22.5vw] max-w-[24rem] max-h-[30rem] [transform-style:preserve-3d] ",
           }}
         >
           <div className="card size-full relative bg-base-300 overflow-hidden">
@@ -59,7 +60,7 @@ const RawList: React.FC<{ games: BoardGame.BoardGameCol[] | null }> = ({ games }
                 >
                   {sch_domain_value || eng_domain_value}
                 </span>
-              )
+              ),
             )}
 
             {(Array.isArray(mode) ? mode : [mode])
@@ -79,7 +80,7 @@ const RawList: React.FC<{ games: BoardGame.BoardGameCol[] | null }> = ({ games }
               className="hidden lg:flex justify-center items-center absolute -bottom-2 -right-2 [transform:translateZ(1rem)] radial-progress text-primary border-0"
               style={
                 {
-                  '--value': gstone_rating * 10,
+                  "--value": gstone_rating * 10,
                 } as React.CSSProperties
               }
               role="progressbar"
@@ -93,7 +94,7 @@ const RawList: React.FC<{ games: BoardGame.BoardGameCol[] | null }> = ({ games }
           )}
         </Swing>
       </div>
-    )
+    ),
   );
 };
 

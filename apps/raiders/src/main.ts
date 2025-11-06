@@ -1,3 +1,3 @@
 export default {
-  async scheduled(controller, env, ctx) {},
+  async scheduled() {},
 } satisfies ExportedHandler<Cloudflare.Env>;

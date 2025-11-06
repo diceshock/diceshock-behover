@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "generate:drizzle": "drizzle-kit generate"
+    "generate:drizzle": "drizzle-kit generate",
+    "lint": "biome check"
   },
   "workspaces": [
     "apps/*",
@@ -19,13 +20,18 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.3.4",
     "@cloudflare/workers-types": "^4.20251106.1",
     "@nx/vite": "22.0.2",
+    "@nx/web": "22.0.2",
     "@types/node": "^24.10.0",
+    "@vitest/ui": "^3.0.0",
     "drizzle-kit": "^0.31.6",
+    "jiti": "2.4.2",
     "nx": "22.0.2",
     "typescript": "^5.9.3",
     "vite": "^7.2.1",
-    "vite-tsconfig-paths": "^5.1.4"
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^3.0.0"
   }
 }

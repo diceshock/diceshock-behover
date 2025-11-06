@@ -5,9 +5,5 @@ export const Route = createRootRoute({
 });
 
 function _Home() {
-  return (
-    <>
-      <Outlet />
-    </>
-  );
+  return <Outlet />;
 }

@@ -1,7 +1,7 @@
-import Logo from '@/client/assets/svg/black-simplify-with-text-logo.svg?react';
-import Gradient from './Gradient';
-import { ArrowUpIcon } from '@phosphor-icons/react/dist/ssr';
-import { Link } from '@tanstack/react-router';
+import { ArrowUpIcon } from "@phosphor-icons/react/dist/ssr";
+import { Link } from "@tanstack/react-router";
+import Logo from "@/client/assets/svg/black-simplify-with-text-logo.svg?react";
+import Gradient from "./Gradient";
 
 const Footer = () => {
   return (
@@ -9,9 +9,9 @@ const Footer = () => {
       <Gradient
         direction="col"
         className={{
-          main: 'w-full h-20',
-          a: 'bg-neutral',
-          b: 'bg-base-100',
+          main: "w-full h-20",
+          a: "bg-neutral",
+          b: "bg-base-100",
         }}
       />
 
@@ -74,10 +74,11 @@ const Footer = () => {
       </footer>
 
       <button
+        type="button"
         onClick={() =>
           document.scrollingElement?.scrollTo?.({
             top: 0,
-            behavior: 'smooth',
+            behavior: "smooth",
           })
         }
         className="w-full h-16 bg-primary hover:bg-base-100 hover:[&>h5]:text-base-content flex justify-between items-center"

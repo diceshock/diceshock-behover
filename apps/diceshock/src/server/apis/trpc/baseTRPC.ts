@@ -1,5 +1,5 @@
-import { HonoCtxEnv } from "@/shared/types";
 import { initTRPC } from "@trpc/server";
+import type { HonoCtxEnv } from "@/shared/types";
 
 const t = initTRPC.context<{ env: HonoCtxEnv["Bindings"] }>().create();
 

@@ -1,9 +1,9 @@
-import * as sqlite from "drizzle-orm/sqlite-core";
-import { relations } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
-import { docsContentZ, docsMetaZ } from "./types/table";
-import { BoardGameCol } from "./types/BoardGame";
-import z from "zod/v4";
+import { relations } from "drizzle-orm";
+import * as sqlite from "drizzle-orm/sqlite-core";
+import type z from "zod/v4";
+import type { BoardGameCol } from "./types/BoardGame";
+import type { docsContentZ, docsMetaZ } from "./types/table";
 
 export const docsTable = sqlite.sqliteTable("docs_table", {
   id: sqlite.text().$defaultFn(createId).primaryKey(),
@@ -62,7 +62,7 @@ export const activeTagMappingsTable = sqlite.sqliteTable(
       .notNull()
       .references(() => activeTagsTable.id),
   },
-  (t) => [sqlite.primaryKey({ columns: [t.active_id, t.tag_id] })]
+  (t) => [sqlite.primaryKey({ columns: [t.active_id, t.tag_id] })],
 );
 
 export const activeTagMappingsRelations = relations(
@@ -76,5 +76,5 @@ export const activeTagMappingsRelations = relations(
       fields: [activeTagMappingsTable.tag_id],
       references: [activeTagsTable.id],
     }),
-  })
+  }),
 );

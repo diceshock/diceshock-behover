@@ -1,9 +1,9 @@
 /*global NodeJS */
 
-import { userAgentMetaZ } from "@/server/middlewares/serverMetaInj";
-import type * as trpcServer from "@/server/apis/trpc";
-import { Env } from "hono";
+import type { Env } from "hono";
 import z from "zod";
+import type * as trpcServer from "@/server/apis/trpc";
+import { userAgentMetaZ } from "@/server/middlewares/serverMetaInj";
 
 export const injectCrossDataZ = z.object({
   UserAgentMeta: userAgentMetaZ.optional(),

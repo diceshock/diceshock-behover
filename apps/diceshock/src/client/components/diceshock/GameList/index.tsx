@@ -1,12 +1,12 @@
-import Filter, { filterCfgA } from './Filter';
-import React, { useEffect, useState } from 'react';
-import RawList from './RawList';
-import { useAtomValue } from 'jotai';
-import { BoardGame } from '@lib/db';
-import trpcClientPublic from '@/shared/utils/trpc';
-import { useInView } from '@react-spring/web';
-import uniqBy from 'lodash/uniqBy';
-import clsx from 'clsx';
+import type { BoardGame } from "@lib/db";
+import { useInView } from "@react-spring/web";
+import clsx from "clsx";
+import { useAtomValue } from "jotai";
+import uniqBy from "lodash/uniqBy";
+import React, { useEffect, useState } from "react";
+import trpcClientPublic from "@/shared/utils/trpc";
+import Filter, { filterCfgA } from "./Filter";
+import RawList from "./RawList";
 
 const GameList: React.FC<{
   className?: { outer?: string; filter?: string };
@@ -42,7 +42,7 @@ const GameList: React.FC<{
 
           if (!isSameFilter) setGames(gameArr);
 
-          setGames((prev) => uniqBy([...(prev ?? []), ...gameArr], 'id'));
+          setGames((prev) => uniqBy([...(prev ?? []), ...gameArr], "id"));
         })
         .finally(() => {
           setIsLoading(false);
@@ -56,9 +56,9 @@ const GameList: React.FC<{
   return (
     <div
       className={clsx(
-        'bg-neutral rounded-xl shadow-lg p-2 min-h-[calc(100vh-10rem)]',
-        'grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-y-2',
-        className?.outer
+        "bg-neutral rounded-xl shadow-lg p-2 min-h-[calc(100vh-10rem)]",
+        "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-y-2",
+        className?.outer,
       )}
     >
       <Filter className={className?.filter} />

@@ -1,13 +1,11 @@
-import * as drizzle from 'drizzle-orm';
-import { z } from 'zod/v4';
-
-import { publicProcedure } from './baseTRPC';
-
 import db, {
   activesTable,
   activeTagMappingsTable,
   activeTagsTable,
-} from '@lib/db';
+} from "@lib/db";
+import * as drizzle from "drizzle-orm";
+import { z } from "zod/v4";
+import { publicProcedure } from "./baseTRPC";
 
 const get = publicProcedure.query(async ({ ctx }) =>
   db(ctx.env.DB).transaction(async (tx) =>
@@ -19,15 +17,15 @@ const get = publicProcedure.query(async ({ ctx }) =>
       .from(activeTagsTable)
       .leftJoin(
         activeTagMappingsTable,
-        drizzle.eq(activeTagsTable.id, activeTagMappingsTable.tag_id)
+        drizzle.eq(activeTagsTable.id, activeTagMappingsTable.tag_id),
       )
       .leftJoin(
         activesTable,
-        drizzle.eq(activeTagMappingsTable.active_id, activesTable.id)
+        drizzle.eq(activeTagMappingsTable.active_id, activesTable.id),
       )
       .where(drizzle.eq(activesTable.is_deleted, false))
-      .groupBy(activeTagsTable.id)
-  )
+      .groupBy(activeTagsTable.id),
+  ),
 );
 
 export const activeTagTitleZ = z.object({
@@ -46,14 +44,14 @@ const insert = publicProcedure.input(insertZ).mutation(async ({ input, ctx }) =>
           where: (a, { eq }) => eq(a.id, activeId),
         });
 
-        if (!active) return { message: 'Active not found', ok: false } as const;
+        if (!active) return { message: "Active not found", ok: false } as const;
 
         const [tag] = await tx
           .insert(activeTagsTable)
           .values({ title })
           .returning();
 
-        if (tag) return { message: 'Tag creation failed', ok: false } as const;
+        if (tag) return { message: "Tag creation failed", ok: false } as const;
 
         const [relation] = await tx
           .insert(activeTagMappingsTable)
@@ -65,15 +63,15 @@ const insert = publicProcedure.input(insertZ).mutation(async ({ input, ctx }) =>
 
         if (!relation)
           return {
-            message: 'Tag mapping creation failed',
+            message: "Tag mapping creation failed",
             ok: false,
             tag,
           } as const;
 
         return tag;
-      })
-    )
-  )
+      }),
+    ),
+  ),
 );
 
 export default { get, insert };

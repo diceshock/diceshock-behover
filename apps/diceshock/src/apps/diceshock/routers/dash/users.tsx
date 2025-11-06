@@ -5,9 +5,5 @@ export const Route = createFileRoute("/dash/users")({
 });
 
 function RouteComponent() {
-  return (
-    <>
-      <main className=""></main>
-    </>
-  );
+  return <main className=""></main>;
 }

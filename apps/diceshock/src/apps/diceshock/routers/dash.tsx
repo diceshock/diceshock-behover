@@ -1,4 +1,3 @@
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import {
   GaugeIcon,
   PackageIcon,
@@ -6,6 +5,7 @@ import {
   SignpostIcon,
   UsersIcon,
 } from "@phosphor-icons/react/dist/ssr";
+import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import ThemeSwap from "@/client/components/ThemeSwap";
 
 export const Route = createFileRoute("/dash")({

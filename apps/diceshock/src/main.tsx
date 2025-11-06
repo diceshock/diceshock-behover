@@ -1,11 +1,10 @@
 import { Hono } from "hono";
-import type { HonoCtxEnv } from "@/shared/types";
-
-import edgeRoot from "@/server/apis/edgeRoot";
 import apisRoot from "@/server/apis/apisRoot";
 import diceshockRouter from "@/server/apis/diceshock";
-import trpcServerPublic from "./server/middlewares/trpcServerPublic";
+import edgeRoot from "@/server/apis/edgeRoot";
+import type { HonoCtxEnv } from "@/shared/types";
 import trpcServerDash from "./server/middlewares/trpcServerDash";
+import trpcServerPublic from "./server/middlewares/trpcServerPublic";
 
 export const app = new Hono<{ Bindings: HonoCtxEnv }>();
 
