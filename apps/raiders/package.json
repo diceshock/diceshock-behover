@@ -1,0 +1,20 @@
+{
+  "name": "raiders",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "generate:drizzle": "drizzle-kit generate",
+    "preview": "$npm_execpath run build && vite preview",
+    "deploy": "$npm_execpath run build && wrangler deploy",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "helper": "npm run start --workspace=scripts --"
+  },
+  "dependencies": {
+    "hono": "^4.10.4"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.13.7"
+  }
+}

@@ -1,0 +1,48 @@
+.lens-flare {
+	background: radial-gradient(
+		ellipse,
+		rgba(255, 255, 255, 0.95) 0%,
+		rgba(255, 255, 255, 0.85) 5%,
+		rgba(255, 236, 110, 0.8) 10%,
+		rgba(255, 193, 7, 0.75) 20%,
+		rgba(255, 152, 0, 0.7) 35%,
+		rgba(255, 87, 34, 0.5) 55%,
+		rgba(255, 87, 34, 0.2) 75%,
+		rgba(255, 87, 34, 0.1) 90%,
+		rgba(255, 87, 34, 0) 100%
+	);
+	border-radius: 50%;
+	filter: blur(25px);
+	box-shadow: 0 0 80px 20px rgba(255, 152, 0, 0.4);
+}
+
+.lens-flare-outer {
+	background: radial-gradient(
+		ellipse,
+		rgba(255, 255, 255, 0.1) 0%,
+		rgba(255, 255, 255, 0.1) 10%,
+		rgba(255, 236, 110, 0.1) 20%,
+		rgba(255, 193, 7, 0.1) 40%,
+		rgba(255, 152, 0, 0.1) 70%,
+		rgba(255, 87, 34, 0.1) 100%
+	);
+	border-radius: 50%;
+	filter: blur(25px);
+	box-shadow: 0 0 80px 20px rgba(255, 152, 0, 0.2);
+}
+
+.lens-overexposed {
+	background: radial-gradient(
+		ellipse,
+		rgba(255, 255, 255, 1) 0%,
+		rgba(255, 255, 255, 1) 20%,
+		rgba(255, 255, 255, 0.9) 40%,
+		rgba(255, 255, 255, 0.7) 60%,
+		rgba(255, 255, 255, 0.4) 80%,
+		rgba(255, 255, 255, 0) 100%
+	);
+	border-radius: 50%;
+	filter: blur(8px);
+	box-shadow: 0 0 80px 20px rgba(255, 255, 255, 0.6);
+	z-index: 10;
+}

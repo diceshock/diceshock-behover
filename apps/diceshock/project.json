@@ -1,0 +1,7 @@
+{
+  "targets": {
+    "lint": {
+      "command": "npx @biomejs/biome lint {projectRoot}"
+    }
+  }
+}
