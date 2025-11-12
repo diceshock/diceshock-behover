@@ -14,6 +14,7 @@ dist-server/
 
 # cache
 .tanstack
+apps/*/drizzle
 
 # deps
 node_modules/

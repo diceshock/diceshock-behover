@@ -10,6 +10,7 @@
     "deploy": "$npm_execpath run build && wrangler deploy",
     "deploy:update": "$npm_execpath run build && npx wrangler versions upload",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "drizzle": "drizzle-kit",
     "helper": "npm run start --workspace=scripts --"
   },
   "dependencies": {

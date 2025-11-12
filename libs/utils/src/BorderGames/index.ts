@@ -1,4 +1,8 @@
+import type { D1Database } from "@cloudflare/workers-types";
+import db, { boardGamesTable, drizzle } from "@lib/db";
+import dayjs from "dayjs";
 import _ from "lodash";
+
 import { sleep } from "..";
 import type { BoardGameCol } from "./types";
 
@@ -6,6 +10,57 @@ export * from "./types";
 
 const headers = new Headers();
 headers.append("Content-Type", "application/x-www-form-urlencoded");
+
+export async function syncDb(d1: D1Database) {
+  const fetched: BoardGameCol[] = [];
+
+  for await (const games of fetchOwnedBoardGames()) {
+    fetched.push(...games);
+  }
+
+  const q = await db(d1);
+
+  const clean = await q
+    .delete(boardGamesTable)
+    .where(
+      drizzle.and(
+        drizzle.gt(boardGamesTable.removeDate, 0),
+        drizzle.lt(
+          boardGamesTable.removeDate,
+          dayjs().subtract(2, "months").valueOf()
+        )
+      )
+    )
+    .returning();
+
+  const hidded = await q
+    .update(boardGamesTable)
+    .set({ removeDate: Date.now() })
+    .where(drizzle.eq(boardGamesTable.removeDate, 0))
+    .returning();
+
+  for (const g of fetched) {
+    await q.insert(boardGamesTable).values({
+      sch_name: g.sch_name,
+      eng_name: g.eng_name,
+      gstone_id: g.id,
+      gstone_rating: g.gstone_rating,
+      category: g.category,
+      mode: g.mode,
+      player_num: g.player_num
+        .map((n, i) => ({ n, i }))
+        .filter(({ n }) => n > 0)
+        .map(({ i }) => i),
+      best_player_num: g.player_num
+        .map((n, i) => ({ n, i }))
+        .filter(({ n }) => n > 1)
+        .map(({ i }) => i),
+      content: g,
+    });
+  }
+
+  return { fetched, clean_count: clean.length, hidded_count: hidded.length };
+}
 
 export async function* fetchOwnedBoardGames() {
   const page = _.range(0, 100);
