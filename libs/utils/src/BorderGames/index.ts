@@ -43,25 +43,28 @@ export async function syncDb(d1: D1Database) {
 
   console.log(hidded.length, " items hide");
 
-  await q.insert(boardGamesTable).values(
-    fetched.map((g) => ({
-      sch_name: g.sch_name,
-      eng_name: g.eng_name,
-      gstone_id: g.id,
-      gstone_rating: g.gstone_rating,
-      category: g.category,
-      mode: g.mode,
-      player_num: g.player_num
-        .map((n, i) => ({ n, i }))
-        .filter(({ n }) => n > 0)
-        .map(({ i }) => i),
-      best_player_num: g.player_num
-        .map((n, i) => ({ n, i }))
-        .filter(({ n }) => n > 1)
-        .map(({ i }) => i),
-      content: g,
-    }))
-  );
+  for (const chunk of _.chunk(fetched, 5)) {
+    await q.insert(boardGamesTable).values(
+      chunk.map((g) => ({
+        sch_name: g.sch_name,
+        eng_name: g.eng_name,
+        gstone_id: g.id,
+        gstone_rating: g.gstone_rating,
+        category: g.category,
+        mode: g.mode,
+        player_num: g.player_num
+          .map((n, i) => ({ n, i }))
+          .filter(({ n }) => n > 0)
+          .map(({ i }) => i),
+        best_player_num: g.player_num
+          .map((n, i) => ({ n, i }))
+          .filter(({ n }) => n > 1)
+          .map(({ i }) => i),
+        content: g,
+      }))
+    );
+  }
+
   console.log(fetched.length, " fetched items add");
 
   return { fetched, clean_count: clean.length, hidded_count: hidded.length };
