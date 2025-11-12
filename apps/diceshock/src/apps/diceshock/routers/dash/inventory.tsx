@@ -36,6 +36,7 @@ function RouteComponent() {
         await trpcClientDash.ownedManagement.sync.mutate();
 
       setSynced({ syncing: false, clean_count, hidded_count, fetched });
+      fetch();
     } catch {
       setSynced({ syncing: false });
     }
