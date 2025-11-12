@@ -61,7 +61,7 @@ function RouteComponent() {
             {synced.fetched?.length && (
               <li key="cleaned">
                 <CheckIcon className="size-4 me-2 inline-block text-success" />
-                清理了过期(超过三个月)数据
+                清理了过期(超过2个月)数据
                 <span>{synced.clean_count}</span>项
               </li>
             )}
