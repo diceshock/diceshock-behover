@@ -43,8 +43,8 @@ export async function syncDb(d1: D1Database) {
 
   console.log(hidded.length, " items hide");
 
-  for (const g of fetched) {
-    await q.insert(boardGamesTable).values({
+  await q.insert(boardGamesTable).values(
+    fetched.map((g) => ({
       sch_name: g.sch_name,
       eng_name: g.eng_name,
       gstone_id: g.id,
@@ -60,8 +60,8 @@ export async function syncDb(d1: D1Database) {
         .filter(({ n }) => n > 1)
         .map(({ i }) => i),
       content: g,
-    });
-  }
+    }))
+  );
   console.log(fetched.length, " fetched items add");
 
   return { fetched, clean_count: clean.length, hidded_count: hidded.length };
