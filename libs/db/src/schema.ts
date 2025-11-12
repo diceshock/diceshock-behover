@@ -1,8 +1,8 @@
+import type { BoardGame } from "@lib/utils";
 import { createId } from "@paralleldrive/cuid2";
 import { relations } from "drizzle-orm";
 import * as sqlite from "drizzle-orm/sqlite-core";
 import type z from "zod/v4";
-import type { BoardGameCol } from "./types/BoardGame";
 import type { docsContentZ, docsMetaZ } from "./types/table";
 
 export const docsTable = sqlite.sqliteTable("docs_table", {
@@ -18,11 +18,14 @@ export const boardGamesTable = sqlite.sqliteTable("board_games_table", {
   eng_name: sqlite.text(),
   gstone_id: sqlite.int(),
   gstone_rating: sqlite.real(),
-  category: sqlite.text({ mode: "json" }).$type<BoardGameCol["category"]>(),
-  mode: sqlite.text({ mode: "json" }).$type<BoardGameCol["mode"]>(),
+  category: sqlite
+    .text({ mode: "json" })
+    .$type<BoardGame.BoardGameCol["category"]>(),
+  mode: sqlite.text({ mode: "json" }).$type<BoardGame.BoardGameCol["mode"]>(),
   player_num: sqlite.text({ mode: "json" }).$type<number[]>(),
   best_player_num: sqlite.text({ mode: "json" }).$type<number[]>(),
-  content: sqlite.blob({ mode: "json" }).$type<BoardGameCol>(),
+  content: sqlite.blob({ mode: "json" }).$type<BoardGame.BoardGameCol>(),
+  removeDate: sqlite.integer("timestamp_ms").$default(() => 0),
 });
 
 export const activesTable = sqlite.sqliteTable("actives_table", {
@@ -62,7 +65,7 @@ export const activeTagMappingsTable = sqlite.sqliteTable(
       .notNull()
       .references(() => activeTagsTable.id),
   },
-  (t) => [sqlite.primaryKey({ columns: [t.active_id, t.tag_id] })],
+  (t) => [sqlite.primaryKey({ columns: [t.active_id, t.tag_id] })]
 );
 
 export const activeTagMappingsRelations = relations(
@@ -76,5 +79,5 @@ export const activeTagMappingsRelations = relations(
       fields: [activeTagMappingsTable.tag_id],
       references: [activeTagsTable.id],
     }),
-  }),
+  })
 );

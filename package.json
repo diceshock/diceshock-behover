@@ -10,12 +10,19 @@
     "apps/*",
     "libs/*"
   ],
+  "pnpm": {
+    "overrides": {
+      "jiti": "2.6.1"
+    }
+  },
   "dependencies": {
     "@paralleldrive/cuid2": "^2.3.1",
+    "dayjs": "^1.11.19",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.44.7",
     "drizzle-zod": "^0.8.3",
     "immer": "^10.2.0",
+    "lodash": "^4.17.21",
     "wrangler": "^4.46.0",
     "zod": "^4.1.12"
   },
@@ -24,6 +31,7 @@
     "@cloudflare/workers-types": "^4.20251106.1",
     "@nx/vite": "22.0.2",
     "@nx/web": "22.0.2",
+    "@types/lodash": "^4.17.20",
     "@types/node": "^24.10.0",
     "@vitest/ui": "^3.0.0",
     "drizzle-kit": "^0.31.6",

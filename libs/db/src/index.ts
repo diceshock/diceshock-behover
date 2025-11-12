@@ -1,11 +1,12 @@
-import type { D1Database } from "@cloudflare/workers-types";
-import { drizzle } from "drizzle-orm/d1";
-import * as schema from "./schema";
-
+export * from "./types/table";
+export { BoardGame } from "@lib/utils";
 export * from "./schema";
 export * from "./types";
-export * as BoardGame from "./types/BoardGame";
-export * from "./types/table";
+
+import * as schema from "./schema";
+import { drizzle } from "drizzle-orm/d1";
+import type { D1Database } from "@cloudflare/workers-types";
+
 
 export default function db(d1: D1Database) {
   return drizzle(d1, { schema });
