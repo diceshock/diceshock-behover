@@ -3,7 +3,23 @@ import { appRouterDash } from "@/server/apis/trpc";
 
 const trpcServerDash = trpcServer({
   router: appRouterDash,
-  onError: console.error,
+  onError({ error, path, input, ctx, type }) {
+    console.error(
+      JSON.stringify(
+        {
+          level: "error",
+          type,
+          path,
+          code: error.code,
+          message: error.message,
+          cause: error.cause,
+          input,
+        },
+        null,
+        2
+      )
+    );
+  },
 });
 
 export default trpcServerDash;
