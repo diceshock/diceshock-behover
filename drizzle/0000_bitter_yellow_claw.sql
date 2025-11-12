@@ -21,8 +21,7 @@ CREATE TABLE `actives_table` (
 	`content` text
 );
 --> statement-breakpoint
-PRAGMA foreign_keys=OFF;--> statement-breakpoint
-CREATE TABLE `__new_board_games_table` (
+CREATE TABLE `board_games_table` (
 	`id` text PRIMARY KEY NOT NULL,
 	`sch_name` text,
 	`eng_name` text,
@@ -36,17 +35,9 @@ CREATE TABLE `__new_board_games_table` (
 	`timestamp_ms` integer
 );
 --> statement-breakpoint
-INSERT INTO `__new_board_games_table`("id", "sch_name", "eng_name", "gstone_id", "gstone_rating", "category", "mode", "player_num", "best_player_num", "content", "timestamp_ms") SELECT "id", "sch_name", "eng_name", "gstone_id", "gstone_rating", "category", "mode", "player_num", "best_player_num", "content", "timestamp_ms" FROM `board_games_table`;--> statement-breakpoint
-DROP TABLE `board_games_table`;--> statement-breakpoint
-ALTER TABLE `__new_board_games_table` RENAME TO `board_games_table`;--> statement-breakpoint
-PRAGMA foreign_keys=ON;--> statement-breakpoint
-CREATE TABLE `__new_docs_table` (
+CREATE TABLE `docs_table` (
 	`id` text PRIMARY KEY NOT NULL,
 	`timestamp_ms` integer,
 	`meta` blob,
 	`content` text
 );
---> statement-breakpoint
-INSERT INTO `__new_docs_table`("id", "timestamp_ms", "meta", "content") SELECT "id", "timestamp_ms", "meta", "content" FROM `docs_table`;--> statement-breakpoint
-DROP TABLE `docs_table`;--> statement-breakpoint
-ALTER TABLE `__new_docs_table` RENAME TO `docs_table`;

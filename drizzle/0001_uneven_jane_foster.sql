@@ -1,0 +1,1 @@
+ALTER TABLE `board_games_table` RENAME COLUMN "timestamp_ms" TO "removeDate";

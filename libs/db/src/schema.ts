@@ -25,7 +25,9 @@ export const boardGamesTable = sqlite.sqliteTable("board_games_table", {
   player_num: sqlite.text({ mode: "json" }).$type<number[]>(),
   best_player_num: sqlite.text({ mode: "json" }).$type<number[]>(),
   content: sqlite.blob({ mode: "json" }).$type<BoardGame.BoardGameCol>(),
-  removeDate: sqlite.integer("timestamp_ms").$default(() => 0),
+  removeDate: sqlite
+    .integer({ mode: "timestamp_ms" })
+    .$default(() => new Date(0)),
 });
 
 export const activesTable = sqlite.sqliteTable("actives_table", {

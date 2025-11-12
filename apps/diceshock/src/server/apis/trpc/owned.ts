@@ -21,7 +21,7 @@ const get = publicProcedure
     const games = db(ctx.env.DB).query.boardGamesTable.findMany({
       where: (game, { like, or, and, eq }) =>
         and(
-          eq(game.removeDate, 0),
+          eq(game.removeDate, new Date(0)),
           trimmedSearchWords
             ? or(
                 like(game.sch_name, `%${trimmedSearchWords}%`),
@@ -68,12 +68,12 @@ const getCount = publicProcedure.query(async ({ ctx }) => {
     const [{ current }] = await q
       .select({ current: drizzle.count(boardGamesTable.id) })
       .from(boardGamesTable)
-      .where(drizzle.eq(boardGamesTable.removeDate, 0));
+      .where(drizzle.eq(boardGamesTable.removeDate, new Date(0)));
 
     const [{ removed }] = await q
       .select({ removed: drizzle.count(boardGamesTable.id) })
       .from(boardGamesTable)
-      .where(drizzle.gt(boardGamesTable.removeDate, 0));
+      .where(drizzle.gt(boardGamesTable.removeDate, new Date(0)));
 
     return { current, removed };
   } catch (error) {

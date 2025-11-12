@@ -24,10 +24,10 @@ export async function syncDb(d1: D1Database) {
     .delete(boardGamesTable)
     .where(
       drizzle.and(
-        drizzle.gt(boardGamesTable.removeDate, 0),
+        drizzle.gt(boardGamesTable.removeDate, new Date(0)),
         drizzle.lt(
           boardGamesTable.removeDate,
-          dayjs().subtract(2, "months").valueOf()
+          dayjs().subtract(2, "months").toDate()
         )
       )
     )
@@ -37,8 +37,8 @@ export async function syncDb(d1: D1Database) {
 
   const hidded = await q
     .update(boardGamesTable)
-    .set({ removeDate: Date.now() })
-    .where(drizzle.eq(boardGamesTable.removeDate, 0))
+    .set({ removeDate: new Date(Date.now()) })
+    .where(drizzle.eq(boardGamesTable.removeDate, new Date(0)))
     .returning();
 
   console.log(hidded.length, " items hide");
