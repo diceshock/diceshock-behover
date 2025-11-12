@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "generate:drizzle": "drizzle-kit generate",
+    "x": "nx run",
     "lint": "biome check"
   },
   "workspaces": [
