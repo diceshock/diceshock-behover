@@ -7,7 +7,9 @@
     "build": "vite build",
     "preview": "$npm_execpath run build && vite preview",
     "deploy": "$npm_execpath run build && wrangler deploy",
+    "deploy:update": "$npm_execpath run build && npx wrangler versions upload",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "drizzle": "drizzle-kit",
     "helper": "npm run start --workspace=scripts --"
   },
   "dependencies": {
@@ -33,6 +35,7 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-i18next": "^16.0.0",
+    "react-json-view-lite": "^2.5.0",
     "zdog": "^1.1.3"
   },
   "devDependencies": {

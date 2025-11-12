@@ -5,5 +5,9 @@ export const Route = createFileRoute("/dash/")({
 });
 
 function RouteComponent() {
-  return <main></main>;
+  return (
+    <main className="size-full">
+      <div className="card"></div>
+    </main>
+  );
 }

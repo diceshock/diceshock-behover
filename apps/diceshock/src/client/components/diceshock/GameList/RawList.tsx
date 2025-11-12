@@ -30,7 +30,7 @@ const RawList: React.FC<{ games: BoardGame.BoardGameCol[] | null }> = ({
             outer:
               "size-min place-self-center [&_.game-meta]:hover:flex [&_.cover]:hover:flex hover:z-10",
             inner:
-              "size-min m-2 w-[7.6rem] h-[8rem] sm:w-[12rem] sm:h-[15rem] lg:w-[18vw] lg:h-[22.5vw] max-w-[24rem] max-h-[30rem] [transform-style:preserve-3d] ",
+              "size-min m-2 w-[7.6rem] h-32 sm:w-48 sm:h-60 lg:w-[18vw] lg:h-[22.5vw] max-w-[24rem] max-h-120 transform-3d ",
           }}
         >
           <div className="card size-full relative bg-base-300 overflow-hidden">
@@ -42,11 +42,11 @@ const RawList: React.FC<{ games: BoardGame.BoardGameCol[] | null }> = ({
               alt="Game"
             />
 
-            <div className="cover hidden absolute top-0 size-full bg-gradient-to-b from-black/10 to-black/70" />
+            <div className="cover hidden absolute top-0 size-full bg-linear-to-b from-black/10 to-black/70" />
           </div>
 
-          <div className="absolute top-3 -left-2 [transform:translateZ(1rem)]">
-            <h5 className="max-w-[8rem] sm:max-w-[12rem] text-sm lg:text-xl sm:text-md shadow-lg text-nowrap overflow-hidden text-ellipsis bg-primary text-black font-bold px-2 py-1">
+          <div className="absolute top-3 -left-2 transform-[translateZ(1rem)]">
+            <h5 className="max-w-32 sm:max-w-48 text-sm lg:text-xl sm:text-md shadow-lg text-nowrap overflow-hidden text-ellipsis bg-primary text-black font-bold px-2 py-1">
               {sch_name || eng_name}
             </h5>
           </div>

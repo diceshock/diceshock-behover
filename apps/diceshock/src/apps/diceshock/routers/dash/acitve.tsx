@@ -18,7 +18,7 @@ export const Route = createFileRoute("/dash/acitve")({
 
 function RouteComponent() {
   return (
-    <div className="size-full">
+    <main className="size-full">
       <form className="w-full flex flex-col items-center gap-6 px-4 pt-4 bg-base-100 z-10">
         <div className="flex flex-col sm:flex-row gap-4 w-full">
           <input
@@ -257,6 +257,6 @@ function RouteComponent() {
           </tbody>
         </table>
       </div>
-    </div>
+    </main>
   );
 }

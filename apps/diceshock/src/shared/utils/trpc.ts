@@ -2,7 +2,7 @@ import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import type { ApiRouterDash, ApiRouterPublic } from "../types";
 
 const trpcClientDash = createTRPCClient<ApiRouterDash>({
-  links: [httpBatchLink({ url: "/apis/dash" })],
+  links: [httpBatchLink({ url: "/edge" })],
 });
 
 const trpcClientPublic = createTRPCClient<ApiRouterPublic>({
