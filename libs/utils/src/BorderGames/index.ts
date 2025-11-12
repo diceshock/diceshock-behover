@@ -33,11 +33,15 @@ export async function syncDb(d1: D1Database) {
     )
     .returning();
 
+  console.log(clean.length, " items clean");
+
   const hidded = await q
     .update(boardGamesTable)
     .set({ removeDate: Date.now() })
     .where(drizzle.eq(boardGamesTable.removeDate, 0))
     .returning();
+
+  console.log(hidded.length, " items hide");
 
   for (const g of fetched) {
     await q.insert(boardGamesTable).values({
@@ -58,6 +62,7 @@ export async function syncDb(d1: D1Database) {
       content: g,
     });
   }
+  console.log(fetched.length, " fetched items add");
 
   return { fetched, clean_count: clean.length, hidded_count: hidded.length };
 }
