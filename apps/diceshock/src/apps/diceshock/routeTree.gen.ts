@@ -8,8 +8,9 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
+import { createFileRoute } from '@tanstack/react-router'
+
 import { Route as rootRouteImport } from './routers/__root'
-import { Route as DashRouteImport } from './routers/dash'
 import { Route as WithHomeLoRouteImport } from './routers/_with-home-lo'
 import { Route as DashIndexRouteImport } from './routers/dash/index'
 import { Route as WithHomeLoIndexRouteImport } from './routers/_with-home-lo/index'
@@ -20,11 +21,13 @@ import { Route as WithHomeLoInventoryRouteImport } from './routers/_with-home-lo
 import { Route as WithHomeLoDiceshockAgentsRouteImport } from './routers/_with-home-lo/diceshock-agents'
 import { Route as WithHomeLoContactUsRouteImport } from './routers/_with-home-lo/contact-us'
 
-const DashRoute = DashRouteImport.update({
+const DashLazyRouteImport = createFileRoute('/dash')()
+
+const DashLazyRoute = DashLazyRouteImport.update({
   id: '/dash',
   path: '/dash',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() => import('./routers/dash.lazy').then((d) => d.Route))
 const WithHomeLoRoute = WithHomeLoRouteImport.update({
   id: '/_with-home-lo',
   getParentRoute: () => rootRouteImport,
@@ -32,7 +35,7 @@ const WithHomeLoRoute = WithHomeLoRouteImport.update({
 const DashIndexRoute = DashIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => DashRoute,
+  getParentRoute: () => DashLazyRoute,
 } as any)
 const WithHomeLoIndexRoute = WithHomeLoIndexRouteImport.update({
   id: '/',
@@ -42,17 +45,17 @@ const WithHomeLoIndexRoute = WithHomeLoIndexRouteImport.update({
 const DashUsersRoute = DashUsersRouteImport.update({
   id: '/users',
   path: '/users',
-  getParentRoute: () => DashRoute,
+  getParentRoute: () => DashLazyRoute,
 } as any)
 const DashInventoryRoute = DashInventoryRouteImport.update({
   id: '/inventory',
   path: '/inventory',
-  getParentRoute: () => DashRoute,
+  getParentRoute: () => DashLazyRoute,
 } as any)
 const DashAcitveRoute = DashAcitveRouteImport.update({
   id: '/acitve',
   path: '/acitve',
-  getParentRoute: () => DashRoute,
+  getParentRoute: () => DashLazyRoute,
 } as any)
 const WithHomeLoInventoryRoute = WithHomeLoInventoryRouteImport.update({
   id: '/inventory',
@@ -72,7 +75,7 @@ const WithHomeLoContactUsRoute = WithHomeLoContactUsRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/dash': typeof DashRouteWithChildren
+  '/dash': typeof DashLazyRouteWithChildren
   '/contact-us': typeof WithHomeLoContactUsRoute
   '/diceshock-agents': typeof WithHomeLoDiceshockAgentsRoute
   '/inventory': typeof WithHomeLoInventoryRoute
@@ -95,7 +98,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_with-home-lo': typeof WithHomeLoRouteWithChildren
-  '/dash': typeof DashRouteWithChildren
+  '/dash': typeof DashLazyRouteWithChildren
   '/_with-home-lo/contact-us': typeof WithHomeLoContactUsRoute
   '/_with-home-lo/diceshock-agents': typeof WithHomeLoDiceshockAgentsRoute
   '/_with-home-lo/inventory': typeof WithHomeLoInventoryRoute
@@ -143,7 +146,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   WithHomeLoRoute: typeof WithHomeLoRouteWithChildren
-  DashRoute: typeof DashRouteWithChildren
+  DashLazyRoute: typeof DashLazyRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -152,7 +155,7 @@ declare module '@tanstack/react-router' {
       id: '/dash'
       path: '/dash'
       fullPath: '/dash'
-      preLoaderRoute: typeof DashRouteImport
+      preLoaderRoute: typeof DashLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_with-home-lo': {
@@ -167,7 +170,7 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/dash/'
       preLoaderRoute: typeof DashIndexRouteImport
-      parentRoute: typeof DashRoute
+      parentRoute: typeof DashLazyRoute
     }
     '/_with-home-lo/': {
       id: '/_with-home-lo/'
@@ -181,21 +184,21 @@ declare module '@tanstack/react-router' {
       path: '/users'
       fullPath: '/dash/users'
       preLoaderRoute: typeof DashUsersRouteImport
-      parentRoute: typeof DashRoute
+      parentRoute: typeof DashLazyRoute
     }
     '/dash/inventory': {
       id: '/dash/inventory'
       path: '/inventory'
       fullPath: '/dash/inventory'
       preLoaderRoute: typeof DashInventoryRouteImport
-      parentRoute: typeof DashRoute
+      parentRoute: typeof DashLazyRoute
     }
     '/dash/acitve': {
       id: '/dash/acitve'
       path: '/acitve'
       fullPath: '/dash/acitve'
       preLoaderRoute: typeof DashAcitveRouteImport
-      parentRoute: typeof DashRoute
+      parentRoute: typeof DashLazyRoute
     }
     '/_with-home-lo/inventory': {
       id: '/_with-home-lo/inventory'
@@ -239,25 +242,27 @@ const WithHomeLoRouteWithChildren = WithHomeLoRoute._addFileChildren(
   WithHomeLoRouteChildren,
 )
 
-interface DashRouteChildren {
+interface DashLazyRouteChildren {
   DashAcitveRoute: typeof DashAcitveRoute
   DashInventoryRoute: typeof DashInventoryRoute
   DashUsersRoute: typeof DashUsersRoute
   DashIndexRoute: typeof DashIndexRoute
 }
 
-const DashRouteChildren: DashRouteChildren = {
+const DashLazyRouteChildren: DashLazyRouteChildren = {
   DashAcitveRoute: DashAcitveRoute,
   DashInventoryRoute: DashInventoryRoute,
   DashUsersRoute: DashUsersRoute,
   DashIndexRoute: DashIndexRoute,
 }
 
-const DashRouteWithChildren = DashRoute._addFileChildren(DashRouteChildren)
+const DashLazyRouteWithChildren = DashLazyRoute._addFileChildren(
+  DashLazyRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   WithHomeLoRoute: WithHomeLoRouteWithChildren,
-  DashRoute: DashRouteWithChildren,
+  DashLazyRoute: DashLazyRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
