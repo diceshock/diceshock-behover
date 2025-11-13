@@ -51,7 +51,7 @@ function RouteComponent() {
 
         if (!patch) break;
 
-        fetched.push(...patch.fetched);
+        fetched.unshift(...patch.fetched);
         setSynced({ syncing: true, fetched });
       }
 
