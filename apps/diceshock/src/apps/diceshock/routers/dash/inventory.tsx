@@ -2,7 +2,7 @@ import type { BoardGame } from "@lib/utils";
 import { CheckIcon, WarningIcon } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { defaultStyles, JsonView } from "react-json-view-lite";
+import { allExpanded, defaultStyles, JsonView } from "react-json-view-lite";
 import trpcClientPublic, { trpcClientDash } from "@/shared/utils/trpc";
 import "react-json-view-lite/dist/index.css";
 import _ from "lodash";
@@ -31,27 +31,32 @@ function RouteComponent() {
   }>({ syncing: false });
 
   const sync = useCallback(async () => {
-    if (synced.syncing) return
+    if (synced.syncing) return;
 
     try {
       setSynced({ syncing: true });
 
       const page = _.range(0, 100);
       const reqChunks = _.chunk(page, 20);
-      const date = Date.now()
+      const date = Date.now();
 
-      const fetched: BoardGame.BoardGameCol[] = []
+      const fetched: BoardGame.BoardGameCol[] = [];
 
       for await (const chunk of reqChunks) {
-        const patch = await trpcClientDash.ownedManagement.sync.mutate({ pageFrom: chunk.at(0)!, pageTo: chunk.at(-1)!, date })
+        const patch = await trpcClientDash.ownedManagement.sync.mutate({
+          pageFrom: chunk.at(0)!,
+          pageTo: chunk.at(-1)!,
+          date,
+        });
 
-        if (!patch) break
+        if (!patch) break;
 
-        fetched.push(...patch.fetched)
-        setSynced({ syncing: true, fetched })
+        fetched.push(...patch.fetched);
+        setSynced({ syncing: true, fetched });
       }
 
-      const { clean, hidded } = await trpcClientDash.ownedManagement.wake.mutate({ date })
+      const { clean, hidded } =
+        await trpcClientDash.ownedManagement.wake.mutate({ date });
 
       setSynced({ syncing: false, clean, hidded, fetched });
       fetch();
@@ -77,14 +82,14 @@ function RouteComponent() {
             )}
           </div>
           <ul className="mt-6 flex flex-col gap-2 text-xs h-40">
-            {synced.fetched?.length && (
+            {synced.clean && (
               <li key="cleaned">
                 <CheckIcon className="size-4 me-2 inline-block text-success" />
                 清理了过期(超过2个月)数据
                 <span>{synced.clean}</span>项
               </li>
             )}
-            {synced.fetched?.length && (
+            {synced.hidded && (
               <li key="hidden">
                 <CheckIcon className="size-4 me-2 inline-block text-success" />
                 移动
@@ -121,7 +126,7 @@ function RouteComponent() {
       {synced.fetched && (
         <JsonView
           data={synced.fetched}
-          shouldExpandNode={() => false}
+          shouldExpandNode={allExpanded}
           style={defaultStyles}
         />
       )}
