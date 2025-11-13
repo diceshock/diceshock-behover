@@ -1,7 +1,3 @@
-import db, { boardGamesTable } from "@lib/db";
-import { BoardGame } from "@lib/utils";
-import dayjs from "dayjs";
-import * as drizzle from "drizzle-orm";
 import { type Env, Hono } from "hono";
 import page from "./apis/page";
 
@@ -15,11 +11,8 @@ app.get("/", page);
 
 const scheduled: ExportedHandlerScheduledHandler<Cloudflare.Env> = async (
   _controller,
-  env,
   _ctx
-) => {
-  await BoardGame.syncDb(env.DB);
-};
+) => {};
 
 export default {
   fetch: app.fetch,

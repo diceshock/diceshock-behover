@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { defaultStyles, JsonView } from "react-json-view-lite";
 import trpcClientPublic, { trpcClientDash } from "@/shared/utils/trpc";
 import "react-json-view-lite/dist/index.css";
+import _ from "lodash";
 
 export const Route = createFileRoute("/dash/inventory")({
   component: RouteComponent,
@@ -24,23 +25,40 @@ function RouteComponent() {
 
   const [synced, setSynced] = useState<{
     syncing: boolean;
-    clean_count?: number;
-    hidded_count?: number;
+    clean?: number;
+    hidded?: number;
     fetched?: BoardGame.BoardGameCol[];
   }>({ syncing: false });
 
   const sync = useCallback(async () => {
+    if (synced.syncing) return
+
     try {
       setSynced({ syncing: true });
-      const { clean_count, hidded_count, fetched } =
-        await trpcClientDash.ownedManagement.sync.mutate();
 
-      setSynced({ syncing: false, clean_count, hidded_count, fetched });
+      const page = _.range(0, 100);
+      const reqChunks = _.chunk(page, 20);
+      const date = Date.now()
+
+      const fetched: BoardGame.BoardGameCol[] = []
+
+      for await (const chunk of reqChunks) {
+        const patch = await trpcClientDash.ownedManagement.sync.mutate({ pageFrom: chunk.at(0)!, pageTo: chunk.at(-1)!, date })
+
+        if (!patch) break
+
+        fetched.push(...patch.fetched)
+        setSynced({ syncing: true, fetched })
+      }
+
+      const { clean, hidded } = await trpcClientDash.ownedManagement.wake.mutate({ date })
+
+      setSynced({ syncing: false, clean, hidded, fetched });
       fetch();
     } catch {
       setSynced({ syncing: false });
     }
-  }, []);
+  }, [fetch, synced.syncing]);
 
   useEffect(() => {
     fetch();
@@ -63,14 +81,14 @@ function RouteComponent() {
               <li key="cleaned">
                 <CheckIcon className="size-4 me-2 inline-block text-success" />
                 清理了过期(超过2个月)数据
-                <span>{synced.clean_count}</span>项
+                <span>{synced.clean}</span>项
               </li>
             )}
             {synced.fetched?.length && (
               <li key="hidden">
                 <CheckIcon className="size-4 me-2 inline-block text-success" />
                 移动
-                <span>{synced.hidded_count}</span>项数据到回收站
+                <span>{synced.hidded}</span>项数据到回收站
               </li>
             )}
             {synced.fetched?.length && (
