@@ -82,21 +82,21 @@ function RouteComponent() {
             )}
           </div>
           <ul className="mt-6 flex flex-col gap-2 text-xs h-40">
-            {synced.clean && (
+            {(synced.clean ?? null) && (
               <li key="cleaned">
                 <CheckIcon className="size-4 me-2 inline-block text-success" />
                 清理了过期(超过2个月)数据
                 <span>{synced.clean}</span>项
               </li>
             )}
-            {synced.hidded && (
+            {(synced.hidded ?? null) && (
               <li key="hidden">
                 <CheckIcon className="size-4 me-2 inline-block text-success" />
                 移动
                 <span>{synced.hidded}</span>项数据到回收站
               </li>
             )}
-            {synced.fetched?.length && (
+            {(synced.fetched?.length ?? null) && (
               <li key="fetched">
                 <CheckIcon className="size-4 me-2 inline-block text-success" />
                 总共爬取了
