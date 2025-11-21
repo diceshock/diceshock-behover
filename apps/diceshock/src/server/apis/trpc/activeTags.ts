@@ -6,72 +6,62 @@ import db, {
 } from "@lib/db";
 import { z } from "zod/v4";
 import { publicProcedure } from "./baseTRPC";
+import { createPortal  } from "react-dom";
 
-const get = publicProcedure.query(async ({ ctx }) =>
-  db(ctx.env.DB).transaction(async (tx) =>
-    tx
-      .select({
-        id: activeTagsTable.id,
-        title: activeTagsTable.title,
-      })
-      .from(activeTagsTable)
-      .leftJoin(
-        activeTagMappingsTable,
-        drizzle.eq(activeTagsTable.id, activeTagMappingsTable.tag_id)
-      )
-      .leftJoin(
-        activesTable,
-        drizzle.eq(activeTagMappingsTable.active_id, activesTable.id)
-      )
-      .where(drizzle.eq(activesTable.is_deleted, false))
-      .groupBy(activeTagsTable.id)
-  )
-);
+const get = publicProcedure.query(async ({ ctx }) => {
+  const tdb = db(ctx.env.DB);
+
+  const allTags = await tdb.query.activeTagsTable.findMany();
+
+  return allTags.map((tag) => ({
+    id: tag.id,
+    title: tag.title,
+  }));
+});
 
 export const activeTagTitleZ = z.object({
-  tx: z.emoji().nonempty(),
+  tx: z.string().nonempty(),
   emoji: z.string().nonempty(),
 });
 const insertZ = z
   .object({ activeId: z.string(), title: activeTagTitleZ })
   .array();
 
-const insert = publicProcedure.input(insertZ).mutation(async ({ input, ctx }) =>
-  db(ctx.env.DB).transaction(async (tx) =>
-    Promise.all(
-      input.map(async ({ activeId, title }) => {
-        const active = await tx.query.activesTable.findFirst({
-          where: (a, { eq }) => eq(a.id, activeId),
-        });
+const insert = publicProcedure.input(insertZ).mutation(async ({ input, ctx }) => {
+  const tdb = db(ctx.env.DB);
 
-        if (!active) return { message: "Active not found", ok: false } as const;
+  return Promise.all(
+    input.map(async ({ activeId, title }) => {
+      const active = await tdb.query.activesTable.findFirst({
+        where: (a, { eq }) => eq(a.id, activeId),
+      });
 
-        const [tag] = await tx
-          .insert(activeTagsTable)
-          .values({ title })
-          .returning();
+      if (!active) return { message: "Active not found", ok: false } as const;
 
-        if (tag) return { message: "Tag creation failed", ok: false } as const;
+      const [tag] = await tdb
+        .insert(activeTagsTable)
+        .values({ title })
+        .returning();
 
-        const [relation] = await tx
-          .insert(activeTagMappingsTable)
-          .values({
-            active_id: activeId,
-            tag_id: tag,
-          })
-          .returning();
+      if (!tag) return { message: "Tag creation failed", ok: false } as const;
 
-        if (!relation)
-          return {
-            message: "Tag mapping creation failed",
-            ok: false,
-            tag,
-          } as const;
+      const [relation] = await tdb
+        .insert(activeTagMappingsTable)
+        .values({
+          active_id: activeId,
+          tag_id: tag.id,
+        })
+        .returning();
 
-        return tag;
-      })
-    )
-  )
-);
+      if (!relation)
+        return {
+          message: "Tag mapping creation failed",
+          ok: false,
+        } as const;
+
+      return tag;
+    })
+  );
+});
 
 export default { get, insert };

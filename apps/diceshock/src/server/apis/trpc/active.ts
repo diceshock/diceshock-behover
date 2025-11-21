@@ -85,41 +85,70 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
     tags: tagIds,
   } = input;
 
-  return await tdb.transaction(async (tx) => {
-    const acitves = await tx
-      .update(activesTable)
-      .set({ name, is_deleted, is_published, description, content })
-      .where(drizzle.eq(activesTable.id, id))
-      .returning();
+  // 构建更新对象，只包含已定义的字段
+  const updateData: {
+    name?: string;
+    is_deleted?: boolean;
+    is_published?: boolean;
+    description?: string;
+    content?: string;
+  } = {};
 
-    if (!acitves.length || !tagIds) return acitves;
+  if (name !== undefined) updateData.name = name;
+  if (is_deleted !== undefined) updateData.is_deleted = is_deleted;
+  if (is_published !== undefined) updateData.is_published = is_published;
+  if (description !== undefined) updateData.description = description;
+  if (content !== undefined) updateData.content = content;
 
-    await tx
-      .delete(activeTagMappingsTable)
-      .where(drizzle.eq(activeTagMappingsTable.active_id, id));
-
-    const tags = await tx.query.activeTagsTable.findMany({
-      where: (t, { inArray }) => inArray(t.id, tagIds),
+  // 如果没有要更新的字段，直接返回（或者只处理标签）
+  if (Object.keys(updateData).length === 0 && !tagIds) {
+    return await tdb.query.activesTable.findMany({
+      where: (a, { eq }) => eq(a.id, id),
     });
+  }
 
-    await tx
+  const acitves = Object.keys(updateData).length > 0
+    ? await tdb
+        .update(activesTable)
+        .set(updateData)
+        .where(drizzle.eq(activesTable.id, id))
+        .returning()
+    : await tdb.query.activesTable.findMany({
+        where: (a, { eq }) => eq(a.id, id),
+      });
+
+  if (!acitves.length || !tagIds) return acitves;
+
+  await tdb
+    .delete(activeTagMappingsTable)
+    .where(drizzle.eq(activeTagMappingsTable.active_id, id));
+
+  const tags = await tdb.query.activeTagsTable.findMany({
+    where: (t, { inArray }) => inArray(t.id, tagIds),
+  });
+
+  if (tags.length > 0) {
+    await tdb
       .insert(activeTagMappingsTable)
       .values(tags.map((t) => ({ active_id: id, tag_id: t.id })));
+  }
 
-    await tx
+  // 删除未被任何活动使用的标签
+  const allMappings = await tdb.query.activeTagMappingsTable.findMany();
+  const usedTagIds = new Set(allMappings.map((m) => m.tag_id));
+
+  const allTags = await tdb.query.activeTagsTable.findMany();
+  const unusedTagIds = allTags
+    .filter((tag) => !usedTagIds.has(tag.id))
+    .map((tag) => tag.id);
+
+  if (unusedTagIds.length > 0) {
+    await tdb
       .delete(activeTagsTable)
-      .where(
-        drizzle.notInArray(
-          activesTable.id,
-          tx
-            .select({ tag_id: activeTagMappingsTable.tag_id })
-            .from(activeTagMappingsTable)
-            .groupBy(activeTagMappingsTable.tag_id)
-        )
-      );
+      .where(drizzle.inArray(activeTagsTable.id, unusedTagIds));
+  }
 
-    return acitves;
-  });
+  return acitves;
 };
 
 const insert = async (env: Cloudflare.Env, input: z.infer<typeof insertZ>) => {
@@ -127,26 +156,66 @@ const insert = async (env: Cloudflare.Env, input: z.infer<typeof insertZ>) => {
 
   const { name, description, content, tags: tagIds } = input;
 
-  return await tdb.transaction(async (tx) => {
-    const tags = await tx.query.activeTagsTable.findMany({
+  // 先创建活动
+  const newActive = await tdb
+    .insert(activesTable)
+    .values({ name, description, content })
+    .returning();
+
+  // 如果有标签，创建标签映射
+  if (tagIds && tagIds.length > 0) {
+    const tags = await tdb.query.activeTagsTable.findMany({
       where: (t, { inArray }) => inArray(t.id, tagIds),
     });
 
-    const newActive = await tx
-      .insert(activesTable)
-      .values({ name, description, content })
-      .returning();
+    if (tags.length > 0) {
+      await tdb
+        .insert(activeTagMappingsTable)
+        .values(
+          newActive.flatMap(({ id: active_id }) =>
+            tags.map(({ id: tag_id }) => ({ active_id, tag_id }))
+          )
+        );
+    }
+  }
 
-    await tx
-      .insert(activeTagMappingsTable)
-      .values(
-        newActive.flatMap(({ id: active_id }) =>
-          tags.map(({ id: tag_id }) => ({ active_id, tag_id }))
-        )
-      );
+  return newActive;
+};
 
-    return newActive;
-  });
+const deleteZ = z.object({
+  id: z.string(),
+});
+
+const deleteActive = async (env: Cloudflare.Env, input: z.infer<typeof deleteZ>) => {
+  const tdb = db(env.DB);
+  const { id } = input;
+
+  // 删除活动的标签映射
+  await tdb
+    .delete(activeTagMappingsTable)
+    .where(drizzle.eq(activeTagMappingsTable.active_id, id));
+
+  // 删除活动本身
+  await tdb
+    .delete(activesTable)
+    .where(drizzle.eq(activesTable.id, id));
+
+  // 清理未被任何活动使用的标签
+  const allMappings = await tdb.query.activeTagMappingsTable.findMany();
+  const usedTagIds = new Set(allMappings.map((m) => m.tag_id));
+
+  const allTags = await tdb.query.activeTagsTable.findMany();
+  const unusedTagIds = allTags
+    .filter((tag) => !usedTagIds.has(tag.id))
+    .map((tag) => tag.id);
+
+  if (unusedTagIds.length > 0) {
+    await tdb
+      .delete(activeTagsTable)
+      .where(drizzle.inArray(activeTagsTable.id, unusedTagIds));
+  }
+
+  return { success: true };
 };
 
 const mutation = publicProcedure
@@ -156,4 +225,10 @@ const mutation = publicProcedure
     return insert(ctx.env, input);
   });
 
-export default { get, mutation };
+const deleteMutation = publicProcedure
+  .input(deleteZ)
+  .mutation(async ({ input, ctx }) => {
+    return deleteActive(ctx.env, input);
+  });
+
+export default { get, mutation, delete: deleteMutation };

@@ -26,7 +26,7 @@ head_sampling_rate = 1
 binding = "DB"
 database_name = "diceshock"
 database_id = "24c01d5e-c4d7-4b13-bb59-5ad3373971e9"
-migrations_dir = "drizzle"
+migrations_dir = "../../drizzle"
 
 [triggers]
 crons = ["0 16 * * *"]
