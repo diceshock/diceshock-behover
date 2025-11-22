@@ -24,7 +24,7 @@ const get = publicProcedure
       params: { isDeleted = false, isPublished, searchWords, tags },
     } = input;
 
-    const actives = db(ctx.env.DB).query.activesTable.findMany({
+    const actives = await db(ctx.env.DB).query.activesTable.findMany({
       where: (acitve, { or, and, like, eq }) =>
         and(
           searchWords

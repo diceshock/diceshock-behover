@@ -6,8 +6,9 @@ import ownedManagement from "./ownedManagement";
 
 export const appRouterDash = router({ active, activeTags, ownedManagement });
 
-// Public API 只暴露 getById，用于预览页面
+// Public API 暴露活动相关的查询接口
 export const appRouterPublic = router({
   owned,
-  active: { getById: active.getById },
+  active: { get: active.get, getById: active.getById },
+  activeTags: { get: activeTags.get },
 });
