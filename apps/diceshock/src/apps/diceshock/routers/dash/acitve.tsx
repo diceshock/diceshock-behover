@@ -9,7 +9,7 @@ import {
   UsersIcon,
   XIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import dayjs from "dayjs";
 import {
   useCallback,
@@ -70,7 +70,6 @@ function RouteComponent() {
 
   const createDialogRef = useRef<HTMLDialogElement>(null);
   const editDialogRef = useRef<HTMLDialogElement>(null);
-  const viewDialogRef = useRef<HTMLDialogElement>(null);
   const deleteDialogRef = useRef<HTMLDialogElement>(null);
 
   const searchWordsRef = useRef(searchWords);
@@ -107,7 +106,6 @@ function RouteComponent() {
   } | null>(null);
   const [editPending, setEditPending] = useState(false);
 
-  const [viewingActive, setViewingActive] = useState<ActiveItem | null>(null);
   const [pendingDelete, setPendingDelete] = useState<ActiveItem | null>(null);
   const [tagDraft, setTagDraft] = useState({ emoji: "", tx: "" });
 
@@ -362,11 +360,6 @@ function RouteComponent() {
     }
   };
 
-  const openViewDialog = (active: ActiveItem) => {
-    setViewingActive(active);
-    viewDialogRef.current?.showModal();
-  };
-
   const openDeleteDialog = (active: ActiveItem) => {
     // 使用 setTimeout 确保状态更新后再显示对话框，避免闪烁
     setPendingDelete(active);
@@ -566,13 +559,13 @@ function RouteComponent() {
                         </label>
                       </th>
                       <td className="p-0">
-                        <button
-                          type="button"
+                        <Link
+                          to="/dash/active/$id"
+                          params={{ id: active.id }}
                           className="btn btn-ghost w-40 justify-start m-0 truncate line-clamp-1"
-                          onClick={() => openViewDialog(active)}
                         >
                           {active.name || "未命名活动"}
-                        </button>
+                        </Link>
                       </td>
                       <td>
                         <label className={`size-full flex items-center gap-2 text-nowrap ${active.is_deleted ? "opacity-50 cursor-not-allowed" : "hover:cursor-pointer"}`}>
@@ -595,15 +588,15 @@ function RouteComponent() {
                         </label>
                       </td>
                       <td className="p-0">
-                        <button
-                          type="button"
+                        <Link
+                          to="/dash/active/$id"
+                          params={{ id: active.id }}
                           className="btn btn-ghost justify-start w-full"
-                          onClick={() => openViewDialog(active)}
                         >
                           <p className="w-full max-w-80 m-0 truncate line-clamp-1">
                             {active.description || "暂无简介"}
                           </p>
-                        </button>
+                        </Link>
                       </td>
                       <td>
                         <div className="flex flex-wrap gap-2">
@@ -642,14 +635,6 @@ function RouteComponent() {
                             <PencilLineIcon />
                           </button>
 
-                          <button
-                            type="button"
-                            className="btn btn-xs btn-ghost"
-                            onClick={() => openViewDialog(active)}
-                          >
-                            查看
-                            <ArrowBendUpRightIcon />
-                          </button>
 
                           <button
                             type="button"
@@ -861,7 +846,7 @@ function RouteComponent() {
                   }
                 />
                 <input
-                  className="input input-bordered input-sm flex-1 min-w-[10rem]"
+                  className="input input-bordered input-sm flex-1 min-w-40"
                   placeholder="标签名称"
                   value={tagDraft.tx}
                   onChange={(evt) =>
@@ -918,61 +903,6 @@ function RouteComponent() {
             </button>
           </div>
         </form>
-      </dialog>
-
-      <dialog ref={viewDialogRef} className="modal">
-        <div className="modal-box max-w-3xl">
-          <div className="modal-action flex items-center justify-between mb-4">
-            <h3 className="font-bold text-lg">活动详情</h3>
-            <button
-              type="button"
-              className="btn btn-ghost btn-square"
-              onClick={() => {
-                viewDialogRef.current?.close();
-                setViewingActive(null);
-              }}
-            >
-              <XIcon />
-            </button>
-          </div>
-          {viewingActive ? (
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-base-content/60">名称</p>
-                <p className="text-lg font-semibold">{viewingActive.name || "未命名活动"}</p>
-              </div>
-              <div>
-                <p className="text-sm text-base-content/60">简介</p>
-                <p>{viewingActive.description || "暂无简介"}</p>
-              </div>
-              <div>
-                <p className="text-sm text-base-content/60">标签</p>
-                <div className="flex flex-wrap gap-2">
-                  {(viewingActive.tags ?? []).map((tag) => {
-                    const title = tagTitle(tag.tag?.title);
-                    return (
-                      <div key={tag.tag_id} className="badge badge-lg gap-2">
-                        <span>{title.emoji}</span>
-                        {title.tx}
-                      </div>
-                    );
-                  })}
-                  {(viewingActive.tags ?? []).length === 0 && (
-                    <span className="text-xs text-base-content/60">暂无标签</span>
-                  )}
-                </div>
-              </div>
-              <div className="text-sm text-base-content/70">
-                创建于:{" "}
-                {viewingActive.publish_at
-                  ? dayjs(viewingActive.publish_at).format("YYYY/MM/DD HH:mm")
-                  : "未设置"}
-              </div>
-            </div>
-          ) : (
-            <p className="text-center text-base-content/60">暂无内容</p>
-          )}
-        </div>
       </dialog>
 
       <dialog ref={deleteDialogRef} className="modal">

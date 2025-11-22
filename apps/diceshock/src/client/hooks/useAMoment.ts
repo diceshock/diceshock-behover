@@ -1,19 +1,21 @@
 import type { AnimationConfig, SpringValue } from "@react-spring/web";
-import { useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 
 const useAMoment = (
   progress: SpringValue<number>,
-  {
-    onRest,
-    delay = 4000,
-    config,
-  }: {
+  options: {
     onRest?: () => void;
     config?: AnimationConfig;
     delay?: number;
   } = {},
 ) => {
-  const show = (f?: () => void) => {
+  const {
+    onRest,
+    delay = 4000,
+    config,
+  } = useRef(options).current
+
+  const show = useCallback((f?: () => void) => {
     f?.();
     progress.set(1);
     progress.start(0, {
@@ -25,7 +27,7 @@ const useAMoment = (
         ...config,
       },
     });
-  };
+  }, []);
 
   const styles = useMemo(
     () => ({

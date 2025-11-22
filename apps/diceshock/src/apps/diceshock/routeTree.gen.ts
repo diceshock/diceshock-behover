@@ -20,6 +20,8 @@ import { Route as DashAcitveRouteImport } from './routers/dash/acitve'
 import { Route as WithHomeLoInventoryRouteImport } from './routers/_with-home-lo/inventory'
 import { Route as WithHomeLoDiceshockAgentsRouteImport } from './routers/_with-home-lo/diceshock-agents'
 import { Route as WithHomeLoContactUsRouteImport } from './routers/_with-home-lo/contact-us'
+import { Route as DashActiveIdRouteImport } from './routers/dash/active/$id'
+import { Route as WithHomeLoActiveIdRouteImport } from './routers/_with-home-lo/active/$id'
 
 const DashLazyRouteImport = createFileRoute('/dash')()
 
@@ -73,6 +75,16 @@ const WithHomeLoContactUsRoute = WithHomeLoContactUsRouteImport.update({
   path: '/contact-us',
   getParentRoute: () => WithHomeLoRoute,
 } as any)
+const DashActiveIdRoute = DashActiveIdRouteImport.update({
+  id: '/active/$id',
+  path: '/active/$id',
+  getParentRoute: () => DashLazyRoute,
+} as any)
+const WithHomeLoActiveIdRoute = WithHomeLoActiveIdRouteImport.update({
+  id: '/active/$id',
+  path: '/active/$id',
+  getParentRoute: () => WithHomeLoRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/dash': typeof DashLazyRouteWithChildren
@@ -84,6 +96,8 @@ export interface FileRoutesByFullPath {
   '/dash/users': typeof DashUsersRoute
   '/': typeof WithHomeLoIndexRoute
   '/dash/': typeof DashIndexRoute
+  '/active/$id': typeof WithHomeLoActiveIdRoute
+  '/dash/active/$id': typeof DashActiveIdRoute
 }
 export interface FileRoutesByTo {
   '/contact-us': typeof WithHomeLoContactUsRoute
@@ -94,6 +108,8 @@ export interface FileRoutesByTo {
   '/dash/users': typeof DashUsersRoute
   '/': typeof WithHomeLoIndexRoute
   '/dash': typeof DashIndexRoute
+  '/active/$id': typeof WithHomeLoActiveIdRoute
+  '/dash/active/$id': typeof DashActiveIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -107,6 +123,8 @@ export interface FileRoutesById {
   '/dash/users': typeof DashUsersRoute
   '/_with-home-lo/': typeof WithHomeLoIndexRoute
   '/dash/': typeof DashIndexRoute
+  '/_with-home-lo/active/$id': typeof WithHomeLoActiveIdRoute
+  '/dash/active/$id': typeof DashActiveIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -120,6 +138,8 @@ export interface FileRouteTypes {
     | '/dash/users'
     | '/'
     | '/dash/'
+    | '/active/$id'
+    | '/dash/active/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/contact-us'
@@ -130,6 +150,8 @@ export interface FileRouteTypes {
     | '/dash/users'
     | '/'
     | '/dash'
+    | '/active/$id'
+    | '/dash/active/$id'
   id:
     | '__root__'
     | '/_with-home-lo'
@@ -142,6 +164,8 @@ export interface FileRouteTypes {
     | '/dash/users'
     | '/_with-home-lo/'
     | '/dash/'
+    | '/_with-home-lo/active/$id'
+    | '/dash/active/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -221,6 +245,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WithHomeLoContactUsRouteImport
       parentRoute: typeof WithHomeLoRoute
     }
+    '/dash/active/$id': {
+      id: '/dash/active/$id'
+      path: '/active/$id'
+      fullPath: '/dash/active/$id'
+      preLoaderRoute: typeof DashActiveIdRouteImport
+      parentRoute: typeof DashLazyRoute
+    }
+    '/_with-home-lo/active/$id': {
+      id: '/_with-home-lo/active/$id'
+      path: '/active/$id'
+      fullPath: '/active/$id'
+      preLoaderRoute: typeof WithHomeLoActiveIdRouteImport
+      parentRoute: typeof WithHomeLoRoute
+    }
   }
 }
 
@@ -229,6 +267,7 @@ interface WithHomeLoRouteChildren {
   WithHomeLoDiceshockAgentsRoute: typeof WithHomeLoDiceshockAgentsRoute
   WithHomeLoInventoryRoute: typeof WithHomeLoInventoryRoute
   WithHomeLoIndexRoute: typeof WithHomeLoIndexRoute
+  WithHomeLoActiveIdRoute: typeof WithHomeLoActiveIdRoute
 }
 
 const WithHomeLoRouteChildren: WithHomeLoRouteChildren = {
@@ -236,6 +275,7 @@ const WithHomeLoRouteChildren: WithHomeLoRouteChildren = {
   WithHomeLoDiceshockAgentsRoute: WithHomeLoDiceshockAgentsRoute,
   WithHomeLoInventoryRoute: WithHomeLoInventoryRoute,
   WithHomeLoIndexRoute: WithHomeLoIndexRoute,
+  WithHomeLoActiveIdRoute: WithHomeLoActiveIdRoute,
 }
 
 const WithHomeLoRouteWithChildren = WithHomeLoRoute._addFileChildren(
@@ -247,6 +287,7 @@ interface DashLazyRouteChildren {
   DashInventoryRoute: typeof DashInventoryRoute
   DashUsersRoute: typeof DashUsersRoute
   DashIndexRoute: typeof DashIndexRoute
+  DashActiveIdRoute: typeof DashActiveIdRoute
 }
 
 const DashLazyRouteChildren: DashLazyRouteChildren = {
@@ -254,6 +295,7 @@ const DashLazyRouteChildren: DashLazyRouteChildren = {
   DashInventoryRoute: DashInventoryRoute,
   DashUsersRoute: DashUsersRoute,
   DashIndexRoute: DashIndexRoute,
+  DashActiveIdRoute: DashActiveIdRoute,
 }
 
 const DashLazyRouteWithChildren = DashLazyRoute._addFileChildren(

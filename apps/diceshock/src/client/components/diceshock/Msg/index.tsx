@@ -5,6 +5,7 @@ import { atom, useSetAtom } from "jotai";
 import type React from "react";
 import useAMoment from "@/client/hooks/useAMoment";
 import ClientSide from "./ClientSide";
+import { useCallback, useMemo } from "react";
 
 const Msg = () => (
   <ClientOnly>
@@ -26,15 +27,15 @@ export const useMsg = () => {
     },
   });
 
-  const containerMouseDown: React.MouseEventHandler<HTMLDivElement> = (evt) => {
+  const containerMouseDown = useCallback<React.MouseEventHandler<HTMLDivElement>>((evt) => {
     if (evt.button !== 1) return;
 
     evt.preventDefault();
 
     setComp(null);
-  };
+  }, [setComp]);
 
-  return {
+  return useMemo(() => ({
     info: (tx: string) =>
       show(() =>
         setComp(
@@ -127,5 +128,5 @@ export const useMsg = () => {
           </animated.div>,
         ),
       ),
-  };
+  }), [show, setComp, styles, containerMouseDown]);
 };

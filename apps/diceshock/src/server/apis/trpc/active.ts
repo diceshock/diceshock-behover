@@ -53,6 +53,25 @@ const get = publicProcedure
     return actives;
   });
 
+const getByIdZ = z.object({
+  id: z.string(),
+});
+
+const getById = publicProcedure
+  .input(getByIdZ)
+  .query(async ({ input, ctx }) => {
+    const active = await db(ctx.env.DB).query.activesTable.findFirst({
+      where: (a, { eq }) => eq(a.id, input.id),
+      with: {
+        tags: {
+          with: { tag: true },
+        },
+      },
+    });
+
+    return active;
+  });
+
 const updateZ = z.object({
   id: z.string(),
   name: z.string().optional(),
@@ -231,4 +250,4 @@ const deleteMutation = publicProcedure
     return deleteActive(ctx.env, input);
   });
 
-export default { get, mutation, delete: deleteMutation };
+export default { get, getById, mutation, delete: deleteMutation };
