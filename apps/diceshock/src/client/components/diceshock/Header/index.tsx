@@ -20,6 +20,10 @@ const PAGES: PageType[] = [
     href: `/diceshock-agents`,
   },
   {
+    title: "活动",
+    href: `/actives`,
+  },
+  {
     title: "联系我们",
     href: `/contact-us`,
   },
