@@ -91,7 +91,8 @@ const insertZ = z.object({
   tags: z.string().array(),
 });
 
-export const postInputZ = insertZ.or(updateZ);
+// 将 updateZ 放在前面，因为它有 id 字段，更容易区分
+export const postInputZ = z.union([updateZ, insertZ]);
 
 const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
   const tdb = db(env.DB);
@@ -123,7 +124,10 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
   if (description !== undefined) updateData.description = description;
   if (content !== undefined) updateData.content = content;
   if (cover_image !== undefined) {
-    updateData.cover_image = cover_image && cover_image.trim() ? cover_image.trim() : null;
+    // 如果 cover_image 是 null，直接设置为 null；如果是字符串，trim 后如果为空则设为 null，否则设为 trim 后的值
+    const processedCoverImage = cover_image === null ? null : (typeof cover_image === "string" && cover_image.trim() ? cover_image.trim() : null);
+    updateData.cover_image = processedCoverImage;
+    console.log("更新 cover_image:", { original: cover_image, processed: processedCoverImage });
   }
 
   // 如果没有要更新的字段，直接返回（或者只处理标签）
@@ -133,6 +137,7 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
     });
   }
 
+  console.log("updateData:", JSON.stringify(updateData, null, 2));
   const acitves = Object.keys(updateData).length > 0
     ? await tdb
         .update(activesTable)
@@ -142,6 +147,7 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
     : await tdb.query.activesTable.findMany({
         where: (a, { eq }) => eq(a.id, id),
       });
+  console.log("更新后的 acitves:", JSON.stringify(acitves, null, 2));
 
   if (!acitves.length || !tagIds) return acitves;
 
@@ -247,8 +253,12 @@ const deleteActive = async (env: Cloudflare.Env, input: z.infer<typeof deleteZ>)
 const mutation = publicProcedure
   .input(postInputZ)
   .mutation(async ({ input, ctx }) => {
-    console.log(input);
-    if ("id" in input) return update(ctx.env, input);
+    console.log("mutation 输入:", { hasId: "id" in input, input });
+    if ("id" in input) {
+      console.log("调用 update");
+      return update(ctx.env, input);
+    }
+    console.log("调用 insert");
     return insert(ctx.env, input);
   });
 
