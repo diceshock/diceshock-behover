@@ -26,6 +26,7 @@ function RouteComponent() {
   const [content, setContent] = useState<string>("");
   const [name, setName] = useState<string>("");
   const [description, setDescription] = useState<string>("");
+  const [coverImage, setCoverImage] = useState<string>("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isPublished, setIsPublished] = useState<boolean>(false);
   const [isDeleted, setIsDeleted] = useState<boolean>(false);
@@ -54,6 +55,7 @@ function RouteComponent() {
         setContent(data.content || "");
         setName(data.name || "");
         setDescription(data.description || "");
+        setCoverImage(data.cover_image || "");
         setSelectedTags(data.tags?.map((t) => t.tag_id) || []);
         setIsPublished(Boolean(data.is_published));
         setIsDeleted(Boolean(data.is_deleted));
@@ -128,6 +130,7 @@ function RouteComponent() {
         name,
         description,
         content,
+        cover_image: coverImage.trim() ? coverImage.trim() : null,
         tags: selectedTags,
         is_published: isPublished,
         is_deleted: isDeleted,
@@ -213,6 +216,30 @@ function RouteComponent() {
                   value={description}
                   onChange={(evt) => setDescription(evt.target.value)}
                 />
+                <div className="flex flex-col gap-2">
+                  <label className="label">
+                    <span className="label-text">头图 URL</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="input input-bordered"
+                    placeholder="输入头图 URL"
+                    value={coverImage}
+                    onChange={(evt) => setCoverImage(evt.target.value)}
+                  />
+                  {coverImage && (
+                    <div className="mt-2">
+                      <img
+                        src={coverImage}
+                        alt="头图预览"
+                        className="w-full max-h-64 object-cover rounded-lg"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

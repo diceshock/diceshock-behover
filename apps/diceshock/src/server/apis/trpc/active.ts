@@ -79,6 +79,7 @@ const updateZ = z.object({
   is_deleted: z.boolean().optional(),
   description: z.string().optional(),
   content: z.string().optional(),
+  cover_image: z.string().nullable().optional(),
   tags: z.string().array().optional(),
 });
 
@@ -86,6 +87,7 @@ const insertZ = z.object({
   name: z.string(),
   description: z.string().optional(),
   content: z.string().optional(),
+  cover_image: z.string().nullable().optional(),
   tags: z.string().array(),
 });
 
@@ -101,6 +103,7 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
     is_published,
     description,
     content,
+    cover_image,
     tags: tagIds,
   } = input;
 
@@ -111,6 +114,7 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
     is_published?: boolean;
     description?: string;
     content?: string;
+    cover_image?: string | null;
   } = {};
 
   if (name !== undefined) updateData.name = name;
@@ -118,6 +122,9 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
   if (is_published !== undefined) updateData.is_published = is_published;
   if (description !== undefined) updateData.description = description;
   if (content !== undefined) updateData.content = content;
+  if (cover_image !== undefined) {
+    updateData.cover_image = cover_image && cover_image.trim() ? cover_image.trim() : null;
+  }
 
   // 如果没有要更新的字段，直接返回（或者只处理标签）
   if (Object.keys(updateData).length === 0 && !tagIds) {
@@ -173,12 +180,12 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
 const insert = async (env: Cloudflare.Env, input: z.infer<typeof insertZ>) => {
   const tdb = db(env.DB);
 
-  const { name, description, content, tags: tagIds } = input;
+  const { name, description, content, cover_image, tags: tagIds } = input;
 
   // 先创建活动
   const newActive = await tdb
     .insert(activesTable)
-    .values({ name, description, content })
+    .values({ name, description, content, cover_image })
     .returning();
 
   // 如果有标签，创建标签映射
@@ -240,6 +247,7 @@ const deleteActive = async (env: Cloudflare.Env, input: z.infer<typeof deleteZ>)
 const mutation = publicProcedure
   .input(postInputZ)
   .mutation(async ({ input, ctx }) => {
+    console.log(input);
     if ("id" in input) return update(ctx.env, input);
     return insert(ctx.env, input);
   });

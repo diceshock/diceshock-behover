@@ -72,6 +72,18 @@ function RouteComponent() {
 
   return (
     <main className="w-full min-h-screen p-4 max-w-4xl mx-auto">
+      {active.cover_image && active.cover_image.trim() && (
+        <div className="mb-8 -mx-4 sm:mx-0">
+          <img
+            src={active.cover_image}
+            alt={active.name || "头图"}
+            className="w-full h-auto max-h-96 object-cover rounded-lg shadow-lg"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+          />
+        </div>
+      )}
       <article className="prose prose-lg max-w-none">
         <header className="mb-8">
           <h1 className="text-4xl font-bold mb-4">{active.name}</h1>
