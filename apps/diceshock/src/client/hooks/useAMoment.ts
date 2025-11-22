@@ -27,7 +27,7 @@ const useAMoment = (
         ...config,
       },
     });
-  }, []);
+  }, [config, delay, onRest, progress.set, progress.start]);
 
   const styles = useMemo(
     () => ({
