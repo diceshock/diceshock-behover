@@ -27,7 +27,7 @@ const PAGES: PageType[] = [
   {
     title: "联系我们",
     href: `/contact-us`,
-    spa: false,
+    
   },
 ];
 
