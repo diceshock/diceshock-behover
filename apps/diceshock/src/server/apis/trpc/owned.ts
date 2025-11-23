@@ -75,10 +75,22 @@ const getCount = publicProcedure.query(async ({ ctx }) => {
       .from(boardGamesTable)
       .where(drizzle.gt(boardGamesTable.removeDate, new Date(0)));
 
-    return { current, removed };
+    // 获取最新的 removeDate
+    const latestGame = await q
+      .select({ removeDate: boardGamesTable.removeDate })
+      .from(boardGamesTable)
+      .orderBy(drizzle.desc(boardGamesTable.removeDate))
+      .limit(1);
+
+    const latestDate =
+      latestGame.length > 0 && latestGame[0]?.removeDate
+        ? latestGame[0].removeDate
+        : null;
+
+    return { current, removed, latestDate };
   } catch (error) {
     console.error("Error fetching board game counts:", error);
-    return { current: 0, removed: 0 };
+    return { current: 0, removed: 0, latestDate: null };
   }
 });
 
