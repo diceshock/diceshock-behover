@@ -8,6 +8,7 @@ type PageType = {
   title: React.ReactNode;
   href?: string;
   children?: PageType[];
+  spa?: boolean; // 默认为 true，为 false 时使用 a 标签跳转
 };
 
 const PAGES: PageType[] = [
@@ -26,12 +27,13 @@ const PAGES: PageType[] = [
   {
     title: "联系我们",
     href: `/contact-us`,
+    spa: false,
   },
 ];
 
 const getSideMenu = (pages: PageType[]) =>
   pages
-    .map(({ title, href, children }, i) => {
+    .map(({ title, href, children, spa = true }, i) => {
       if (children)
         return (
           <li key={i}>
@@ -43,7 +45,11 @@ const getSideMenu = (pages: PageType[]) =>
       if (href)
         return (
           <li key={i}>
-            <Link to={href}>{title}</Link>
+            {spa ? (
+              <Link to={href}>{title}</Link>
+            ) : (
+              <a href={href}>{title}</a>
+            )}
           </li>
         );
 
@@ -53,7 +59,7 @@ const getSideMenu = (pages: PageType[]) =>
 
 const getMidMenu = (pages: PageType[]) =>
   pages
-    .map(({ title, href, children }, i) => {
+    .map(({ title, href, children, spa = true }, i) => {
       if (children)
         return (
           <li key={i}>
@@ -67,9 +73,15 @@ const getMidMenu = (pages: PageType[]) =>
       if (href)
         return (
           <li key={i}>
-            <Link to={href} className="text-nowrap mr-2">
-              {title}
-            </Link>
+            {spa ? (
+              <Link to={href} className="text-nowrap mr-2">
+                {title}
+              </Link>
+            ) : (
+              <a href={href} className="text-nowrap mr-2">
+                {title}
+              </a>
+            )}
           </li>
         );
 

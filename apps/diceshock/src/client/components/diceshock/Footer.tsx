@@ -40,9 +40,9 @@ const Footer = () => {
           <Link to="/actives" className="link link-hover">
             活动
           </Link>
-          <Link to="/dash" className="link link-hover">
+          <a href="/dash" className="link link-hover">
             后台
-          </Link>
+          </a>
         </nav>
         <nav>
           <h6 className="footer-title">关于我们</h6>
