@@ -15,6 +15,13 @@
       "when": 1762975721880,
       "tag": "0001_uneven_jane_foster",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1763822619477,
+      "tag": "0002_faulty_hedge_knight",
+      "breakpoints": true
     }
   ]
 }

@@ -1,14 +1,16 @@
-import { ArrowBendUpRightIcon, ArrowLeftIcon, PlusIcon } from "@phosphor-icons/react/dist/ssr";
+import {
+  ArrowBendUpRightIcon,
+  ArrowLeftIcon,
+  PlusIcon,
+} from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MDEditor from "@uiw/react-md-editor";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "@uiw/react-md-editor/markdown-editor.css";
-import { trpcClientDash } from "@/shared/utils/trpc";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import { trpcClientDash } from "@/shared/utils/trpc";
 
-type TagList = Awaited<
-  ReturnType<typeof trpcClientDash.activeTags.get.query>
->;
+type TagList = Awaited<ReturnType<typeof trpcClientDash.activeTags.get.query>>;
 type TagItem = TagList[number];
 
 const tagTitle = (tag?: TagItem["title"] | null) => ({
@@ -30,7 +32,9 @@ function RouteComponent() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isPublished, setIsPublished] = useState<boolean>(false);
   const [isDeleted, setIsDeleted] = useState<boolean>(false);
-  const [active, setActive] = useState<Awaited<ReturnType<typeof trpcClientDash.active.getById.query>> | null>(null);
+  const [active, setActive] = useState<Awaited<
+    ReturnType<typeof trpcClientDash.active.getById.query>
+  > | null>(null);
   const [tags, setTags] = useState<TagItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -74,14 +78,15 @@ function RouteComponent() {
   }, [fetchTags, fetchActive]);
 
   const availableTags = useMemo(
-    () => tags.sort((a, b) => {
-      const aSelected = selectedTags.includes(a.id);
-      const bSelected = selectedTags.includes(b.id);
-      if (aSelected && !bSelected) return -1;
-      if (!aSelected && bSelected) return 1;
-      return (a.title?.tx ?? "").localeCompare(b.title?.tx ?? "");
-    }),
-    [tags, selectedTags]
+    () =>
+      tags.sort((a, b) => {
+        const aSelected = selectedTags.includes(a.id);
+        const bSelected = selectedTags.includes(b.id);
+        if (aSelected && !bSelected) return -1;
+        if (!aSelected && bSelected) return 1;
+        return (a.title?.tx ?? "").localeCompare(b.title?.tx ?? "");
+      }),
+    [tags, selectedTags],
   );
 
   const handleCreateTag = useCallback(async () => {
@@ -103,7 +108,7 @@ function RouteComponent() {
       ]);
 
       const created = result.find(
-        (tag): tag is TagItem => tag && "id" in tag && "title" in tag
+        (tag): tag is TagItem => tag && "id" in tag && "title" in tag,
       );
       if (!created) {
         msg.error("标签创建失败");
@@ -266,7 +271,7 @@ function RouteComponent() {
                             setSelectedTags((prev) =>
                               checked
                                 ? prev.filter((id) => id !== tag.id)
-                                : [...prev, tag.id]
+                                : [...prev, tag.id],
                             )
                           }
                         />
@@ -309,7 +314,9 @@ function RouteComponent() {
             <div className="card-body">
               <h2 className="card-title">状态</h2>
               <div className="flex items-center gap-4">
-                <label className={`label gap-2 ${isDeleted ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}>
+                <label
+                  className={`label gap-2 ${isDeleted ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                >
                   <span className="label-text">发布状态</span>
                   <input
                     type="checkbox"
@@ -364,13 +371,76 @@ function EmojiPicker({ value, onChange }: EmojiPickerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const commonEmojis = [
-    "🏷️", "📝", "📌", "⭐", "🔥", "💡", "🎯", "✅", "❌", "⚠️",
-    "📅", "📊", "📈", "📉", "🎉", "🎊", "🎁", "🎈", "🎀", "🎪",
-    "🏠", "🏢", "🏫", "🏥", "🏪", "🏨", "🏰", "⛪", "🕌", "🕍",
-    "🚗", "🚕", "🚙", "🚌", "🚎", "🏎️", "🚓", "🚑", "🚒", "🚐",
-    "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃",
-    "😉", "😊", "😇", "🥰", "😍", "🤩", "😘", "😗", "😚", "😙",
-    "🥳", "🤗", "🤔", "🤨", "😐", "😑", "😶", "🙄", "😏", "😣",
+    "🏷️",
+    "📝",
+    "📌",
+    "⭐",
+    "🔥",
+    "💡",
+    "🎯",
+    "✅",
+    "❌",
+    "⚠️",
+    "📅",
+    "📊",
+    "📈",
+    "📉",
+    "🎉",
+    "🎊",
+    "🎁",
+    "🎈",
+    "🎀",
+    "🎪",
+    "🏠",
+    "🏢",
+    "🏫",
+    "🏥",
+    "🏪",
+    "🏨",
+    "🏰",
+    "⛪",
+    "🕌",
+    "🕍",
+    "🚗",
+    "🚕",
+    "🚙",
+    "🚌",
+    "🚎",
+    "🏎️",
+    "🚓",
+    "🚑",
+    "🚒",
+    "🚐",
+    "😀",
+    "😃",
+    "😄",
+    "😁",
+    "😆",
+    "😅",
+    "🤣",
+    "😂",
+    "🙂",
+    "🙃",
+    "😉",
+    "😊",
+    "😇",
+    "🥰",
+    "😍",
+    "🤩",
+    "😘",
+    "😗",
+    "😚",
+    "😙",
+    "🥳",
+    "🤗",
+    "🤔",
+    "🤨",
+    "😐",
+    "😑",
+    "😶",
+    "🙄",
+    "😏",
+    "😣",
   ];
 
   useEffect(() => {

@@ -1,9 +1,5 @@
 import ZdogComponent from "./Zdog";
 
-const END_SLASH = (
-  <span className="absolute top-1 -right-7 rotate-12 size-8 bg-base-200 border-l-2" />
-);
-
 export default function Hero() {
   return (
     <div className="h-[calc(100vh-64px)] bg-base-100 flex overflow-hidden relative z-10">

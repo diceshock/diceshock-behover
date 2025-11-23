@@ -3,7 +3,7 @@ import { appRouterPublic } from "../apis/trpc";
 
 const trpcServerPublic = trpcServer({
   router: appRouterPublic,
-  onError({ error, path, input, ctx, type }) {
+  onError({ error, path, input, ctx: _ctx, type }) {
     console.error(
       JSON.stringify(
         {
@@ -16,8 +16,8 @@ const trpcServerPublic = trpcServer({
           input,
         },
         null,
-        2
-      )
+        2,
+      ),
     );
   },
 });

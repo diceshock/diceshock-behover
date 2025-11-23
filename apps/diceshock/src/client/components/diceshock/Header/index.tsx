@@ -16,12 +16,12 @@ const PAGES: PageType[] = [
     href: `/inventory`,
   },
   {
-    title: "DiceShock Agents©",
-    href: `/diceshock-agents`,
-  },
-  {
     title: "活动",
     href: `/actives`,
+  },
+  {
+    title: "DiceShock Agents©",
+    href: `/diceshock-agents`,
   },
   {
     title: "联系我们",

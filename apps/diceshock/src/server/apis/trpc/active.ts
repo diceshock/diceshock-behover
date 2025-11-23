@@ -30,13 +30,15 @@ const get = publicProcedure
           searchWords
             ? or(
                 like(acitve.name, `%${searchWords}%`),
-                like(acitve.description, `%${searchWords}%`)
+                like(acitve.description, `%${searchWords}%`),
               )
             : undefined,
           isPublished !== undefined
             ? eq(acitve.is_published, isPublished)
             : undefined,
-          isDeleted !== undefined ? eq(acitve.is_deleted, isDeleted) : undefined
+          isDeleted !== undefined
+            ? eq(acitve.is_deleted, isDeleted)
+            : undefined,
         ),
       with: {
         tags: {
@@ -125,9 +127,17 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
   if (content !== undefined) updateData.content = content;
   if (cover_image !== undefined) {
     // 如果 cover_image 是 null，直接设置为 null；如果是字符串，trim 后如果为空则设为 null，否则设为 trim 后的值
-    const processedCoverImage = cover_image === null ? null : (typeof cover_image === "string" && cover_image.trim() ? cover_image.trim() : null);
+    const processedCoverImage =
+      cover_image === null
+        ? null
+        : typeof cover_image === "string" && cover_image.trim()
+          ? cover_image.trim()
+          : null;
     updateData.cover_image = processedCoverImage;
-    console.log("更新 cover_image:", { original: cover_image, processed: processedCoverImage });
+    console.log("更新 cover_image:", {
+      original: cover_image,
+      processed: processedCoverImage,
+    });
   }
 
   // 如果没有要更新的字段，直接返回（或者只处理标签）
@@ -138,15 +148,16 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
   }
 
   console.log("updateData:", JSON.stringify(updateData, null, 2));
-  const acitves = Object.keys(updateData).length > 0
-    ? await tdb
-        .update(activesTable)
-        .set(updateData)
-        .where(drizzle.eq(activesTable.id, id))
-        .returning()
-    : await tdb.query.activesTable.findMany({
-        where: (a, { eq }) => eq(a.id, id),
-      });
+  const acitves =
+    Object.keys(updateData).length > 0
+      ? await tdb
+          .update(activesTable)
+          .set(updateData)
+          .where(drizzle.eq(activesTable.id, id))
+          .returning()
+      : await tdb.query.activesTable.findMany({
+          where: (a, { eq }) => eq(a.id, id),
+        });
   console.log("更新后的 acitves:", JSON.stringify(acitves, null, 2));
 
   if (!acitves.length || !tagIds) return acitves;
@@ -205,8 +216,8 @@ const insert = async (env: Cloudflare.Env, input: z.infer<typeof insertZ>) => {
         .insert(activeTagMappingsTable)
         .values(
           newActive.flatMap(({ id: active_id }) =>
-            tags.map(({ id: tag_id }) => ({ active_id, tag_id }))
-          )
+            tags.map(({ id: tag_id }) => ({ active_id, tag_id })),
+          ),
         );
     }
   }
@@ -218,7 +229,10 @@ const deleteZ = z.object({
   id: z.string(),
 });
 
-const deleteActive = async (env: Cloudflare.Env, input: z.infer<typeof deleteZ>) => {
+const deleteActive = async (
+  env: Cloudflare.Env,
+  input: z.infer<typeof deleteZ>,
+) => {
   const tdb = db(env.DB);
   const { id } = input;
 
@@ -228,9 +242,7 @@ const deleteActive = async (env: Cloudflare.Env, input: z.infer<typeof deleteZ>)
     .where(drizzle.eq(activeTagMappingsTable.active_id, id));
 
   // 删除活动本身
-  await tdb
-    .delete(activesTable)
-    .where(drizzle.eq(activesTable.id, id));
+  await tdb.delete(activesTable).where(drizzle.eq(activesTable.id, id));
 
   // 清理未被任何活动使用的标签
   const allMappings = await tdb.query.activeTagMappingsTable.findMany();

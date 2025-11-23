@@ -22,7 +22,6 @@ export default function NavBar() {
   return (
     <nav className="navbar bg-base-100 sticky top-0 z-50">
       <div className="navbar-start">
-        {/** biome-ignore lint/a11y/noStaticElementInteractions: dropdown */}
         <div
           suppressHydrationWarning
           onClick={clickDropdown}

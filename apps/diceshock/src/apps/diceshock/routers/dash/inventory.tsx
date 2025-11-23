@@ -125,7 +125,7 @@ function RouteComponent() {
 
       {synced.fetched && (
         <JsonView
-          data={synced.fetched.map(i => _.pick(i, ["sch_name", "id"]))}
+          data={synced.fetched.map((i) => _.pick(i, ["sch_name", "id"]))}
           shouldExpandNode={allExpanded}
           style={defaultStyles}
         />

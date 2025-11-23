@@ -11,7 +11,7 @@ app.get("/", page);
 
 const scheduled: ExportedHandlerScheduledHandler<Cloudflare.Env> = async (
   _controller,
-  _ctx
+  _ctx,
 ) => {};
 
 export default {

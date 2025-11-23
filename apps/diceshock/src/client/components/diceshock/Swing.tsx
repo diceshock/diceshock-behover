@@ -60,6 +60,7 @@ const Swing: React.FC<{
       window.addEventListener("devicemotion", handleMotion);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // biome-ignore lint/suspicious/noExplicitAny: DeviceMotionEvent.requestPermission is experimental API
       const { requestPermission } = DeviceMotionEvent as any;
 
       if (typeof requestPermission === "function") {

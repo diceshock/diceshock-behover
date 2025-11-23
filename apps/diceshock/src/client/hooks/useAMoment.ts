@@ -9,25 +9,24 @@ const useAMoment = (
     delay?: number;
   } = {},
 ) => {
-  const {
-    onRest,
-    delay = 4000,
-    config,
-  } = useRef(options).current
+  const { onRest, delay = 4000, config } = useRef(options).current;
 
-  const show = useCallback((f?: () => void) => {
-    f?.();
-    progress.set(1);
-    progress.start(0, {
-      onRest,
-      delay,
-      config: {
-        friction: 30,
-        tension: 120,
-        ...config,
-      },
-    });
-  }, [config, delay, onRest, progress.set, progress.start]);
+  const show = useCallback(
+    (f?: () => void) => {
+      f?.();
+      progress.set(1);
+      progress.start(0, {
+        onRest,
+        delay,
+        config: {
+          friction: 30,
+          tension: 120,
+          ...config,
+        },
+      });
+    },
+    [config, delay, onRest, progress.set, progress.start],
+  );
 
   const styles = useMemo(
     () => ({

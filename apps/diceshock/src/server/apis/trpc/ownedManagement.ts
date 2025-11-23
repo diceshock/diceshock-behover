@@ -11,7 +11,7 @@ const syncInpuZ = z.object({
 const sync = publicProcedure
   .input(syncInpuZ)
   .mutation(({ ctx, input }) =>
-    BoardGame.fetchToDb(ctx.env.DB, input.pageFrom, input.pageTo, input.date)
+    BoardGame.fetchToDb(ctx.env.DB, input.pageFrom, input.pageTo, input.date),
   );
 
 const wakeInpuZ = z.object({
@@ -21,7 +21,7 @@ const wakeInpuZ = z.object({
 const wake = publicProcedure
   .input(wakeInpuZ)
   .mutation(({ ctx, input }) =>
-    BoardGame.setDateToCurry(ctx.env.DB, input.date)
+    BoardGame.setDateToCurry(ctx.env.DB, input.date),
   );
 
 export default {

@@ -1,0 +1,1 @@
+ALTER TABLE `actives_table` ADD `cover_image` text;

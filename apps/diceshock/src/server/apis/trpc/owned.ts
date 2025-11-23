@@ -12,10 +12,10 @@ const get = publicProcedure
 
     const player_num = params.isBestNumOfPlayers
       ? undefined
-      : params.numOfPlayers ?? undefined;
+      : (params.numOfPlayers ?? undefined);
 
     const best_player_num = params.isBestNumOfPlayers
-      ? params.numOfPlayers ?? undefined
+      ? (params.numOfPlayers ?? undefined)
       : undefined;
 
     const games = db(ctx.env.DB).query.boardGamesTable.findMany({
@@ -25,25 +25,25 @@ const get = publicProcedure
           trimmedSearchWords
             ? or(
                 like(game.sch_name, `%${trimmedSearchWords}%`),
-                like(game.eng_name, `%${trimmedSearchWords}%`)
+                like(game.eng_name, `%${trimmedSearchWords}%`),
               )
             : undefined,
           params.tags.includes("PARTY")
             ? or(
                 like(game.category, "%Party%"),
-                like(game.category, "%Puzzle%")
+                like(game.category, "%Puzzle%"),
               )
             : undefined,
           params.tags.includes("RPG")
             ? or(
                 like(game.category, "%American-style%"),
-                like(game.category, "%Role Playing$")
+                like(game.category, "%Role Playing$"),
               )
             : undefined,
           params.tags.includes("SCORE_RACE")
             ? or(
                 like(game.category, "%Euro-style%"),
-                like(game.category, "%Abstract%")
+                like(game.category, "%Abstract%"),
               )
             : undefined,
           player_num === undefined
@@ -51,7 +51,7 @@ const get = publicProcedure
             : like(game.player_num, `%${player_num}%`),
           best_player_num === undefined
             ? undefined
-            : like(game.player_num, `%${best_player_num}%`)
+            : like(game.player_num, `%${best_player_num}%`),
         ),
       limit: pageSize,
       offset: (page - 1) * pageSize,

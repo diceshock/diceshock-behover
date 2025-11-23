@@ -148,7 +148,7 @@ const Filter: React.FC<{ className?: string }> = ({ className }) => {
                         draft.numOfPlayers =
                           evt.target.value === "0"
                             ? null
-                            : Number.parseInt(evt.target.value);
+                            : Number.parseInt(evt.target.value, 10);
                       })
                     }
                     className="range range-lg w-56 sm:w-[20rem] mx-2"
@@ -270,7 +270,7 @@ const Filter: React.FC<{ className?: string }> = ({ className }) => {
                 draft.numOfPlayers =
                   evt.target.value === "0"
                     ? null
-                    : Number.parseInt(evt.target.value);
+                    : Number.parseInt(evt.target.value, 10);
               })
             }
             className="range range-lg w-56 sm:w-[20rem] mx-2"

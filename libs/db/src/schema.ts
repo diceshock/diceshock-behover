@@ -40,6 +40,7 @@ export const activesTable = sqlite.sqliteTable("actives_table", {
     .integer({ mode: "timestamp_ms" })
     .$default(() => new Date(0)),
   content: sqlite.text(),
+  cover_image: sqlite.text(),
 });
 
 export const activeRelations = relations(activesTable, ({ many }) => ({

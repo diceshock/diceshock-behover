@@ -1,4 +1,4 @@
-/** biome-ignore-all lint/correctness/useHookAtTopLevel: <explanation> */
+/** biome-ignore-all lint/correctness/useHookAtTopLevel: hooks are conditionally used in this component */
 import { motion, transform, useScroll, useTransform } from "motion/react";
 import { useRef, useState } from "react";
 import LightingLogoIcon from "@/client/components/icons/LightingLogoIcon";

@@ -1,11 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
 import MDEditor from "@uiw/react-md-editor";
+import { useCallback, useEffect, useState } from "react";
 import "@uiw/react-md-editor/markdown-editor.css";
-import trpcClientPublic from "@/shared/utils/trpc";
 import dayjs from "dayjs";
 import { useAtomValue } from "jotai";
 import { themeA } from "@/client/components/ThemeSwap";
+import trpcClientPublic from "@/shared/utils/trpc";
 
 export const Route = createFileRoute("/_with-home-lo/active/$id")({
   component: RouteComponent,
@@ -14,7 +14,9 @@ export const Route = createFileRoute("/_with-home-lo/active/$id")({
 function RouteComponent() {
   const { id } = Route.useParams();
   const [loading, setLoading] = useState(true);
-  const [active, setActive] = useState<Awaited<ReturnType<typeof trpcClientPublic.active.getById.query>> | null>(null);
+  const [active, setActive] = useState<Awaited<
+    ReturnType<typeof trpcClientPublic.active.getById.query>
+  > | null>(null);
 
   const theme = useAtomValue(themeA);
 
@@ -72,7 +74,7 @@ function RouteComponent() {
 
   return (
     <main className="w-full min-h-screen p-4 max-w-4xl mx-auto">
-      {active.cover_image && active.cover_image.trim() && (
+      {active.cover_image?.trim() && (
         <div className="mb-8 -mx-4 sm:mx-0">
           <img
             src={active.cover_image}
@@ -116,7 +118,10 @@ function RouteComponent() {
         </header>
 
         <div data-color-mode={theme ?? "light"} className="mt-8">
-          <MDEditor.Markdown source={active.content ?? ""} className="bg-transparent!" />
+          <MDEditor.Markdown
+            source={active.content ?? ""}
+            className="bg-transparent!"
+          />
         </div>
       </article>
     </main>
