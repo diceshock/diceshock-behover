@@ -9,9 +9,39 @@ import { publicProcedure } from "./baseTRPC";
 const get = publicProcedure.query(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
 
-  const allTags = await tdb.query.activeTagsTable.findMany();
+  // 先找到所有已发布且未删除的活动
+  const publishedActives = await tdb.query.activesTable.findMany({
+    where: (a, { and, eq }) =>
+      and(eq(a.is_published, true), eq(a.is_deleted, false)),
+    columns: { id: true },
+  });
 
-  return allTags.map((tag) => ({
+  const publishedActiveIds = publishedActives.map((a) => a.id);
+
+  // 如果没有已发布的活动，返回空数组
+  if (publishedActiveIds.length === 0) {
+    return [];
+  }
+
+  // 找到这些活动使用的标签ID
+  const tagMappings = await tdb.query.activeTagMappingsTable.findMany({
+    where: (m, { inArray }) => inArray(m.active_id, publishedActiveIds),
+    columns: { tag_id: true },
+  });
+
+  const usedTagIds = [...new Set(tagMappings.map((m) => m.tag_id))];
+
+  // 如果没有使用的标签，返回空数组
+  if (usedTagIds.length === 0) {
+    return [];
+  }
+
+  // 返回这些标签
+  const tags = await tdb.query.activeTagsTable.findMany({
+    where: (t, { inArray }) => inArray(t.id, usedTagIds),
+  });
+
+  return tags.map((tag) => ({
     id: tag.id,
     title: tag.title,
   }));
