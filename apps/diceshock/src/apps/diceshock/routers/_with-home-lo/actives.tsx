@@ -146,11 +146,10 @@ function RouteComponent() {
               <button
                 key={tag.id}
                 onClick={() => toggleTag(tag.id)}
-                className={`badge badge-lg gap-2 cursor-pointer transition-all ${
-                  isSelected
+                className={`badge badge-lg gap-2 cursor-pointer transition-all ${isSelected
                     ? "badge-primary"
                     : "badge-outline hover:badge-primary"
-                }`}
+                  }`}
               >
                 <span>{title.emoji}</span>
                 {title.tx}

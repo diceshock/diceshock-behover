@@ -11,14 +11,24 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import dayjs from "dayjs";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import { trpcClientDash } from "@/shared/utils/trpc";
 
-type ActiveList = Awaited<ReturnType<typeof trpcClientDash.active.get.query>>;
+type ActiveList = Awaited<
+  ReturnType<typeof trpcClientDash.active.get.query>
+>;
 type ActiveItem = ActiveList[number];
 
-type TagList = Awaited<ReturnType<typeof trpcClientDash.activeTags.get.query>>;
+type TagList = Awaited<
+  ReturnType<typeof trpcClientDash.activeTags.get.query>
+>;
 type TagItem = TagList[number];
 
 type StatusFilter = "all" | "published" | "trash";
@@ -36,7 +46,7 @@ const tagTitle = (tag?: TagItem["title"] | null) => ({
 });
 
 const isSelectableTag = (
-  value: unknown,
+  value: unknown
 ): value is { id: string; title: TagItem["title"] } => {
   if (!value || typeof value !== "object") return false;
   const record = value as Record<string, unknown>;
@@ -99,6 +109,12 @@ function RouteComponent() {
   const [pendingDelete, setPendingDelete] = useState<ActiveItem | null>(null);
   const [tagDraft, setTagDraft] = useState({ emoji: "", tx: "" });
 
+  const statusParams = useMemo(() => {
+    if (status === "trash") return { isDeleted: true, isPublished: undefined };
+    if (status === "published") return { isDeleted: false, isPublished: true };
+    return { isDeleted: false, isPublished: undefined };
+  }, [status]);
+
   const refreshTags = useCallback(async () => {
     try {
       const data = await trpcClientDash.activeTags.get.query();
@@ -148,7 +164,7 @@ function RouteComponent() {
 
       setActives(data);
       setSelectedRows((prev) =>
-        prev.filter((id) => data.some((active) => active.id === id)),
+        prev.filter((id) => data.some((active) => active.id === id))
       );
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "获取活动失败");
@@ -163,7 +179,7 @@ function RouteComponent() {
 
   const selectedTagsKey = useMemo(
     () => selectedTags.sort().join(","),
-    [selectedTags],
+    [selectedTags]
   );
 
   useEffect(() => {
@@ -193,9 +209,7 @@ function RouteComponent() {
   const toggleFilterTag = (tagId: string) => {
     setPage(1);
     setSelectedTags((prev) =>
-      prev.includes(tagId)
-        ? prev.filter((id) => id !== tagId)
-        : [...prev, tagId],
+      prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
     );
   };
 
@@ -221,17 +235,13 @@ function RouteComponent() {
       });
 
       // 如果有新标签，创建并关联
-      if (
-        createForm.newTags.length > 0 &&
-        Array.isArray(newActive) &&
-        newActive[0]?.id
-      ) {
+      if (createForm.newTags.length > 0 && Array.isArray(newActive) && newActive[0]?.id) {
         const activeId = newActive[0].id;
         const tagResults = await trpcClientDash.activeTags.insert.mutate(
           createForm.newTags.map((tag) => ({
             activeId,
             title: { emoji: tag.emoji.trim(), tx: tag.tx.trim() },
-          })),
+          }))
         );
 
         const createdTagIds = tagResults
@@ -322,10 +332,10 @@ function RouteComponent() {
       setEditForm((prev) =>
         prev
           ? {
-              ...prev,
-              tags: [...new Set([...prev.tags, created.id])],
-            }
-          : prev,
+            ...prev,
+            tags: [...new Set([...prev.tags, created.id])],
+          }
+          : prev
       );
       setTagDraft({ emoji: "", tx: "" });
       await refreshActives();
@@ -338,7 +348,7 @@ function RouteComponent() {
 
   const patchActive = async (
     id: string,
-    patch: { is_deleted?: boolean; is_published?: boolean },
+    patch: { is_deleted?: boolean; is_published?: boolean }
   ) => {
     try {
       await trpcClientDash.active.mutation.mutate({ id, ...patch });
@@ -361,7 +371,7 @@ function RouteComponent() {
   const confirmDelete = async () => {
     if (!pendingDelete) return;
     await patchActive(pendingDelete.id, {
-      is_deleted: !pendingDelete.is_deleted,
+      is_deleted: !Boolean(pendingDelete.is_deleted),
     });
     deleteDialogRef.current?.close();
     setPendingDelete(null);
@@ -396,101 +406,27 @@ function RouteComponent() {
 
   const toggleRow = (id: string) => {
     setSelectedRows((prev) =>
-      prev.includes(id) ? prev.filter((row) => row !== id) : [...prev, id],
+      prev.includes(id) ? prev.filter((row) => row !== id) : [...prev, id]
     );
   };
 
-  const [batchProcessing, setBatchProcessing] = useState(false);
+  const availableTags = useMemo(
+    () => {
+      const sorted = [...tags].sort((a, b) => {
+        const aSelected = selectedTags.includes(a.id);
+        const bSelected = selectedTags.includes(b.id);
 
-  const handleBatchPublish = async () => {
-    if (selectedRows.length === 0) {
-      msg.warning("请先选择要发布的活动");
-      return;
-    }
+        // 选中的标签排在前面
+        if (aSelected && !bSelected) return -1;
+        if (!aSelected && bSelected) return 1;
 
-    setBatchProcessing(true);
-    try {
-      // 过滤掉已在垃圾桶中的活动
-      const validIds = actives
-        .filter(
-          (active) => selectedRows.includes(active.id) && !active.is_deleted,
-        )
-        .map((active) => active.id);
-
-      if (validIds.length === 0) {
-        msg.warning("选中的活动都在垃圾桶中，无法发布");
-        setBatchProcessing(false);
-        return;
-      }
-
-      // 批量发布
-      await Promise.all(
-        validIds.map((id) =>
-          trpcClientDash.active.mutation.mutate({
-            id,
-            is_published: true,
-          }),
-        ),
-      );
-
-      msg.success(`已发布 ${validIds.length} 个活动`);
-      setSelectedRows([]);
-      await refreshActives();
-      await refreshTags();
-    } catch (err) {
-      msg.error(err instanceof Error ? err.message : "批量发布失败");
-    } finally {
-      setBatchProcessing(false);
-    }
-  };
-
-  const handleBatchDelete = async () => {
-    if (selectedRows.length === 0) {
-      msg.warning("请先选择要删除的活动");
-      return;
-    }
-
-    if (!confirm(`确定要将 ${selectedRows.length} 个活动放入垃圾桶吗？`)) {
-      return;
-    }
-
-    setBatchProcessing(true);
-    try {
-      // 批量删除（放入垃圾桶）
-      await Promise.all(
-        selectedRows.map((id) =>
-          trpcClientDash.active.mutation.mutate({
-            id,
-            is_deleted: true,
-          }),
-        ),
-      );
-
-      msg.success(`已将 ${selectedRows.length} 个活动放入垃圾桶`);
-      setSelectedRows([]);
-      await refreshActives();
-      await refreshTags();
-    } catch (err) {
-      msg.error(err instanceof Error ? err.message : "批量删除失败");
-    } finally {
-      setBatchProcessing(false);
-    }
-  };
-
-  const availableTags = useMemo(() => {
-    const sorted = [...tags].sort((a, b) => {
-      const aSelected = selectedTags.includes(a.id);
-      const bSelected = selectedTags.includes(b.id);
-
-      // 选中的标签排在前面
-      if (aSelected && !bSelected) return -1;
-      if (!aSelected && bSelected) return 1;
-
-      // 都选中或都没选中时，按名称排序
-      return (a.title?.tx ?? "").localeCompare(b.title?.tx ?? "");
-    });
-    return sorted;
-  }, [tags, selectedTags]);
+        // 都选中或都没选中时，按名称排序
+        return (a.title?.tx ?? "").localeCompare(b.title?.tx ?? "");
+      });
+      return sorted;
+    },
+    [tags, selectedTags]
+  );
 
   return (
     <main className="size-full">
@@ -524,14 +460,12 @@ function RouteComponent() {
                   <button
                     type="button"
                     onClick={() => toggleFilterTag(tag.id)}
-                    className={`btn btn-ghost ${
-                      selected ? "btn-primary" : "btn-outline"
-                    } p-0 size-fit`}
+                    className={`btn btn-ghost ${selected ? "btn-primary" : "btn-outline"
+                      } p-0 size-fit`}
                   >
                     <div
-                      className={`badge shrink-0 text-nowrap badge-lg gap-1 ${
-                        selected ? "badge-neutral" : "badge-warning"
-                      }`}
+                      className={`badge shrink-0 text-nowrap badge-lg gap-1 ${selected ? "badge-neutral" : "badge-warning"
+                        }`}
                     >
                       <span>{title.emoji}</span>
                       {title.tx}
@@ -549,9 +483,8 @@ function RouteComponent() {
             <button
               key={tab.value}
               type="button"
-              className={`tab ${status === tab.value ? "tab-active" : ""} ${
-                tab.value === "trash" ? "text-error" : ""
-              }`}
+              className={`tab ${status === tab.value ? "tab-active" : ""} ${tab.value === "trash" ? "text-error" : ""
+                }`}
               onClick={() => {
                 setStatus(tab.value);
                 setPage(1);
@@ -566,52 +499,6 @@ function RouteComponent() {
           ))}
         </div>
       </form>
-
-      {/* 批量操作栏 */}
-      {selectedRows.length > 0 && (
-        <div className="w-full px-4 py-2 bg-base-200 border-b border-base-300 flex items-center justify-between">
-          <span className="text-sm text-base-content/70">
-            已选中 {selectedRows.length} 个活动
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="btn btn-sm btn-primary"
-              onClick={handleBatchPublish}
-              disabled={batchProcessing}
-            >
-              {batchProcessing ? (
-                <span className="loading loading-spinner loading-xs" />
-              ) : (
-                <ToggleRightIcon className="size-4" weight="fill" />
-              )}
-              批量发布
-            </button>
-            <button
-              type="button"
-              className="btn btn-sm btn-error"
-              onClick={handleBatchDelete}
-              disabled={batchProcessing}
-            >
-              {batchProcessing ? (
-                <span className="loading loading-spinner loading-xs" />
-              ) : (
-                <TrashIcon className="size-4" />
-              )}
-              批量删除
-            </button>
-            <button
-              type="button"
-              className="btn btn-sm btn-ghost"
-              onClick={() => setSelectedRows([])}
-              disabled={batchProcessing}
-            >
-              <XIcon className="size-4" />
-              取消选择
-            </button>
-          </div>
-        </div>
-      )}
 
       <div className="w-full h-[calc(100vh-8rem)] overflow-y-auto overflow-x-auto pb-40">
         <table className="table table-pin-rows table-pin-cols">
@@ -641,146 +528,137 @@ function RouteComponent() {
           </thead>
 
           <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={8} className="py-12 text-center">
-                  <span className="loading loading-dots loading-md"></span>
-                </td>
-              </tr>
-            ) : actives.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={8}
-                  className="py-12 text-center text-base-content/60"
-                >
-                  暂无活动，尝试调整筛选条件。
-                </td>
-              </tr>
-            ) : (
-              actives.map((active) => {
-                const tagsForRow = active.tags ?? [];
-                return (
-                  <tr key={active.id}>
-                    <th className="z-10">
-                      <label className="size-full hover:cursor-pointer">
-                        <input
-                          type="checkbox"
-                          className="checkbox"
-                          checked={selectedRows.includes(active.id)}
-                          onChange={() => toggleRow(active.id)}
-                        />
-                      </label>
-                    </th>
-                    <td className="p-0">
-                      <Link
-                        to="/dash/active/$id"
-                        params={{ id: active.id }}
-                        className="btn btn-ghost w-40 justify-start m-0 truncate line-clamp-1"
-                      >
-                        {active.name || "未命名活动"}
-                      </Link>
-                    </td>
-                    <td>
-                      <label
-                        className={`size-full flex items-center gap-2 text-nowrap ${active.is_deleted ? "opacity-50 cursor-not-allowed" : "hover:cursor-pointer"}`}
-                      >
-                        <input
-                          type="checkbox"
-                          className="toggle"
-                          checked={Boolean(active.is_published)}
-                          disabled={Boolean(active.is_deleted)}
-                          onChange={() => {
-                            if (active.is_deleted) return;
-                            const nextPublished = !active.is_published;
-                            void patchActive(active.id, {
-                              is_published: nextPublished,
-                            });
-                          }}
-                        />
-                        {active.is_published ? "已发布" : "未发布"}
-                      </label>
-                    </td>
-                    <td className="p-0">
-                      <Link
-                        to="/dash/active/$id"
-                        params={{ id: active.id }}
-                        className="btn btn-ghost justify-start w-full"
-                      >
-                        <p className="w-full max-w-80 m-0 truncate line-clamp-1">
-                          {active.description || "暂无简介"}
-                        </p>
-                      </Link>
-                    </td>
-                    <td>
-                      <div className="flex flex-wrap gap-2">
-                        {tagsForRow.length === 0 && (
-                          <span className="text-xs text-base-content/50">
-                            暂无
-                          </span>
-                        )}
-                        {tagsForRow.map((tag) => {
-                          const title = tagTitle(tag.tag?.title);
-                          return (
-                            <div
-                              key={tag.tag_id}
-                              className="badge shrink-0 text-nowrap badge-sm gap-1 badge-neutral"
-                            >
-                              <span>{title.emoji}</span>
-                              {title.tx}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </td>
-                    <td>
-                      {active.publish_at
-                        ? dayjs(active.publish_at).format("YYYY/MM/DD HH:mm")
-                        : "—"}
-                    </td>
-                    <td>
-                      <div className="flex items-center gap-4 py-2 h-full">
-                        <button
-                          type="button"
-                          className="btn btn-xs btn-ghost btn-primary"
-                          onClick={() => openEditDialog(active)}
-                        >
-                          编辑
-                          <PencilLineIcon />
-                        </button>
-
-                        <button
-                          type="button"
-                          className={`btn btn-xs btn-ghost ${
-                            active.is_deleted ? "btn-success" : "btn-error"
-                          }`}
-                          onClick={() => openDeleteDialog(active)}
-                        >
-                          {active.is_deleted ? "恢复/删除" : "删除"}
-                          <TrashIcon />
-                        </button>
-                      </div>
+            {loading
+              ? (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center">
+                    <span className="loading loading-dots loading-md"></span>
+                  </td>
+                </tr>
+              )
+              : actives.length === 0
+                ? (
+                  <tr>
+                    <td colSpan={8} className="py-12 text-center text-base-content/60">
+                      暂无活动，尝试调整筛选条件。
                     </td>
                   </tr>
-                );
-              })
-            )}
+                )
+                : actives.map((active) => {
+                  const tagsForRow = active.tags ?? [];
+                  return (
+                    <tr key={active.id}>
+                      <th className="z-10">
+                        <label className="size-full hover:cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="checkbox"
+                            checked={selectedRows.includes(active.id)}
+                            onChange={() => toggleRow(active.id)}
+                          />
+                        </label>
+                      </th>
+                      <td className="p-0">
+                        <Link
+                          to="/dash/active/$id"
+                          params={{ id: active.id }}
+                          className="btn btn-ghost w-40 justify-start m-0 truncate line-clamp-1"
+                        >
+                          {active.name || "未命名活动"}
+                        </Link>
+                      </td>
+                      <td>
+                        <label className={`size-full flex items-center gap-2 text-nowrap ${active.is_deleted ? "opacity-50 cursor-not-allowed" : "hover:cursor-pointer"}`}>
+                          <input
+                            type="checkbox"
+                            className="toggle"
+                            checked={Boolean(active.is_published)}
+                            disabled={Boolean(active.is_deleted)}
+                            onChange={() => {
+                              if (active.is_deleted) return;
+                              const nextPublished = !Boolean(
+                                active.is_published
+                              );
+                              void patchActive(active.id, {
+                                is_published: nextPublished,
+                              });
+                            }}
+                          />
+                          {active.is_published ? "已发布" : "未发布"}
+                        </label>
+                      </td>
+                      <td className="p-0">
+                        <Link
+                          to="/dash/active/$id"
+                          params={{ id: active.id }}
+                          className="btn btn-ghost justify-start w-full"
+                        >
+                          <p className="w-full max-w-80 m-0 truncate line-clamp-1">
+                            {active.description || "暂无简介"}
+                          </p>
+                        </Link>
+                      </td>
+                      <td>
+                        <div className="flex flex-wrap gap-2">
+                          {tagsForRow.length === 0 && (
+                            <span className="text-xs text-base-content/50">
+                              暂无
+                            </span>
+                          )}
+                          {tagsForRow.map((tag) => {
+                            const title = tagTitle(tag.tag?.title);
+                            return (
+                              <div
+                                key={tag.tag_id}
+                                className="badge shrink-0 text-nowrap badge-sm gap-1 badge-neutral"
+                              >
+                                <span>{title.emoji}</span>
+                                {title.tx}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </td>
+                      <td>
+                        {active.publish_at
+                          ? dayjs(active.publish_at).format("YYYY/MM/DD HH:mm")
+                          : "—"}
+                      </td>
+                      <td>
+                        <div className="flex items-center gap-4 py-2 h-full">
+                          <button
+                            type="button"
+                            className="btn btn-xs btn-ghost btn-primary"
+                            onClick={() => openEditDialog(active)}
+                          >
+                            编辑
+                            <PencilLineIcon />
+                          </button>
+
+
+                          <button
+                            type="button"
+                            className={`btn btn-xs btn-ghost ${active.is_deleted ? "btn-success" : "btn-error"
+                              }`}
+                            onClick={() => openDeleteDialog(active)}
+                          >
+                            {active.is_deleted ? "恢复/删除" : "删除"}
+                            <TrashIcon />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
           </tbody>
         </table>
       </div>
 
       <dialog ref={createDialogRef} className="modal">
-        <form
-          method="dialog"
-          className="modal-box"
-          onSubmit={handleCreateActive}
-        >
+        <form method="dialog" className="modal-box" onSubmit={handleCreateActive}>
           <div className="modal-action flex items-center justify-between mb-4">
             <h3 className="font-bold text-lg">创建活动</h3>
-            <button
-              type="button"
-              className="btn btn-ghost btn-square"
-              onClick={() => createDialogRef.current?.close()}
-            >
+            <button type="button" className="btn btn-ghost btn-square" onClick={() => createDialogRef.current?.close()}>
               <XIcon />
             </button>
           </div>
@@ -893,18 +771,10 @@ function RouteComponent() {
       </dialog>
 
       <dialog ref={editDialogRef} className="modal">
-        <form
-          method="dialog"
-          className="modal-box max-w-3xl"
-          onSubmit={handleEditSubmit}
-        >
+        <form method="dialog" className="modal-box max-w-3xl" onSubmit={handleEditSubmit}>
           <div className="modal-action flex items-center justify-between mb-4">
             <h3 className="font-bold text-lg">编辑活动</h3>
-            <button
-              type="button"
-              className="btn btn-ghost btn-square"
-              onClick={() => editDialogRef.current?.close()}
-            >
+            <button type="button" className="btn btn-ghost btn-square" onClick={() => editDialogRef.current?.close()}>
               <XIcon />
             </button>
           </div>
@@ -917,7 +787,7 @@ function RouteComponent() {
                 value={editForm.name}
                 onChange={(evt) =>
                   setEditForm((prev) =>
-                    prev ? { ...prev, name: evt.target.value } : prev,
+                    prev ? { ...prev, name: evt.target.value } : prev
                   )
                 }
               />
@@ -927,7 +797,7 @@ function RouteComponent() {
                 value={editForm.description}
                 onChange={(evt) =>
                   setEditForm((prev) =>
-                    prev ? { ...prev, description: evt.target.value } : prev,
+                    prev ? { ...prev, description: evt.target.value } : prev
                   )
                 }
               />
@@ -951,12 +821,12 @@ function RouteComponent() {
                             setEditForm((prev) =>
                               prev
                                 ? {
-                                    ...prev,
-                                    tags: checked
-                                      ? prev.tags.filter((id) => id !== tag.id)
-                                      : [...prev.tags, tag.id],
-                                  }
-                                : prev,
+                                  ...prev,
+                                  tags: checked
+                                    ? prev.tags.filter((id) => id !== tag.id)
+                                    : [...prev.tags, tag.id],
+                                }
+                                : prev
                             )
                           }
                         />
@@ -994,9 +864,7 @@ function RouteComponent() {
               </div>
 
               <div className="flex items-center gap-4">
-                <label
-                  className={`label gap-2 ${editForm.is_deleted ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                >
+                <label className={`label gap-2 ${editForm.is_deleted ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}>
                   <span className="label-text">发布状态</span>
                   <input
                     type="checkbox"
@@ -1006,9 +874,7 @@ function RouteComponent() {
                     onChange={(evt) => {
                       if (editForm.is_deleted) return;
                       setEditForm((prev) =>
-                        prev
-                          ? { ...prev, is_published: evt.target.checked }
-                          : prev,
+                        prev ? { ...prev, is_published: evt.target.checked } : prev
                       );
                     }}
                   />
@@ -1022,9 +888,7 @@ function RouteComponent() {
                     checked={editForm.is_deleted}
                     onChange={(evt) =>
                       setEditForm((prev) =>
-                        prev
-                          ? { ...prev, is_deleted: evt.target.checked }
-                          : prev,
+                        prev ? { ...prev, is_deleted: evt.target.checked } : prev
                       )
                     }
                   />
@@ -1034,11 +898,7 @@ function RouteComponent() {
           )}
 
           <div className="modal-action mt-6">
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={editPending}
-            >
+            <button type="submit" className="btn btn-primary" disabled={editPending}>
               {editPending ? "保存中..." : "保存"}
             </button>
           </div>
@@ -1140,7 +1000,7 @@ function TagAutocompleteInput({
 
   const availableTags = useMemo(
     () => tags.filter((tag) => !selectedTagIds.includes(tag.id)),
-    [tags, selectedTagIds],
+    [tags, selectedTagIds]
   );
 
   const suggestions = useMemo(() => {
@@ -1287,76 +1147,13 @@ function EmojiPicker({ value, onChange }: EmojiPickerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const commonEmojis = [
-    "🏷️",
-    "📝",
-    "📌",
-    "⭐",
-    "🔥",
-    "💡",
-    "🎯",
-    "✅",
-    "❌",
-    "⚠️",
-    "📅",
-    "📊",
-    "📈",
-    "📉",
-    "🎉",
-    "🎊",
-    "🎁",
-    "🎈",
-    "🎀",
-    "🎪",
-    "🏠",
-    "🏢",
-    "🏫",
-    "🏥",
-    "🏪",
-    "🏨",
-    "🏰",
-    "⛪",
-    "🕌",
-    "🕍",
-    "🚗",
-    "🚕",
-    "🚙",
-    "🚌",
-    "🚎",
-    "🏎️",
-    "🚓",
-    "🚑",
-    "🚒",
-    "🚐",
-    "😀",
-    "😃",
-    "😄",
-    "😁",
-    "😆",
-    "😅",
-    "🤣",
-    "😂",
-    "🙂",
-    "🙃",
-    "😉",
-    "😊",
-    "😇",
-    "🥰",
-    "😍",
-    "🤩",
-    "😘",
-    "😗",
-    "😚",
-    "😙",
-    "🥳",
-    "🤗",
-    "🤔",
-    "🤨",
-    "😐",
-    "😑",
-    "😶",
-    "🙄",
-    "😏",
-    "😣",
+    "🏷️", "📝", "📌", "⭐", "🔥", "💡", "🎯", "✅", "❌", "⚠️",
+    "📅", "📊", "📈", "📉", "🎉", "🎊", "🎁", "🎈", "🎀", "🎪",
+    "🏠", "🏢", "🏫", "🏥", "🏪", "🏨", "🏰", "⛪", "🕌", "🕍",
+    "🚗", "🚕", "🚙", "🚌", "🚎", "🏎️", "🚓", "🚑", "🚒", "🚐",
+    "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃",
+    "😉", "😊", "😇", "🥰", "😍", "🤩", "😘", "😗", "😚", "😙",
+    "🥳", "🤗", "🤔", "🤨", "😐", "😑", "😶", "🙄", "😏", "😣",
   ];
 
   useEffect(() => {

@@ -110,6 +110,15 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
     tags: tagIds,
   } = input;
 
+  // 如果正在发布活动，先查询当前状态
+  let currentActive: { is_published: boolean | null; publish_at: Date | null } | null = null;
+  if (is_published === true) {
+    currentActive = await tdb.query.activesTable.findFirst({
+      where: (a, { eq }) => eq(a.id, id),
+      columns: { is_published: true, publish_at: true },
+    });
+  }
+
   // 构建更新对象，只包含已定义的字段
   const updateData: {
     name?: string;
@@ -118,6 +127,7 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
     description?: string;
     content?: string;
     cover_image?: string | null;
+    publish_at?: Date;
   } = {};
 
   if (name !== undefined) updateData.name = name;
@@ -138,6 +148,16 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
       original: cover_image,
       processed: processedCoverImage,
     });
+  }
+
+  // 如果正在发布活动，且之前未发布过，则设置发布时间为当前时间
+  if (
+    is_published === true &&
+    currentActive &&
+    !currentActive.is_published &&
+    (!currentActive.publish_at || currentActive.publish_at.getTime() === 0)
+  ) {
+    updateData.publish_at = new Date();
   }
 
   // 如果没有要更新的字段，直接返回（或者只处理标签）

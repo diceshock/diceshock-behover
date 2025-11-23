@@ -37,11 +37,11 @@ const Footer = () => {
           <Link to="/" className="link link-hover">
             DiceShock Agents
           </Link>
-          <Link to="/" className="link link-hover">
-            活动&比赛
+          <Link to="/actives" className="link link-hover">
+            活动
           </Link>
-          <Link to="/" className="link link-hover">
-            美团商家
+          <Link to="/dash" className="link link-hover">
+            后台
           </Link>
         </nav>
         <nav>
