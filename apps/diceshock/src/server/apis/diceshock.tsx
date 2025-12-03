@@ -11,7 +11,7 @@ import {
   Script,
   ViteClient,
 } from "vite-ssr-components/react";
-import { createRouter } from "@/apps/diceshock/router";
+import { createRouter } from "@/apps/router";
 import { CrossDataProvider } from "@/client/hooks/useCrossData";
 import { ServerCtxProvider } from "@/client/hooks/useServerCtx";
 import type { HonoCtxEnv } from "@/shared/types";
@@ -48,9 +48,9 @@ export default async function diceshockRouter(c: Context<HonoCtxEnv>) {
             <ViteClient />
             <ReactRefresh />
 
-            <Script src="/src/apps/diceshock/client.tsx" />
+            <Script src="/src/apps/client.tsx" />
 
-            <Link href="/src/apps/diceshock/style.css" rel="stylesheet" />
+            <Link href="/src/apps/style.css" rel="stylesheet" />
 
             <link
               rel="icon"

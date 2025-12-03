@@ -20,10 +20,10 @@ const config = defineConfig({
         "// @ts-nocheck",
       ],
       autoCodeSplitting: true,
-      routesDirectory: path.resolve(__dirname, "./src/apps/diceshock/routers"),
+      routesDirectory: path.resolve(__dirname, "./src/apps/routers"),
       generatedRouteTree: path.resolve(
         __dirname,
-        "./src/apps/diceshock/routeTree.gen.ts"
+        "./src/apps/routeTree.gen.ts"
       ),
     }),
     cloudflare({ configPath: path.resolve(__dirname, "./wrangler.toml") }),
