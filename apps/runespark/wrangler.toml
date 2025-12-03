@@ -1,0 +1,43 @@
+"$schema" = "node_modules/wrangler/config-schema.json"
+
+name = "runespark-behover"
+compatibility_date = "2025-09-24"
+main = "./src/main.tsx"
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = false
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true
+
+[observability.traces]
+enabled = false
+persist = true
+head_sampling_rate = 1
+
+[version_metadata]
+binding = "CF_VERSION_METADATA"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "runespark"
+database_id = "24c01d5e-c4d7-4b13-bb59-5ad3373971e9"
+migrations_dir = "../../drizzle"
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "runespark"
+preview_bucket_name = "runespark-preview"
+
+[[routes]]
+pattern = "www.runespark.org"
+custom_domain = true
+
+[[routes]]
+pattern = "runespark.org"
+custom_domain = true
