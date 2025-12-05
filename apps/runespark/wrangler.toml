@@ -23,16 +23,30 @@ head_sampling_rate = 1
 [version_metadata]
 binding = "CF_VERSION_METADATA"
 
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["WsConnectionPool"]
+
 [[d1_databases]]
 binding = "DB"
 database_name = "runespark"
 database_id = "24c01d5e-c4d7-4b13-bb59-5ad3373971e9"
 migrations_dir = "../../drizzle"
 
+[[d1_databases]]
+binding = "SUBSCRIPTIONS"
+database_name = "subscriptions"
+database_id = "2438be17-84e1-4d85-a74d-055f55822669"
+migrations_dir = "node_modules/graphql-workers-subscriptions/migrations"
+
 [[r2_buckets]]
 binding = "R2"
 bucket_name = "runespark"
 preview_bucket_name = "runespark-preview"
+
+[[durable_objects.bindings]]
+name = "WS_CONNECTION_POOL"
+class_name = "WsConnectionPool"
 
 [[routes]]
 pattern = "www.runespark.org"
