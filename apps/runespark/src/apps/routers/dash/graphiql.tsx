@@ -1,7 +1,7 @@
-import { ClientOnly, createLazyFileRoute } from "@tanstack/react-router";
+import { ClientOnly, createFileRoute } from "@tanstack/react-router";
 import { GraphiQlScreen } from "@/client/components/GraphiQL";
 
-export const Route = createLazyFileRoute("/dash/graphiql")({
+export const Route = createFileRoute("/dash/graphiql")({
   component: RouteComponent,
 });
 

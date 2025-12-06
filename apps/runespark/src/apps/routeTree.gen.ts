@@ -12,9 +12,9 @@ import { createFileRoute } from '@tanstack/react-router'
 
 import { Route as rootRouteImport } from './routers/__root'
 import { Route as WithHomeLoRouteImport } from './routers/_with-home-lo'
+import { Route as DashGraphiqlRouteImport } from './routers/dash/graphiql'
 
 const DashLazyRouteImport = createFileRoute('/dash')()
-const DashGraphiqlLazyRouteImport = createFileRoute('/dash/graphiql')()
 
 const DashLazyRoute = DashLazyRouteImport.update({
   id: '/dash',
@@ -25,27 +25,25 @@ const WithHomeLoRoute = WithHomeLoRouteImport.update({
   id: '/_with-home-lo',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DashGraphiqlLazyRoute = DashGraphiqlLazyRouteImport.update({
+const DashGraphiqlRoute = DashGraphiqlRouteImport.update({
   id: '/graphiql',
   path: '/graphiql',
   getParentRoute: () => DashLazyRoute,
-} as any).lazy(() =>
-  import('./routers/dash/graphiql.lazy').then((d) => d.Route),
-)
+} as any)
 
 export interface FileRoutesByFullPath {
   '/dash': typeof DashLazyRouteWithChildren
-  '/dash/graphiql': typeof DashGraphiqlLazyRoute
+  '/dash/graphiql': typeof DashGraphiqlRoute
 }
 export interface FileRoutesByTo {
   '/dash': typeof DashLazyRouteWithChildren
-  '/dash/graphiql': typeof DashGraphiqlLazyRoute
+  '/dash/graphiql': typeof DashGraphiqlRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_with-home-lo': typeof WithHomeLoRoute
   '/dash': typeof DashLazyRouteWithChildren
-  '/dash/graphiql': typeof DashGraphiqlLazyRoute
+  '/dash/graphiql': typeof DashGraphiqlRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -80,18 +78,18 @@ declare module '@tanstack/react-router' {
       id: '/dash/graphiql'
       path: '/graphiql'
       fullPath: '/dash/graphiql'
-      preLoaderRoute: typeof DashGraphiqlLazyRouteImport
+      preLoaderRoute: typeof DashGraphiqlRouteImport
       parentRoute: typeof DashLazyRoute
     }
   }
 }
 
 interface DashLazyRouteChildren {
-  DashGraphiqlLazyRoute: typeof DashGraphiqlLazyRoute
+  DashGraphiqlRoute: typeof DashGraphiqlRoute
 }
 
 const DashLazyRouteChildren: DashLazyRouteChildren = {
-  DashGraphiqlLazyRoute: DashGraphiqlLazyRoute,
+  DashGraphiqlRoute: DashGraphiqlRoute,
 }
 
 const DashLazyRouteWithChildren = DashLazyRoute._addFileChildren(
