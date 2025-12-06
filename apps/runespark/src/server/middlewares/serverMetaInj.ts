@@ -1,3 +1,5 @@
+import type { GraphQLSchemaWithContext } from "@graphql-tools/schema";
+import { RenameRootFields, wrapSchema } from "@graphql-tools/wrap";
 import { z } from "zod";
 import { FACTORY } from "../factory";
 import { injectCrossDataToCtx } from "../utils";
@@ -72,6 +74,20 @@ export function parseLanguage(acceptLanguage: string): string {
     .filter((lang) => lang.length > 0);
 
   return languages.at(0) || "unknown";
+}
+
+export function wrapSchemaWithNamespace<C>(
+  schema: GraphQLSchemaWithContext<C>,
+  ns: string,
+) {
+  return wrapSchema({
+    schema,
+    transforms: [
+      new RenameRootFields((_op, name) => {
+        return `${ns}_${name}`;
+      }),
+    ],
+  });
 }
 
 export function parseUserAgentMeta(

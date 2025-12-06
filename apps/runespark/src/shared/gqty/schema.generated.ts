@@ -2790,101 +2790,101 @@ export const generatedSchema = {
   },
   mutation: {
     __typename: { __type: "String!" },
-    deleteFromActiveTagMappingsTable: {
+    ds_db_deleteFromActiveTagMappingsTable: {
       __type: "[ActiveTagMappingsTableItem!]!",
       __args: { where: "ActiveTagMappingsTableFilters" },
     },
-    deleteFromActiveTagsTable: {
+    ds_db_deleteFromActiveTagsTable: {
       __type: "[ActiveTagsTableItem!]!",
       __args: { where: "ActiveTagsTableFilters" },
     },
-    deleteFromActivesTable: {
+    ds_db_deleteFromActivesTable: {
       __type: "[ActivesTableItem!]!",
       __args: { where: "ActivesTableFilters" },
     },
-    deleteFromBoardGamesTable: {
+    ds_db_deleteFromBoardGamesTable: {
       __type: "[BoardGamesTableItem!]!",
       __args: { where: "BoardGamesTableFilters" },
     },
-    deleteFromDocsTable: {
+    ds_db_deleteFromDocsTable: {
       __type: "[DocsTableItem!]!",
       __args: { where: "DocsTableFilters" },
     },
-    insertIntoActiveTagMappingsTable: {
+    ds_db_insertIntoActiveTagMappingsTable: {
       __type: "[ActiveTagMappingsTableItem!]!",
       __args: { values: "[ActiveTagMappingsTableInsertInput!]!" },
     },
-    insertIntoActiveTagMappingsTableSingle: {
+    ds_db_insertIntoActiveTagMappingsTableSingle: {
       __type: "ActiveTagMappingsTableItem",
       __args: { values: "ActiveTagMappingsTableInsertInput!" },
     },
-    insertIntoActiveTagsTable: {
+    ds_db_insertIntoActiveTagsTable: {
       __type: "[ActiveTagsTableItem!]!",
       __args: { values: "[ActiveTagsTableInsertInput!]!" },
     },
-    insertIntoActiveTagsTableSingle: {
+    ds_db_insertIntoActiveTagsTableSingle: {
       __type: "ActiveTagsTableItem",
       __args: { values: "ActiveTagsTableInsertInput!" },
     },
-    insertIntoActivesTable: {
+    ds_db_insertIntoActivesTable: {
       __type: "[ActivesTableItem!]!",
       __args: { values: "[ActivesTableInsertInput!]!" },
     },
-    insertIntoActivesTableSingle: {
+    ds_db_insertIntoActivesTableSingle: {
       __type: "ActivesTableItem",
       __args: { values: "ActivesTableInsertInput!" },
     },
-    insertIntoBoardGamesTable: {
+    ds_db_insertIntoBoardGamesTable: {
       __type: "[BoardGamesTableItem!]!",
       __args: { values: "[BoardGamesTableInsertInput!]!" },
     },
-    insertIntoBoardGamesTableSingle: {
+    ds_db_insertIntoBoardGamesTableSingle: {
       __type: "BoardGamesTableItem",
       __args: { values: "BoardGamesTableInsertInput!" },
     },
-    insertIntoDocsTable: {
+    ds_db_insertIntoDocsTable: {
       __type: "[DocsTableItem!]!",
       __args: { values: "[DocsTableInsertInput!]!" },
     },
-    insertIntoDocsTableSingle: {
+    ds_db_insertIntoDocsTableSingle: {
       __type: "DocsTableItem",
       __args: { values: "DocsTableInsertInput!" },
     },
-    intToJson: { __type: "String", __args: { data: "Int!" } },
-    sendMessage: { __type: "Boolean", __args: { text: "String!" } },
-    updateActiveTagMappingsTable: {
+    ds_db_updateActiveTagMappingsTable: {
       __type: "[ActiveTagMappingsTableItem!]!",
       __args: {
         set: "ActiveTagMappingsTableUpdateInput!",
         where: "ActiveTagMappingsTableFilters",
       },
     },
-    updateActiveTagsTable: {
+    ds_db_updateActiveTagsTable: {
       __type: "[ActiveTagsTableItem!]!",
       __args: {
         set: "ActiveTagsTableUpdateInput!",
         where: "ActiveTagsTableFilters",
       },
     },
-    updateActivesTable: {
+    ds_db_updateActivesTable: {
       __type: "[ActivesTableItem!]!",
       __args: { set: "ActivesTableUpdateInput!", where: "ActivesTableFilters" },
     },
-    updateBoardGamesTable: {
+    ds_db_updateBoardGamesTable: {
       __type: "[BoardGamesTableItem!]!",
       __args: {
         set: "BoardGamesTableUpdateInput!",
         where: "BoardGamesTableFilters",
       },
     },
-    updateDocsTable: {
+    ds_db_updateDocsTable: {
       __type: "[DocsTableItem!]!",
       __args: { set: "DocsTableUpdateInput!", where: "DocsTableFilters" },
     },
+    intToJson: { __type: "String", __args: { data: "Int!" } },
+    sendMessage: { __type: "Boolean", __args: { text: "String!" } },
   },
   query: {
     __typename: { __type: "String!" },
-    activeTagMappingsTable: {
+    ds_db_activeTagMappingsTable: {
       __type: "[ActiveTagMappingsTableSelectItem!]!",
       __args: {
         limit: "Int",
@@ -2893,7 +2893,7 @@ export const generatedSchema = {
         where: "ActiveTagMappingsTableFilters",
       },
     },
-    activeTagMappingsTableSingle: {
+    ds_db_activeTagMappingsTableSingle: {
       __type: "ActiveTagMappingsTableSelectItem",
       __args: {
         offset: "Int",
@@ -2901,7 +2901,7 @@ export const generatedSchema = {
         where: "ActiveTagMappingsTableFilters",
       },
     },
-    activeTagsTable: {
+    ds_db_activeTagsTable: {
       __type: "[ActiveTagsTableSelectItem!]!",
       __args: {
         limit: "Int",
@@ -2910,7 +2910,7 @@ export const generatedSchema = {
         where: "ActiveTagsTableFilters",
       },
     },
-    activeTagsTableSingle: {
+    ds_db_activeTagsTableSingle: {
       __type: "ActiveTagsTableSelectItem",
       __args: {
         offset: "Int",
@@ -2918,7 +2918,7 @@ export const generatedSchema = {
         where: "ActiveTagsTableFilters",
       },
     },
-    activesTable: {
+    ds_db_activesTable: {
       __type: "[ActivesTableSelectItem!]!",
       __args: {
         limit: "Int",
@@ -2927,7 +2927,7 @@ export const generatedSchema = {
         where: "ActivesTableFilters",
       },
     },
-    activesTableSingle: {
+    ds_db_activesTableSingle: {
       __type: "ActivesTableSelectItem",
       __args: {
         offset: "Int",
@@ -2935,7 +2935,7 @@ export const generatedSchema = {
         where: "ActivesTableFilters",
       },
     },
-    boardGamesTable: {
+    ds_db_boardGamesTable: {
       __type: "[BoardGamesTableSelectItem!]!",
       __args: {
         limit: "Int",
@@ -2944,7 +2944,7 @@ export const generatedSchema = {
         where: "BoardGamesTableFilters",
       },
     },
-    boardGamesTableSingle: {
+    ds_db_boardGamesTableSingle: {
       __type: "BoardGamesTableSelectItem",
       __args: {
         offset: "Int",
@@ -2952,7 +2952,7 @@ export const generatedSchema = {
         where: "BoardGamesTableFilters",
       },
     },
-    docsTable: {
+    ds_db_docsTable: {
       __type: "[DocsTableSelectItem!]!",
       __args: {
         limit: "Int",
@@ -2961,7 +2961,7 @@ export const generatedSchema = {
         where: "DocsTableFilters",
       },
     },
-    docsTableSingle: {
+    ds_db_docsTableSingle: {
       __type: "DocsTableSelectItem",
       __args: {
         offset: "Int",
@@ -3296,132 +3296,132 @@ export interface DocsTableSelectItem {
 
 export interface Mutation {
   __typename?: "Mutation";
-  deleteFromActiveTagMappingsTable: (args?: {
+  ds_db_deleteFromActiveTagMappingsTable: (args?: {
     where?: Maybe<ActiveTagMappingsTableFilters>;
   }) => Array<ActiveTagMappingsTableItem>;
-  deleteFromActiveTagsTable: (args?: {
+  ds_db_deleteFromActiveTagsTable: (args?: {
     where?: Maybe<ActiveTagsTableFilters>;
   }) => Array<ActiveTagsTableItem>;
-  deleteFromActivesTable: (args?: {
+  ds_db_deleteFromActivesTable: (args?: {
     where?: Maybe<ActivesTableFilters>;
   }) => Array<ActivesTableItem>;
-  deleteFromBoardGamesTable: (args?: {
+  ds_db_deleteFromBoardGamesTable: (args?: {
     where?: Maybe<BoardGamesTableFilters>;
   }) => Array<BoardGamesTableItem>;
-  deleteFromDocsTable: (args?: {
+  ds_db_deleteFromDocsTable: (args?: {
     where?: Maybe<DocsTableFilters>;
   }) => Array<DocsTableItem>;
-  insertIntoActiveTagMappingsTable: (args: {
+  ds_db_insertIntoActiveTagMappingsTable: (args: {
     values: Array<ActiveTagMappingsTableInsertInput>;
   }) => Array<ActiveTagMappingsTableItem>;
-  insertIntoActiveTagMappingsTableSingle: (args: {
+  ds_db_insertIntoActiveTagMappingsTableSingle: (args: {
     values: ActiveTagMappingsTableInsertInput;
   }) => Maybe<ActiveTagMappingsTableItem>;
-  insertIntoActiveTagsTable: (args: {
+  ds_db_insertIntoActiveTagsTable: (args: {
     values: Array<ActiveTagsTableInsertInput>;
   }) => Array<ActiveTagsTableItem>;
-  insertIntoActiveTagsTableSingle: (args: {
+  ds_db_insertIntoActiveTagsTableSingle: (args: {
     values: ActiveTagsTableInsertInput;
   }) => Maybe<ActiveTagsTableItem>;
-  insertIntoActivesTable: (args: {
+  ds_db_insertIntoActivesTable: (args: {
     values: Array<ActivesTableInsertInput>;
   }) => Array<ActivesTableItem>;
-  insertIntoActivesTableSingle: (args: {
+  ds_db_insertIntoActivesTableSingle: (args: {
     values: ActivesTableInsertInput;
   }) => Maybe<ActivesTableItem>;
-  insertIntoBoardGamesTable: (args: {
+  ds_db_insertIntoBoardGamesTable: (args: {
     values: Array<BoardGamesTableInsertInput>;
   }) => Array<BoardGamesTableItem>;
-  insertIntoBoardGamesTableSingle: (args: {
+  ds_db_insertIntoBoardGamesTableSingle: (args: {
     values: BoardGamesTableInsertInput;
   }) => Maybe<BoardGamesTableItem>;
-  insertIntoDocsTable: (args: {
+  ds_db_insertIntoDocsTable: (args: {
     values: Array<DocsTableInsertInput>;
   }) => Array<DocsTableItem>;
-  insertIntoDocsTableSingle: (args: {
+  ds_db_insertIntoDocsTableSingle: (args: {
     values: DocsTableInsertInput;
   }) => Maybe<DocsTableItem>;
+  ds_db_updateActiveTagMappingsTable: (args: {
+    set: ActiveTagMappingsTableUpdateInput;
+    where?: Maybe<ActiveTagMappingsTableFilters>;
+  }) => Array<ActiveTagMappingsTableItem>;
+  ds_db_updateActiveTagsTable: (args: {
+    set: ActiveTagsTableUpdateInput;
+    where?: Maybe<ActiveTagsTableFilters>;
+  }) => Array<ActiveTagsTableItem>;
+  ds_db_updateActivesTable: (args: {
+    set: ActivesTableUpdateInput;
+    where?: Maybe<ActivesTableFilters>;
+  }) => Array<ActivesTableItem>;
+  ds_db_updateBoardGamesTable: (args: {
+    set: BoardGamesTableUpdateInput;
+    where?: Maybe<BoardGamesTableFilters>;
+  }) => Array<BoardGamesTableItem>;
+  ds_db_updateDocsTable: (args: {
+    set: DocsTableUpdateInput;
+    where?: Maybe<DocsTableFilters>;
+  }) => Array<DocsTableItem>;
   intToJson: (args: {
     data: Scalars["Int"]["input"];
   }) => Maybe<Scalars["String"]["output"]>;
   sendMessage: (args: {
     text: Scalars["String"]["input"];
   }) => Maybe<Scalars["Boolean"]["output"]>;
-  updateActiveTagMappingsTable: (args: {
-    set: ActiveTagMappingsTableUpdateInput;
-    where?: Maybe<ActiveTagMappingsTableFilters>;
-  }) => Array<ActiveTagMappingsTableItem>;
-  updateActiveTagsTable: (args: {
-    set: ActiveTagsTableUpdateInput;
-    where?: Maybe<ActiveTagsTableFilters>;
-  }) => Array<ActiveTagsTableItem>;
-  updateActivesTable: (args: {
-    set: ActivesTableUpdateInput;
-    where?: Maybe<ActivesTableFilters>;
-  }) => Array<ActivesTableItem>;
-  updateBoardGamesTable: (args: {
-    set: BoardGamesTableUpdateInput;
-    where?: Maybe<BoardGamesTableFilters>;
-  }) => Array<BoardGamesTableItem>;
-  updateDocsTable: (args: {
-    set: DocsTableUpdateInput;
-    where?: Maybe<DocsTableFilters>;
-  }) => Array<DocsTableItem>;
 }
 
 export interface Query {
   __typename?: "Query";
-  activeTagMappingsTable: (args?: {
+  ds_db_activeTagMappingsTable: (args?: {
     limit?: Maybe<Scalars["Int"]["input"]>;
     offset?: Maybe<Scalars["Int"]["input"]>;
     orderBy?: Maybe<ActiveTagMappingsTableOrderBy>;
     where?: Maybe<ActiveTagMappingsTableFilters>;
   }) => Array<ActiveTagMappingsTableSelectItem>;
-  activeTagMappingsTableSingle: (args?: {
+  ds_db_activeTagMappingsTableSingle: (args?: {
     offset?: Maybe<Scalars["Int"]["input"]>;
     orderBy?: Maybe<ActiveTagMappingsTableOrderBy>;
     where?: Maybe<ActiveTagMappingsTableFilters>;
   }) => Maybe<ActiveTagMappingsTableSelectItem>;
-  activeTagsTable: (args?: {
+  ds_db_activeTagsTable: (args?: {
     limit?: Maybe<Scalars["Int"]["input"]>;
     offset?: Maybe<Scalars["Int"]["input"]>;
     orderBy?: Maybe<ActiveTagsTableOrderBy>;
     where?: Maybe<ActiveTagsTableFilters>;
   }) => Array<ActiveTagsTableSelectItem>;
-  activeTagsTableSingle: (args?: {
+  ds_db_activeTagsTableSingle: (args?: {
     offset?: Maybe<Scalars["Int"]["input"]>;
     orderBy?: Maybe<ActiveTagsTableOrderBy>;
     where?: Maybe<ActiveTagsTableFilters>;
   }) => Maybe<ActiveTagsTableSelectItem>;
-  activesTable: (args?: {
+  ds_db_activesTable: (args?: {
     limit?: Maybe<Scalars["Int"]["input"]>;
     offset?: Maybe<Scalars["Int"]["input"]>;
     orderBy?: Maybe<ActivesTableOrderBy>;
     where?: Maybe<ActivesTableFilters>;
   }) => Array<ActivesTableSelectItem>;
-  activesTableSingle: (args?: {
+  ds_db_activesTableSingle: (args?: {
     offset?: Maybe<Scalars["Int"]["input"]>;
     orderBy?: Maybe<ActivesTableOrderBy>;
     where?: Maybe<ActivesTableFilters>;
   }) => Maybe<ActivesTableSelectItem>;
-  boardGamesTable: (args?: {
+  ds_db_boardGamesTable: (args?: {
     limit?: Maybe<Scalars["Int"]["input"]>;
     offset?: Maybe<Scalars["Int"]["input"]>;
     orderBy?: Maybe<BoardGamesTableOrderBy>;
     where?: Maybe<BoardGamesTableFilters>;
   }) => Array<BoardGamesTableSelectItem>;
-  boardGamesTableSingle: (args?: {
+  ds_db_boardGamesTableSingle: (args?: {
     offset?: Maybe<Scalars["Int"]["input"]>;
     orderBy?: Maybe<BoardGamesTableOrderBy>;
     where?: Maybe<BoardGamesTableFilters>;
   }) => Maybe<BoardGamesTableSelectItem>;
-  docsTable: (args?: {
+  ds_db_docsTable: (args?: {
     limit?: Maybe<Scalars["Int"]["input"]>;
     offset?: Maybe<Scalars["Int"]["input"]>;
     orderBy?: Maybe<DocsTableOrderBy>;
     where?: Maybe<DocsTableFilters>;
   }) => Array<DocsTableSelectItem>;
-  docsTableSingle: (args?: {
+  ds_db_docsTableSingle: (args?: {
     offset?: Maybe<Scalars["Int"]["input"]>;
     orderBy?: Maybe<DocsTableOrderBy>;
     where?: Maybe<DocsTableFilters>;

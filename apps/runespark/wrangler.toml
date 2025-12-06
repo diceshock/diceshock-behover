@@ -48,10 +48,10 @@ preview_bucket_name = "runespark-preview"
 name = "WS_CONNECTION_POOL"
 class_name = "WsConnectionPool"
 
-[[routes]]
-pattern = "www.runespark.org"
-custom_domain = true
+# [[routes]]
+# pattern = "www.runespark.org"
+# custom_domain = true
 
-[[routes]]
-pattern = "runespark.org"
-custom_domain = true
+# [[routes]]
+# pattern = "runespark.org"
+# custom_domain = true

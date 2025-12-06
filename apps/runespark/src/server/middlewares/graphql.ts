@@ -1,4 +1,5 @@
 import { mergeSchemas } from "@graphql-tools/schema";
+import { RenameRootFields, wrapSchema } from "@graphql-tools/wrap";
 import { graphqlServer } from "@hono/graphql-server";
 import db from "@lib/db";
 import { buildSchema } from "drizzle-graphql";
@@ -11,6 +12,7 @@ import type { HonoCtxEnv } from "@/shared/types";
 import { schema } from "../apis/graphql";
 import { FACTORY } from "../factory";
 import { wrapSchemaWithContext } from "../utils";
+import { wrapSchemaWithNamespace } from "./serverMetaInj";
 
 export const graphqlSubSettings = {
   schema,
@@ -19,6 +21,11 @@ export const graphqlSubSettings = {
 };
 
 const graphql = FACTORY.createMiddleware(async (c, next) => {
+  const dsDrizzleSchema = wrapSchemaWithNamespace(
+    buildSchema(db(c.env.DB)).schema,
+    "ds_db",
+  );
+
   const ctxInjectedSchema = wrapSchemaWithContext<Context<HonoCtxEnv>>(
     schema,
     async (ctx) => {
@@ -31,11 +38,9 @@ const graphql = FACTORY.createMiddleware(async (c, next) => {
     },
   );
 
-  const drizzleSchema = buildSchema(db(c.env.DB));
-
   const server = graphqlServer<HonoCtxEnv>({
     schema: mergeSchemas({
-      schemas: [ctxInjectedSchema, drizzleSchema.schema],
+      schemas: [ctxInjectedSchema, dsDrizzleSchema],
     }),
     graphiql: false,
   });
