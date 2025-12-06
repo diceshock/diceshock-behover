@@ -25,6 +25,7 @@
     "@hono/graphql-server": "^0.7.0",
     "@paralleldrive/cuid2": "^2.2.2",
     "@phosphor-icons/react": "^2.1.10",
+    "@pothos/core": "^4.10.0",
     "@react-spring/web": "^10.0.3",
     "@tanstack/react-router": "^1.132.23",
     "@tanstack/react-router-devtools": "^1.132.23",

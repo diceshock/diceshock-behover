@@ -1,52 +1,60 @@
-import { makeExecutableSchema } from "@graphql-tools/schema";
-import type { createDefaultPublishableContext } from "graphql-workers-subscriptions";
-import { subscribe } from "graphql-workers-subscriptions";
+import SchemaBuilder from "@pothos/core";
+import { builderSubscription } from "@/server/utils";
+import type { GraphQLContext } from "@/shared/types";
 
-export const typeDefs = `
-  type Query {
-    hello: String!
-    methods: [String!]!
-  }
+const builder = new SchemaBuilder<{ Context: GraphQLContext }>({});
 
-  type Mutation {
-    sendMessage(text: String!): Boolean!
-    intToJson(data: Int!): String!
-  }
+builder.queryType({
+  fields: (t) => ({
+    hello: t.field({
+      type: "String",
+      resolve: () => "Hello World",
+    }),
+    methods: t.field({
+      type: ["String"],
+      resolve: (_parent, _args, ctx) => Object.keys(ctx),
+    }),
+  }),
+});
 
-  type Subscription {
-    message(text: String): String!
-  }
-`;
-
-// 定义 GraphQL context 类型
-type GraphQLContext = ReturnType<
-  typeof createDefaultPublishableContext<Cloudflare.Env>
->;
-
-export const schema = makeExecutableSchema<GraphQLContext>({
-  typeDefs,
-  resolvers: {
-    Query: {
-      hello: (_, _i, _ctx) => "Hello World",
-      methods: (_, _i, ctx) => Object.keys(ctx),
-    },
-
-    Mutation: {
-      sendMessage: async (_, { text }, ctx) => {
+builder.mutationType({
+  fields: (t) => ({
+    sendMessage: t.field({
+      type: "Boolean",
+      args: {
+        text: t.arg.string({ required: true }),
+      },
+      resolve: async (_parent, { text }, ctx) => {
         ctx.publish("MESSAGE_TOPIC", { message: text });
         return true;
       },
-      intToJson: async (_, { data }, _ctx) => {
+    }),
+    intToJson: t.field({
+      type: "String",
+      args: {
+        data: t.arg.int({ required: true }),
+      },
+      resolve: async (_parent, { data }) => {
         return JSON.stringify(data);
       },
-    },
-
-    Subscription: {
-      message: {
-        subscribe: subscribe("MESSAGE_TOPIC", {
-          filter: (_root, args) => (args.text ? { message: args.text } : {}),
-        }),
-      },
-    },
-  },
+    }),
+  }),
 });
+
+builder.subscriptionType({
+  fields: (t) => ({
+    message: t.field({
+      type: "String",
+      args: {
+        text: t.arg.string(),
+      },
+      subscribe: builderSubscription("MESSAGE_TOPIC", {
+        filter: (_root, filterArgs) =>
+          filterArgs.text ? { message: filterArgs.text } : {},
+      }),
+      resolve: (payload: { message: string }) => payload.message,
+    }),
+  }),
+});
+
+export const schema = builder.toSchema();

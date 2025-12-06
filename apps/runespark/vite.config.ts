@@ -35,6 +35,7 @@ const config = defineConfig({
     ssrPlugin({
       hotReload: {
         ignore: ["./src/client/**/*.tsx", "./src/apps/**/*.tsx"],
+        target: ["./src/server/**/*.ts"],
       },
     }),
     react(),

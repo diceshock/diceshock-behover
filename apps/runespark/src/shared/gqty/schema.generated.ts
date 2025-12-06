@@ -41,17 +41,17 @@ export const scalarsEnumsHash: ScalarsEnumsHash = {
 export const generatedSchema = {
   mutation: {
     __typename: { __type: "String!" },
-    intToJson: { __type: "String!", __args: { data: "Int!" } },
-    sendMessage: { __type: "Boolean!", __args: { text: "String!" } },
+    intToJson: { __type: "String", __args: { data: "Int!" } },
+    sendMessage: { __type: "Boolean", __args: { text: "String!" } },
   },
   query: {
     __typename: { __type: "String!" },
-    hello: { __type: "String!" },
-    methods: { __type: "[String!]!" },
+    hello: { __type: "String" },
+    methods: { __type: "[String!]" },
   },
   subscription: {
     __typename: { __type: "String!" },
-    message: { __type: "String!", __args: { text: "String" } },
+    message: { __type: "String", __args: { text: "String" } },
   },
 } as const;
 
@@ -59,23 +59,23 @@ export interface Mutation {
   __typename?: "Mutation";
   intToJson: (args: {
     data: Scalars["Int"]["input"];
-  }) => Scalars["String"]["output"];
+  }) => Maybe<Scalars["String"]["output"]>;
   sendMessage: (args: {
     text: Scalars["String"]["input"];
-  }) => Scalars["Boolean"]["output"];
+  }) => Maybe<Scalars["Boolean"]["output"]>;
 }
 
 export interface Query {
   __typename?: "Query";
-  hello?: Scalars["String"]["output"];
-  methods?: Array<Scalars["String"]["output"]>;
+  hello?: Maybe<Scalars["String"]["output"]>;
+  methods?: Maybe<Array<Scalars["String"]["output"]>>;
 }
 
 export interface Subscription {
   __typename?: "Subscription";
   message: (args?: {
     text?: Maybe<Scalars["String"]["input"]>;
-  }) => Scalars["String"]["output"];
+  }) => Maybe<Scalars["String"]["output"]>;
 }
 
 export interface GeneratedSchema {
