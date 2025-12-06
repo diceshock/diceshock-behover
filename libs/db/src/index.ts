@@ -1,6 +1,7 @@
 export { BoardGame } from "@lib/utils";
 export * as drizzle from "drizzle-orm";
 export * from "./schema";
+export * as schema from "./schema";
 export * from "./types";
 export * from "./types/table";
 

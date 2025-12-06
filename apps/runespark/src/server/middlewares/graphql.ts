@@ -1,4 +1,7 @@
+import { mergeSchemas } from "@graphql-tools/schema";
 import { graphqlServer } from "@hono/graphql-server";
+import db from "@lib/db";
+import { buildSchema } from "drizzle-graphql";
 import {
   createDefaultPublishableContext,
   createWsConnectionPoolClass,
@@ -6,6 +9,7 @@ import {
 import type { Context } from "hono";
 import type { HonoCtxEnv } from "@/shared/types";
 import { schema } from "../apis/graphql";
+import { FACTORY } from "../factory";
 import { wrapSchemaWithContext } from "../utils";
 
 export const graphqlSubSettings = {
@@ -14,15 +18,29 @@ export const graphqlSubSettings = {
   subscriptionsDb: (env: Cloudflare.Env) => env.SUBSCRIPTIONS,
 };
 
-const graphql = graphqlServer<HonoCtxEnv>({
-  schema: wrapSchemaWithContext<Context<HonoCtxEnv>>(schema, async (ctx) =>
-    createDefaultPublishableContext({
-      env: ctx.env,
-      executionCtx: ctx.executionCtx,
-      ...graphqlSubSettings,
+const graphql = FACTORY.createMiddleware(async (c, next) => {
+  const ctxInjectedSchema = wrapSchemaWithContext<Context<HonoCtxEnv>>(
+    schema,
+    async (ctx) => {
+      return createDefaultPublishableContext({
+        env: ctx.env,
+        executionCtx: ctx.executionCtx,
+        ...graphqlSubSettings,
+        schema,
+      });
+    },
+  );
+
+  const drizzleSchema = buildSchema(db(c.env.DB));
+
+  const server = graphqlServer<HonoCtxEnv>({
+    schema: mergeSchemas({
+      schemas: [ctxInjectedSchema, drizzleSchema.schema],
     }),
-  ),
-  graphiql: false,
+    graphiql: false,
+  });
+
+  return server(c, next);
 });
 
 export default graphql;
