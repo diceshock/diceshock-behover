@@ -1,5 +1,4 @@
 import { mergeSchemas } from "@graphql-tools/schema";
-import { RenameRootFields, wrapSchema } from "@graphql-tools/wrap";
 import { graphqlServer } from "@hono/graphql-server";
 import db from "@lib/db";
 import { buildSchema } from "drizzle-graphql";
