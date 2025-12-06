@@ -10,7 +10,6 @@ export const typeDefs = `
 
   type Mutation {
     sendMessage(text: String!): Boolean!
-    intToJson(data: Int!): String!
   }
 
   type Subscription {
@@ -35,9 +34,6 @@ export const schema = makeExecutableSchema<GraphQLContext>({
       sendMessage: async (_, { text }, ctx) => {
         ctx.publish("MESSAGE_TOPIC", { message: text });
         return true;
-      },
-      intToJson: async (_, { data }, _ctx) => {
-        return JSON.stringify(data);
       },
     },
 

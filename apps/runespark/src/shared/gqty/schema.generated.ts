@@ -35,11 +35,13 @@ export interface Scalars {
 
 export const scalarsEnumsHash: ScalarsEnumsHash = {
   Boolean: true,
+  Int: true,
   String: true,
 };
 export const generatedSchema = {
   mutation: {
     __typename: { __type: "String!" },
+    intToJson: { __type: "String!", __args: { data: "Int!" } },
     sendMessage: { __type: "Boolean!", __args: { text: "String!" } },
   },
   query: {
@@ -55,6 +57,9 @@ export const generatedSchema = {
 
 export interface Mutation {
   __typename?: "Mutation";
+  intToJson: (args: {
+    data: Scalars["Int"]["input"];
+  }) => Scalars["String"]["output"];
   sendMessage: (args: {
     text: Scalars["String"]["input"];
   }) => Scalars["Boolean"]["output"];

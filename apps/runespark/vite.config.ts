@@ -14,6 +14,7 @@ const config = defineConfig({
       watch: ["src/server/**/*.ts"],
       command: "pnpm exec gqty generate",
       cwd: __dirname,
+      delay: 500, // 延迟 500 毫秒，等待 GraphQL 服务器重启
     }),
     tailwindcss(),
     tanstackRouter({
