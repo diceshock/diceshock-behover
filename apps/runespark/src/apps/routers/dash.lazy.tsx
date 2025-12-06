@@ -1,9 +1,7 @@
 import {
   GaugeIcon,
-  PackageIcon,
+  GraphIcon,
   SignOutIcon,
-  SignpostIcon,
-  UsersIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { createLazyFileRoute, Link, Outlet } from "@tanstack/react-router";
 import ThemeSwap from "@/client/components/ThemeSwap";
@@ -25,9 +23,9 @@ function RouteComponent() {
           </li>
 
           <li>
-            <Link to="/dash/users" className="gap-12">
-              <UsersIcon className="size-6" />
-              用户
+            <Link to="/dash/graphiql" className="gap-12">
+              <GraphIcon className="size-6" />
+              Graphi
             </Link>
           </li>
 

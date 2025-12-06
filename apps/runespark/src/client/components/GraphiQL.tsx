@@ -9,6 +9,8 @@ import "@graphiql/plugin-explorer/style.css";
 import createEditorWorker from "https://esm.sh/monaco-editor/esm/vs/editor/editor.worker.js?worker";
 import createJSONWorker from "https://esm.sh/monaco-editor/esm/vs/language/json/json.worker.js?worker";
 import createGraphQLWorker from "https://esm.sh/monaco-graphql/esm/graphql.worker.js?worker";
+import { useAtomValue } from "jotai";
+import { themeA } from "./ThemeSwap";
 
 // @ts-expect-error - MonacoEnvironment is not typed
 globalThis.MonacoEnvironment = {
@@ -27,6 +29,8 @@ globalThis.MonacoEnvironment = {
 const explorer = explorerPlugin();
 
 export function GraphiQlScreen() {
+  const theme = useAtomValue(themeA);
+
   const fetcher = useMemo(() => {
     return createGraphiQLFetcher({
       url: "/graphql",
@@ -34,5 +38,11 @@ export function GraphiQlScreen() {
     });
   }, []);
 
-  return <GraphiQL fetcher={fetcher} plugins={[explorer]} />;
+  return (
+    <GraphiQL
+      fetcher={fetcher}
+      plugins={[explorer]}
+      forcedTheme={theme === "light" ? "light" : "dark"}
+    />
+  );
 }

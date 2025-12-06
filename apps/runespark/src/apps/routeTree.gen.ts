@@ -12,7 +12,7 @@ import { createFileRoute } from '@tanstack/react-router'
 
 import { Route as rootRouteImport } from './routers/__root'
 import { Route as WithHomeLoRouteImport } from './routers/_with-home-lo'
-import { Route as DashGraphiqlRouteImport } from './routers/dash.graphiql'
+import { Route as DashGraphiqlRouteImport } from './routers/dash/graphiql'
 
 const DashLazyRouteImport = createFileRoute('/dash')()
 
