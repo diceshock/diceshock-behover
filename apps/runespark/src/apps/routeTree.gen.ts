@@ -11,8 +11,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 
 import { Route as rootRouteImport } from './routers/__root'
-import { Route as WithHomeLoRouteImport } from './routers/_with-home-lo'
+import { Route as MainRouteImport } from './routers/_main'
 import { Route as DashGraphiqlRouteImport } from './routers/dash/graphiql'
+import { Route as MainHomePageRouteImport } from './routers/_main/_homePage'
 
 const DashLazyRouteImport = createFileRoute('/dash')()
 
@@ -21,14 +22,18 @@ const DashLazyRoute = DashLazyRouteImport.update({
   path: '/dash',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routers/dash.lazy').then((d) => d.Route))
-const WithHomeLoRoute = WithHomeLoRouteImport.update({
-  id: '/_with-home-lo',
+const MainRoute = MainRouteImport.update({
+  id: '/_main',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashGraphiqlRoute = DashGraphiqlRouteImport.update({
   id: '/graphiql',
   path: '/graphiql',
   getParentRoute: () => DashLazyRoute,
+} as any)
+const MainHomePageRoute = MainHomePageRouteImport.update({
+  id: '/_homePage',
+  getParentRoute: () => MainRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -41,8 +46,9 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/_with-home-lo': typeof WithHomeLoRoute
+  '/_main': typeof MainRouteWithChildren
   '/dash': typeof DashLazyRouteWithChildren
+  '/_main/_homePage': typeof MainHomePageRoute
   '/dash/graphiql': typeof DashGraphiqlRoute
 }
 export interface FileRouteTypes {
@@ -50,11 +56,11 @@ export interface FileRouteTypes {
   fullPaths: '/dash' | '/dash/graphiql'
   fileRoutesByTo: FileRoutesByTo
   to: '/dash' | '/dash/graphiql'
-  id: '__root__' | '/_with-home-lo' | '/dash' | '/dash/graphiql'
+  id: '__root__' | '/_main' | '/dash' | '/_main/_homePage' | '/dash/graphiql'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  WithHomeLoRoute: typeof WithHomeLoRoute
+  MainRoute: typeof MainRouteWithChildren
   DashLazyRoute: typeof DashLazyRouteWithChildren
 }
 
@@ -67,11 +73,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_with-home-lo': {
-      id: '/_with-home-lo'
+    '/_main': {
+      id: '/_main'
       path: ''
       fullPath: ''
-      preLoaderRoute: typeof WithHomeLoRouteImport
+      preLoaderRoute: typeof MainRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dash/graphiql': {
@@ -81,8 +87,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashGraphiqlRouteImport
       parentRoute: typeof DashLazyRoute
     }
+    '/_main/_homePage': {
+      id: '/_main/_homePage'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof MainHomePageRouteImport
+      parentRoute: typeof MainRoute
+    }
   }
 }
+
+interface MainRouteChildren {
+  MainHomePageRoute: typeof MainHomePageRoute
+}
+
+const MainRouteChildren: MainRouteChildren = {
+  MainHomePageRoute: MainHomePageRoute,
+}
+
+const MainRouteWithChildren = MainRoute._addFileChildren(MainRouteChildren)
 
 interface DashLazyRouteChildren {
   DashGraphiqlRoute: typeof DashGraphiqlRoute
@@ -97,7 +120,7 @@ const DashLazyRouteWithChildren = DashLazyRoute._addFileChildren(
 )
 
 const rootRouteChildren: RootRouteChildren = {
-  WithHomeLoRoute: WithHomeLoRoute,
+  MainRoute: MainRouteWithChildren,
   DashLazyRoute: DashLazyRouteWithChildren,
 }
 export const routeTree = rootRouteImport

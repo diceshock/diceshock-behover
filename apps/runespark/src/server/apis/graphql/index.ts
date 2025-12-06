@@ -1,15 +1,16 @@
 import { makeExecutableSchema } from "@graphql-tools/schema";
-import type { IResolvers } from "@graphql-tools/utils";
 import type { createDefaultPublishableContext } from "graphql-workers-subscriptions";
 import { subscribe } from "graphql-workers-subscriptions";
 
 export const typeDefs = `
   type Query {
     hello: String!
+    methods: [String!]!
   }
 
   type Mutation {
     sendMessage(text: String!): Boolean!
+    intToJson(data: Int!): String!
   }
 
   type Subscription {
@@ -26,13 +27,17 @@ export const schema = makeExecutableSchema<GraphQLContext>({
   typeDefs,
   resolvers: {
     Query: {
-      hello: (_, _i, ctx) => JSON.stringify(Object.keys(ctx)),
+      hello: (_, _i, _ctx) => "Hello World",
+      methods: (_, _i, ctx) => Object.keys(ctx),
     },
 
     Mutation: {
       sendMessage: async (_, { text }, ctx) => {
         ctx.publish("MESSAGE_TOPIC", { message: text });
         return true;
+      },
+      intToJson: async (_, { data }, _ctx) => {
+        return JSON.stringify(data);
       },
     },
 

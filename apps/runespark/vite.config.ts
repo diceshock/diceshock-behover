@@ -5,12 +5,16 @@ import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import baseConfig from "../../vite.config.base";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import svgr from "vite-plugin-svgr";
 import path from "node:path";
+import cmdWatch from "../../plugins/cmd-watch";
 
 const config = defineConfig({
   plugins: [
-    svgr(),
+    cmdWatch({
+      watch: ["src/server/**/*.ts"],
+      command: "pnpm exec gqty generate",
+      cwd: __dirname,
+    }),
     tailwindcss(),
     tanstackRouter({
       target: "react",

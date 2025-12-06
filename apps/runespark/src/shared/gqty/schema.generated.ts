@@ -42,7 +42,11 @@ export const generatedSchema = {
     __typename: { __type: "String!" },
     sendMessage: { __type: "Boolean!", __args: { text: "String!" } },
   },
-  query: { __typename: { __type: "String!" }, hello: { __type: "String!" } },
+  query: {
+    __typename: { __type: "String!" },
+    hello: { __type: "String!" },
+    methods: { __type: "[String!]!" },
+  },
   subscription: {
     __typename: { __type: "String!" },
     message: { __type: "String!", __args: { text: "String" } },
@@ -59,6 +63,7 @@ export interface Mutation {
 export interface Query {
   __typename?: "Query";
   hello?: Scalars["String"]["output"];
+  methods?: Array<Scalars["String"]["output"]>;
 }
 
 export interface Subscription {
