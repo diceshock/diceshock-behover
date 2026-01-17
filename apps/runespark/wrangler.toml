@@ -49,9 +49,9 @@ name = "WS_CONNECTION_POOL"
 class_name = "WsConnectionPool"
 
 # [[routes]]
-# pattern = "www.runespark.org"
+# pattern = "www.runespark.fun"
 # custom_domain = true
 
 # [[routes]]
-# pattern = "runespark.org"
+# pattern = "runespark.fun"
 # custom_domain = true
