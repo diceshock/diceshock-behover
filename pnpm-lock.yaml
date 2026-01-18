@@ -89,7 +89,7 @@ importers:
     dependencies:
       '@hono/auth-js':
         specifier: ^1.1.0
-        version: 1.1.0(@auth/core@0.41.1)(hono@4.10.5)(react@19.2.0)
+        version: 1.1.0(@auth/core@0.34.3)(hono@4.10.5)(react@19.2.0)
       '@hono/trpc-server':
         specifier: ^0.4.0
         version: 0.4.0(@trpc/server@11.7.1(typescript@5.9.3))(hono@4.10.5)
@@ -144,6 +144,9 @@ importers:
       motion:
         specifier: ^12.23.22
         version: 12.23.24(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      nanoid:
+        specifier: ^5.1.6
+        version: 5.1.6
       qr-scanner:
         specifier: ^1.4.2
         version: 1.4.2
@@ -4845,6 +4848,11 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
+  nanoid@5.1.6:
+    resolution: {integrity: sha512-c7+7RQ+dMB5dPwwCp4ee1/iV/q2P6aK1mTZcfr1BTuVlyW9hJYiMPybJCcnBlQtuSmTIWNeazm/zqNoZSSElBg==}
+    engines: {node: ^18 || >=20}
+    hasBin: true
+
   no-case@3.0.4:
     resolution: {integrity: sha512-fgAN3jGAh+RoxUGZHTSOLJIqUc2wmoBwGR4tbpNAKmmovFoWq0OdRkb0VkldReO2a2iBT/OEulG9XSUc10r3zg==}
 
@@ -7396,9 +7404,9 @@ snapshots:
       react-dom: 19.2.0(react@19.2.0)
       use-sync-external-store: 1.6.0(react@19.2.0)
 
-  '@hono/auth-js@1.1.0(@auth/core@0.41.1)(hono@4.10.5)(react@19.2.0)':
+  '@hono/auth-js@1.1.0(@auth/core@0.34.3)(hono@4.10.5)(react@19.2.0)':
     dependencies:
-      '@auth/core': 0.41.1
+      '@auth/core': 0.34.3
       hono: 4.10.5
       react: 19.2.0
 
@@ -10649,6 +10657,8 @@ snapshots:
   mute-stream@2.0.0: {}
 
   nanoid@3.3.11: {}
+
+  nanoid@5.1.6: {}
 
   no-case@3.0.4:
     dependencies:

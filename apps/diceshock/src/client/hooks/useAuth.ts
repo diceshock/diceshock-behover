@@ -1,6 +1,11 @@
-import { atom, type WritableAtom } from "jotai";
+import type { Session } from "@auth/core/types";
+import { useSession } from "@hono/auth-js/react";
+import { produce } from "immer";
+import { atom, useAtom, type WritableAtom } from "jotai";
 import { useHydrateAtoms } from "jotai/utils";
-import type { UserInfo } from "@/shared/types";
+import { useCallback, useMemo } from "react";
+import type { UserInfo } from "@/server/middlewares/auth";
+import type { Recipe } from "@/shared/types/kits";
 import useCrossData from "./useCrossData";
 
 const userInfoAtom = atom<UserInfo | null>(null);
@@ -15,4 +20,17 @@ export function useAuthRegister() {
   useHydrateAtoms(atoms);
 }
 
-export default function useAuth() {}
+export default function useAuth() {
+  const { data: session, status } = useSession();
+  const [userInfo, setUserInfo] = useAtom(userInfoAtom);
+
+  const setUserInfoIm = useCallback(
+    (recipe: Recipe<UserInfo>) => setUserInfo(produce(userInfo, recipe)),
+    [userInfo, setUserInfo],
+  );
+
+  return useMemo(
+    () => ({ session: session as Session | null, status, userInfo, setUserInfoIm }),
+    [session, status, userInfo, setUserInfoIm],
+  );
+}

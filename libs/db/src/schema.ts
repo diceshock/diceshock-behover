@@ -97,6 +97,32 @@ export const users = sqlite.sqliteTable("user", {
   image: sqlite.text("image"),
 });
 
+export const userInfoTable = sqlite.sqliteTable("user_info", {
+  id: sqlite
+    .text("id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  uid: sqlite.text("uid").notNull(),
+  create_at: sqlite
+    .integer("create_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date(Date.now())),
+  nickname: sqlite.text("nickname").notNull(),
+});
+
+export const userInfoRelations = relations(userInfoTable, ({ one }) => ({
+  user: one(users, {
+    fields: [userInfoTable.id],
+    references: [users.id],
+  }),
+}));
+
+export const usersRelations = relations(users, ({ one }) => ({
+  userInfo: one(userInfoTable, {
+    fields: [users.id],
+    references: [userInfoTable.id],
+  }),
+}));
+
 export const accounts = sqlite.sqliteTable(
   "account",
   {
