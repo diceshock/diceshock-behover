@@ -12,6 +12,8 @@
     "libs/*"
   ],
   "dependencies": {
+    "@auth/core": "^0.34.3",
+    "@auth/drizzle-adapter": "^1.11.1",
     "@paralleldrive/cuid2": "^2.3.1",
     "dayjs": "^1.11.19",
     "dotenv": "^17.2.3",

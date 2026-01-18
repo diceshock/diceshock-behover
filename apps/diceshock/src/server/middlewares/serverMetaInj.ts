@@ -114,7 +114,7 @@ export function safeParseUserAgentMeta(
     } else {
       return { success: false, error: result.error };
     }
-  } catch (error) {
+  } catch {
     return {
       success: false,
       error: new z.ZodError([

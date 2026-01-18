@@ -1,3 +1,4 @@
+import type { AdapterAccountType } from "@auth/core/adapters";
 import type { BoardGame } from "@lib/utils";
 import { createId } from "@paralleldrive/cuid2";
 import { relations } from "drizzle-orm";
@@ -83,4 +84,89 @@ export const activeTagMappingsRelations = relations(
       references: [activeTagsTable.id],
     }),
   }),
+);
+
+export const users = sqlite.sqliteTable("user", {
+  id: sqlite
+    .text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  name: sqlite.text("name"),
+  email: sqlite.text("email").unique(),
+  emailVerified: sqlite.integer("emailVerified", { mode: "timestamp_ms" }),
+  image: sqlite.text("image"),
+});
+
+export const accounts = sqlite.sqliteTable(
+  "account",
+  {
+    userId: sqlite
+      .text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: sqlite.text("type").$type<AdapterAccountType>().notNull(),
+    provider: sqlite.text("provider").notNull(),
+    providerAccountId: sqlite.text("providerAccountId").notNull(),
+    refresh_token: sqlite.text("refresh_token"),
+    access_token: sqlite.text("access_token"),
+    expires_at: sqlite.integer("expires_at"),
+    token_type: sqlite.text("token_type"),
+    scope: sqlite.text("scope"),
+    id_token: sqlite.text("id_token"),
+    session_state: sqlite.text("session_state"),
+  },
+  (account) => [
+    sqlite.primaryKey({
+      columns: [account.provider, account.providerAccountId],
+    }),
+  ],
+);
+
+export const sessions = sqlite.sqliteTable("session", {
+  sessionToken: sqlite.text("sessionToken").primaryKey(),
+  userId: sqlite
+    .text("userId")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  expires: sqlite.integer("expires", { mode: "timestamp_ms" }).notNull(),
+});
+
+export const verificationTokens = sqlite.sqliteTable(
+  "verificationToken",
+  {
+    identifier: sqlite.text("identifier").notNull(),
+    token: sqlite.text("token").notNull(),
+    expires: sqlite.integer("expires", { mode: "timestamp_ms" }).notNull(),
+  },
+  (verificationToken) => [
+    sqlite.primaryKey({
+      columns: [verificationToken.identifier, verificationToken.token],
+    }),
+  ],
+);
+
+export const authenticators = sqlite.sqliteTable(
+  "authenticator",
+  {
+    credentialID: sqlite.text("credentialID").notNull().unique(),
+    userId: sqlite
+      .text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    providerAccountId: sqlite.text("providerAccountId").notNull(),
+    credentialPublicKey: sqlite.text("credentialPublicKey").notNull(),
+    counter: sqlite.integer("counter").notNull(),
+    credentialDeviceType: sqlite.text("credentialDeviceType").notNull(),
+    credentialBackedUp: sqlite
+      .integer("credentialBackedUp", {
+        mode: "boolean",
+      })
+      .notNull(),
+    transports: sqlite.text("transports"),
+  },
+  (authenticator) => [
+    sqlite.primaryKey({
+      columns: [authenticator.userId, authenticator.credentialID],
+    }),
+  ],
 );

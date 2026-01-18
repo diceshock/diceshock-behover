@@ -1,14 +1,12 @@
 /*global NodeJS */
 
+import type { AdapterUser } from "@auth/core/adapters";
 import type { Env } from "hono";
 import z from "zod/v4";
 import type * as trpcServer from "@/server/apis/trpc";
 import { userAgentMetaZ } from "@/server/middlewares/serverMetaInj";
 
-export const userInfoZ = z.object({
-  id: z.string(),
-  name: z.string(),
-});
+export const userInfoZ = z.custom<AdapterUser>();
 
 export type UserInfo = z.infer<typeof userInfoZ>;
 

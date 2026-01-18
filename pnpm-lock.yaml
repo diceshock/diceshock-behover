@@ -8,6 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@auth/core':
+        specifier: ^0.34.3
+        version: 0.34.3
+      '@auth/drizzle-adapter':
+        specifier: ^1.11.1
+        version: 1.11.1
       '@paralleldrive/cuid2':
         specifier: ^2.3.1
         version: 2.3.1
@@ -81,15 +87,9 @@ importers:
 
   apps/diceshock:
     dependencies:
-      '@auth/core':
-        specifier: ^0.34.3
-        version: 0.34.3
       '@hono/auth-js':
         specifier: ^1.1.0
-        version: 1.1.0(@auth/core@0.34.3)(hono@4.10.5)(react@19.2.0)
-      '@hono/clerk-auth':
-        specifier: ^3.0.3
-        version: 3.0.3(hono@4.10.5)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+        version: 1.1.0(@auth/core@0.41.1)(hono@4.10.5)(react@19.2.0)
       '@hono/trpc-server':
         specifier: ^0.4.0
         version: 0.4.0(@trpc/server@11.7.1(typescript@5.9.3))(hono@4.10.5)
@@ -414,6 +414,23 @@ packages:
         optional: true
       nodemailer:
         optional: true
+
+  '@auth/core@0.41.1':
+    resolution: {integrity: sha512-t9cJ2zNYAdWMacGRMT6+r4xr1uybIdmYa49calBPeTqwgAFPV/88ac9TEvCR85pvATiSPt8VaNf+Gt24JIT/uw==}
+    peerDependencies:
+      '@simplewebauthn/browser': ^9.0.1
+      '@simplewebauthn/server': ^9.0.2
+      nodemailer: ^7.0.7
+    peerDependenciesMeta:
+      '@simplewebauthn/browser':
+        optional: true
+      '@simplewebauthn/server':
+        optional: true
+      nodemailer:
+        optional: true
+
+  '@auth/drizzle-adapter@1.11.1':
+    resolution: {integrity: sha512-cQTvDZqsyF7RPhDm/B6SvqdVP9EzQhy3oM4Muu7fjjmSYFLbSR203E6dH631ZHSKDn2b4WZkfMnjPDzRsPSAeA==}
 
   '@babel/code-frame@7.27.1':
     resolution: {integrity: sha512-cjQ7ZlQ0Mv3b47hABuTevyTuYN4i+loJKGeV9flcCgIK37cCXRh+L1bd3iBHlynerhQ7BhCkn2BPbQUL+rGqFg==}
@@ -4378,6 +4395,9 @@ packages:
   jose@5.10.0:
     resolution: {integrity: sha512-s+3Al/p9g32Iq+oqXxkW//7jk2Vig6FF1CFqzVXoTUXt2qz89YWbL+OwS17NFYEvxC35n0FKeGO2LGYSxeM2Gg==}
 
+  jose@6.1.3:
+    resolution: {integrity: sha512-0TpaTfihd4QMNwrz/ob2Bp7X04yuxJkjRGi4aKmOqwhov54i6u79oCv7T+C7lo70MKH6BesI3vscD1yb/yzKXQ==}
+
   jotai@2.15.1:
     resolution: {integrity: sha512-yHT1HAZ3ba2Q8wgaUQ+xfBzEtcS8ie687I8XVCBinfg4bNniyqLIN+utPXWKQE93LMF5fPbQSVRZqgpcN5yd6Q==}
     engines: {node: '>=12.20.0'}
@@ -4879,6 +4899,9 @@ packages:
   oauth4webapi@2.17.0:
     resolution: {integrity: sha512-lbC0Z7uzAFNFyzEYRIC+pkSVvDHJTbEW+dYlSBAlCYDe6RxUkJ26bClhk8ocBZip1wfI9uKTe0fm4Ib4RHn6uQ==}
 
+  oauth4webapi@3.8.3:
+    resolution: {integrity: sha512-pQ5BsX3QRTgnt5HxgHwgunIRaDXBdkT23tf8dfzmtTIL2LTpdmxgbpbBm0VgFWAIDlezQvQCTgnVIUmHupXHxw==}
+
   object-assign@4.1.1:
     resolution: {integrity: sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==}
     engines: {node: '>=0.10.0'}
@@ -5014,8 +5037,16 @@ packages:
     peerDependencies:
       preact: '>=10'
 
+  preact-render-to-string@6.5.11:
+    resolution: {integrity: sha512-ubnauqoGczeGISiOh6RjX0/cdaF8v/oDXIjO85XALCQjwQP+SB4RDXXtvZ6yTYSjG+PC1QRP2AhPgCEsM2EvUw==}
+    peerDependencies:
+      preact: '>=10'
+
   preact@10.11.3:
     resolution: {integrity: sha512-eY93IVpod/zG3uMF22Unl8h9KkrcKIRs2EGar8hwLZZDU1lkjph303V9HZBwufh2s736U6VXuhD109LYqPoffg==}
+
+  preact@10.24.3:
+    resolution: {integrity: sha512-Z2dPnBnMUfyQfSQ+GBdsGa16hz35YmLmtTLhM169uW944hYL6xzTYkJjC07j+Wosz733pMWx0fgON3JNw1jJQA==}
 
   prettier@2.8.8:
     resolution: {integrity: sha512-tdN8qQGvNjw4CHbY+XXk0JgCXn9QiF21a55rBe5LJAU+kDyC4WQn4+awm2Xfk2lQMk5fKup9XgzTZtGkjBdP9Q==}
@@ -5943,6 +5974,22 @@ snapshots:
       oauth4webapi: 2.17.0
       preact: 10.11.3
       preact-render-to-string: 5.2.3(preact@10.11.3)
+
+  '@auth/core@0.41.1':
+    dependencies:
+      '@panva/hkdf': 1.2.1
+      jose: 6.1.3
+      oauth4webapi: 3.8.3
+      preact: 10.24.3
+      preact-render-to-string: 6.5.11(preact@10.24.3)
+
+  '@auth/drizzle-adapter@1.11.1':
+    dependencies:
+      '@auth/core': 0.41.1
+    transitivePeerDependencies:
+      - '@simplewebauthn/browser'
+      - '@simplewebauthn/server'
+      - nodemailer
 
   '@babel/code-frame@7.27.1':
     dependencies:
@@ -7349,20 +7396,11 @@ snapshots:
       react-dom: 19.2.0(react@19.2.0)
       use-sync-external-store: 1.6.0(react@19.2.0)
 
-  '@hono/auth-js@1.1.0(@auth/core@0.34.3)(hono@4.10.5)(react@19.2.0)':
+  '@hono/auth-js@1.1.0(@auth/core@0.41.1)(hono@4.10.5)(react@19.2.0)':
     dependencies:
-      '@auth/core': 0.34.3
+      '@auth/core': 0.41.1
       hono: 4.10.5
       react: 19.2.0
-
-  '@hono/clerk-auth@3.0.3(hono@4.10.5)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
-    dependencies:
-      '@clerk/backend': 2.21.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
-      '@clerk/types': 4.99.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
-      hono: 4.10.5
-    transitivePeerDependencies:
-      - react
-      - react-dom
 
   '@hono/clerk-auth@3.0.3(hono@4.10.7)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
     dependencies:
@@ -10024,6 +10062,8 @@ snapshots:
 
   jose@5.10.0: {}
 
+  jose@6.1.3: {}
+
   jotai@2.15.1(@babel/core@7.28.5)(@babel/template@7.27.2)(@types/react@19.2.4)(react@19.2.0):
     optionalDependencies:
       '@babel/core': 7.28.5
@@ -10692,6 +10732,8 @@ snapshots:
 
   oauth4webapi@2.17.0: {}
 
+  oauth4webapi@3.8.3: {}
+
   object-assign@4.1.1: {}
 
   object-inspect@1.13.4: {}
@@ -10827,7 +10869,13 @@ snapshots:
       preact: 10.11.3
       pretty-format: 3.8.0
 
+  preact-render-to-string@6.5.11(preact@10.24.3):
+    dependencies:
+      preact: 10.24.3
+
   preact@10.11.3: {}
+
+  preact@10.24.3: {}
 
   prettier@2.8.8: {}
 

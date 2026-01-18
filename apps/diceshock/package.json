@@ -13,9 +13,7 @@
     "helper": "npm run start --workspace=scripts --"
   },
   "dependencies": {
-    "@auth/core": "^0.34.3",
     "@hono/auth-js": "^1.1.0",
-    "@hono/clerk-auth": "^3.0.3",
     "@hono/trpc-server": "^0.4.0",
     "@paralleldrive/cuid2": "^2.2.2",
     "@phosphor-icons/react": "^2.1.10",
