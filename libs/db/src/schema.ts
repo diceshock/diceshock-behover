@@ -68,7 +68,7 @@ export const activeTagMappingsTable = sqlite.sqliteTable(
       .notNull()
       .references(() => activeTagsTable.id),
   },
-  (t) => [sqlite.primaryKey({ columns: [t.active_id, t.tag_id] })]
+  (t) => [sqlite.primaryKey({ columns: [t.active_id, t.tag_id] })],
 );
 
 export const activeTagMappingsRelations = relations(
@@ -82,5 +82,5 @@ export const activeTagMappingsRelations = relations(
       fields: [activeTagMappingsTable.tag_id],
       references: [activeTagsTable.id],
     }),
-  })
+  }),
 );
