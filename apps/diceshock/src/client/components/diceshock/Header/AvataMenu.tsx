@@ -1,9 +1,13 @@
 import { KeyIcon, ScanIcon, UserIcon } from "@phosphor-icons/react/dist/ssr";
+import { useState } from "react";
 import useAuth from "@/client/hooks/useAuth";
 import ThemeSwap from "../../ThemeSwap";
+import LoginDialog from "./LoginDialog";
 
 export default function AvatarMenu() {
   const { userInfo } = useAuth();
+
+  const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
 
   const name = userInfo?.nickname ?? "Anonymous Shock";
 
@@ -50,11 +54,14 @@ export default function AvatarMenu() {
 
           {!userInfo && (
             <li>
-              <a className="px-5 py-3 flex items-center justify-between">
+              <button
+                onClick={() => setIsLoginDialogOpen(true)}
+                className="px-5 py-3 flex items-center justify-between"
+              >
                 <KeyIcon weight="fill" className="size-5" />
 
                 <span>登录/注册</span>
-              </a>
+              </button>
             </li>
           )}
         </ul>
@@ -71,6 +78,11 @@ export default function AvatarMenu() {
           />
         </div>
       </div>
+
+      <LoginDialog
+        isOpen={isLoginDialogOpen}
+        onClose={() => setIsLoginDialogOpen(false)}
+      />
     </div>
   );
 }
