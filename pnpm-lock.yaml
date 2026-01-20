@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@alicloud/dysmsapi20170525':
+        specifier: 4.4.0
+        version: 4.4.0
       '@auth/core':
         specifier: ^0.34.3
         version: 0.34.3
@@ -397,6 +400,51 @@ importers:
         version: 0.8.3(drizzle-orm@0.44.7(@cloudflare/workers-types@4.20251111.0))(zod@4.1.12)
 
 packages:
+
+  '@alicloud/credentials@2.4.4':
+    resolution: {integrity: sha512-/eRAGSKcniLIFQ1UCpDhB/IrHUZisQ1sc65ws/c2avxUMpXwH1rWAohb76SVAUJhiF4mwvLzLJM1Mn1XL4Xe/Q==}
+
+  '@alicloud/darabonba-array@0.1.2':
+    resolution: {integrity: sha512-ZPuQ+bJyjrd8XVVm55kl+ypk7OQoi1ZH/DiToaAEQaGvgEjrTcvQkg71//vUX/6cvbLIF5piQDvhrLb+lUEIPQ==}
+
+  '@alicloud/darabonba-encode-util@0.0.1':
+    resolution: {integrity: sha512-Sl5vCRVAYMqwmvXpJLM9hYoCHOMsQlGxaWSGhGWulpKk/NaUBArtoO1B0yHruJf1C5uHhEJIaylYcM48icFHgw==}
+
+  '@alicloud/darabonba-encode-util@0.0.2':
+    resolution: {integrity: sha512-mlsNctkeqmR0RtgE1Rngyeadi5snLOAHBCWEtYf68d7tyKskosXDTNeZ6VCD/UfrUu4N51ItO8zlpfXiOgeg3A==}
+
+  '@alicloud/darabonba-map@0.0.1':
+    resolution: {integrity: sha512-2ep+G3YDvuI+dRYVlmER1LVUQDhf9kEItmVB/bbEu1pgKzelcocCwAc79XZQjTcQGFgjDycf3vH87WLDGLFMlw==}
+
+  '@alicloud/darabonba-signature-util@0.0.4':
+    resolution: {integrity: sha512-I1TtwtAnzLamgqnAaOkN0IGjwkiti//0a7/auyVThdqiC/3kyafSAn6znysWOmzub4mrzac2WiqblZKFcN5NWg==}
+
+  '@alicloud/darabonba-string@1.0.3':
+    resolution: {integrity: sha512-NyWwrU8cAIesWk3uHL1Q7pTDTqLkCI/0PmJXC4/4A0MFNAZ9Ouq0iFBsRqvfyUujSSM+WhYLuTfakQXiVLkTMA==}
+
+  '@alicloud/dysmsapi20170525@4.4.0':
+    resolution: {integrity: sha512-YJGC1xCEin+dQOaEgVyVjtzZwiGlGzWwCV9YCqZiR/bXONxFegM17s5zIhBKlEqmvrx/MwPij5xmsNpmDbSmhQ==}
+
+  '@alicloud/endpoint-util@0.0.1':
+    resolution: {integrity: sha512-+pH7/KEXup84cHzIL6UJAaPqETvln4yXlD9JzlrqioyCSaWxbug5FUobsiI6fuUOpw5WwoB3fWAtGbFnJ1K3Yg==}
+
+  '@alicloud/gateway-pop@0.0.6':
+    resolution: {integrity: sha512-KF4I+JvfYuLKc3fWeWYIZ7lOVJ9jRW0sQXdXidZn1DKZ978ncfGf7i0LBfONGk4OxvNb/HD3/0yYhkgZgPbKtA==}
+
+  '@alicloud/gateway-spi@0.0.8':
+    resolution: {integrity: sha512-KM7fu5asjxZPmrz9sJGHJeSU+cNQNOxW+SFmgmAIrITui5hXL2LB+KNRuzWmlwPjnuA2X3/keq9h6++S9jcV5g==}
+
+  '@alicloud/openapi-core@1.0.7':
+    resolution: {integrity: sha512-I80PQVfmlzRiXGHwutMp2zTpiqUVv8ts30nWAfksfHUSTIapk3nj9IXaPbULMPGNV6xqEyshO2bj2a+pmwc2tQ==}
+
+  '@alicloud/openapi-util@0.3.3':
+    resolution: {integrity: sha512-vf0cQ/q8R2U7ZO88X5hDiu1yV3t/WexRj+YycWxRutkH/xVXfkmpRgps8lmNEk7Ar+0xnY8+daN2T+2OyB9F4A==}
+
+  '@alicloud/tea-typescript@1.8.0':
+    resolution: {integrity: sha512-CWXWaquauJf0sW30mgJRVu9aaXyBth5uMBCUc+5vKTK1zlgf3hIqRUjJZbjlwHwQ5y9anwcu18r48nOZb7l2QQ==}
+
+  '@alicloud/tea-util@1.4.11':
+    resolution: {integrity: sha512-HyPEEQ8F0WoZegiCp7sVdrdm6eBOB+GCvGl4182u69LDFktxfirGLcAx3WExUr1zFWkq2OSmBroTwKQ4w/+Yww==}
 
   '@ardatan/relay-compiler@12.0.3':
     resolution: {integrity: sha512-mBDFOGvAoVlWaWqs3hm1AciGHSQE1rqFc/liZTyYz/Oek9yZdT5H26pH2zAFuEiTiBVPPyMuqf5VjOFPI2DGsQ==}
@@ -1117,6 +1165,9 @@ packages:
   '@cspotcode/source-map-support@0.8.1':
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
     engines: {node: '>=12'}
+
+  '@darabonba/typescript@1.0.3':
+    resolution: {integrity: sha512-/y2y6wf5TsxD7pCPIm0OvTC+5qV0Tk7HQYxwpIuWRLXQLB0CRDvr6qk4bR6rTLO/JglJa8z2uCGZsaLYpQNqFQ==}
 
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
@@ -3079,6 +3130,15 @@ packages:
   '@types/ms@2.1.0':
     resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}
 
+  '@types/node@12.20.55':
+    resolution: {integrity: sha512-J8xLz7q2OFulZ2cyGTLE1TbbZcjpno7FaN6zdJNrgAdrJ+DZzh/uFR6YrTb4C+nXakvud8Q4+rbhoIWlYQbUFQ==}
+
+  '@types/node@20.19.30':
+    resolution: {integrity: sha512-WJtwWJu7UdlvzEAUm484QNg5eAoq5QR08KDNx7g45Usrs2NtOPiX8ugDqmKdXkyL03rBqU5dYNYVQetEpBHq2g==}
+
+  '@types/node@22.19.7':
+    resolution: {integrity: sha512-MciR4AKGHWl7xwxkBa6xUGxQJ4VBOmPTF7sL+iGzuahOFaO0jHCsuEfS80pan1ef4gWId1oWOweIhrDEYLuaOw==}
+
   '@types/node@24.10.1':
     resolution: {integrity: sha512-GNWcUTRBgIRJD5zj+Tq0fKOJ5XZajIiBroOF0yvj2bSU1WvNdYS/dn9UxwsujGW4JX06dnHyjV2y9rRaybH0iQ==}
 
@@ -4230,6 +4290,9 @@ packages:
     engines: {node: '>=12'}
     hasBin: true
 
+  httpx@2.3.3:
+    resolution: {integrity: sha512-k1qv94u1b6e+XKCxVbLgYlOypVP9MPGpnN5G/vxFf6tDO4V3xpz3d6FUOY/s8NtPgaq5RBVVgSB+7IHpVxMYzw==}
+
   i18next@25.6.2:
     resolution: {integrity: sha512-0GawNyVUw0yvJoOEBq1VHMAsqdM23XrHkMtl2gKEjviJQSLVXsrPqsoYAxBEugW5AB96I2pZkwRxyl8WZVoWdw==}
     peerDependencies:
@@ -4274,6 +4337,9 @@ packages:
 
   inherits@2.0.4:
     resolution: {integrity: sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==}
+
+  ini@1.3.8:
+    resolution: {integrity: sha512-JV/yugV2uzW5iMRSiZAyDtQd+nxtUnjeLt0acNdw98kKLrvuRVyB80tsREOE7yvGVgalhZ6RNXCmEHkUKBKxew==}
 
   inline-style-parser@0.2.6:
     resolution: {integrity: sha512-gtGXVaBdl5mAes3rPcMedEBm12ibjt1kDMFfheul1wUAOVEJW60voNdMVzVkfLN06O7ZaD/rxhfKgtlgtTbMjg==}
@@ -4473,6 +4539,9 @@ packages:
 
   just-safe-set@4.2.1:
     resolution: {integrity: sha512-La5CP41Ycv52+E4g7w1sRV8XXk7Sp8a/TwWQAYQKn6RsQz1FD4Z/rDRRmqV3wJznS1MDF3YxK7BCudX1J8FxLg==}
+
+  kitx@2.2.0:
+    resolution: {integrity: sha512-tBMwe6AALTBQJb0woQDD40734NKzb0Kzi3k7wQj9ar3AbP9oqhoVrdXPh7rk2r00/glIgd0YbToIUJsnxWMiIg==}
 
   kleur@4.1.5:
     resolution: {integrity: sha512-o+NO+8WrRiQEE4/7nwRJhN1HWpVmJm511pBHUxPLtp0BUISzlBplORYSmTclCnJvQq2tKu/sgl3xVpkc7ZWuQQ==}
@@ -4798,6 +4867,12 @@ packages:
 
   minimist@1.2.8:
     resolution: {integrity: sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==}
+
+  moment-timezone@0.5.48:
+    resolution: {integrity: sha512-f22b8LV1gbTO2ms2j2z13MuPogNoh5UzxL3nzNAYKGraILnbGc9NEE6dyiiiLv46DGRb8A4kg8UKWLjPthxBHw==}
+
+  moment@2.30.1:
+    resolution: {integrity: sha512-uEmtNhbDOrWPFS+hdjFCBfy9f2YoyzRpwcl+DqpC6taX21FzsTLQVbMV/W7PzNSX6x/bhC1zA3c2UQ5NzH6how==}
 
   monaco-editor@0.52.2:
     resolution: {integrity: sha512-GEQWEZmfkOGLdd3XK8ryrfWz3AIP8YymVXiPHEdewrUq7mh0qrKrfHLNCXcbB6sTnMLnOZ3ztSiKcciFUkIJwQ==}
@@ -5327,6 +5402,10 @@ packages:
   safer-buffer@2.1.2:
     resolution: {integrity: sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==}
 
+  sax@1.4.4:
+    resolution: {integrity: sha512-1n3r/tGXO6b6VXMdFT54SHzT9ytu9yr7TaELowdYpMqY/Ao7EnlQGmAQ1+RatX7Tkkdm6hONI2owqNx2aZj5Sw==}
+    engines: {node: '>=11.0.0'}
+
   scheduler@0.27.0:
     resolution: {integrity: sha512-eNv+WrVbKu1f3vbYJT/xtiF5syA5HPIMtf9IgY/nKg0sWqzAUEvqY/xm7OcZc/qafLx/iO9FgOmeSAp4v5ti/Q==}
 
@@ -5405,6 +5484,9 @@ packages:
   sirv@3.0.2:
     resolution: {integrity: sha512-2wcC/oGxHis/BoHkkPwldgiPSYcpZK3JU28WoMVv55yHJgcZ8rlXvuG9iZggz+sU1d4bRgIGASwyWqjxu3FM0g==}
     engines: {node: '>=18'}
+
+  sm3@1.0.3:
+    resolution: {integrity: sha512-KyFkIfr8QBlFG3uc3NaljaXdYcsbRy1KrSfc4tsQV8jW68jAktGeOcifu530Vx/5LC+PULHT0Rv8LiI8Gw+c1g==}
 
   snake-case@3.0.4:
     resolution: {integrity: sha512-LAOh4z89bGQvl9pFfNF8V146i7o7/CqFPbqzYgP+yYzDIDeS9HaNFtXABamRW+AQzEVODcvE79ljJ+8a9YSdMg==}
@@ -5612,6 +5694,9 @@ packages:
   unc-path-regex@0.1.2:
     resolution: {integrity: sha512-eXL4nmJT7oCpkZsHZUOJo8hcX3GbsiDOa0Qu9F646fi8dT3XuSVopVqAcEiVzSKKH7UoDti23wNX3qGFxcW5Qg==}
     engines: {node: '>=0.10.0'}
+
+  undici-types@6.21.0:
+    resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
 
   undici-types@7.16.0:
     resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
@@ -5888,6 +5973,14 @@ packages:
       utf-8-validate:
         optional: true
 
+  xml2js@0.6.2:
+    resolution: {integrity: sha512-T4rieHaC1EXcES0Kxxj4JWgaUQHDk+qwHcYOCFHfiwKz7tOVPLq7Hjq9dM1WCMhylqMEfP7hMcOIChvotiZegA==}
+    engines: {node: '>=4.0.0'}
+
+  xmlbuilder@11.0.1:
+    resolution: {integrity: sha512-fDlsI/kFEx7gLvbecc0/ohLG50fugQp8ryHzMTuW9vSa1GJ0XYWKnhsUx7oie3G98+r56aTQIUB4kht42R3JvA==}
+    engines: {node: '>=4.0'}
+
   y18n@5.0.8:
     resolution: {integrity: sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA==}
     engines: {node: '>=10'}
@@ -5956,6 +6049,120 @@ packages:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
 snapshots:
+
+  '@alicloud/credentials@2.4.4':
+    dependencies:
+      '@alicloud/tea-typescript': 1.8.0
+      httpx: 2.3.3
+      ini: 1.3.8
+      kitx: 2.2.0
+    transitivePeerDependencies:
+      - supports-color
+
+  '@alicloud/darabonba-array@0.1.2':
+    dependencies:
+      '@alicloud/tea-typescript': 1.8.0
+    transitivePeerDependencies:
+      - supports-color
+
+  '@alicloud/darabonba-encode-util@0.0.1':
+    dependencies:
+      '@alicloud/tea-typescript': 1.8.0
+      moment: 2.30.1
+    transitivePeerDependencies:
+      - supports-color
+
+  '@alicloud/darabonba-encode-util@0.0.2':
+    dependencies:
+      moment: 2.30.1
+
+  '@alicloud/darabonba-map@0.0.1':
+    dependencies:
+      '@alicloud/tea-typescript': 1.8.0
+    transitivePeerDependencies:
+      - supports-color
+
+  '@alicloud/darabonba-signature-util@0.0.4':
+    dependencies:
+      '@alicloud/darabonba-encode-util': 0.0.1
+    transitivePeerDependencies:
+      - supports-color
+
+  '@alicloud/darabonba-string@1.0.3':
+    dependencies:
+      '@alicloud/tea-typescript': 1.8.0
+    transitivePeerDependencies:
+      - supports-color
+
+  '@alicloud/dysmsapi20170525@4.4.0':
+    dependencies:
+      '@alicloud/openapi-core': 1.0.7
+      '@darabonba/typescript': 1.0.3
+    transitivePeerDependencies:
+      - supports-color
+
+  '@alicloud/endpoint-util@0.0.1':
+    dependencies:
+      '@alicloud/tea-typescript': 1.8.0
+      kitx: 2.2.0
+    transitivePeerDependencies:
+      - supports-color
+
+  '@alicloud/gateway-pop@0.0.6':
+    dependencies:
+      '@alicloud/credentials': 2.4.4
+      '@alicloud/darabonba-array': 0.1.2
+      '@alicloud/darabonba-encode-util': 0.0.2
+      '@alicloud/darabonba-map': 0.0.1
+      '@alicloud/darabonba-signature-util': 0.0.4
+      '@alicloud/darabonba-string': 1.0.3
+      '@alicloud/endpoint-util': 0.0.1
+      '@alicloud/gateway-spi': 0.0.8
+      '@alicloud/openapi-util': 0.3.3
+      '@alicloud/tea-typescript': 1.8.0
+      '@alicloud/tea-util': 1.4.11
+    transitivePeerDependencies:
+      - supports-color
+
+  '@alicloud/gateway-spi@0.0.8':
+    dependencies:
+      '@alicloud/credentials': 2.4.4
+      '@alicloud/tea-typescript': 1.8.0
+    transitivePeerDependencies:
+      - supports-color
+
+  '@alicloud/openapi-core@1.0.7':
+    dependencies:
+      '@alicloud/credentials': 2.4.4
+      '@alicloud/gateway-pop': 0.0.6
+      '@alicloud/gateway-spi': 0.0.8
+      '@darabonba/typescript': 1.0.3
+    transitivePeerDependencies:
+      - supports-color
+
+  '@alicloud/openapi-util@0.3.3':
+    dependencies:
+      '@alicloud/tea-typescript': 1.8.0
+      '@alicloud/tea-util': 1.4.11
+      kitx: 2.2.0
+      sm3: 1.0.3
+    transitivePeerDependencies:
+      - supports-color
+
+  '@alicloud/tea-typescript@1.8.0':
+    dependencies:
+      '@types/node': 12.20.55
+      httpx: 2.3.3
+    transitivePeerDependencies:
+      - supports-color
+
+  '@alicloud/tea-util@1.4.11':
+    dependencies:
+      '@alicloud/tea-typescript': 1.8.0
+      '@darabonba/typescript': 1.0.3
+      kitx: 2.2.0
+    transitivePeerDependencies:
+      - supports-color
 
   '@ardatan/relay-compiler@12.0.3(graphql@16.12.0)':
     dependencies:
@@ -6837,6 +7044,17 @@ snapshots:
   '@cspotcode/source-map-support@0.8.1':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.9
+
+  '@darabonba/typescript@1.0.3':
+    dependencies:
+      '@alicloud/tea-typescript': 1.8.0
+      httpx: 2.3.3
+      lodash: 4.17.21
+      moment: 2.30.1
+      moment-timezone: 0.5.48
+      xml2js: 0.6.2
+    transitivePeerDependencies:
+      - supports-color
 
   '@drizzle-team/brocli@0.10.2': {}
 
@@ -8695,6 +8913,16 @@ snapshots:
 
   '@types/ms@2.1.0': {}
 
+  '@types/node@12.20.55': {}
+
+  '@types/node@20.19.30':
+    dependencies:
+      undici-types: 6.21.0
+
+  '@types/node@22.19.7':
+    dependencies:
+      undici-types: 6.21.0
+
   '@types/node@24.10.1':
     dependencies:
       undici-types: 7.16.0
@@ -9936,6 +10164,13 @@ snapshots:
       - debug
       - supports-color
 
+  httpx@2.3.3:
+    dependencies:
+      '@types/node': 20.19.30
+      debug: 4.4.3
+    transitivePeerDependencies:
+      - supports-color
+
   i18next@25.6.2(typescript@5.9.3):
     dependencies:
       '@babel/runtime': 7.28.4
@@ -9968,6 +10203,8 @@ snapshots:
   import-from@4.0.0: {}
 
   inherits@2.0.4: {}
+
+  ini@1.3.8: {}
 
   inline-style-parser@0.2.6: {}
 
@@ -10115,6 +10352,10 @@ snapshots:
   just-safe-get@4.2.0: {}
 
   just-safe-set@4.2.1: {}
+
+  kitx@2.2.0:
+    dependencies:
+      '@types/node': 22.19.7
 
   kleur@4.1.5: {}
 
@@ -10623,6 +10864,12 @@ snapshots:
       brace-expansion: 2.0.2
 
   minimist@1.2.8: {}
+
+  moment-timezone@0.5.48:
+    dependencies:
+      moment: 2.30.1
+
+  moment@2.30.1: {}
 
   monaco-editor@0.52.2: {}
 
@@ -11233,6 +11480,8 @@ snapshots:
 
   safer-buffer@2.1.2: {}
 
+  sax@1.4.4: {}
+
   scheduler@0.27.0: {}
 
   secure-compare@3.0.1: {}
@@ -11337,6 +11586,8 @@ snapshots:
       '@polka/url': 1.0.0-next.29
       mrmime: 2.0.1
       totalist: 3.0.1
+
+  sm3@1.0.3: {}
 
   snake-case@3.0.4:
     dependencies:
@@ -11518,6 +11769,8 @@ snapshots:
   uc.micro@2.1.0: {}
 
   unc-path-regex@0.1.2: {}
+
+  undici-types@6.21.0: {}
 
   undici-types@7.16.0: {}
 
@@ -11826,6 +12079,13 @@ snapshots:
   wrappy@1.0.2: {}
 
   ws@8.18.0: {}
+
+  xml2js@0.6.2:
+    dependencies:
+      sax: 1.4.4
+      xmlbuilder: 11.0.1
+
+  xmlbuilder@11.0.1: {}
 
   y18n@5.0.8: {}
 

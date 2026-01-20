@@ -12,6 +12,7 @@
     "libs/*"
   ],
   "dependencies": {
+    "@alicloud/dysmsapi20170525": "4.4.0",
     "@auth/core": "^0.34.3",
     "@auth/drizzle-adapter": "^1.11.1",
     "@paralleldrive/cuid2": "^2.3.1",
