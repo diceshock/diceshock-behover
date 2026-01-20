@@ -4,12 +4,46 @@ import { customAlphabet } from "nanoid";
 import z from "zod/v4";
 import { publicProcedure } from "./baseTRPC";
 
+export interface TurnstileResponse {
+  success: boolean;
+  challenge_ts: string;
+  hostname: string;
+  "error-codes": any[];
+  action: string;
+  cdata: string;
+  metadata: {
+    ephemeral_id: string;
+  };
+}
+
 const smsCode = publicProcedure
-  .input(z.object({ phone: z.string() }))
+  .input(z.object({ phone: z.string(), botcheck: z.string() }))
   .mutation(async ({ input, ctx }) => {
-    const { phone } = input;
+    const { phone, botcheck } = input;
     const { aliyunClient, env } = ctx;
-    const { KV } = env;
+    const { KV, TURNSTILE_KEY } = env;
+
+    const formData = new FormData();
+    formData.append("secret", TURNSTILE_KEY);
+    formData.append("response", botcheck);
+
+    try {
+      const response = await fetch(
+        "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+        {
+          method: "POST",
+          body: formData,
+        },
+      );
+
+      const result: TurnstileResponse = await response.json();
+
+      if (!result.success)
+        return { success: false, message: "Turnstile 验证失败, 请稍后重试" };
+    } catch (error) {
+      console.error("Turnstile validation error:", error);
+      return { success: false, message: "Turnstile 验证失败, 请稍后重试" };
+    }
 
     const code = customAlphabet("0123456789", 6)();
 

@@ -18,6 +18,7 @@
         "useLiteralKeys": "off"
       },
       "suspicious": {
+        "noConfusingVoidType": "off",
         "noArrayIndexKey": "off",
         "noExplicitAny": "off"
       },

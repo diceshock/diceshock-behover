@@ -4,6 +4,7 @@ name = "diceshock-behover"
 compatibility_date = "2025-09-24"
 main = "./src/main.tsx"
 compatibility_flags = ["nodejs_compat"]
+account_id = "3244c8f91cd34317ce18652158e5853a"
 
 [observability]
 enabled = false

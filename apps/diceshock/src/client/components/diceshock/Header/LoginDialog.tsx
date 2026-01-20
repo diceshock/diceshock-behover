@@ -3,11 +3,26 @@
 import { XIcon } from "@phosphor-icons/react/dist/ssr";
 import clsx from "clsx";
 import { useAtomValue } from "jotai";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { z } from "zod/v4";
+import useImmer from "@/client/hooks/useImmer";
+import trpcClientPublic from "@/shared/utils/trpc";
 import Modal from "../../modal";
 import { themeA } from "../../ThemeSwap";
 
 const SITE_KEY = "0x4AAAAAACNaVUPcjZJ2BWv-";
+
+type SmsForm = {
+  botcheck: null | string;
+  phone: string;
+  code: string;
+};
+
+const DEFAULT_SMS_FORM: SmsForm = {
+  botcheck: null,
+  phone: "",
+  code: "",
+};
 
 export default function LoginDialog({
   isOpen,
@@ -26,10 +41,13 @@ export default function LoginDialog({
 
   const turnstileIdRef = useRef<string | null | undefined>(null);
 
+  const [smsForm, setSmsForm] = useImmer<SmsForm>(DEFAULT_SMS_FORM);
+
   useLayoutEffect(() => {
     if (!turnstile || typeof window === "undefined") return;
 
-    if (!isOpen && turnstileIdRef.current) turnstile.remove(turnstileIdRef.current);
+    if (!isOpen && turnstileIdRef.current)
+      turnstile.remove(turnstileIdRef.current);
 
     if (!isOpen) return;
 
@@ -37,8 +55,31 @@ export default function LoginDialog({
       sitekey: SITE_KEY,
       theme: theme === "dark" ? "dark" : "light",
       size: "normal",
+      callback: (token) => {
+        setSmsForm((draft) => {
+          draft.botcheck = token;
+        });
+      },
     });
-  }, [isOpen, theme]);
+  }, [isOpen, theme, setSmsForm]);
+
+  const getSmsCode = useCallback(async () => {
+    if (!smsForm.botcheck) return setError("请先通过人机验证");
+
+    const phoneResult = z
+      .string()
+      .min(6)
+      .max(20)
+      .regex(/^[0-9]*$/)
+      .safeParse(smsForm.phone);
+
+    if (!phoneResult.success) return setError("手机号格式错误");
+
+    const result = await trpcClientPublic.auth.smsCode.mutate({
+      phone: smsForm.phone,
+      botcheck: smsForm.botcheck,
+    });
+  }, [smsForm]);
 
   return (
     <Modal
