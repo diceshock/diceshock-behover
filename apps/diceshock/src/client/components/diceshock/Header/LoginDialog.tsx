@@ -1,26 +1,51 @@
 /// <reference types="cloudflare-turnstile" />
 
-import { XIcon } from "@phosphor-icons/react/dist/ssr";
+import { WarningIcon, XIcon } from "@phosphor-icons/react/dist/ssr";
 import clsx from "clsx";
 import { useAtomValue } from "jotai";
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import { z } from "zod/v4";
-import useImmer from "@/client/hooks/useImmer";
 import trpcClientPublic from "@/shared/utils/trpc";
 import Modal from "../../modal";
 import { themeA } from "../../ThemeSwap";
 
 const SITE_KEY = "0x4AAAAAACNaVUPcjZJ2BWv-";
 
-type SmsForm = {
+type SmsFormState = {
   botcheck: null | string;
-  phone: string;
   code: string;
 };
 
-const DEFAULT_SMS_FORM: SmsForm = {
+type SmsFormAction =
+  | { type: "SET_BOTCHECK"; payload: string | null }
+  | { type: "SET_CODE"; payload: string }
+  | { type: "RESET" };
+
+const smsFormReducer = (
+  state: SmsFormState,
+  action: SmsFormAction,
+): SmsFormState => {
+  switch (action.type) {
+    case "SET_BOTCHECK":
+      return { ...state, botcheck: action.payload };
+    case "SET_CODE":
+      return { ...state, code: action.payload };
+    case "RESET":
+      return { botcheck: null, code: "" };
+    default:
+      return state;
+  }
+};
+
+const INITIAL_SMS_FORM_STATE: SmsFormState = {
   botcheck: null,
-  phone: "",
   code: "",
 };
 
@@ -38,32 +63,47 @@ export default function LoginDialog({
   );
 
   const [error, setError] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(0);
+  const [phone, setPhone] = useState("");
 
   const turnstileIdRef = useRef<string | null | undefined>(null);
+  const countdownTimerRef = useRef<number | null>(null);
+  const prevPhoneRef = useRef<string>("");
 
-  const [smsForm, setSmsForm] = useImmer<SmsForm>(DEFAULT_SMS_FORM);
+  const [smsForm, dispatchSmsForm] = useReducer(
+    smsFormReducer,
+    INITIAL_SMS_FORM_STATE,
+  );
 
   useLayoutEffect(() => {
     if (!turnstile || typeof window === "undefined") return;
 
-    if (!isOpen && turnstileIdRef.current)
+    if (!isOpen && turnstileIdRef.current) {
       turnstile.remove(turnstileIdRef.current);
+      turnstileIdRef.current = null;
+    }
 
-    if (!isOpen) return;
+    if (!isOpen) {
+      dispatchSmsForm({ type: "RESET" });
+      setPhone("");
+      setCountdown(0);
+      setError(null);
+      prevPhoneRef.current = "";
+      return;
+    }
 
     turnstileIdRef.current = turnstile.render("#turnstile-container", {
       sitekey: SITE_KEY,
       theme: theme === "dark" ? "dark" : "light",
       size: "normal",
       callback: (token) => {
-        setSmsForm((draft) => {
-          draft.botcheck = token;
-        });
+        dispatchSmsForm({ type: "SET_BOTCHECK", payload: token });
       },
     });
-  }, [isOpen, theme, setSmsForm]);
+  }, [isOpen, theme]);
 
   const getSmsCode = useCallback(async () => {
+    if (countdown > 0) return;
     if (!smsForm.botcheck) return setError("请先通过人机验证");
 
     const phoneResult = z
@@ -71,15 +111,53 @@ export default function LoginDialog({
       .min(6)
       .max(20)
       .regex(/^[0-9]*$/)
-      .safeParse(smsForm.phone);
+      .safeParse(phone);
 
     if (!phoneResult.success) return setError("手机号格式错误");
 
-    const result = await trpcClientPublic.auth.smsCode.mutate({
-      phone: smsForm.phone,
-      botcheck: smsForm.botcheck,
-    });
-  }, [smsForm]);
+    setError(null);
+
+    try {
+      const result = await trpcClientPublic.auth.smsCode.mutate({
+        phone,
+        botcheck: smsForm.botcheck,
+      });
+
+      if (result.success && "code" in result) {
+        setCountdown(20);
+      } else if (!result.success && "message" in result) {
+        setError(result.message);
+      } else {
+        setError("发送失败，请稍后重试");
+      }
+    } catch {
+      setError("网络错误，请稍后重试");
+    }
+  }, [phone, smsForm.botcheck, countdown]);
+
+  useEffect(() => {
+    if (countdown > 0) {
+      countdownTimerRef.current = window.setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            if (countdownTimerRef.current) {
+              clearInterval(countdownTimerRef.current);
+              countdownTimerRef.current = null;
+            }
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+      }
+    };
+  }, [countdown]);
 
   return (
     <Modal
@@ -126,16 +204,47 @@ export default function LoginDialog({
 
         {activeTab === "phonenumber" && (
           <form className="flex flex-col gap-4 py-4 px-12">
+            {error && (
+              <div role="alert" className="alert alert-error alert-soft">
+                <WarningIcon className="text-error size-4" />
+                <span>{error}</span>
+              </div>
+            )}
+
             <label className="flex flex-row gap-2">
               <span className="label text-sm min-w-20">手机号:</span>
               <input
                 type="text"
                 placeholder="用以收发短信验证码"
                 className="input input-sm"
+                value={phone}
+                onChange={(e) => {
+                  const newPhone = e.target.value;
+                  const phoneChanged = newPhone !== prevPhoneRef.current;
+
+                  // 如果手机号改变，清空 botcheck 和 code，并重置 Turnstile
+                  if (phoneChanged && prevPhoneRef.current) {
+                    dispatchSmsForm({ type: "RESET" });
+                    // 重置 Turnstile widget
+                    if (turnstile && turnstileIdRef.current) {
+                      turnstile.reset(turnstileIdRef.current);
+                    }
+                  }
+
+                  setPhone(newPhone);
+                  prevPhoneRef.current = newPhone;
+                  setError(null);
+                }}
+                disabled={countdown > 0}
               />
 
-              <button type="button" className="btn btn-sm">
-                获取验证码
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={getSmsCode}
+                disabled={countdown > 0}
+              >
+                {countdown > 0 ? `${countdown}秒后重试` : "获取验证码"}
               </button>
             </label>
 
@@ -145,16 +254,21 @@ export default function LoginDialog({
                 type="text"
                 placeholder="六位数字短信验证码"
                 className="input input-sm flex-1"
+                value={smsForm.code}
+                onChange={(e) => {
+                  dispatchSmsForm({
+                    type: "SET_CODE",
+                    payload: e.target.value,
+                  });
+                  setError(null);
+                }}
+                maxLength={6}
               />
             </label>
 
             <div className="flex justify-center">
               <div id="turnstile-container" />
             </div>
-
-            {error && (
-              <div className="text-error text-sm my-4 px-4">{error}</div>
-            )}
 
             <button type="submit" className="btn btn-primary btn-sm">
               登录
