@@ -58,14 +58,8 @@ export default async function diceshockRouter(c: Context<HonoCtxEnv>) {
               href="https://assets.diceshock.com/images/diceshock.favicon.svg"
             />
 
-            <link
-              rel="preconnect"
-              href="https://challenges.cloudflare.com"
-            ></link>
-
             <script
-              src="https://challenges.cloudflare.com/turnstile/v0/api.js"
-              async
+              src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
               defer
             ></script>
           </head>

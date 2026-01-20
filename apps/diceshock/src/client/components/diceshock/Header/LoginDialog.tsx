@@ -1,9 +1,13 @@
+/// <reference types="cloudflare-turnstile" />
+
 import { XIcon } from "@phosphor-icons/react/dist/ssr";
 import clsx from "clsx";
 import { useAtomValue } from "jotai";
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import Modal from "../../modal";
 import { themeA } from "../../ThemeSwap";
+
+const SITE_KEY = "0x4AAAAAACNaVUPcjZJ2BWv-";
 
 export default function LoginDialog({
   isOpen,
@@ -19,6 +23,22 @@ export default function LoginDialog({
   );
 
   const [error, setError] = useState<string | null>(null);
+
+  const turnstileIdRef = useRef<string | null | undefined>(null);
+
+  useLayoutEffect(() => {
+    if (!turnstile || typeof window === "undefined") return;
+
+    if (!isOpen && turnstileIdRef.current) turnstile.remove(turnstileIdRef.current);
+
+    if (!isOpen) return;
+
+    turnstileIdRef.current = turnstile.render("#turnstile-container", {
+      sitekey: SITE_KEY,
+      theme: theme === "dark" ? "dark" : "light",
+      size: "normal",
+    });
+  }, [isOpen, theme]);
 
   return (
     <Modal
@@ -88,12 +108,7 @@ export default function LoginDialog({
             </label>
 
             <div className="flex justify-center">
-              <div
-                className="cf-turnstile w-72 min-h-14 bg-neutral rounded-lg"
-                data-sitekey="0x4AAAAAACNaVUPcjZJ2BWv-"
-                data-theme={theme === "dark" ? "dark" : "light"}
-                data-size="normal"
-              />
+              <div id="turnstile-container" />
             </div>
 
             {error && (
