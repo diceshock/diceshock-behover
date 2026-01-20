@@ -18,6 +18,8 @@ export default function LoginDialog({
     "phonenumber",
   );
 
+  const [error, setError] = useState<string | null>(null);
+
   return (
     <Modal
       isCloseOnClick
@@ -61,12 +63,48 @@ export default function LoginDialog({
           </button>
         </div>
 
-        <div
-          className="cf-turnstile"
-          data-sitekey="0x4AAAAAACNaVUPcjZJ2BWv-"
-          data-theme={theme === "dark" ? "dark" : "light"}
-          data-size="normal"
-        ></div>
+        {activeTab === "phonenumber" && (
+          <form className="flex flex-col gap-4 py-4 px-12">
+            <label className="flex flex-row gap-2">
+              <span className="label text-sm min-w-20">手机号:</span>
+              <input
+                type="text"
+                placeholder="用以收发短信验证码"
+                className="input input-sm"
+              />
+
+              <button type="button" className="btn btn-sm">
+                获取验证码
+              </button>
+            </label>
+
+            <label className="flex flex-row gap-2">
+              <span className="label text-sm min-w-20">短信验证码:</span>
+              <input
+                type="text"
+                placeholder="六位数字短信验证码"
+                className="input input-sm flex-1"
+              />
+            </label>
+
+            <div className="flex justify-center">
+              <div
+                className="cf-turnstile w-72 min-h-14 bg-neutral rounded-lg"
+                data-sitekey="0x4AAAAAACNaVUPcjZJ2BWv-"
+                data-theme={theme === "dark" ? "dark" : "light"}
+                data-size="normal"
+              />
+            </div>
+
+            {error && (
+              <div className="text-error text-sm my-4 px-4">{error}</div>
+            )}
+
+            <button type="submit" className="btn btn-primary btn-sm">
+              登录
+            </button>
+          </form>
+        )}
       </div>
     </Modal>
   );

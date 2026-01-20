@@ -21,7 +21,7 @@ export function useAuthRegister() {
 }
 
 export default function useAuth() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSession() ?? {};
   const [userInfo, setUserInfo] = useAtom(userInfoAtom);
 
   const setUserInfoIm = useCallback(
@@ -30,7 +30,12 @@ export default function useAuth() {
   );
 
   return useMemo(
-    () => ({ session: session as Session | null, status, userInfo, setUserInfoIm }),
+    () => ({
+      session: session as Session | null,
+      status,
+      userInfo,
+      setUserInfoIm,
+    }),
     [session, status, userInfo, setUserInfoIm],
   );
 }
