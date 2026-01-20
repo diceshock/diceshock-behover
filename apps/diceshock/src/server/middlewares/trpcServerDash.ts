@@ -3,6 +3,10 @@ import { appRouterDash } from "@/server/apis/trpc";
 
 const trpcServerDash = trpcServer({
   router: appRouterDash,
+  createContext: (_opts, c) => ({
+    env: c.env,
+    aliyunClient: c.get("AliyunClient"),
+  }),
   onError({ error, path, input, ctx: _ctx, type }) {
     console.error(
       JSON.stringify(

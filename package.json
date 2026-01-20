@@ -13,6 +13,8 @@
   ],
   "dependencies": {
     "@alicloud/dysmsapi20170525": "4.4.0",
+    "@alicloud/openapi-client": "^0.4.15",
+    "@alicloud/tea-util": "^1.4.11",
     "@auth/core": "^0.34.3",
     "@auth/drizzle-adapter": "^1.11.1",
     "@paralleldrive/cuid2": "^2.3.1",

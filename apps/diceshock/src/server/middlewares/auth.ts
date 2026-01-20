@@ -1,5 +1,6 @@
+import Credentials from "@auth/core/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import { initAuthConfig } from "@hono/auth-js";
+import { type AuthConfig, initAuthConfig } from "@hono/auth-js";
 import db, { userInfoTable } from "@lib/db";
 import { createSelectSchema } from "drizzle-zod";
 import type { Context } from "hono";
@@ -13,12 +14,33 @@ export const userInfoZ = createSelectSchema(userInfoTable).omit({ id: true });
 
 export type UserInfo = z.infer<typeof userInfoZ>;
 
-export const authInit = initAuthConfig((c: Context<HonoCtxEnv>) => ({
-  adapter: DrizzleAdapter(db(c.env.DB)),
-  secret: c.env.AUTH_SECRET,
-  providers: [],
-  session: { strategy: "jwt" },
-}));
+export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
+  const aliyunClient = c.get("AliyunClient");
+
+  const config: AuthConfig = {
+    adapter: DrizzleAdapter(db(c.env.DB)),
+    secret: c.env.AUTH_SECRET,
+    providers: [],
+    session: { strategy: "jwt" },
+  };
+
+  if (!aliyunClient) return config;
+
+  // config.providers.push(
+  //   Credentials({
+  //     name: "SMS",
+  //     credentials: {
+  //       phone: { label: "Phone", type: "text" },
+  //       code: { label: "Code", type: "text" },
+  //     },
+  //     authorize: async (credentials) => {
+  //       const {phone, code} = credentials;
+  //     }
+  //   }),
+  // );
+
+  return config;
+});
 
 export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
   const auth = c.get("authUser");

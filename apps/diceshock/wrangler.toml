@@ -23,6 +23,10 @@ head_sampling_rate = 1
 [version_metadata]
 binding = "CF_VERSION_METADATA"
 
+[[kv_namespaces]]
+binding = "KV"
+id = "59911665c0654c54814d81fbb213aae4"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "diceshock"

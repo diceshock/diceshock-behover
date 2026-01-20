@@ -1,5 +1,6 @@
 import active from "./active";
 import activeTags from "./activeTags";
+import auth from "./auth";
 import { router } from "./baseTRPC";
 import owned from "./owned";
 import ownedManagement from "./ownedManagement";
@@ -11,4 +12,5 @@ export const appRouterPublic = router({
   owned,
   active: { get: active.get, getById: active.getById },
   activeTags: { get: activeTags.get },
+  auth: { smsCode: auth.smsCode },
 });

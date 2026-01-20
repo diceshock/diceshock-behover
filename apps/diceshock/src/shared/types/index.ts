@@ -1,5 +1,6 @@
 /*global NodeJS */
 
+import type Dysmsapi20170525 from "@alicloud/dysmsapi20170525";
 import type { Env } from "hono";
 import z from "zod/v4";
 import type * as trpcServer from "@/server/apis/trpc";
@@ -14,7 +15,10 @@ export type InjectCrossData = z.infer<typeof injectCrossDataZ>;
 
 export interface HonoCtxEnv extends Env {
   Bindings: Cloudflare.Env;
-  Variables: { InjectCrossData?: InjectCrossData };
+  Variables: {
+    InjectCrossData?: InjectCrossData;
+    AliyunClient?: Dysmsapi20170525;
+  };
 }
 
 export type ApiRouterPublic = typeof trpcServer.appRouterPublic;
