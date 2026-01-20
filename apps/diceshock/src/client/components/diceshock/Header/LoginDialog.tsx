@@ -222,10 +222,14 @@ export default function LoginDialog({
                   const newPhone = e.target.value;
                   const phoneChanged = newPhone !== prevPhoneRef.current;
 
-                  // 如果手机号改变，清空 botcheck 和 code，并重置 Turnstile
-                  if (phoneChanged && prevPhoneRef.current) {
+                  // 如果手机号改变且有 token，清空 botcheck 和 code，并重置 Turnstile
+                  if (
+                    phoneChanged &&
+                    prevPhoneRef.current &&
+                    smsForm.botcheck
+                  ) {
                     dispatchSmsForm({ type: "RESET" });
-                    // 重置 Turnstile widget
+                    // 重置 Turnstile widget（只有在有 token 的情况下才重置）
                     if (turnstile && turnstileIdRef.current) {
                       turnstile.reset(turnstileIdRef.current);
                     }
