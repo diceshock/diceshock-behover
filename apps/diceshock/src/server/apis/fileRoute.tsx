@@ -17,7 +17,7 @@ import { ServerCtxProvider } from "@/client/hooks/useServerCtx";
 import type { HonoCtxEnv } from "@/shared/types";
 import themeGet from "../utils/themeGet";
 
-export default async function diceshockRouter(c: Context<HonoCtxEnv>) {
+export default async function fileRoute(c: Context<HonoCtxEnv>) {
   const handler = createRequestHandler({
     request: c.req.raw,
     createRouter,

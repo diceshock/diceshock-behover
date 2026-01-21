@@ -90,6 +90,7 @@ const WithHomeLoActiveIdRoute = WithHomeLoActiveIdRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof WithHomeLoIndexRoute
   '/dash': typeof DashRouteWithChildren
   '/actives': typeof WithHomeLoActivesRoute
   '/contact-us': typeof WithHomeLoContactUsRoute
@@ -98,7 +99,6 @@ export interface FileRoutesByFullPath {
   '/dash/acitve': typeof DashAcitveRoute
   '/dash/inventory-management': typeof DashInventoryManagementRoute
   '/dash/users': typeof DashUsersRoute
-  '/': typeof WithHomeLoIndexRoute
   '/dash/': typeof DashIndexRoute
   '/active/$id': typeof WithHomeLoActiveIdRoute
   '/dash/active/$id': typeof DashActiveIdRoute
@@ -135,6 +135,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
     | '/dash'
     | '/actives'
     | '/contact-us'
@@ -143,7 +144,6 @@ export interface FileRouteTypes {
     | '/dash/acitve'
     | '/dash/inventory-management'
     | '/dash/users'
-    | '/'
     | '/dash/'
     | '/active/$id'
     | '/dash/active/$id'
@@ -194,7 +194,7 @@ declare module '@tanstack/react-router' {
     '/_with-home-lo': {
       id: '/_with-home-lo'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof WithHomeLoRouteImport
       parentRoute: typeof rootRouteImport
     }

@@ -6,8 +6,7 @@ export const injectCrossDataToCtx = (
   crossData: Partial<InjectCrossData>,
 ) => {
   const prevInject = ctx.get("InjectCrossData");
-  console.log("prevInject", prevInject);
-  console.log("crossData", crossData);
+
   ctx.set("InjectCrossData", {
     ...prevInject,
     ...crossData,

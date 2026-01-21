@@ -1,4 +1,4 @@
-import { createRootRoute, Outlet } from "@tanstack/react-router";
+import { createRootRoute, Outlet, Scripts } from "@tanstack/react-router";
 import { useAuthRegister } from "@/client/hooks/useAuth";
 import { useCrossDataRegister } from "@/client/hooks/useCrossData";
 
@@ -10,5 +10,10 @@ function _Home() {
   useCrossDataRegister();
   useAuthRegister();
 
-  return <Outlet />;
+  return (
+    <>
+      <Outlet />
+      <Scripts />
+    </>
+  );
 }

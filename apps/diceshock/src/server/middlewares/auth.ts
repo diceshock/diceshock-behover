@@ -59,7 +59,7 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
 
   const authUser = c.get("authUser");
 
-  const id = authUser?.user?.id ?? "";
+  const id = authUser.session.user?.id ?? "";
 
   if (!authUser || !id) return next();
 
@@ -68,7 +68,7 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
   });
 
   if (!userInfoRaw) {
-    const nickname = authUser.user?.name ?? genNickname();
+    const nickname = authUser.session.user?.name ?? genNickname();
 
     const uid = nanoid();
 
