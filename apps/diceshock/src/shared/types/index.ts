@@ -10,6 +10,7 @@ import { userAgentMetaZ } from "@/server/middlewares/serverMetaInj";
 export const injectCrossDataZ = z.object({
   UserAgentMeta: userAgentMetaZ.optional(),
   UserInfo: userInfoZ.optional(),
+  RequestId: z.string(),
 });
 export type InjectCrossData = z.infer<typeof injectCrossDataZ>;
 

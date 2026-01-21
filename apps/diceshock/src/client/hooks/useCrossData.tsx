@@ -21,7 +21,7 @@ export const CrossDataProvider: React.FC<{
   c: Context<HonoCtxEnv>;
   children: React.ReactNode;
 }> = ({ c, children }) => {
-  const data = c.get("InjectCrossData") ?? {};
+  const data = c.get("InjectCrossData") as InjectCrossData;
   const payload = LZString.compressToBase64(JSON.stringify(data));
 
   return (

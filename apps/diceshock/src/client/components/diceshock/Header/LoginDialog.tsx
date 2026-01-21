@@ -179,14 +179,16 @@ export default function LoginDialog({
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
 
-      const result = await signIn("SMS", {
+      const result = await signIn("credentials", {
         phone,
         code: smsForm.code,
+        redirect: false,
       });
 
       if (result?.ok) window.location.reload();
 
       setError(`登录失败，请稍后重试: ${result?.error ?? "未知错误"}`);
+      console.error(`登录失败，请稍后重试: ${result?.error ?? "未知错误"}`);
     },
     [phone, smsForm.code],
   );

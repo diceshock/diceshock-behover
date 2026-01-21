@@ -6,12 +6,10 @@ export const injectCrossDataToCtx = (
   crossData: Partial<InjectCrossData>,
 ) => {
   const prevInject = ctx.get("InjectCrossData");
-  ctx.set("InjectCrossData", { ...prevInject, ...crossData });
+  console.log("prevInject", prevInject);
+  console.log("crossData", crossData);
+  ctx.set("InjectCrossData", {
+    ...prevInject,
+    ...crossData,
+  } as InjectCrossData);
 };
-
-export const pickBy =
-  <const O extends Record<PropertyKey, unknown>>(o: O) =>
-  <const F extends <const K extends keyof O>(k: K, v: O[K]) => boolean>(f: F) =>
-    Object.fromEntries(Object.entries(o).filter(([k, v]) => f(k, v))) as {
-      [K in keyof O as ReturnType<F> extends true ? never : K]: O[K];
-    };

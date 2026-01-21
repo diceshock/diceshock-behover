@@ -29,7 +29,7 @@ const config = defineConfig({
     cloudflare({ configPath: path.resolve(__dirname, "./wrangler.toml") }),
     ssrPlugin({
       hotReload: {
-        ignore: ["./src/client/**/*.tsx", "./src/apps/**/*.tsx"],
+        ignore: ["./src/client/**/*.tsx"],
       },
     }),
     react(),

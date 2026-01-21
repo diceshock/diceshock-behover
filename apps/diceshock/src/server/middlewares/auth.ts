@@ -24,6 +24,7 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
     providers: [],
     session: { strategy: "jwt" },
     trustHost: true,
+    basePath: "/api/auth",
   };
 
   if (!aliyunClient) return config;
@@ -56,17 +57,18 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
   // 排除认证路由，这些路由由 authHandler 处理
   if (c.req.path.startsWith("/api/auth/")) return next();
 
-  const auth = c.get("authUser");
-  const id = auth?.user?.id ?? "";
+  const authUser = c.get("authUser");
 
-  if (!auth || !id) return next();
+  const id = authUser?.user?.id ?? "";
+
+  if (!authUser || !id) return next();
 
   const userInfoRaw = await db(c.env.DB).query.userInfoTable.findFirst({
     where: (userInfo, { eq }) => eq(userInfo.id, id),
   });
 
   if (!userInfoRaw) {
-    const nickname = auth.user?.name ?? genNickname();
+    const nickname = authUser.user?.name ?? genNickname();
 
     const uid = nanoid();
 

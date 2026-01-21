@@ -5,10 +5,10 @@ import {
   SignpostIcon,
   UsersIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import { createLazyFileRoute, Link, Outlet } from "@tanstack/react-router";
+import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
 import ThemeSwap from "@/client/components/ThemeSwap";
 
-export const Route = createLazyFileRoute("/dash")({
+export const Route = createFileRoute("/dash")({
   component: RouteComponent,
 });
 
