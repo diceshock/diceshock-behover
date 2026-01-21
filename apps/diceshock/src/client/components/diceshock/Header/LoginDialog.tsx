@@ -119,17 +119,16 @@ export default function LoginDialog({
 
     try {
       const result = await trpcClientPublic.auth.smsCode.mutate({
-        phone,
         botcheck: smsForm.botcheck,
+        phone,
       });
 
-      if (result.success && "code" in result) {
-        setCountdown(20);
-      } else if (!result.success && "message" in result) {
-        setError(result.message);
-      } else {
-        setError("发送失败，请稍后重试");
-      }
+      if (result.success && "code" in result) return setCountdown(20);
+
+      if (!result.success && "message" in result)
+        return setError(result.message);
+
+      setError("发送失败，请稍后重试");
     } catch {
       setError("网络错误，请稍后重试");
     }
@@ -139,14 +138,13 @@ export default function LoginDialog({
     if (countdown > 0) {
       countdownTimerRef.current = window.setInterval(() => {
         setCountdown((prev) => {
-          if (prev <= 1) {
-            if (countdownTimerRef.current) {
-              clearInterval(countdownTimerRef.current);
-              countdownTimerRef.current = null;
-            }
-            return 0;
-          }
-          return prev - 1;
+          if (prev > 1) return prev - 1;
+
+          if (!countdownTimerRef.current) return 0;
+
+          clearInterval(countdownTimerRef.current);
+          countdownTimerRef.current = null;
+          return 0;
         });
       }, 1000);
     }

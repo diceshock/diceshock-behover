@@ -45,10 +45,10 @@ const smsCode = publicProcedure
       return { success: false, message: "Turnstile 验证失败, 请稍后重试" };
     }
 
-    const code = customAlphabet("0123456789", 6)();
+    const verificationCode = customAlphabet("0123456789", 6)();
 
     const sendSmsRequest = new $Dysmsapi20170525.SendSmsRequest({
-      templateParam: JSON.stringify({ code }),
+      templateParam: JSON.stringify({ code: verificationCode }),
       templateCode: "SMS_330260870",
       signName: "武汉市奇兵文化创意",
       phoneNumbers: phone,
@@ -57,25 +57,62 @@ const smsCode = publicProcedure
     const runtime = new $Util.RuntimeOptions({});
 
     try {
-      const { body: { code } = {} } = await aliyunClient.sendSmsWithOptions(
+      const response = await aliyunClient.sendSmsWithOptions(
         sendSmsRequest,
         runtime,
       );
 
-      if (code !== "OK")
+      const responseCode = response.body?.code;
+
+      if (responseCode !== "OK") {
+        console.error({
+          type: "SMS_SEND_FAILED",
+          phone,
+          responseCode,
+          responseBody: response.body,
+          templateCode: sendSmsRequest.templateCode,
+        });
         return { success: false, message: "无法发送短信, 请联系管理员" };
+      }
 
       const expirationTtl = 60 * 5;
+      const kvKey = `sms_code:${phone}`;
 
-      await KV.put(`sms_code:${phone}`, code, { expirationTtl });
+      await KV.put(kvKey, verificationCode, { expirationTtl });
+
+      console.log({
+        type: "SMS_SENT_SUCCESS",
+        phone,
+        kvKey,
+        expirationTtl,
+      });
 
       return {
         success: true,
-        code,
+        code: verificationCode,
         expiresInMs: expirationTtl * 1000,
       };
     } catch (e) {
-      console.error(e);
+      console.error({
+        type: "SMS_SERVICE_ERROR",
+        errorType: e?.constructor?.name || "Unknown",
+        errorMessage: e instanceof Error ? e.message : String(e),
+        errorStack: e instanceof Error ? e.stack : undefined,
+        context: {
+          phone,
+          templateCode: sendSmsRequest.templateCode,
+          signName: sendSmsRequest.signName,
+          phoneNumbers: sendSmsRequest.phoneNumbers,
+        },
+        errorDetails:
+          e instanceof Error
+            ? {
+                name: e.name,
+                message: e.message,
+                stack: e.stack,
+              }
+            : String(e),
+      });
 
       return { success: false, message: "服务端错误, 请联系管理员" };
     }
