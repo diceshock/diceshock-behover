@@ -18,6 +18,9 @@ import { themeA } from "../../ThemeSwap";
 
 const SITE_KEY = "0x4AAAAAACNaVUPcjZJ2BWv-";
 
+const turnstileIns: typeof turnstile | null =
+  (globalThis as any).turnstile ?? null;
+
 type SmsFormState = {
   botcheck: null | string;
   code: string;
@@ -76,10 +79,10 @@ export default function LoginDialog({
   );
 
   useLayoutEffect(() => {
-    if (!turnstile || typeof window === "undefined") return;
+    if (!turnstileIns || typeof window === "undefined") return;
 
     if (!isOpen && turnstileIdRef.current) {
-      turnstile.remove(turnstileIdRef.current);
+      turnstileIns.remove(turnstileIdRef.current);
       turnstileIdRef.current = null;
     }
 
@@ -92,7 +95,7 @@ export default function LoginDialog({
       return;
     }
 
-    turnstileIdRef.current = turnstile.render("#turnstile-container", {
+    turnstileIdRef.current = turnstileIns.render("#turnstileIns-container", {
       sitekey: SITE_KEY,
       theme: theme === "dark" ? "dark" : "light",
       size: "normal",
@@ -104,7 +107,10 @@ export default function LoginDialog({
 
   const getSmsCode = useCallback(async () => {
     if (countdown > 0) return;
-    if (!smsForm.botcheck) return setError("请先通过人机验证");
+
+    if (import.meta.env.PROD) {
+      if (!smsForm.botcheck) return setError("请先通过人机验证");
+    }
 
     const phoneResult = z
       .string()
@@ -127,8 +133,8 @@ export default function LoginDialog({
 
       // 发送失败，重置人机验证
       dispatchSmsForm({ type: "RESET" });
-      if (turnstile && turnstileIdRef.current) {
-        turnstile.reset(turnstileIdRef.current);
+      if (turnstileIns && turnstileIdRef.current) {
+        turnstileIns.reset(turnstileIdRef.current);
       }
 
       if (!result.success && "message" in result)
@@ -138,8 +144,8 @@ export default function LoginDialog({
     } catch {
       // 网络错误，重置人机验证
       dispatchSmsForm({ type: "RESET" });
-      if (turnstile && turnstileIdRef.current) {
-        turnstile.reset(turnstileIdRef.current);
+      if (turnstileIns && turnstileIdRef.current) {
+        turnstileIns.reset(turnstileIdRef.current);
       }
       setError("网络错误，请稍后重试");
     }
@@ -231,16 +237,16 @@ export default function LoginDialog({
                   const newPhone = e.target.value;
                   const phoneChanged = newPhone !== prevPhoneRef.current;
 
-                  // 如果手机号改变且有 token，清空 botcheck 和 code，并重置 Turnstile
+                  // 如果手机号改变且有 token，清空 botcheck 和 code，并重置 turnstileIns
                   if (
                     phoneChanged &&
                     prevPhoneRef.current &&
                     smsForm.botcheck
                   ) {
                     dispatchSmsForm({ type: "RESET" });
-                    // 重置 Turnstile widget（只有在有 token 的情况下才重置）
-                    if (turnstile && turnstileIdRef.current) {
-                      turnstile.reset(turnstileIdRef.current);
+                    // 重置 turnstileIns widget（只有在有 token 的情况下才重置）
+                    if (turnstileIns && turnstileIdRef.current) {
+                      turnstileIns.reset(turnstileIdRef.current);
                     }
                   }
 
@@ -280,7 +286,7 @@ export default function LoginDialog({
             </label>
 
             <div className="flex justify-center">
-              <div id="turnstile-container" />
+              <div id="turnstileIns-container" />
             </div>
 
             <button type="submit" className="btn btn-primary btn-sm">

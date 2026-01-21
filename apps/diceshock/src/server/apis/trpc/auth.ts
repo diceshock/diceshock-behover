@@ -17,7 +17,7 @@ export interface TurnstileResponse {
 }
 
 const smsCode = publicProcedure
-  .input(z.object({ phone: z.string(), botcheck: z.string() }))
+  .input(z.object({ phone: z.string(), botcheck: z.string().nullable() }))
   .mutation(async ({ input, ctx }) => {
     const { phone, botcheck } = input;
     const { aliyunClient, env } = ctx;
@@ -25,24 +25,26 @@ const smsCode = publicProcedure
 
     const formData = new FormData();
     formData.append("secret", TURNSTILE_KEY);
-    formData.append("response", botcheck);
+    formData.append("response", botcheck ?? "");
 
-    try {
-      const response = await fetch(
-        "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-        {
-          method: "POST",
-          body: formData,
-        },
-      );
+    if (import.meta.env.PROD) {
+      try {
+        const response = await fetch(
+          "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+          {
+            method: "POST",
+            body: formData,
+          },
+        );
 
-      const result: TurnstileResponse = await response.json();
+        const result: TurnstileResponse = await response.json();
 
-      if (!result.success)
+        if (!result.success)
+          return { success: false, message: "Turnstile 验证失败, 请稍后重试" };
+      } catch (error) {
+        console.error("Turnstile validation error:", error);
         return { success: false, message: "Turnstile 验证失败, 请稍后重试" };
-    } catch (error) {
-      console.error("Turnstile validation error:", error);
-      return { success: false, message: "Turnstile 验证失败, 请稍后重试" };
+      }
     }
 
     const verificationCode = customAlphabet("0123456789", 6)();
