@@ -10,12 +10,12 @@ import trpcServerPublic from "./server/middlewares/trpcServerPublic";
 
 export const app = new Hono<{ Bindings: HonoCtxEnv }>();
 
-app.use("/edge/*", trpcServerDash);
-app.use("/apis/*", trpcServerPublic);
-
 app.use(aliyunInj);
 app.use(authInit);
 app.use(userInjMiddleware);
+
+app.use("/edge/*", trpcServerDash);
+app.use("/apis/*", trpcServerPublic);
 
 app.use("/auth/*", authHandler());
 
