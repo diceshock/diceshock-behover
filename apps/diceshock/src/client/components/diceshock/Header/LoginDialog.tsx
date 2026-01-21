@@ -281,15 +281,6 @@ export default function LoginDialog({
                 }}
                 disabled={countdown > 0}
               />
-
-              <button
-                type="button"
-                className="btn btn-sm"
-                onClick={getSmsCode}
-                disabled={countdown > 0}
-              >
-                {countdown > 0 ? `${countdown}秒后重试` : "获取验证码"}
-              </button>
             </label>
 
             <label className="flex flex-row gap-2">
@@ -308,6 +299,15 @@ export default function LoginDialog({
                 }}
                 maxLength={6}
               />
+
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={getSmsCode}
+                disabled={countdown > 0}
+              >
+                {countdown > 0 ? `${countdown}秒后重试` : "获取验证码"}
+              </button>
             </label>
 
             <div className="flex justify-center">

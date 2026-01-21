@@ -61,6 +61,7 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
 
   const id = authUser.session.user?.id ?? "";
 
+  console.log("authUser", authUser, id);
   if (!authUser || !id) return next();
 
   const userInfoRaw = await db(c.env.DB).query.userInfoTable.findFirst({
