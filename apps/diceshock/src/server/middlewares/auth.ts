@@ -1,7 +1,7 @@
 import Credentials from "@auth/core/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { type AuthConfig, getAuthUser, initAuthConfig } from "@hono/auth-js";
-import db, { userInfoTable } from "@lib/db";
+import db, { userInfoTable, users } from "@lib/db";
 import { createSelectSchema } from "drizzle-zod";
 import type { Context } from "hono";
 import { nanoid } from "nanoid/non-secure";
@@ -11,7 +11,7 @@ import { FACTORY } from "../factory";
 import { injectCrossDataToCtx } from "../utils";
 import { genNickname, getSmsTmpCodeKey } from "../utils/auth";
 
-export const userInfoZ = createSelectSchema(userInfoTable).omit({ id: true });
+export const userInfoZ = createSelectSchema(userInfoTable).omit({ id: true, create_at: true });
 
 export type UserInfo = z.infer<typeof userInfoZ>;
 
@@ -25,6 +25,24 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
     session: { strategy: "jwt" },
     trustHost: true,
     basePath: "/api/auth",
+    callbacks: {
+      async jwt({ token, user }) {
+        // 当用户首次登录时，user 对象存在
+        if (user) {
+          token.sub = user.id;
+          token.name = user.name;
+        }
+        return token;
+      },
+      async session({ session, token }) {
+        // 将 token 中的信息同步到 session
+        if (session.user && token.sub) {
+          session.user.id = token.sub;
+          session.user.name = token.name as string;
+        }
+        return session;
+      },
+    },
   };
 
   if (!aliyunClient) return config;
@@ -61,9 +79,28 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
 
   console.log("authUser", authUser);
 
-  const id = authUser?.user?.id;
+  // 在 JWT 策略下，用户 ID 存储在 token.sub 中
+  const id = authUser?.token?.sub || authUser?.user?.id;
+
+  console.log("user id:", id);
 
   if (!authUser || !id) return next();
+
+  // 确保用户存在于 user 表中（JWT 策略可能不会自动保存）
+  const userExists = await db(c.env.DB).query.users.findFirst({
+    where: (user, { eq }) => eq(user.id, id),
+  });
+
+  if (!userExists) {
+    console.log("用户不存在，创建用户:", id);
+    await db(c.env.DB)
+      .insert(users)
+      .values({
+        id,
+        name: authUser.user?.name || authUser.token?.name || genNickname(),
+      })
+      .onConflictDoNothing();
+  }
 
   const userInfoRaw = await db(c.env.DB).query.userInfoTable.findFirst({
     where: (userInfo, { eq }) => eq(userInfo.id, id),
