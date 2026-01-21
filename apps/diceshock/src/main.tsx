@@ -17,7 +17,7 @@ app.use(userInjMiddleware);
 app.use("/edge/*", trpcServerDash);
 app.use("/apis/*", trpcServerPublic);
 
-app.use("/auth/*", authHandler());
+app.use("/api/auth/*", authHandler());
 
 app.get("/*", diceshockRouter);
 

@@ -249,8 +249,11 @@ export default function LoginDialog({
             <label className="flex flex-row gap-2">
               <span className="label text-sm min-w-20">手机号:</span>
               <input
-                type="text"
                 placeholder="用以收发短信验证码"
+                type="tel"
+                inputMode="numeric"
+                autoComplete="tel"
+                name="phone"
                 className="input input-sm"
                 value={phone}
                 onChange={(e) => {

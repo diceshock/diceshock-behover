@@ -23,6 +23,7 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
     secret: c.env.AUTH_SECRET,
     providers: [],
     session: { strategy: "jwt" },
+    trustHost: true,
   };
 
   if (!aliyunClient) return config;
