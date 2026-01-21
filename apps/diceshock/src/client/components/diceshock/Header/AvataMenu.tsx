@@ -1,4 +1,10 @@
-import { KeyIcon, ScanIcon, UserIcon } from "@phosphor-icons/react/dist/ssr";
+import { signOut } from "@hono/auth-js/react";
+import {
+  KeyIcon,
+  ScanIcon,
+  SignOutIcon,
+  UserIcon,
+} from "@phosphor-icons/react/dist/ssr";
 import { useState } from "react";
 import useAuth from "@/client/hooks/useAuth";
 import ThemeSwap from "../../ThemeSwap";
@@ -10,6 +16,11 @@ export default function AvatarMenu() {
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
 
   const name = userInfo?.nickname ?? "Anonymous Shock";
+
+  const handleSignOut = async () => {
+    await signOut({ redirect: false });
+    window.location.href = "/";
+  };
 
   return (
     <div className="dropdown dropdown-bottom dropdown-end">
@@ -43,11 +54,14 @@ export default function AvatarMenu() {
                 </a>
               </li>
               <li>
-                <a className="px-5 py-3 flex items-center justify-between">
-                  <KeyIcon weight="fill" className="size-5" />
+                <button
+                  onClick={handleSignOut}
+                  className="px-5 py-3 flex items-center justify-between"
+                >
+                  <SignOutIcon weight="fill" className="size-5" />
 
-                  <span>账户迁移</span>
-                </a>
+                  <span>登出</span>
+                </button>
               </li>
             </>
           )}
