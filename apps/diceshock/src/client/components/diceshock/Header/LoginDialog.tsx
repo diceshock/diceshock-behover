@@ -125,11 +125,22 @@ export default function LoginDialog({
 
       if (result.success && "code" in result) return setCountdown(20);
 
+      // 发送失败，重置人机验证
+      dispatchSmsForm({ type: "RESET" });
+      if (turnstile && turnstileIdRef.current) {
+        turnstile.reset(turnstileIdRef.current);
+      }
+
       if (!result.success && "message" in result)
         return setError(result.message);
 
       setError("发送失败，请稍后重试");
     } catch {
+      // 网络错误，重置人机验证
+      dispatchSmsForm({ type: "RESET" });
+      if (turnstile && turnstileIdRef.current) {
+        turnstile.reset(turnstileIdRef.current);
+      }
       setError("网络错误，请稍后重试");
     }
   }, [phone, smsForm.botcheck, countdown]);
