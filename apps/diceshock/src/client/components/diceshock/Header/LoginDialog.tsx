@@ -1,5 +1,6 @@
 /// <reference types="cloudflare-turnstile" />
 
+import { signIn } from "@hono/auth-js/react";
 import { WarningIcon, XIcon } from "@phosphor-icons/react/dist/ssr";
 import clsx from "clsx";
 import { useAtomValue } from "jotai";
@@ -174,6 +175,22 @@ export default function LoginDialog({
     };
   }, [countdown]);
 
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+
+      const result = await signIn("SMS", {
+        phone,
+        code: smsForm.code,
+      });
+
+      if (result?.ok) window.location.reload();
+
+      setError(`登录失败，请稍后重试: ${result?.error ?? "未知错误"}`);
+    },
+    [phone, smsForm.code],
+  );
+
   return (
     <Modal
       isCloseOnClick
@@ -218,7 +235,10 @@ export default function LoginDialog({
         </div>
 
         {activeTab === "phonenumber" && (
-          <form className="flex flex-col gap-4 py-4 px-12">
+          <form
+            onSubmit={handleSubmit}
+            className="flex flex-col gap-4 py-4 px-12"
+          >
             {error && (
               <div role="alert" className="alert alert-error alert-soft">
                 <WarningIcon className="text-error size-4" />

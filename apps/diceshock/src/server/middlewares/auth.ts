@@ -4,7 +4,7 @@ import { type AuthConfig, initAuthConfig } from "@hono/auth-js";
 import db, { userInfoTable } from "@lib/db";
 import { createSelectSchema } from "drizzle-zod";
 import type { Context } from "hono";
-import { customAlphabet, nanoid } from "nanoid/non-secure";
+import { nanoid } from "nanoid/non-secure";
 import type z from "zod/v4";
 import type { HonoCtxEnv } from "@/shared/types";
 import { FACTORY } from "../factory";
