@@ -7,7 +7,7 @@ import trpcClientPublic, { trpcClientDash } from "@/shared/utils/trpc";
 import "react-json-view-lite/dist/index.css";
 import _ from "lodash";
 
-export const Route = createFileRoute("/dash/inventory")({
+export const Route = createFileRoute("/dash/inventory-management")({
   component: RouteComponent,
 });
 

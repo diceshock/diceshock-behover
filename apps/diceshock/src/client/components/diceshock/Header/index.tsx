@@ -2,7 +2,6 @@ import { CaretDownIcon } from "@phosphor-icons/react/dist/ssr";
 import { Link } from "@tanstack/react-router";
 import type React from "react";
 import LongTextLogo from "@/client/assets/svg/black-simplify-with-text-logo.svg?react";
-import ThemeSwap from "@/client/components/ThemeSwap";
 import AvatarMenu from "./AvataMenu";
 
 type PageType = {

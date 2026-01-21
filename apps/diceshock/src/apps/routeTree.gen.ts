@@ -15,7 +15,7 @@ import { Route as WithHomeLoRouteImport } from './routers/_with-home-lo'
 import { Route as DashIndexRouteImport } from './routers/dash/index'
 import { Route as WithHomeLoIndexRouteImport } from './routers/_with-home-lo/index'
 import { Route as DashUsersRouteImport } from './routers/dash/users'
-import { Route as DashInventoryRouteImport } from './routers/dash/inventory'
+import { Route as DashInventoryManagementRouteImport } from './routers/dash/inventory-management'
 import { Route as DashAcitveRouteImport } from './routers/dash/acitve'
 import { Route as WithHomeLoInventoryRouteImport } from './routers/_with-home-lo/inventory'
 import { Route as WithHomeLoDiceshockAgentsRouteImport } from './routers/_with-home-lo/diceshock-agents'
@@ -50,9 +50,9 @@ const DashUsersRoute = DashUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => DashLazyRoute,
 } as any)
-const DashInventoryRoute = DashInventoryRouteImport.update({
-  id: '/inventory',
-  path: '/inventory',
+const DashInventoryManagementRoute = DashInventoryManagementRouteImport.update({
+  id: '/inventory-management',
+  path: '/inventory-management',
   getParentRoute: () => DashLazyRoute,
 } as any)
 const DashAcitveRoute = DashAcitveRouteImport.update({
@@ -99,7 +99,7 @@ export interface FileRoutesByFullPath {
   '/diceshock-agents': typeof WithHomeLoDiceshockAgentsRoute
   '/inventory': typeof WithHomeLoInventoryRoute
   '/dash/acitve': typeof DashAcitveRoute
-  '/dash/inventory': typeof DashInventoryRoute
+  '/dash/inventory-management': typeof DashInventoryManagementRoute
   '/dash/users': typeof DashUsersRoute
   '/': typeof WithHomeLoIndexRoute
   '/dash/': typeof DashIndexRoute
@@ -112,7 +112,7 @@ export interface FileRoutesByTo {
   '/diceshock-agents': typeof WithHomeLoDiceshockAgentsRoute
   '/inventory': typeof WithHomeLoInventoryRoute
   '/dash/acitve': typeof DashAcitveRoute
-  '/dash/inventory': typeof DashInventoryRoute
+  '/dash/inventory-management': typeof DashInventoryManagementRoute
   '/dash/users': typeof DashUsersRoute
   '/': typeof WithHomeLoIndexRoute
   '/dash': typeof DashIndexRoute
@@ -128,7 +128,7 @@ export interface FileRoutesById {
   '/_with-home-lo/diceshock-agents': typeof WithHomeLoDiceshockAgentsRoute
   '/_with-home-lo/inventory': typeof WithHomeLoInventoryRoute
   '/dash/acitve': typeof DashAcitveRoute
-  '/dash/inventory': typeof DashInventoryRoute
+  '/dash/inventory-management': typeof DashInventoryManagementRoute
   '/dash/users': typeof DashUsersRoute
   '/_with-home-lo/': typeof WithHomeLoIndexRoute
   '/dash/': typeof DashIndexRoute
@@ -144,7 +144,7 @@ export interface FileRouteTypes {
     | '/diceshock-agents'
     | '/inventory'
     | '/dash/acitve'
-    | '/dash/inventory'
+    | '/dash/inventory-management'
     | '/dash/users'
     | '/'
     | '/dash/'
@@ -157,7 +157,7 @@ export interface FileRouteTypes {
     | '/diceshock-agents'
     | '/inventory'
     | '/dash/acitve'
-    | '/dash/inventory'
+    | '/dash/inventory-management'
     | '/dash/users'
     | '/'
     | '/dash'
@@ -172,7 +172,7 @@ export interface FileRouteTypes {
     | '/_with-home-lo/diceshock-agents'
     | '/_with-home-lo/inventory'
     | '/dash/acitve'
-    | '/dash/inventory'
+    | '/dash/inventory-management'
     | '/dash/users'
     | '/_with-home-lo/'
     | '/dash/'
@@ -222,11 +222,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashUsersRouteImport
       parentRoute: typeof DashLazyRoute
     }
-    '/dash/inventory': {
-      id: '/dash/inventory'
-      path: '/inventory'
-      fullPath: '/dash/inventory'
-      preLoaderRoute: typeof DashInventoryRouteImport
+    '/dash/inventory-management': {
+      id: '/dash/inventory-management'
+      path: '/inventory-management'
+      fullPath: '/dash/inventory-management'
+      preLoaderRoute: typeof DashInventoryManagementRouteImport
       parentRoute: typeof DashLazyRoute
     }
     '/dash/acitve': {
@@ -305,7 +305,7 @@ const WithHomeLoRouteWithChildren = WithHomeLoRoute._addFileChildren(
 
 interface DashLazyRouteChildren {
   DashAcitveRoute: typeof DashAcitveRoute
-  DashInventoryRoute: typeof DashInventoryRoute
+  DashInventoryManagementRoute: typeof DashInventoryManagementRoute
   DashUsersRoute: typeof DashUsersRoute
   DashIndexRoute: typeof DashIndexRoute
   DashActiveIdRoute: typeof DashActiveIdRoute
@@ -313,7 +313,7 @@ interface DashLazyRouteChildren {
 
 const DashLazyRouteChildren: DashLazyRouteChildren = {
   DashAcitveRoute: DashAcitveRoute,
-  DashInventoryRoute: DashInventoryRoute,
+  DashInventoryManagementRoute: DashInventoryManagementRoute,
   DashUsersRoute: DashUsersRoute,
   DashIndexRoute: DashIndexRoute,
   DashActiveIdRoute: DashActiveIdRoute,

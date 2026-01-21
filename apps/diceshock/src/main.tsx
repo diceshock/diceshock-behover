@@ -12,12 +12,13 @@ export const app = new Hono<{ Bindings: HonoCtxEnv }>();
 
 app.use(aliyunInj);
 app.use(authInit);
-app.use(userInjMiddleware);
 
 app.use("/edge/*", trpcServerDash);
 app.use("/apis/*", trpcServerPublic);
 
 app.use("/api/auth/*", authHandler());
+
+app.use(userInjMiddleware);
 
 app.get("/*", diceshockRouter);
 

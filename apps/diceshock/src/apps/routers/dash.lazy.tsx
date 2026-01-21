@@ -25,7 +25,7 @@ function RouteComponent() {
           </li>
 
           <li>
-            <Link to="/dash/inventory" className="gap-12">
+            <Link to="/dash/inventory-management" className="gap-12">
               <PackageIcon className="size-6" />
               库存
             </Link>
