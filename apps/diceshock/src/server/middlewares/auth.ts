@@ -1,6 +1,6 @@
 import Credentials from "@auth/core/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import { type AuthConfig, initAuthConfig } from "@hono/auth-js";
+import { type AuthConfig, getAuthUser, initAuthConfig } from "@hono/auth-js";
 import db, { userInfoTable } from "@lib/db";
 import { createSelectSchema } from "drizzle-zod";
 import type { Context } from "hono";
@@ -57,11 +57,12 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
   // 排除认证路由，这些路由由 authHandler 处理
   if (c.req.path.startsWith("/api/auth/")) return next();
 
-  const authUser = c.get("authUser");
+  const authUser = await getAuthUser(c);
 
-  const id = authUser.session.user?.id ?? "";
+  console.log("authUser", authUser);
 
-  console.log("authUser", authUser, id);
+  const id = authUser?.user?.id;
+
   if (!authUser || !id) return next();
 
   const userInfoRaw = await db(c.env.DB).query.userInfoTable.findFirst({
@@ -69,7 +70,7 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
   });
 
   if (!userInfoRaw) {
-    const nickname = authUser.session.user?.name ?? genNickname();
+    const nickname = authUser.user?.name ?? genNickname();
 
     const uid = nanoid();
 

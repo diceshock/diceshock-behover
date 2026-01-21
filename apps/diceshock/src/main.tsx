@@ -23,7 +23,6 @@ app.use("/edge/*", trpcServerDash);
 app.use("/apis/*", trpcServerPublic);
 
 app.use("/api/auth/*", authHandler());
-app.use("*", verifyAuth());
 
 app.use("*", userInjMiddleware);
 
