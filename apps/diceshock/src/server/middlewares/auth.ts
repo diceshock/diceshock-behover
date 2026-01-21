@@ -9,6 +9,7 @@ import type z from "zod/v4";
 import type { HonoCtxEnv } from "@/shared/types";
 import { FACTORY } from "../factory";
 import { injectCrossDataToCtx } from "../utils";
+import { genNickname, getSmsTmpCodeKey } from "../utils/auth";
 
 export const userInfoZ = createSelectSchema(userInfoTable).omit({ id: true });
 
@@ -26,18 +27,26 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
 
   if (!aliyunClient) return config;
 
-  // config.providers.push(
-  //   Credentials({
-  //     name: "SMS",
-  //     credentials: {
-  //       phone: { label: "Phone", type: "text" },
-  //       code: { label: "Code", type: "text" },
-  //     },
-  //     authorize: async (credentials) => {
-  //       const {phone, code} = credentials;
-  //     }
-  //   }),
-  // );
+  const { KV } = c.env;
+
+  config.providers.push(
+    Credentials({
+      name: "SMS",
+      credentials: {
+        phone: { label: "Phone", type: "text" },
+        code: { label: "Code", type: "text" },
+      },
+      authorize: async (credentials) => {
+        const { phone, code } = credentials as { phone: string; code: string };
+
+        const smsCode = await KV.get(getSmsTmpCodeKey(phone));
+
+        if (smsCode !== code) return null;
+
+        return { id: crypto.randomUUID(), name: genNickname() };
+      },
+    }),
+  );
 
   return config;
 });
@@ -53,8 +62,7 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
   });
 
   if (!userInfoRaw) {
-    let nickname = auth.user?.name;
-    nickname ??= `The Shock ${customAlphabet("1234567890abcdef", 5)}`;
+    const nickname = auth.user?.name ?? genNickname();
 
     const uid = nanoid();
 

@@ -2,6 +2,7 @@ import * as $Dysmsapi20170525 from "@alicloud/dysmsapi20170525";
 import * as $Util from "@alicloud/tea-util";
 import { customAlphabet } from "nanoid";
 import z from "zod/v4";
+import { getSmsTmpCodeKey } from "@/server/utils/auth";
 import { publicProcedure } from "./baseTRPC";
 
 export interface TurnstileResponse {
@@ -78,7 +79,7 @@ const smsCode = publicProcedure
       }
 
       const expirationTtl = 60 * 5;
-      const kvKey = `sms_code:${phone}`;
+      const kvKey = getSmsTmpCodeKey(phone);
 
       await KV.put(kvKey, verificationCode, { expirationTtl });
 
