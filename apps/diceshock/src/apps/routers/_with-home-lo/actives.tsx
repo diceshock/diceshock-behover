@@ -85,15 +85,22 @@ function RouteComponent() {
     fetchActives();
   }, [fetchActives]);
 
-  // 处理 hover 高亮同一天的活动
+  // 处理 hover 高亮同一天的活动线条
   const [highlightedDate, setHighlightedDate] = useState<string | null>(null);
+  // 处理 hover 高亮当前悬浮的卡片
+  const [hoveredActiveId, setHoveredActiveId] = useState<string | null>(null);
 
-  const handleMouseEnter = useCallback((dateKey: string) => {
-    setHighlightedDate(dateKey);
-  }, []);
+  const handleMouseEnter = useCallback(
+    (dateKey: string, activeId: string) => {
+      setHighlightedDate(dateKey);
+      setHoveredActiveId(activeId);
+    },
+    [],
+  );
 
   const handleMouseLeave = useCallback(() => {
     setHighlightedDate(null);
+    setHoveredActiveId(null);
   }, []);
 
   // 筛选活动：根据选中的标签筛选，默认过滤过期活动
@@ -234,7 +241,7 @@ function RouteComponent() {
   }
 
   return (
-    <main className="w-full min-h-screen p-4 max-w-6xl mx-auto">
+    <main className="w-full min-h-screen p-4 pb-20 max-w-6xl mx-auto">
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-4">活动列表</h1>
 
@@ -321,7 +328,8 @@ function RouteComponent() {
                     const isPinned = pinnedTag
                       ? active.tags?.some((t) => t.tag_id === pinnedTag.id)
                       : false;
-                    const isHighlighted = highlightedDate === active.dateKey;
+                    const isLineHighlighted = highlightedDate === active.dateKey;
+                    const isCardHighlighted = hoveredActiveId === active.id;
                     const isFirstInDate = index === 0;
                     const weekdays = [
                       "周日",
@@ -347,16 +355,18 @@ function RouteComponent() {
                         to="/active/$id"
                         params={{ id: active.id }}
                         data-date-key={active.dateKey}
-                        onMouseEnter={() => handleMouseEnter(active.dateKey)}
+                        onMouseEnter={() =>
+                          handleMouseEnter(active.dateKey, active.id)
+                        }
                         onMouseLeave={handleMouseLeave}
                         className={`group card bg-base-100 shadow-md hover:shadow-lg transition-all relative overflow-visible ${
-                          isHighlighted ? "bg-base-200/50 translate-x-1" : ""
+                          isCardHighlighted ? "bg-base-200/50 translate-x-1" : ""
                         }`}
                       >
                         {/* 日期标识 - 顶部水平线条，默认显示，只连接同一天的活动 */}
                         <div
                           className={`absolute top-0 h-1 transition-all z-30 ${
-                            isHighlighted
+                            isLineHighlighted
                               ? "bg-secondary"
                               : "bg-primary group-hover:bg-secondary"
                           }`}
@@ -372,7 +382,7 @@ function RouteComponent() {
                         {isFirstInDate && (
                           <div
                             className={`absolute left-0 -top-6 px-2 py-0.5 text-xs font-semibold bg-base-100 border rounded transition-all z-30 whitespace-nowrap shadow-sm ${
-                              isHighlighted
+                              isLineHighlighted
                                 ? "text-secondary border-secondary bg-secondary/20"
                                 : "text-primary border-primary/30 group-hover:text-secondary group-hover:border-secondary"
                             }`}
