@@ -20,6 +20,20 @@ type TagList = Awaited<
 >;
 type TagItem = TagList[number];
 
+type Team = Awaited<
+  ReturnType<typeof trpcClientPublic.activeRegistrations.teams.get.query>
+>[number];
+
+type Registration = Awaited<
+  ReturnType<
+    typeof trpcClientPublic.activeRegistrations.registrations.get.query
+  >
+>[number];
+
+type BoardGameItem = Awaited<
+  ReturnType<typeof trpcClientPublic.owned.get.query>
+>[number];
+
 const tagTitle = (tag?: TagItem["title"] | null) => ({
   emoji: tag?.emoji ?? "🏷️",
   tx: tag?.tx ?? "未命名",
@@ -191,7 +205,7 @@ function RouteComponent() {
           // 计算总容量（所有队伍的最大人数之和，null 表示无上限）
           let totalCapacity = 0;
           let hasUnlimited = false;
-          teams.forEach((team) => {
+          teams.forEach((team: Team) => {
             if (team.max_participants === null) {
               hasUnlimited = true;
             } else {
@@ -201,12 +215,12 @@ function RouteComponent() {
 
           // 计算当前报名人数（不包括观望）
           const currentCount = registrations.filter(
-            (reg) => !reg.is_watching,
+            (reg: Registration) => !reg.is_watching,
           ).length;
 
           // 计算观望人数
           const watchingCount = registrations.filter(
-            (reg) => reg.is_watching,
+            (reg: Registration) => reg.is_watching,
           ).length;
 
           statsMap.set(active.id, {
@@ -217,7 +231,7 @@ function RouteComponent() {
 
           // 如果是约局，存储发起者和报名者信息
           if ((active as any).is_game) {
-            const participantIds = registrations.map((reg) => reg.user_id);
+            const participantIds = registrations.map((reg: Registration) => reg.user_id);
             gameParticipantsMap.set(active.id, {
               creator_id: (active as any).creator_id || null,
               participant_ids: participantIds,
@@ -305,7 +319,7 @@ function RouteComponent() {
     // 根据选中的标签筛选
     if (selectedTags.length > 0) {
       result = result.filter((active) =>
-        active.tags?.some((t) => selectedTags.includes(t.tag_id)),
+        active.tags?.some((t: { tag_id: string }) => selectedTags.includes(t.tag_id)),
       );
     }
 
@@ -524,7 +538,7 @@ function RouteComponent() {
         },
       });
       setGameSearchResults(
-        results.map((game) => ({
+        results.map((game: BoardGameItem) => ({
           id: game.id,
           gstone_id: game.gstone_id,
           content: game.content,
@@ -716,7 +730,7 @@ function RouteComponent() {
                       (tag) => tagTitle(tag.title).tx === "置顶",
                     );
                     const isPinned = pinnedTag
-                      ? active.tags?.some((t) => t.tag_id === pinnedTag.id)
+                      ? active.tags?.some((t: { tag_id: string }) => t.tag_id === pinnedTag.id)
                       : false;
                     const isLineHighlighted =
                       highlightedDate === active.dateKey;
@@ -906,7 +920,7 @@ function RouteComponent() {
                             {/* 其他标签 */}
                             {active.tags &&
                               active.tags.length > 0 &&
-                              active.tags.map((tagMapping) => {
+                              active.tags.map((tagMapping: { tag_id: string; tag?: TagItem | null }) => {
                                 const title = tagTitle(tagMapping.tag?.title);
                                 return (
                                   <span

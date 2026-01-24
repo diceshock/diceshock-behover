@@ -4,61 +4,61 @@ rewrite = false
 [[tags]]
 name = "策略游戏"
 emoji = "🧠"
-keywords = "策略,思考,智力,桌游"
+keywords = "策略,思考,智力,桌游,celueyouxi,clyx,celue,cl"
 is_pinned = true
 
 [[tags]]
 name = "聚会游戏"
 emoji = "🎉"
-keywords = "聚会,多人,欢乐,社交"
+keywords = "聚会,多人,欢乐,社交,juhuiyouxi,jhyx,juhui,jh"
 is_pinned = true
 
 [[tags]]
 name = "美式桌游"
 emoji = "🇺🇸"
-keywords = "美式,主题,随机,骰子,模型"
+keywords = "美式,主题,随机,骰子,模型,meishizhuoyou,mszy,meishi,ms"
 is_pinned = true
 
 [[tags]]
 name = "德式桌游"
 emoji = "🇩🇪"
-keywords = "德式,策略,机制,得分,精算"
+keywords = "德式,策略,机制,得分,精算,deshizhuoyou,dszy,deshi,ds"
 is_pinned = true
 
 [[tags]]
 name = "桌面角色扮演"
 emoji = "🎲"
-keywords = "TRPG,角色扮演,跑团,DND"
+keywords = "TRPG,角色扮演,跑团,DND,jiaosebanyan,jsby,paotuan,pt"
 is_pinned = true
 
 [[tags]]
 name = "卡牌游戏"
 emoji = "🃏"
-keywords = "卡牌,收集,对战"
+keywords = "卡牌,收集,对战,kapaiyouxi,kpyx,kapai,kp"
 is_pinned = false
 
 [[tags]]
 name = "合作游戏"
 emoji = "🤝"
-keywords = "合作,团队,协作"
+keywords = "合作,团队,协作,hezuoyouxi,hzyx,hezuo,hz"
 is_pinned = false
 
 [[tags]]
 name = "竞争游戏"
 emoji = "⚔️"
-keywords = "竞争,对战,竞技"
+keywords = "竞争,对战,竞技,jingzhengyouxi,jzyx,jingzheng,jz"
 is_pinned = false
 
 [[tags]]
 name = "家庭游戏"
 emoji = "👨‍👩‍👧‍👦"
-keywords = "家庭,亲子,轻松"
+keywords = "家庭,亲子,轻松,jiatingyouxi,jtyx,jiating,jt"
 is_pinned = false
 
 [[tags]]
 name = "推理游戏"
 emoji = "🔍"
-keywords = "推理,解谜,逻辑"
+keywords = "推理,解谜,逻辑,tuiliyouxi,tlyx,tuili,tl"
 is_pinned = false
 
 # TRPG 系统
