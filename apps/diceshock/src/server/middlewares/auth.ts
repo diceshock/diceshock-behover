@@ -66,7 +66,7 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
 
         if (smsCode !== code) return null;
 
-        return { id: crypto.randomUUID(), name: genNickname() };
+        return { id: crypto.randomUUID(), name: genNickname(), phone };
       },
     }),
   );
