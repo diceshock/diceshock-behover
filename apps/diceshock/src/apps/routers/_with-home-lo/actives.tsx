@@ -1,8 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import dayjs from "dayjs";
+import weekOfYear from "dayjs/plugin/weekOfYear";
+import isoWeek from "dayjs/plugin/isoWeek";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import trpcClientPublic from "@/shared/utils/trpc";
-import { formatEventDate } from "@/shared/utils/formatEventDate";
+
+dayjs.extend(weekOfYear);
+dayjs.extend(isoWeek);
 
 type ActiveList = Awaited<ReturnType<typeof trpcClientPublic.active.get.query>>;
 type ActiveItem = ActiveList[number];
@@ -80,42 +84,92 @@ function RouteComponent() {
     fetchActives();
   }, [fetchActives]);
 
-  // 筛选和排序：根据选中的标签筛选，并将"置顶"标签的活动放到前面
-  const filteredAndSortedActives = useMemo(() => {
-    // 先筛选：如果选中了标签，只显示包含任一选中标签的活动
-    let filtered = actives;
-    if (selectedTags.length > 0) {
-      filtered = actives.filter((active) =>
-        active.tags?.some((t) => selectedTags.includes(t.tag_id)),
-      );
-    }
+  // 筛选活动：根据选中的标签筛选
+  const filteredActives = useMemo(() => {
+    if (selectedTags.length === 0) return actives;
+    return actives.filter((active) =>
+      active.tags?.some((t) => selectedTags.includes(t.tag_id)),
+    );
+  }, [actives, selectedTags]);
 
-    // 再排序：将"置顶"标签的活动放到前面
-    const pinnedTag = tags.find((tag) => tagTitle(tag.title).tx === "置顶");
-    // 获取时间戳的辅助函数
-    const getTimestamp = (date: Date | string | null | undefined): number => {
-      if (!date) return 0;
-      if (date instanceof Date) return date.getTime();
-      return dayjs(date).valueOf();
-    };
+  // 按周和日期分组活动
+  const groupedActives = useMemo(() => {
+    const groups: Map<
+      string,
+      Map<string, { date: dayjs.Dayjs; actives: ActiveItem[] }>
+    > = new Map();
 
-    if (!pinnedTag) {
-      // 如果没有"置顶"标签，按发布时间排序
-      return [...filtered].sort(
-        (a, b) => getTimestamp(b.publish_at) - getTimestamp(a.publish_at),
-      );
-    }
+    // 只处理有 event_date 的活动，并按 event_date 排序
+    const activesWithDate = filteredActives
+      .filter((active) => active.event_date)
+      .sort((a, b) => {
+        const dateA = dayjs(a.event_date!);
+        const dateB = dayjs(b.event_date!);
+        return dateA.valueOf() - dateB.valueOf();
+      });
 
-    return [...filtered].sort((a, b) => {
-      const aHasPinned = a.tags?.some((t) => t.tag_id === pinnedTag.id);
-      const bHasPinned = b.tags?.some((t) => t.tag_id === pinnedTag.id);
+    activesWithDate.forEach((active) => {
+      const eventDate = dayjs(active.event_date!);
+      const weekKey = `${eventDate.isoWeekYear()}-W${String(eventDate.isoWeek()).padStart(2, "0")}`;
+      const dateKey = eventDate.format("YYYY-MM-DD");
 
-      if (aHasPinned && !bHasPinned) return -1;
-      if (!aHasPinned && bHasPinned) return 1;
-      // 如果都有或都没有，按发布时间排序
-      return getTimestamp(b.publish_at) - getTimestamp(a.publish_at);
+      if (!groups.has(weekKey)) {
+        groups.set(weekKey, new Map());
+      }
+
+      const weekGroup = groups.get(weekKey)!;
+      if (!weekGroup.has(dateKey)) {
+        weekGroup.set(dateKey, { date: eventDate, actives: [] });
+      }
+
+      weekGroup.get(dateKey)!.actives.push(active);
     });
-  }, [actives, tags, selectedTags]);
+
+    // 转换为数组并排序
+    return Array.from(groups.entries())
+      .map(([weekKey, dateMap]) => ({
+        weekKey,
+        weekStart: Array.from(dateMap.values())[0]?.date.startOf("isoWeek") || dayjs(),
+        dates: Array.from(dateMap.values()).sort((a, b) =>
+          a.date.valueOf() - b.date.valueOf(),
+        ),
+      }))
+      .sort((a, b) => a.weekStart.valueOf() - b.weekStart.valueOf());
+  }, [filteredActives]);
+
+  // 获取周标题
+  const getWeekTitle = (weekStart: dayjs.Dayjs) => {
+    const now = dayjs();
+    const weekEnd = weekStart.add(6, "day");
+
+    if (weekStart.isSame(now, "week")) {
+      return "本周";
+    }
+    if (weekStart.isSame(now.add(1, "week"), "week")) {
+      return "下周";
+    }
+    if (weekStart.isBefore(now, "week")) {
+      return `${weekStart.format("MM月DD日")} - ${weekEnd.format("MM月DD日")}`;
+    }
+    return `${weekStart.format("MM月DD日")} - ${weekEnd.format("MM月DD日")}`;
+  };
+
+  // 获取日期标题
+  const getDateTitle = (date: dayjs.Dayjs) => {
+    const now = dayjs();
+    const weekdays = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+
+    if (date.isToday()) {
+      return `今天 (${date.format("MM月DD日")})`;
+    }
+    if (date.isTomorrow()) {
+      return `明天 (${date.format("MM月DD日")})`;
+    }
+    if (date.isSame(now, "week")) {
+      return `${weekdays[date.day()]} (${date.format("MM月DD日")})`;
+    }
+    return `${weekdays[date.day()]} ${date.format("MM月DD日")}`;
+  };
 
   const toggleTag = useCallback((tagId: string) => {
     setSelectedTags((prev) =>
@@ -170,83 +224,114 @@ function RouteComponent() {
         )}
       </div>
 
-      {/* 活动列表 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredAndSortedActives.length === 0 ? (
-          <div className="col-span-full text-center py-12">
-            <p className="text-lg text-base-content/60">暂无活动</p>
-          </div>
-        ) : (
-          filteredAndSortedActives.map((active) => {
-            const pinnedTag = tags.find(
-              (tag) => tagTitle(tag.title).tx === "置顶",
-            );
-            const isPinned = pinnedTag
-              ? active.tags?.some((t) => t.tag_id === pinnedTag.id)
-              : false;
+      {/* 活动列表 - 按周和日期分组 */}
+      {groupedActives.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-lg text-base-content/60">暂无活动</p>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {groupedActives.map((weekGroup) => (
+            <div key={weekGroup.weekKey} className="space-y-6">
+              {/* 周标题 */}
+              <div className="divider">
+                <h2 className="text-2xl font-bold text-base-content">
+                  {getWeekTitle(weekGroup.weekStart)}
+                </h2>
+              </div>
 
-            return (
-              <Link
-                key={active.id}
-                to="/active/$id"
-                params={{ id: active.id }}
-                className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow"
-              >
-                {active.cover_image && (
-                  <figure className="h-48 overflow-hidden">
-                    <img
-                      src={active.cover_image}
-                      alt={active.name || "活动头图"}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
-                    />
-                  </figure>
-                )}
-                <div className="card-body">
-                  <div className="flex items-start justify-between gap-2">
-                    <h2 className="card-title text-lg">
-                      {isPinned && (
-                        <span className="text-primary" title="置顶">
-                          📌
-                        </span>
-                      )}
-                      {active.name}
-                    </h2>
-                  </div>
-                  {active.description && (
-                    <p className="text-sm text-base-content/70 line-clamp-2">
-                      {active.description}
-                    </p>
-                  )}
-                  {active.tags && active.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {active.tags.map((tagMapping) => {
-                        const title = tagTitle(tagMapping.tag?.title);
+              {/* 每天的活动 */}
+              {weekGroup.dates.map((dateGroup) => (
+                <div key={dateGroup.date.format("YYYY-MM-DD")} className="space-y-4">
+                  {/* 日期标题 */}
+                  <h3 className="text-xl font-semibold text-base-content/80">
+                    {getDateTitle(dateGroup.date)}
+                  </h3>
+
+                  {/* 该日期的活动列表 - 按时间排序 */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {dateGroup.actives
+                      .sort((a, b) => {
+                        const timeA = dayjs(a.event_date!).format("HH:mm");
+                        const timeB = dayjs(b.event_date!).format("HH:mm");
+                        return timeA.localeCompare(timeB);
+                      })
+                      .map((active) => {
+                        const pinnedTag = tags.find(
+                          (tag) => tagTitle(tag.title).tx === "置顶",
+                        );
+                        const isPinned = pinnedTag
+                          ? active.tags?.some((t) => t.tag_id === pinnedTag.id)
+                          : false;
+
                         return (
-                          <span
-                            key={tagMapping.tag_id}
-                            className="badge badge-sm gap-1"
+                          <Link
+                            key={active.id}
+                            to="/active/$id"
+                            params={{ id: active.id }}
+                            className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow"
                           >
-                            <span>{title.emoji}</span>
-                            {title.tx}
-                          </span>
+                            {active.cover_image && (
+                              <figure className="h-48 overflow-hidden">
+                                <img
+                                  src={active.cover_image}
+                                  alt={active.name || "活动头图"}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display =
+                                      "none";
+                                  }}
+                                />
+                              </figure>
+                            )}
+                            <div className="card-body">
+                              <div className="flex items-start justify-between gap-2">
+                                <h2 className="card-title text-lg">
+                                  {isPinned && (
+                                    <span className="text-primary" title="置顶">
+                                      📌
+                                    </span>
+                                  )}
+                                  {active.name}
+                                </h2>
+                              </div>
+                              {active.description && (
+                                <p className="text-sm text-base-content/70 line-clamp-2">
+                                  {active.description}
+                                </p>
+                              )}
+                              {active.tags && active.tags.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                  {active.tags.map((tagMapping) => {
+                                    const title = tagTitle(tagMapping.tag?.title);
+                                    return (
+                                      <span
+                                        key={tagMapping.tag_id}
+                                        className="badge badge-sm gap-1"
+                                      >
+                                        <span>{title.emoji}</span>
+                                        {title.tx}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                              {active.event_date && (
+                                <div className="text-sm font-medium text-primary mt-2">
+                                  {dayjs(active.event_date).format("HH:mm")}
+                                </div>
+                              )}
+                            </div>
+                          </Link>
                         );
                       })}
-                    </div>
-                  )}
-                  {active.event_date && (
-                    <div className="text-sm font-medium text-primary mt-2">
-                      {formatEventDate(active.event_date)}
-                    </div>
-                  )}
+                  </div>
                 </div>
-              </Link>
-            );
-          })
-        )}
-      </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
     </main>
   );
 }
