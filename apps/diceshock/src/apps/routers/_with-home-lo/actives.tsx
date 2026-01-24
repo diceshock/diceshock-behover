@@ -312,7 +312,7 @@ function RouteComponent() {
               </div>
 
               {/* 网格布局的活动列表 - 按日期分组以支持线条连接 */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 relative">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 relative">
                 {weekGroup.dates.map((dateGroup) =>
                   dateGroup.actives.map((active, index) => {
                     const pinnedTag = tags.find(
