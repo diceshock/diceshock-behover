@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import dayjs from "dayjs";
-import weekOfYear from "dayjs/plugin/weekOfYear";
 import isoWeek from "dayjs/plugin/isoWeek";
+import weekOfYear from "dayjs/plugin/weekOfYear";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import trpcClientPublic from "@/shared/utils/trpc";
 
@@ -27,6 +27,7 @@ export const Route = createFileRoute("/_with-home-lo/actives")({
 
 function RouteComponent() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [showExpired, setShowExpired] = useState(false);
   const [actives, setActives] = useState<ActiveItem[]>([]);
   const [tags, setTags] = useState<TagItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,74 +85,104 @@ function RouteComponent() {
     fetchActives();
   }, [fetchActives]);
 
-  // 筛选活动：根据选中的标签筛选
+  // 处理 hover 高亮同一天的活动
+  const [highlightedDate, setHighlightedDate] = useState<string | null>(null);
+
+  const handleMouseEnter = useCallback((dateKey: string) => {
+    setHighlightedDate(dateKey);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setHighlightedDate(null);
+  }, []);
+
+  // 筛选活动：根据选中的标签筛选，默认过滤过期活动
   const filteredActives = useMemo(() => {
-    if (selectedTags.length === 0) return actives;
-    return actives.filter((active) =>
-      active.tags?.some((t) => selectedTags.includes(t.tag_id)),
-    );
-  }, [actives, selectedTags]);
+    let result = actives;
 
-  // 按周和日期分组活动
-  const groupedActives = useMemo(() => {
-    const groups: Map<
-      string,
-      Map<string, { date: dayjs.Dayjs; actives: ActiveItem[] }>
-    > = new Map();
+    // 默认过滤掉过期活动，除非 showExpired 为 true
+    if (!showExpired) {
+      result = result.filter((active) => !active.isExpired);
+    }
 
-    // 只处理有 event_date 的活动，并按 event_date 排序
-    const activesWithDate = filteredActives
+    // 根据选中的标签筛选
+    if (selectedTags.length > 0) {
+      result = result.filter((active) =>
+        active.tags?.some((t) => selectedTags.includes(t.tag_id)),
+      );
+    }
+
+    return result;
+  }, [actives, selectedTags, showExpired]);
+
+  // 将所有活动展平，添加日期信息用于分组和标识
+  const flattenedActives = useMemo(() => {
+    return filteredActives
       .filter((active) => active.event_date)
-      .sort((a, b) => {
-        const dateA = dayjs(a.event_date!);
-        const dateB = dayjs(b.event_date!);
-        return dateA.valueOf() - dateB.valueOf();
-      });
+      .map((active) => {
+        const eventDate = dayjs(active.event_date!);
+        return {
+          ...active,
+          eventDate,
+          dateKey: eventDate.format("YYYY-MM-DD"),
+          weekKey: `${eventDate.isoWeekYear()}-W${String(eventDate.isoWeek()).padStart(2, "0")}`,
+        };
+      })
+      .sort((a, b) => a.eventDate.valueOf() - b.eventDate.valueOf());
+  }, [filteredActives]);
 
-    activesWithDate.forEach((active) => {
-      const eventDate = dayjs(active.event_date!);
-      const weekKey = `${eventDate.isoWeekYear()}-W${String(eventDate.isoWeek()).padStart(2, "0")}`;
-      const dateKey = eventDate.format("YYYY-MM-DD");
-
-      if (!groups.has(weekKey)) {
-        groups.set(weekKey, new Map());
+  // 按周分组，并进一步按日期分组，用于显示周标题和连接线条
+  const weekGroups = useMemo(() => {
+    const groups = new Map<string, Map<string, typeof flattenedActives>>();
+    flattenedActives.forEach((active) => {
+      if (!groups.has(active.weekKey)) {
+        groups.set(active.weekKey, new Map());
       }
-
-      const weekGroup = groups.get(weekKey)!;
-      if (!weekGroup.has(dateKey)) {
-        weekGroup.set(dateKey, { date: eventDate, actives: [] });
+      const weekGroup = groups.get(active.weekKey)!;
+      if (!weekGroup.has(active.dateKey)) {
+        weekGroup.set(active.dateKey, []);
       }
-
-      weekGroup.get(dateKey)!.actives.push(active);
+      weekGroup.get(active.dateKey)!.push(active);
     });
 
-    // 转换为数组并排序
     return Array.from(groups.entries())
-      .map(([weekKey, dateMap]) => ({
-        weekKey,
-        weekStart: Array.from(dateMap.values())[0]?.date.startOf("isoWeek") || dayjs(),
-        dates: Array.from(dateMap.values()).sort((a, b) =>
-          a.date.valueOf() - b.date.valueOf(),
-        ),
-      }))
+      .map(([weekKey, dateMap]) => {
+        const weekStart =
+          Array.from(dateMap.values())[0]?.[0]?.eventDate.startOf("isoWeek") ||
+          dayjs();
+        const dates = Array.from(dateMap.entries())
+          .map(([dateKey, actives]) => ({
+            dateKey,
+            date: actives[0]?.eventDate || dayjs(),
+            actives,
+          }))
+          .sort((a, b) => a.date.valueOf() - b.date.valueOf());
+        return {
+          weekKey,
+          weekStart,
+          dates,
+        };
+      })
       .sort((a, b) => a.weekStart.valueOf() - b.weekStart.valueOf());
-  }, [filteredActives]);
+  }, [flattenedActives]);
 
   // 获取周标题
   const getWeekTitle = (weekStart: dayjs.Dayjs) => {
     const now = dayjs();
     const weekEnd = weekStart.add(6, "day");
+    const weekNumber = weekStart.isoWeek();
 
     if (weekStart.isSame(now, "week")) {
-      return "本周";
+      return { main: "本周", sub: null };
     }
     if (weekStart.isSame(now.add(1, "week"), "week")) {
-      return "下周";
+      return { main: "下周", sub: null };
     }
-    if (weekStart.isBefore(now, "week")) {
-      return `${weekStart.format("MM月DD日")} - ${weekEnd.format("MM月DD日")}`;
-    }
-    return `${weekStart.format("MM月DD日")} - ${weekEnd.format("MM月DD日")}`;
+    // 更远的日期：显示第几周，小字显示日期范围
+    return {
+      main: `第 ${weekNumber} 周`,
+      sub: `${weekStart.format("MM月DD日")} - ${weekEnd.format("MM月DD日")}`,
+    };
   };
 
   // 获取日期标题
@@ -159,16 +190,31 @@ function RouteComponent() {
     const now = dayjs();
     const weekdays = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 
-    if (date.isToday()) {
-      return `今天 (${date.format("MM月DD日")})`;
+    // 判断是否是今天：比较年月日
+    const isToday = date.isSame(now, "day");
+    // 判断是否是明天：日期差为1天
+    const isTomorrow = date.diff(now, "day") === 1;
+
+    if (isToday) {
+      return { main: `今天 (${date.format("MM月DD日")})`, sub: null };
     }
-    if (date.isTomorrow()) {
-      return `明天 (${date.format("MM月DD日")})`;
+    if (isTomorrow) {
+      return { main: `明天 (${date.format("MM月DD日")})`, sub: null };
     }
     if (date.isSame(now, "week")) {
-      return `${weekdays[date.day()]} (${date.format("MM月DD日")})`;
+      return {
+        main: `${weekdays[date.day()]} (${date.format("MM月DD日")})`,
+        sub: null,
+      };
     }
-    return `${weekdays[date.day()]} ${date.format("MM月DD日")}`;
+    // 更远的日期：显示第几周，小字显示日期范围
+    const weekStart = date.startOf("isoWeek");
+    const weekEnd = date.endOf("isoWeek");
+    const weekNumber = date.isoWeek();
+    return {
+      main: `第 ${weekNumber} 周`,
+      sub: `${weekStart.format("MM月DD日")} - ${weekEnd.format("MM月DD日")}`,
+    };
   };
 
   const toggleTag = useCallback((tagId: string) => {
@@ -194,6 +240,20 @@ function RouteComponent() {
 
         {/* 标签筛选 */}
         <div className="flex flex-wrap gap-2 mb-6">
+          {/* 过期活动标签 */}
+          <button
+            onClick={() => setShowExpired(!showExpired)}
+            className={`badge badge-lg gap-2 cursor-pointer transition-all ${
+              showExpired
+                ? "badge-secondary"
+                : "badge-outline hover:badge-secondary"
+            }`}
+          >
+            <span>⏰</span>
+            过期活动
+          </button>
+
+          {/* 普通标签 */}
           {tags.map((tag) => {
             const title = tagTitle(tag.title);
             const isSelected = selectedTags.includes(tag.id);
@@ -201,10 +261,11 @@ function RouteComponent() {
               <button
                 key={tag.id}
                 onClick={() => toggleTag(tag.id)}
-                className={`badge badge-lg gap-2 cursor-pointer transition-all ${isSelected
+                className={`badge badge-lg gap-2 cursor-pointer transition-all ${
+                  isSelected
                     ? "badge-primary"
                     : "badge-outline hover:badge-primary"
-                  }`}
+                }`}
               >
                 <span>{title.emoji}</span>
                 {title.tx}
@@ -214,9 +275,12 @@ function RouteComponent() {
         </div>
 
         {/* 清除筛选 */}
-        {selectedTags.length > 0 && (
+        {(selectedTags.length > 0 || showExpired) && (
           <button
-            onClick={() => setSelectedTags([])}
+            onClick={() => {
+              setSelectedTags([]);
+              setShowExpired(false);
+            }}
             className="btn btn-sm btn-ghost mb-4"
           >
             清除筛选
@@ -224,110 +288,174 @@ function RouteComponent() {
         )}
       </div>
 
-      {/* 活动列表 - 按周和日期分组 */}
-      {groupedActives.length === 0 ? (
+      {/* 活动列表 - 使用网格布局，允许跨天显示 */}
+      {weekGroups.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-lg text-base-content/60">暂无活动</p>
         </div>
       ) : (
         <div className="space-y-8">
-          {groupedActives.map((weekGroup) => (
-            <div key={weekGroup.weekKey} className="space-y-6">
+          {weekGroups.map((weekGroup) => (
+            <div key={weekGroup.weekKey} className="space-y-4">
               {/* 周标题 */}
-              <div className="divider">
-                <h2 className="text-2xl font-bold text-base-content">
-                  {getWeekTitle(weekGroup.weekStart)}
-                </h2>
+              <div className="divider mt-12 mb-24">
+                <div className="flex flex-col items-center gap-1">
+                  <h2 className="text-2xl font-bold text-base-content">
+                    {getWeekTitle(weekGroup.weekStart).main}
+                  </h2>
+                  {getWeekTitle(weekGroup.weekStart).sub && (
+                    <div className="text-sm text-base-content/50">
+                      {getWeekTitle(weekGroup.weekStart).sub}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* 每天的活动 */}
-              {weekGroup.dates.map((dateGroup) => (
-                <div key={dateGroup.date.format("YYYY-MM-DD")} className="space-y-4">
-                  {/* 日期标题 */}
-                  <h3 className="text-xl font-semibold text-base-content/80">
-                    {getDateTitle(dateGroup.date)}
-                  </h3>
+              {/* 网格布局的活动列表 - 按日期分组以支持线条连接 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 relative">
+                {weekGroup.dates.map((dateGroup) =>
+                  dateGroup.actives.map((active, index) => {
+                    const pinnedTag = tags.find(
+                      (tag) => tagTitle(tag.title).tx === "置顶",
+                    );
+                    const isPinned = pinnedTag
+                      ? active.tags?.some((t) => t.tag_id === pinnedTag.id)
+                      : false;
+                    const isHighlighted = highlightedDate === active.dateKey;
+                    const isFirstInDate = index === 0;
+                    const weekdays = [
+                      "周日",
+                      "周一",
+                      "周二",
+                      "周三",
+                      "周四",
+                      "周五",
+                      "周六",
+                    ];
+                    const weekday = weekdays[active.eventDate.day()];
 
-                  {/* 该日期的活动列表 - 按时间排序 */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {dateGroup.actives
-                      .sort((a, b) => {
-                        const timeA = dayjs(a.event_date!).format("HH:mm");
-                        const timeB = dayjs(b.event_date!).format("HH:mm");
-                        return timeA.localeCompare(timeB);
-                      })
-                      .map((active) => {
-                        const pinnedTag = tags.find(
-                          (tag) => tagTitle(tag.title).tx === "置顶",
-                        );
-                        const isPinned = pinnedTag
-                          ? active.tags?.some((t) => t.tag_id === pinnedTag.id)
-                          : false;
+                    // 检查同一天的活动组内，是否是第一个或最后一个
+                    // 如果是第一个，左边不延伸；如果是最后一个，右边不延伸
+                    // 中间的活动都延伸，以便连接
+                    const hasLeftSameDate = index > 0; // 同一天组内不是第一个
+                    const hasRightSameDate =
+                      index < dateGroup.actives.length - 1; // 同一天组内不是最后一个
 
-                        return (
-                          <Link
-                            key={active.id}
-                            to="/active/$id"
-                            params={{ id: active.id }}
-                            className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow"
+                    return (
+                      <Link
+                        key={active.id}
+                        to="/active/$id"
+                        params={{ id: active.id }}
+                        data-date-key={active.dateKey}
+                        onMouseEnter={() => handleMouseEnter(active.dateKey)}
+                        onMouseLeave={handleMouseLeave}
+                        className={`group card bg-base-100 shadow-md hover:shadow-lg transition-all relative overflow-visible ${
+                          isHighlighted ? "bg-base-200/50 translate-x-1" : ""
+                        }`}
+                      >
+                        {/* 日期标识 - 顶部水平线条，默认显示，只连接同一天的活动 */}
+                        <div
+                          className={`absolute top-0 h-1 transition-all z-30 ${
+                            isHighlighted
+                              ? "bg-secondary"
+                              : "bg-primary group-hover:bg-secondary"
+                          }`}
+                          style={{
+                            borderRadius: "0.5rem 0.5rem 0 0",
+                            // 只有左边有同一天的活动时才向左延伸
+                            left: hasLeftSameDate ? "-1rem" : "0",
+                            // 只有右边有同一天的活动时才向右延伸
+                            right: hasRightSameDate ? "-1rem" : "0",
+                          }}
+                        />
+                        {/* 周几标签 - 只在同一天的第一个活动显示 */}
+                        {isFirstInDate && (
+                          <div
+                            className={`absolute left-0 -top-6 px-2 py-0.5 text-xs font-semibold bg-base-100 border rounded transition-all z-30 whitespace-nowrap shadow-sm ${
+                              isHighlighted
+                                ? "text-secondary border-secondary bg-secondary/20"
+                                : "text-primary border-primary/30 group-hover:text-secondary group-hover:border-secondary"
+                            }`}
                           >
-                            {active.cover_image && (
-                              <figure className="h-48 overflow-hidden">
-                                <img
-                                  src={active.cover_image}
-                                  alt={active.name || "活动头图"}
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    (e.target as HTMLImageElement).style.display =
-                                      "none";
-                                  }}
-                                />
-                              </figure>
-                            )}
-                            <div className="card-body">
-                              <div className="flex items-start justify-between gap-2">
-                                <h2 className="card-title text-lg">
-                                  {isPinned && (
-                                    <span className="text-primary" title="置顶">
-                                      📌
-                                    </span>
-                                  )}
-                                  {active.name}
-                                </h2>
-                              </div>
-                              {active.description && (
-                                <p className="text-sm text-base-content/70 line-clamp-2">
-                                  {active.description}
-                                </p>
+                            {weekday}
+                          </div>
+                        )}
+
+                        {active.cover_image && (
+                          <figure className="h-48 overflow-hidden rounded-t-lg">
+                            <img
+                              src={active.cover_image}
+                              alt={active.name || "活动头图"}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display =
+                                  "none";
+                              }}
+                            />
+                          </figure>
+                        )}
+                        <div className="card-body">
+                          <div className="flex items-start justify-between gap-2">
+                            <h2 className="card-title text-lg">
+                              {isPinned && (
+                                <span className="text-primary" title="置顶">
+                                  📌
+                                </span>
                               )}
-                              {active.tags && active.tags.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-2">
-                                  {active.tags.map((tagMapping) => {
-                                    const title = tagTitle(tagMapping.tag?.title);
-                                    return (
-                                      <span
-                                        key={tagMapping.tag_id}
-                                        className="badge badge-sm gap-1"
-                                      >
-                                        <span>{title.emoji}</span>
-                                        {title.tx}
-                                      </span>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                              {active.event_date && (
-                                <div className="text-sm font-medium text-primary mt-2">
-                                  {dayjs(active.event_date).format("HH:mm")}
-                                </div>
-                              )}
+                              {active.name}
+                            </h2>
+                          </div>
+                          {active.description && (
+                            <p className="text-sm text-base-content/70 line-clamp-2">
+                              {active.description}
+                            </p>
+                          )}
+                          {active.tags && active.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {active.tags.map((tagMapping) => {
+                                const title = tagTitle(tagMapping.tag?.title);
+                                return (
+                                  <span
+                                    key={tagMapping.tag_id}
+                                    className="badge badge-sm gap-1"
+                                  >
+                                    <span>{title.emoji}</span>
+                                    {title.tx}
+                                  </span>
+                                );
+                              })}
                             </div>
-                          </Link>
-                        );
-                      })}
-                  </div>
-                </div>
-              ))}
+                          )}
+                          <div className="flex items-center justify-between mt-4 gap-4">
+                            <div className="text-sm font-medium text-primary">
+                              {active.eventDate.format("HH:mm")}
+                            </div>
+                            <div className="text-right">
+                              {(() => {
+                                const dateTitle = getDateTitle(
+                                  active.eventDate,
+                                );
+                                return (
+                                  <>
+                                    <div className="text-xs text-base-content/70">
+                                      {dateTitle.main}
+                                    </div>
+                                    {dateTitle.sub && (
+                                      <div className="text-xs text-base-content/40 mt-0.5">
+                                        {dateTitle.sub}
+                                      </div>
+                                    )}
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  }),
+                )}
+              </div>
             </div>
           ))}
         </div>

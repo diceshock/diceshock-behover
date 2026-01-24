@@ -25,7 +25,8 @@ const get = publicProcedure
       params: { isDeleted = false, isPublished, searchWords, tags },
     } = input;
 
-    const actives = await db(ctx.env.DB).query.activesTable.findMany({
+    // 先获取所有符合条件的数据（不限制数量，以便在内存中排序）
+    const allActives = await db(ctx.env.DB).query.activesTable.findMany({
       where: (acitve, { or, and, like, eq }) =>
         and(
           searchWords
@@ -48,12 +49,40 @@ const get = publicProcedure
             tags ? inArray(tag.tag_id, tags) : undefined,
         },
       },
-      limit: pageSize,
-      offset: (page - 1) * pageSize,
-      orderBy: (actives, { desc }) => desc(actives.publish_at),
     });
 
-    return actives;
+    // 当前时间
+    const now = new Date();
+
+    // 为每个活动添加过期状态，并排序
+    const activesWithExpired = allActives
+      .map((active) => {
+        const isExpired =
+          active.event_date !== null &&
+          active.event_date !== undefined &&
+          active.event_date < now;
+        return {
+          ...active,
+          isExpired,
+        };
+      })
+      .sort((a, b) => {
+        // 先按过期状态排序：未过期的在前（isExpired: false 在前）
+        if (a.isExpired !== b.isExpired) {
+          return a.isExpired ? 1 : -1;
+        }
+        // 如果过期状态相同，按 publish_at 降序排序
+        const publishAtA = a.publish_at?.getTime() || 0;
+        const publishAtB = b.publish_at?.getTime() || 0;
+        return publishAtB - publishAtA;
+      });
+
+    // 应用分页
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const paginatedActives = activesWithExpired.slice(startIndex, endIndex);
+
+    return paginatedActives;
   });
 
 const getByIdZ = z.object({
@@ -72,7 +101,21 @@ const getById = publicProcedure
       },
     });
 
-    return active;
+    if (!active) {
+      return null;
+    }
+
+    // 判断是否过期
+    const now = new Date();
+    const isExpired =
+      active.event_date !== null &&
+      active.event_date !== undefined &&
+      active.event_date < now;
+
+    return {
+      ...active,
+      isExpired,
+    };
   });
 
 const updateZ = z.object({
@@ -198,7 +241,7 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
   if (event_date !== undefined) {
     // 将 ISO datetime string 转换为 Date 对象，如果为空字符串则设为 null
     updateData.event_date =
-      event_date && event_date.trim()
+      event_date?.trim()
         ? new Date(event_date)
         : null;
   }
@@ -302,7 +345,7 @@ const insert = async (env: Cloudflare.Env, input: z.infer<typeof insertZ>) => {
       description,
       content,
       cover_image,
-      event_date: event_date && event_date.trim() ? new Date(event_date) : null,
+      event_date: event_date?.trim() ? new Date(event_date) : null,
     })
     .returning();
 
