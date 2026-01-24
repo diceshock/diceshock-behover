@@ -25,12 +25,19 @@ export const Route = createFileRoute("/_with-home-lo/actives")({
   component: RouteComponent,
 });
 
+type TimeFilter = "本周" | "下周" | "本月" | "本季度" | "年内" | "更远" | null;
+
 function RouteComponent() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showExpired, setShowExpired] = useState(false);
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>(null);
   const [actives, setActives] = useState<ActiveItem[]>([]);
   const [tags, setTags] = useState<TagItem[]>([]);
   const [loading, setLoading] = useState(true);
+  // 存储每个活动的报名统计信息
+  const [registrationStats, setRegistrationStats] = useState<
+    Map<string, { total: number; current: number; watching: number }>
+  >(new Map());
 
   const fetchActives = useCallback(async () => {
     try {
@@ -85,6 +92,71 @@ function RouteComponent() {
     fetchActives();
   }, [fetchActives]);
 
+  // 获取所有开启报名的活动的报名统计
+  useEffect(() => {
+    const fetchRegistrationStats = async () => {
+      const statsMap = new Map<
+        string,
+        { total: number; current: number; watching: number }
+      >();
+
+      // 只获取开启报名的活动
+      const activesWithRegistration = actives.filter(
+        (active) => active.enable_registration,
+      );
+
+      // 批量获取报名数据
+      const promises = activesWithRegistration.map(async (active) => {
+        try {
+          const [teams, registrations] = await Promise.all([
+            trpcClientPublic.activeRegistrations.teams.get.query({
+              active_id: active.id,
+            }),
+            trpcClientPublic.activeRegistrations.registrations.get.query({
+              active_id: active.id,
+            }),
+          ]);
+
+          // 计算总容量（所有队伍的最大人数之和，null 表示无上限）
+          let totalCapacity = 0;
+          let hasUnlimited = false;
+          teams.forEach((team) => {
+            if (team.max_participants === null) {
+              hasUnlimited = true;
+            } else {
+              totalCapacity += team.max_participants;
+            }
+          });
+
+          // 计算当前报名人数（不包括观望）
+          const currentCount = registrations.filter(
+            (reg) => !reg.is_watching,
+          ).length;
+
+          // 计算观望人数
+          const watchingCount = registrations.filter(
+            (reg) => reg.is_watching,
+          ).length;
+
+          statsMap.set(active.id, {
+            total: hasUnlimited ? -1 : totalCapacity, // -1 表示无上限
+            current: currentCount,
+            watching: watchingCount,
+          });
+        } catch (error) {
+          console.error(`获取活动 ${active.id} 的报名统计失败:`, error);
+        }
+      });
+
+      await Promise.all(promises);
+      setRegistrationStats(statsMap);
+    };
+
+    if (actives.length > 0) {
+      fetchRegistrationStats();
+    }
+  }, [actives]);
+
   // 处理 hover 高亮同一天的活动线条
   const [highlightedDate, setHighlightedDate] = useState<string | null>(null);
   // 处理 hover 高亮当前悬浮的卡片
@@ -100,7 +172,7 @@ function RouteComponent() {
     setHoveredActiveId(null);
   }, []);
 
-  // 筛选活动：根据选中的标签筛选，默认过滤过期活动
+  // 筛选活动：根据选中的标签和时间筛选，默认过滤过期活动
   const filteredActives = useMemo(() => {
     let result = actives;
 
@@ -116,8 +188,39 @@ function RouteComponent() {
       );
     }
 
+    // 根据时间筛选
+    if (timeFilter && timeFilter !== null) {
+      const now = dayjs();
+      result = result.filter((active) => {
+        if (!active.event_date) return false;
+        const eventDate = dayjs(active.event_date);
+
+        switch (timeFilter) {
+          case "本周":
+            return eventDate.isSame(now, "week");
+          case "下周":
+            return eventDate.isSame(now.add(1, "week"), "week");
+          case "本月":
+            return eventDate.isSame(now, "month");
+          case "本季度": {
+            const currentQuarter = Math.floor(now.month() / 3);
+            const eventQuarter = Math.floor(eventDate.month() / 3);
+            return (
+              eventDate.isSame(now, "year") && currentQuarter === eventQuarter
+            );
+          }
+          case "年内":
+            return eventDate.isSame(now, "year");
+          case "更远":
+            return eventDate.isAfter(now, "year");
+          default:
+            return true;
+        }
+      });
+    }
+
     return result;
-  }, [actives, selectedTags, showExpired]);
+  }, [actives, selectedTags, showExpired, timeFilter]);
 
   // 将所有活动展平，添加日期信息用于分组和标识
   const flattenedActives = useMemo(() => {
@@ -278,12 +381,34 @@ function RouteComponent() {
           })}
         </div>
 
+        {/* 时间筛选 */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          {(["本周", "下周", "本月", "本季度", "年内", "更远"] as const).map(
+            (filter) => (
+              <button
+                key={filter}
+                onClick={() =>
+                  setTimeFilter(timeFilter === filter ? null : filter)
+                }
+                className={`badge badge-lg gap-2 cursor-pointer transition-all ${
+                  timeFilter === filter
+                    ? "badge-accent"
+                    : "badge-outline hover:badge-accent"
+                }`}
+              >
+                {filter}
+              </button>
+            ),
+          )}
+        </div>
+
         {/* 清除筛选 */}
-        {(selectedTags.length > 0 || showExpired) && (
+        {(selectedTags.length > 0 || showExpired || timeFilter) && (
           <button
             onClick={() => {
               setSelectedTags([]);
               setShowExpired(false);
+              setTimeFilter(null);
             }}
             className="btn btn-sm btn-ghost mb-4"
           >
@@ -358,9 +483,7 @@ function RouteComponent() {
                         }
                         onMouseLeave={handleMouseLeave}
                         className={`group card bg-base-100 shadow-md hover:shadow-lg transition-all relative overflow-visible w-full ${
-                          isCardHighlighted
-                            ? "bg-base-200/50"
-                            : ""
+                          isCardHighlighted ? "bg-base-200/50" : ""
                         }`}
                       >
                         {/* 日期标识 - 顶部水平线条（lg+），左侧竖线（md），默认显示，只连接同一天的活动 */}
@@ -415,7 +538,8 @@ function RouteComponent() {
                                   : "text-primary border-primary/30 group-hover:text-secondary group-hover:border-secondary group-hover:bg-base-100"
                               }`}
                               style={{
-                                transform: "translateY(-50%) translateX(0.5rem) rotate(-90deg)",
+                                transform:
+                                  "translateY(-50%) translateX(0.5rem) rotate(-90deg)",
                                 transformOrigin: "center",
                               }}
                             >
@@ -469,6 +593,41 @@ function RouteComponent() {
                               })}
                             </div>
                           )}
+                          {/* 报名和观望标签 */}
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {active.enable_registration && (
+                              <span className="badge badge-sm badge-info gap-1 items-center">
+                                <span>👥</span>
+                                {(() => {
+                                  const stats = registrationStats.get(
+                                    active.id,
+                                  );
+                                  if (stats) {
+                                    if (stats.total === -1) {
+                                      return `${stats.current}+`;
+                                    }
+                                    return `${stats.current}/${stats.total}`;
+                                  }
+                                  return "报名中";
+                                })()}
+                              </span>
+                            )}
+                            {active.allow_watching && (
+                              <span className="badge badge-sm badge-warning gap-1 items-center">
+                                <span>👀</span>
+                                观望
+                                {(() => {
+                                  const stats = registrationStats.get(
+                                    active.id,
+                                  );
+                                  if (stats && stats.watching > 0) {
+                                    return ` (${stats.watching})`;
+                                  }
+                                  return "";
+                                })()}
+                              </span>
+                            )}
+                          </div>
                           <div className="flex items-center justify-between mt-4 gap-4">
                             <div className="text-sm font-medium text-primary">
                               {active.eventDate.format("HH:mm")}
