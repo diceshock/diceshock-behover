@@ -55,7 +55,7 @@ export default function ActiveDetail({
   }, [fetchBoardGames]);
 
   return (
-    <main className="w-full min-h-screen p-4 max-w-4xl mx-auto">
+    <main className="w-full min-h-[calc(100vh-20rem)] p-4 max-w-4xl mx-auto">
       {/* 预览模式下的未发布提示 */}
       {isPreview && (!active?.is_published || active?.is_deleted) && (
         <div className="alert alert-warning mb-4">

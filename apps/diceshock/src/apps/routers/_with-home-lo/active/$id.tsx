@@ -46,7 +46,7 @@ function RouteComponent() {
 
   if (loading) {
     return (
-      <main className="size-full p-4 flex items-center justify-center min-h-screen">
+      <main className="w-full p-4 flex items-center justify-center min-h-[calc(100vh-20rem)]">
         <span className="loading loading-dots loading-md"></span>
       </main>
     );
@@ -54,7 +54,7 @@ function RouteComponent() {
 
   if (error || !active) {
     return (
-      <main className="size-full p-4 flex items-center justify-center min-h-screen">
+      <main className="w-full p-4 flex items-center justify-center min-h-[calc(100vh-20rem)]">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4">
             {error || "活动不存在"}
@@ -78,7 +78,7 @@ function RouteComponent() {
   // 只显示已发布且未删除的活动
   if (!active.is_published || active.is_deleted) {
     return (
-      <main className="size-full p-4 flex items-center justify-center min-h-screen">
+      <main className="w-full p-4 flex items-center justify-center min-h-[calc(100vh-20rem)]">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4">活动不可用</h2>
           <Link to="/" className="btn btn-primary">
