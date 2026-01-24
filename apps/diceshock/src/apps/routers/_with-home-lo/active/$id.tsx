@@ -5,6 +5,7 @@ import "@uiw/react-md-editor/markdown-editor.css";
 import dayjs from "dayjs";
 import { useAtomValue } from "jotai";
 import { themeA } from "@/client/components/ThemeSwap";
+import ActiveRegistration from "@/client/components/diceshock/ActiveRegistration";
 import trpcClientPublic from "@/shared/utils/trpc";
 
 export const Route = createFileRoute("/_with-home-lo/active/$id")({
@@ -116,6 +117,11 @@ function RouteComponent() {
             </time>
           )}
         </header>
+
+        {/* 报名组件 - 仅在开启报名时显示 */}
+        {active.enable_registration && (
+          <ActiveRegistration activeId={id} allowWatching={active.allow_watching ?? false} />
+        )}
 
         <div data-color-mode={theme ?? "light"} className="mt-8">
           <MDEditor.Markdown

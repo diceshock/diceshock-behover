@@ -2,6 +2,7 @@ import db, {
   activesTable,
   activeTagMappingsTable,
   activeTagsTable,
+  activeTeamsTable,
   drizzle,
   pagedZ,
 } from "@lib/db";
@@ -79,6 +80,8 @@ const updateZ = z.object({
   name: z.string().optional(),
   is_published: z.boolean().optional(),
   is_deleted: z.boolean().optional(),
+  enable_registration: z.boolean().optional(),
+  allow_watching: z.boolean().optional(),
   description: z.string().optional(),
   content: z.string().optional(),
   cover_image: z.string().nullable().optional(),
@@ -104,22 +107,35 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
     name,
     is_deleted,
     is_published,
+    enable_registration,
+    allow_watching,
     description,
     content,
     cover_image,
     tags: tagIds,
   } = input;
 
-  // 如果正在发布活动，先查询当前状态
+  // 如果正在发布活动、开启报名或修改观望设置，先查询当前状态
   let currentActive: {
     is_published: boolean | null;
     publish_at: Date | null;
+    enable_registration: boolean | null;
+    allow_watching: boolean | null;
   } | null = null;
-  if (is_published === true) {
+  if (
+    is_published === true ||
+    enable_registration !== undefined ||
+    allow_watching !== undefined
+  ) {
     currentActive =
       (await tdb.query.activesTable.findFirst({
         where: (a, { eq }) => eq(a.id, id),
-        columns: { is_published: true, publish_at: true },
+        columns: {
+          is_published: true,
+          publish_at: true,
+          enable_registration: true,
+          allow_watching: true,
+        },
       })) ?? null;
   }
 
@@ -128,6 +144,8 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
     name?: string;
     is_deleted?: boolean;
     is_published?: boolean;
+    enable_registration?: boolean;
+    allow_watching?: boolean;
     description?: string;
     content?: string;
     cover_image?: string | null;
@@ -137,6 +155,26 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
   if (name !== undefined) updateData.name = name;
   if (is_deleted !== undefined) updateData.is_deleted = is_deleted;
   if (is_published !== undefined) updateData.is_published = is_published;
+  if (enable_registration !== undefined)
+    updateData.enable_registration = enable_registration;
+  if (allow_watching !== undefined) {
+    // 只有开启报名时才能开启观望
+    if (allow_watching) {
+      // 检查是否开启了报名（可能是本次更新开启，也可能是之前已开启）
+      const shouldEnableRegistration =
+        enable_registration === true ||
+        (enable_registration === undefined &&
+          currentActive?.enable_registration);
+      if (!shouldEnableRegistration) {
+        throw new Error("需要先开启报名功能才能开启观望");
+      }
+    }
+    updateData.allow_watching = allow_watching;
+    // 如果关闭报名，自动关闭观望
+    if (enable_registration === false) {
+      updateData.allow_watching = false;
+    }
+  }
   if (description !== undefined) updateData.description = description;
   if (content !== undefined) updateData.content = content;
   if (cover_image !== undefined) {
@@ -162,6 +200,27 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
     (!currentActive.publish_at || currentActive.publish_at.getTime() === 0)
   ) {
     updateData.publish_at = new Date();
+  }
+
+  // 如果开启报名功能，且之前未开启，则创建默认队伍
+  if (
+    enable_registration === true &&
+    currentActive &&
+    !currentActive.enable_registration
+  ) {
+    // 检查是否已有队伍
+    const existingTeams = await tdb.query.activeTeamsTable.findMany({
+      where: (team, { eq }) => eq(team.active_id, id),
+    });
+
+    // 如果没有队伍，创建默认队伍
+    if (existingTeams.length === 0) {
+      await tdb.insert(activeTeamsTable).values({
+        active_id: id,
+        name: "默认队伍",
+        max_participants: null, // 无上限
+      });
+    }
   }
 
   // 如果没有要更新的字段，直接返回（或者只处理标签）

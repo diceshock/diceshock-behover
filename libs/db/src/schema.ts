@@ -36,6 +36,8 @@ export const activesTable = sqlite.sqliteTable("actives_table", {
   name: sqlite.text(),
   is_published: sqlite.int({ mode: "boolean" }).$default(() => false),
   is_deleted: sqlite.int({ mode: "boolean" }).$default(() => false),
+  enable_registration: sqlite.int({ mode: "boolean" }).$default(() => false),
+  allow_watching: sqlite.int({ mode: "boolean" }).$default(() => false),
   description: sqlite.text(),
   publish_at: sqlite
     .integer({ mode: "timestamp_ms" })
@@ -44,9 +46,73 @@ export const activesTable = sqlite.sqliteTable("actives_table", {
   cover_image: sqlite.text(),
 });
 
+export const activeTeamsTable = sqlite.sqliteTable("active_teams_table", {
+  id: sqlite.text().$defaultFn(createId).primaryKey(),
+  active_id: sqlite
+    .text()
+    .notNull()
+    .references(() => activesTable.id, { onDelete: "cascade" }),
+  name: sqlite.text().notNull(),
+  description: sqlite.text(),
+  max_participants: sqlite.int(), // null 表示无上限
+  create_at: sqlite
+    .integer("create_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date(Date.now())),
+});
+
+export const activeRegistrationsTable = sqlite.sqliteTable(
+  "active_registrations_table",
+  {
+    id: sqlite.text().$defaultFn(createId).primaryKey(),
+    active_id: sqlite
+      .text()
+      .notNull()
+      .references(() => activesTable.id, { onDelete: "cascade" }),
+    team_id: sqlite
+      .text()
+      .references(() => activeTeamsTable.id, { onDelete: "cascade" }),
+    user_id: sqlite
+      .text()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    is_watching: sqlite.int({ mode: "boolean" }).$default(() => false), // true 表示观望
+    create_at: sqlite
+      .integer("create_at", { mode: "timestamp_ms" })
+      .$defaultFn(() => new Date(Date.now())),
+  },
+);
+
 export const activeRelations = relations(activesTable, ({ many }) => ({
   tags: many(activeTagMappingsTable),
+  teams: many(activeTeamsTable),
+  registrations: many(activeRegistrationsTable),
 }));
+
+export const activeTeamsRelations = relations(activeTeamsTable, ({ one, many }) => ({
+  active: one(activesTable, {
+    fields: [activeTeamsTable.active_id],
+    references: [activesTable.id],
+  }),
+  registrations: many(activeRegistrationsTable),
+}));
+
+export const activeRegistrationsRelations = relations(
+  activeRegistrationsTable,
+  ({ one }) => ({
+    active: one(activesTable, {
+      fields: [activeRegistrationsTable.active_id],
+      references: [activesTable.id],
+    }),
+    team: one(activeTeamsTable, {
+      fields: [activeRegistrationsTable.team_id],
+      references: [activeTeamsTable.id],
+    }),
+    user: one(users, {
+      fields: [activeRegistrationsTable.user_id],
+      references: [users.id],
+    }),
+  }),
+);
 
 export const activeTagsTable = sqlite.sqliteTable("active_tags_table", {
   id: sqlite.text().$defaultFn(createId).primaryKey(),
