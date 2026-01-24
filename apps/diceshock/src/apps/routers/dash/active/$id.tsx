@@ -39,6 +39,7 @@ function RouteComponent() {
   const [isDeleted, setIsDeleted] = useState<boolean>(false);
   const [enableRegistration, setEnableRegistration] = useState<boolean>(false);
   const [allowWatching, setAllowWatching] = useState<boolean>(false);
+  const [eventDate, setEventDate] = useState<string>("");
   const [active, setActive] = useState<Awaited<
     ReturnType<typeof trpcClientDash.active.getById.query>
   > | null>(null);
@@ -88,6 +89,18 @@ function RouteComponent() {
         setIsDeleted(Boolean(data.is_deleted));
         setEnableRegistration(Boolean(data.enable_registration));
         setAllowWatching(Boolean(data.allow_watching));
+        // 将 event_date 转换为 datetime-local 格式 (YYYY-MM-DDTHH:mm)
+        if (data.event_date) {
+          const date = new Date(data.event_date);
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, "0");
+          const day = String(date.getDate()).padStart(2, "0");
+          const hours = String(date.getHours()).padStart(2, "0");
+          const minutes = String(date.getMinutes()).padStart(2, "0");
+          setEventDate(`${year}-${month}-${day}T${hours}:${minutes}`);
+        } else {
+          setEventDate("");
+        }
       }
     } catch (error) {
       msg.error("获取活动失败");
@@ -231,6 +244,7 @@ function RouteComponent() {
         is_deleted: isDeleted,
         enable_registration: enableRegistration,
         allow_watching: allowWatching,
+        event_date: eventDate || undefined,
       });
       msg.success("保存成功");
       await fetchActive();
@@ -473,6 +487,17 @@ function RouteComponent() {
                       value={description}
                       onChange={(evt) => setDescription(evt.target.value)}
                     />
+                    <div className="flex flex-col gap-2">
+                      <label className="label">
+                        <span className="label-text">活动日期</span>
+                      </label>
+                      <input
+                        type="datetime-local"
+                        className="input input-bordered"
+                        value={eventDate}
+                        onChange={(evt) => setEventDate(evt.target.value)}
+                      />
+                    </div>
                     <div className="flex flex-col gap-2">
                       <label className="label">
                         <span className="label-text">头图 URL</span>

@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import trpcClientPublic from "@/shared/utils/trpc";
+import { formatEventDate } from "@/shared/utils/formatEventDate";
 
 type ActiveList = Awaited<ReturnType<typeof trpcClientPublic.active.get.query>>;
 type ActiveItem = ActiveList[number];
@@ -235,9 +236,9 @@ function RouteComponent() {
                       })}
                     </div>
                   )}
-                  {active.publish_at && (
-                    <div className="text-xs text-base-content/50 mt-2">
-                      {dayjs(active.publish_at).format("YYYY-MM-DD")}
+                  {active.event_date && (
+                    <div className="text-sm font-medium text-primary mt-2">
+                      {formatEventDate(active.event_date)}
                     </div>
                   )}
                 </div>

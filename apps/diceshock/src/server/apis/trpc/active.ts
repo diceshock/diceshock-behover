@@ -86,6 +86,7 @@ const updateZ = z.object({
   content: z.string().optional(),
   cover_image: z.string().nullable().optional(),
   tags: z.string().array().optional(),
+  event_date: z.string().optional(), // ISO datetime string
 });
 
 const insertZ = z.object({
@@ -94,6 +95,7 @@ const insertZ = z.object({
   content: z.string().optional(),
   cover_image: z.string().nullable().optional(),
   tags: z.string().array(),
+  event_date: z.string().optional(), // ISO datetime string
 });
 
 // 将 updateZ 放在前面，因为它有 id 字段，更容易区分
@@ -113,6 +115,7 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
     content,
     cover_image,
     tags: tagIds,
+    event_date,
   } = input;
 
   // 如果正在发布活动、开启报名或修改观望设置，先查询当前状态
@@ -150,6 +153,7 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
     content?: string;
     cover_image?: string | null;
     publish_at?: Date;
+    event_date?: Date | null;
   } = {};
 
   if (name !== undefined) updateData.name = name;
@@ -190,6 +194,13 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
       original: cover_image,
       processed: processedCoverImage,
     });
+  }
+  if (event_date !== undefined) {
+    // 将 ISO datetime string 转换为 Date 对象，如果为空字符串则设为 null
+    updateData.event_date =
+      event_date && event_date.trim()
+        ? new Date(event_date)
+        : null;
   }
 
   // 如果正在发布活动，且之前未发布过，则设置发布时间为当前时间
@@ -280,12 +291,19 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
 const insert = async (env: Cloudflare.Env, input: z.infer<typeof insertZ>) => {
   const tdb = db(env.DB);
 
-  const { name, description, content, cover_image, tags: tagIds } = input;
+  const { name, description, content, cover_image, tags: tagIds, event_date } =
+    input;
 
   // 先创建活动
   const newActive = await tdb
     .insert(activesTable)
-    .values({ name, description, content, cover_image })
+    .values({
+      name,
+      description,
+      content,
+      cover_image,
+      event_date: event_date && event_date.trim() ? new Date(event_date) : null,
+    })
     .returning();
 
   // 如果有标签，创建标签映射

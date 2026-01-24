@@ -78,6 +78,13 @@
       "when": 1769241633603,
       "tag": "0010_majestic_roland_deschain",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1769243752211,
+      "tag": "0011_mighty_orphan",
+      "breakpoints": true
     }
   ]
 }

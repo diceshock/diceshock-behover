@@ -1,15 +1,18 @@
 import { Link } from "@tanstack/react-router";
 import MDEditor from "@uiw/react-md-editor";
 import { useAtomValue } from "jotai";
-import dayjs from "dayjs";
 import { themeA } from "@/client/components/ThemeSwap";
 import ActiveRegistration from "@/client/components/diceshock/ActiveRegistration";
-import trpcClientPublic from "@/shared/utils/trpc";
-import { trpcClientDash } from "@/shared/utils/trpc";
+import type { ApiRouterPublic, ApiRouterDash } from "@/shared/types";
+import type { createTRPCClient } from "@trpc/client";
+import { formatEventDate } from "@/shared/utils/formatEventDate";
+
+type TrpcClientPublic = ReturnType<typeof createTRPCClient<ApiRouterPublic>>;
+type TrpcClientDash = ReturnType<typeof createTRPCClient<ApiRouterDash>>;
 
 type Active =
-  | Awaited<ReturnType<typeof trpcClientPublic.active.getById.query>>
-  | Awaited<ReturnType<typeof trpcClientDash.active.getById.query>>;
+  | Awaited<ReturnType<TrpcClientPublic["active"]["getById"]["query"]>>
+  | Awaited<ReturnType<TrpcClientDash["active"]["getById"]["query"]>>;
 
 type ActiveDetailProps = {
   active: NonNullable<Active>;
@@ -112,10 +115,10 @@ export default function ActiveDetail({
             ))}
           </div>
 
-          {active?.publish_at && (
-            <time className="text-sm text-base-content/50">
-              {dayjs(active.publish_at).format("YYYY年MM月DD日")}
-            </time>
+          {active?.event_date && (
+            <div className="text-lg font-semibold text-primary mb-2">
+              {formatEventDate(active.event_date)}
+            </div>
           )}
         </header>
 

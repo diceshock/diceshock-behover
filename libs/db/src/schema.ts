@@ -42,6 +42,7 @@ export const activesTable = sqlite.sqliteTable("actives_table", {
   publish_at: sqlite
     .integer({ mode: "timestamp_ms" })
     .$default(() => new Date(0)),
+  event_date: sqlite.integer({ mode: "timestamp_ms" }),
   content: sqlite.text(),
   cover_image: sqlite.text(),
 });
@@ -88,13 +89,16 @@ export const activeRelations = relations(activesTable, ({ many }) => ({
   registrations: many(activeRegistrationsTable),
 }));
 
-export const activeTeamsRelations = relations(activeTeamsTable, ({ one, many }) => ({
-  active: one(activesTable, {
-    fields: [activeTeamsTable.active_id],
-    references: [activesTable.id],
+export const activeTeamsRelations = relations(
+  activeTeamsTable,
+  ({ one, many }) => ({
+    active: one(activesTable, {
+      fields: [activeTeamsTable.active_id],
+      references: [activesTable.id],
+    }),
+    registrations: many(activeRegistrationsTable),
   }),
-  registrations: many(activeRegistrationsTable),
-}));
+);
 
 export const activeRegistrationsRelations = relations(
   activeRegistrationsTable,
