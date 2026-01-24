@@ -675,7 +675,7 @@ function RouteComponent() {
               {/* 周标题 */}
               <div className="divider mt-12 mb-24 relative">
                 {/* 年份标签 - 在分割线最左边 */}
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 text-xs text-base-content/40 whitespace-nowrap">
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 text-xs text-base-content/40 bg-base-100 pr-1 whitespace-nowrap">
                   {weekGroup.isExpired
                     ? weekGroup.dates[0]?.date.format("YYYY年")
                     : weekGroup.weekStart.format("YYYY年")}
