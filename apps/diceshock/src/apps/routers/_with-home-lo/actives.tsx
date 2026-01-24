@@ -1084,7 +1084,10 @@ function RouteComponent() {
               {/* 搜索结果 */}
               {gameSearchQuery && gameSearchResults.length > 0 && (
                 <div className="mb-4 overflow-x-auto">
-                  <div className="flex gap-2 px-1" style={{ width: 'max-content' }}>
+                  <div
+                    className="flex gap-2 px-1"
+                    style={{ width: "max-content" }}
+                  >
                     {gameSearchResults.map((game) => {
                       const gameContent = game.content;
                       if (!gameContent || !game.gstone_id) return null;
@@ -1099,50 +1102,54 @@ function RouteComponent() {
                           className={`card bg-base-200 shadow-sm overflow-hidden cursor-pointer w-32 shrink-0 ${
                             isSelected ? "ring-2 ring-primary" : ""
                           }`}
-                        onClick={() => {
-                          const gstoneId = game.gstone_id!;
-                          setGameForm((prev) => ({
-                            ...prev,
-                            selectedBoardGames: isSelected
-                              ? prev.selectedBoardGames.filter(
-                                  (id) => id !== gstoneId,
-                                )
-                              : [...prev.selectedBoardGames, gstoneId],
-                          }));
-                          // 添加到已选择列表以便显示
-                          if (!isSelected) {
-                            setGameBoardGames((prev) => {
-                              if (prev.some((g) => g.gstone_id === gstoneId)) {
-                                return prev;
-                              }
-                              return [...prev, game];
-                            });
-                          } else {
-                            setGameBoardGames((prev) =>
-                              prev.filter((g) => g.gstone_id !== gstoneId),
-                            );
-                          }
-                        }}
-                      >
-                        {gameContent.sch_cover_url && (
-                          <figure className="h-20 overflow-hidden">
-                            <img
-                              src={gameContent.sch_cover_url}
-                              alt={gameContent.sch_name || gameContent.eng_name}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display =
-                                  "none";
-                              }}
-                            />
-                          </figure>
-                        )}
-                        <div className="card-body p-2">
-                          <h4 className="card-title text-xs line-clamp-2">
-                            {gameContent.sch_name || gameContent.eng_name}
-                          </h4>
+                          onClick={() => {
+                            const gstoneId = game.gstone_id!;
+                            setGameForm((prev) => ({
+                              ...prev,
+                              selectedBoardGames: isSelected
+                                ? prev.selectedBoardGames.filter(
+                                    (id) => id !== gstoneId,
+                                  )
+                                : [...prev.selectedBoardGames, gstoneId],
+                            }));
+                            // 添加到已选择列表以便显示
+                            if (!isSelected) {
+                              setGameBoardGames((prev) => {
+                                if (
+                                  prev.some((g) => g.gstone_id === gstoneId)
+                                ) {
+                                  return prev;
+                                }
+                                return [...prev, game];
+                              });
+                            } else {
+                              setGameBoardGames((prev) =>
+                                prev.filter((g) => g.gstone_id !== gstoneId),
+                              );
+                            }
+                          }}
+                        >
+                          {gameContent.sch_cover_url && (
+                            <figure className="h-20 overflow-hidden">
+                              <img
+                                src={gameContent.sch_cover_url}
+                                alt={
+                                  gameContent.sch_name || gameContent.eng_name
+                                }
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display =
+                                    "none";
+                                }}
+                              />
+                            </figure>
+                          )}
+                          <div className="card-body p-2">
+                            <h4 className="card-title text-xs line-clamp-2">
+                              {gameContent.sch_name || gameContent.eng_name}
+                            </h4>
+                          </div>
                         </div>
-                      </div>
                       );
                     })}
                   </div>
