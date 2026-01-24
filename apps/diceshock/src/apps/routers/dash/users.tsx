@@ -1,4 +1,8 @@
-import { PencilLineIcon, XIcon, UserMinusIcon } from "@phosphor-icons/react/dist/ssr";
+import {
+  PencilLineIcon,
+  UserMinusIcon,
+  XIcon,
+} from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute } from "@tanstack/react-router";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -226,11 +230,7 @@ function RouteComponent() {
       </div>
 
       <dialog ref={editDialogRef} className="modal">
-        <form
-          method="dialog"
-          className="modal-box"
-          onSubmit={handleEditSubmit}
-        >
+        <form method="dialog" className="modal-box" onSubmit={handleEditSubmit}>
           <div className="modal-action flex items-center justify-between mb-4">
             <h3 className="font-bold text-lg">编辑用户</h3>
             <button
@@ -333,7 +333,8 @@ function RouteComponent() {
                 <strong>用户 ID:</strong> {pendingDisable.id}
               </p>
               <p className="text-sm">
-                <strong>昵称:</strong> {pendingDisable.userInfo?.nickname || "—"}
+                <strong>昵称:</strong>{" "}
+                {pendingDisable.userInfo?.nickname || "—"}
               </p>
               <p className="text-sm">
                 <strong>邮箱:</strong> {pendingDisable.email || "—"}
