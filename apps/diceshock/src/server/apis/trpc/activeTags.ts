@@ -255,6 +255,101 @@ const deleteTag = publicProcedure
     return deletedTag;
   });
 
+// 批量导入标签
+const importTagsZ = z.object({
+  tags: z
+    .array(
+      z.object({
+        name: z.string(),
+        emoji: z.string().optional(),
+        keywords: z.string().optional(),
+        is_pinned: z.boolean().optional(),
+      }),
+    )
+    .min(1),
+  rewrite: z.boolean().optional().default(false),
+});
+
+const importTags = publicProcedure
+  .input(importTagsZ)
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const { tags, rewrite } = input;
+
+    const results = {
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      errors: [] as string[],
+    };
+
+    for (const tagData of tags) {
+      try {
+        // 获取所有标签，检查是否有相同名称的标签
+        const allTags = await tdb.query.activeTagsTable.findMany();
+        const existing = allTags.find(
+          (tag) => tag.title?.tx === tagData.name.trim(),
+        );
+
+        if (existing) {
+          if (rewrite) {
+            // 如果启用 rewrite，更新现有标签（优先使用 TOML 中的数据）
+            const updateData: {
+              title: { tx: string; emoji: string };
+              keywords?: string | null;
+              is_pinned?: boolean;
+            } = {
+              title: {
+                tx: tagData.name.trim(),
+                emoji: tagData.emoji?.trim() || existing.title?.emoji || "🎲",
+              },
+            };
+
+            // 如果 TOML 中提供了 keywords，使用 TOML 的值；否则保持现有值
+            if (tagData.keywords !== undefined) {
+              updateData.keywords = tagData.keywords.trim() || null;
+            }
+
+            // 如果 TOML 中提供了 is_pinned，使用 TOML 的值；否则保持现有值
+            if (tagData.is_pinned !== undefined) {
+              updateData.is_pinned = tagData.is_pinned;
+            }
+
+            await tdb
+              .update(activeTagsTable)
+              .set(updateData)
+              .where(drizzle.eq(activeTagsTable.id, existing.id));
+
+            results.updated++;
+          } else {
+            results.skipped++;
+          }
+          continue;
+        }
+
+        // 创建新标签
+        await tdb.insert(activeTagsTable).values({
+          title: {
+            tx: tagData.name.trim(),
+            emoji: tagData.emoji?.trim() || "🎲",
+          },
+          keywords: tagData.keywords?.trim() || null,
+          is_pinned: tagData.is_pinned || false,
+        });
+
+        results.created++;
+      } catch (error) {
+        results.errors.push(
+          `标签 "${tagData.name}" 导入失败: ${
+            error instanceof Error ? error.message : "未知错误"
+          }`,
+        );
+      }
+    }
+
+    return results;
+  });
+
 export default {
   get,
   insert,
@@ -262,4 +357,5 @@ export default {
   getGameTags,
   createGameTag,
   delete: deleteTag,
+  importTags,
 };

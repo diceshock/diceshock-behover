@@ -3,6 +3,7 @@ import activeRegistrations from "./activeRegistrations";
 import activeTags from "./activeTags";
 import auth from "./auth";
 import { router } from "./baseTRPC";
+import dashboard from "./dashboard";
 import owned from "./owned";
 import ownedManagement from "./ownedManagement";
 import users from "./users";
@@ -16,8 +17,10 @@ export const appRouterDash = router({
     getGameTags: activeTags.getGameTags,
     createGameTag: activeTags.createGameTag,
     delete: activeTags.delete,
+    importTags: activeTags.importTags,
   },
   activeRegistrations,
+  dashboard,
   ownedManagement,
   users,
 });

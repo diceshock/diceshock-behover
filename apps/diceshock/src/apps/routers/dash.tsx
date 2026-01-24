@@ -1,6 +1,5 @@
 import {
   GaugeIcon,
-  PackageIcon,
   SignOutIcon,
   SignpostIcon,
   TagIcon,
@@ -21,19 +20,13 @@ export const Route = createFileRoute("/dash")({
 function RouteComponent() {
   return (
     <ClientOnly>
-      <aside className="fixed w-20 hover:w-auto h-screen bg-secondary overflow-hidden z-50">
+      {/* 侧边栏 - 大屏幕显示，小屏幕隐藏 */}
+      <aside className="hidden lg:block fixed w-20 hover:w-auto h-screen bg-secondary overflow-hidden z-50">
         <ul className="menu menu-xl rounded-none bg-base-200 rounded-box w-56 h-screen">
           <li>
             <Link to="/dash" className="gap-12">
               <GaugeIcon className="size-6" />
               仪表盘
-            </Link>
-          </li>
-
-          <li>
-            <Link to="/dash/inventory-management" className="gap-12">
-              <PackageIcon className="size-6" />
-              库存
             </Link>
           </li>
 
@@ -77,7 +70,7 @@ function RouteComponent() {
         </ul>
       </aside>
 
-      <main className="flex min-h-screen pl-20">
+      <main className="flex min-h-screen lg:pl-20">
         <Outlet />
       </main>
     </ClientOnly>

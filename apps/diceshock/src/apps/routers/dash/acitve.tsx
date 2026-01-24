@@ -7,6 +7,7 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { EmojiPicker } from "@/client/components/diceshock/EmojiPicker";
+import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMsg } from "@/client/components/diceshock/Msg";
@@ -414,6 +415,9 @@ function RouteComponent() {
 
   return (
     <main className="size-full">
+      <div className="px-4 pt-4">
+        <DashBackButton />
+      </div>
       <form className="w-full flex flex-col items-center gap-6 px-4 pt-4 bg-base-100 z-10">
         <div className="flex flex-col sm:flex-row gap-4 w-full">
           <input

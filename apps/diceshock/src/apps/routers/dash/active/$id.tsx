@@ -15,6 +15,7 @@ import "@uiw/react-md-editor/markdown-editor.css";
 import type { BoardGame } from "@lib/utils";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import { EmojiPicker } from "@/client/components/diceshock/EmojiPicker";
+import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import trpcClientPublic, { trpcClientDash } from "@/shared/utils/trpc";
 
 type TagList = Awaited<ReturnType<typeof trpcClientDash.activeTags.get.query>>;
@@ -439,10 +440,13 @@ function RouteComponent() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             {/* 第一行：返回按钮和操作按钮 */}
             <div className="flex items-center justify-between w-full sm:w-auto gap-2">
-              <Link to="/dash/acitve" className="btn btn-ghost btn-sm">
-                <ArrowLeftIcon className="size-4" />
-                <span className="hidden sm:inline">返回</span>
-              </Link>
+              <div className="flex gap-2">
+                <DashBackButton />
+                <Link to="/dash/acitve" className="btn btn-ghost btn-sm">
+                  <ArrowLeftIcon className="size-4" />
+                  <span className="hidden sm:inline">返回列表</span>
+                </Link>
+              </div>
               <div className="flex items-center gap-2 sm:hidden">
                 {active && (
                   <button

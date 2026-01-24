@@ -1,0 +1,805 @@
+rewrite = false
+
+# 游戏类型
+[[tags]]
+name = "策略游戏"
+emoji = "🧠"
+keywords = "策略,思考,智力,桌游"
+is_pinned = true
+
+[[tags]]
+name = "聚会游戏"
+emoji = "🎉"
+keywords = "聚会,多人,欢乐,社交"
+is_pinned = true
+
+[[tags]]
+name = "美式桌游"
+emoji = "🇺🇸"
+keywords = "美式,主题,随机,骰子,模型"
+is_pinned = true
+
+[[tags]]
+name = "德式桌游"
+emoji = "🇩🇪"
+keywords = "德式,策略,机制,得分,精算"
+is_pinned = true
+
+[[tags]]
+name = "桌面角色扮演"
+emoji = "🎲"
+keywords = "TRPG,角色扮演,跑团,DND"
+is_pinned = true
+
+[[tags]]
+name = "卡牌游戏"
+emoji = "🃏"
+keywords = "卡牌,收集,对战"
+is_pinned = false
+
+[[tags]]
+name = "合作游戏"
+emoji = "🤝"
+keywords = "合作,团队,协作"
+is_pinned = false
+
+[[tags]]
+name = "竞争游戏"
+emoji = "⚔️"
+keywords = "竞争,对战,竞技"
+is_pinned = false
+
+[[tags]]
+name = "家庭游戏"
+emoji = "👨‍👩‍👧‍👦"
+keywords = "家庭,亲子,轻松"
+is_pinned = false
+
+[[tags]]
+name = "推理游戏"
+emoji = "🔍"
+keywords = "推理,解谜,逻辑"
+is_pinned = false
+
+# TRPG 系统
+[[tags]]
+name = "D&D 5e"
+emoji = "⚔️"
+keywords = "DND,龙与地下城,5版,5e,跑团"
+is_pinned = false
+
+[[tags]]
+name = "D&D 3.5"
+emoji = "⚔️"
+keywords = "DND,龙与地下城,3.5版,跑团"
+is_pinned = false
+
+[[tags]]
+name = "D&D 4e"
+emoji = "⚔️"
+keywords = "DND,龙与地下城,4版,4e,跑团"
+is_pinned = false
+
+[[tags]]
+name = "Pathfinder"
+emoji = "🗡️"
+keywords = "开拓者,PF,跑团,角色扮演"
+is_pinned = false
+
+[[tags]]
+name = "Pathfinder 2e"
+emoji = "🗡️"
+keywords = "开拓者,PF2,2版,跑团,角色扮演"
+is_pinned = false
+
+[[tags]]
+name = "COC"
+emoji = "🐙"
+keywords = "克苏鲁,COC,调查,恐怖,跑团"
+is_pinned = false
+
+[[tags]]
+name = "COC 7版"
+emoji = "🐙"
+keywords = "克苏鲁,COC,7版,调查,恐怖,跑团"
+is_pinned = false
+
+[[tags]]
+name = "COC 6版"
+emoji = "🐙"
+keywords = "克苏鲁,COC,6版,调查,恐怖,跑团"
+is_pinned = false
+
+# 麻将
+[[tags]]
+name = "日麻"
+emoji = "🀄"
+keywords = "日本麻将,日麻,立直,雀魂"
+is_pinned = true
+
+[[tags]]
+name = "公式战"
+emoji = "🏆"
+keywords = "公式战,比赛,竞技,官方"
+is_pinned = true
+
+# TCG 集换式卡牌游戏
+[[tags]]
+name = "TCG"
+emoji = "🎴"
+keywords = "TCG,集换式卡牌,卡牌游戏,收集"
+is_pinned = true
+
+[[tags]]
+name = "万智牌"
+emoji = "🔮"
+keywords = "万智牌,MTG,Magic,TCG,卡牌"
+is_pinned = false
+
+[[tags]]
+name = "游戏王"
+emoji = "⚡"
+keywords = "游戏王,Yu-Gi-Oh,YGO,OCG,TCG,卡牌"
+is_pinned = false
+
+[[tags]]
+name = "宝可梦卡牌"
+emoji = "⚡"
+keywords = "宝可梦,Pokemon,TCG,卡牌,PTCG"
+is_pinned = false
+
+[[tags]]
+name = "炉石传说"
+emoji = "🔥"
+keywords = "炉石,炉石传说,Hearthstone,卡牌,电子卡牌"
+is_pinned = false
+
+[[tags]]
+name = "影之诗"
+emoji = "🌙"
+keywords = "影之诗,Shadowverse,SV,卡牌,电子卡牌"
+is_pinned = false
+
+[[tags]]
+name = "符文之地传说"
+emoji = "💎"
+keywords = "符文之地,LoR,Legends of Runeterra,卡牌,电子卡牌"
+is_pinned = false
+
+[[tags]]
+name = "KeyForge"
+emoji = "🗝️"
+keywords = "KeyForge,钥匙,卡牌,TCG"
+is_pinned = false
+
+[[tags]]
+name = "Flesh and Blood"
+emoji = "🩸"
+keywords = "FAB,血肉与鲜血,TCG,卡牌"
+is_pinned = false
+
+[[tags]]
+name = "One Piece TCG"
+emoji = "🏴‍☠️"
+keywords = "海贼王,One Piece,OP,TCG,卡牌"
+is_pinned = false
+
+[[tags]]
+name = "Weiß Schwarz"
+emoji = "⚪"
+keywords = "WS,Weiss Schwarz,TCG,卡牌,动漫"
+is_pinned = false
+
+[[tags]]
+name = "WSD 黑白双翼"
+emoji = "🪽"
+keywords = "WSD,黑白双翼,Weiss Schwarz,WS,TCG,卡牌"
+is_pinned = false
+
+# 万代系 TCG
+[[tags]]
+name = "万代"
+emoji = "🎌"
+keywords = "万代,Bandai,TCG,卡牌"
+is_pinned = false
+
+# 游戏对局类型
+[[tags]]
+name = "友情局"
+emoji = "💕"
+keywords = "友情局,朋友,轻松,休闲"
+is_pinned = false
+
+[[tags]]
+name = "胡闹局"
+emoji = "🤪"
+keywords = "胡闹局,搞笑,欢乐,娱乐"
+is_pinned = false
+
+[[tags]]
+name = "村规局"
+emoji = "🏘️"
+keywords = "村规局,村规,自定义规则,非官方"
+is_pinned = false
+
+[[tags]]
+name = "剧情团"
+emoji = "📚"
+keywords = "剧情团,剧情,角色扮演,故事"
+is_pinned = false
+
+[[tags]]
+name = "踢门团"
+emoji = "🚪"
+keywords = "踢门团,战斗,地牢,冒险"
+is_pinned = false
+
+[[tags]]
+name = "竞技局"
+emoji = "🏆"
+keywords = "竞技局,比赛,竞技,正式"
+is_pinned = false
+
+[[tags]]
+name = "比赛"
+emoji = "🏅"
+keywords = "比赛,竞赛,竞技,赛事"
+is_pinned = false
+
+[[tags]]
+name = "裁判"
+emoji = "⚖️"
+keywords = "裁判,官方,监督,规则"
+is_pinned = false
+
+[[tags]]
+name = "严肃对局"
+emoji = "😐"
+keywords = "严肃对局,认真,正式,严格"
+is_pinned = false
+
+[[tags]]
+name = "锦标赛"
+emoji = "🥇"
+keywords = "锦标赛,比赛,竞技,正式"
+is_pinned = false
+
+[[tags]]
+name = "预选赛"
+emoji = "🎯"
+keywords = "预选赛,选拔,比赛,竞技"
+is_pinned = false
+
+[[tags]]
+name = "决赛"
+emoji = "👑"
+keywords = "决赛,最终,比赛,竞技"
+is_pinned = false
+
+[[tags]]
+name = "积分赛"
+emoji = "📊"
+keywords = "积分赛,积分,排名,比赛"
+is_pinned = false
+
+[[tags]]
+name = "淘汰赛"
+emoji = "❌"
+keywords = "淘汰赛,淘汰,比赛,竞技"
+is_pinned = false
+
+[[tags]]
+name = "循环赛"
+emoji = "🔄"
+keywords = "循环赛,循环,比赛,竞技"
+is_pinned = false
+
+[[tags]]
+name = "练习局"
+emoji = "📖"
+keywords = "练习局,练习,学习,新手"
+is_pinned = false
+
+[[tags]]
+name = "教学局"
+emoji = "👨‍🏫"
+keywords = "教学局,教学,教学,指导"
+is_pinned = false
+
+[[tags]]
+name = "娱乐局"
+emoji = "🎮"
+keywords = "娱乐局,娱乐,休闲,放松"
+is_pinned = false
+
+[[tags]]
+name = "新游戏测试"
+emoji = "🆕"
+keywords = "新游戏测试,测试,新游戏,试玩"
+is_pinned = false
+
+[[tags]]
+name = "自制游戏"
+emoji = "🛠️"
+keywords = "自制游戏,DIY,自制,原创"
+is_pinned = false
+
+[[tags]]
+name = "单人游戏"
+emoji = "1️⃣"
+keywords = "单人游戏,Solo,单人,1人"
+is_pinned = false
+
+[[tags]]
+name = "Puzzle"
+emoji = "🧩"
+keywords = "Puzzle,解谜,拼图,益智"
+is_pinned = false
+
+[[tags]]
+name = "亲友"
+emoji = "👨‍👩‍👧‍👦"
+keywords = "亲友,家人,朋友,熟人"
+is_pinned = false
+
+# 桌游机制
+[[tags]]
+name = "工人放置"
+emoji = "👷"
+keywords = "工人放置,Worker Placement,机制"
+is_pinned = false
+
+[[tags]]
+name = "区域控制"
+emoji = "🗺️"
+keywords = "区域控制,Area Control,区域,地图"
+is_pinned = false
+
+[[tags]]
+name = "手牌管理"
+emoji = "🃏"
+keywords = "手牌管理,Hand Management,卡牌,手牌"
+is_pinned = false
+
+[[tags]]
+name = "引擎构筑"
+emoji = "⚙️"
+keywords = "引擎构筑,Engine Building,组合,机制"
+is_pinned = false
+
+[[tags]]
+name = "牌组构筑"
+emoji = "📚"
+keywords = "牌组构筑,Deck Building,卡牌,构筑"
+is_pinned = false
+
+[[tags]]
+name = "骰子驱动"
+emoji = "🎲"
+keywords = "骰子,骰子驱动,Dice Rolling,随机"
+is_pinned = false
+
+[[tags]]
+name = "拍卖竞价"
+emoji = "🔨"
+keywords = "拍卖,竞价,Auction,机制"
+is_pinned = false
+
+[[tags]]
+name = "资源管理"
+emoji = "💰"
+keywords = "资源管理,Resource Management,资源,经济"
+is_pinned = false
+
+[[tags]]
+name = "板块放置"
+emoji = "🧩"
+keywords = "板块放置,Tile Placement,拼图,板块"
+is_pinned = false
+
+[[tags]]
+name = "成套收集"
+emoji = "📦"
+keywords = "成套收集,Set Collection,收集,组合"
+is_pinned = false
+
+[[tags]]
+name = "行动点选择"
+emoji = "🎯"
+keywords = "行动点,Action Points,选择,机制"
+is_pinned = false
+
+[[tags]]
+name = "可变玩家能力"
+emoji = "🎭"
+keywords = "可变玩家能力,Variable Player Powers,能力,角色"
+is_pinned = false
+
+[[tags]]
+name = "网格移动"
+emoji = "🔲"
+keywords = "网格移动,Grid Movement,移动,地图"
+is_pinned = false
+
+[[tags]]
+name = "记忆"
+emoji = "🧠"
+keywords = "记忆,Memory,记忆游戏,机制"
+is_pinned = false
+
+[[tags]]
+name = "谈判"
+emoji = "🤝"
+keywords = "谈判,Negotiation,协商,交易"
+is_pinned = false
+
+[[tags]]
+name = "隐藏身份"
+emoji = "🎭"
+keywords = "隐藏身份,Hidden Roles,身份,推理"
+is_pinned = false
+
+[[tags]]
+name = "实时"
+emoji = "⏱️"
+keywords = "实时,Real-Time,时间压力,快速"
+is_pinned = false
+
+[[tags]]
+name = "合作"
+emoji = "🤝"
+keywords = "合作,Cooperative,团队,协作"
+is_pinned = false
+
+[[tags]]
+name = "半合作"
+emoji = "🤝"
+keywords = "半合作,Semi-Cooperative,合作竞争"
+is_pinned = false
+
+# 游戏人数
+[[tags]]
+name = "单人游戏"
+emoji = "1️⃣"
+keywords = "1人,单人,Solo,单人游戏"
+is_pinned = false
+
+[[tags]]
+name = "双人游戏"
+emoji = "2️⃣"
+keywords = "2人,双人,Two Player,对战"
+is_pinned = false
+
+[[tags]]
+name = "3-4人"
+emoji = "👥"
+keywords = "3人,4人,3-4人,小团体"
+is_pinned = false
+
+[[tags]]
+name = "5-6人"
+emoji = "👥"
+keywords = "5人,6人,5-6人,中团体"
+is_pinned = false
+
+[[tags]]
+name = "7+人"
+emoji = "👥"
+keywords = "7人,8人,多人,大团体,聚会"
+is_pinned = false
+
+# 心情
+[[tags]]
+name = "轻松"
+emoji = "😊"
+keywords = "轻松,休闲,放松,愉快"
+is_pinned = false
+
+[[tags]]
+name = "紧张"
+emoji = "😰"
+keywords = "紧张,刺激,压力,挑战"
+is_pinned = false
+
+[[tags]]
+name = "欢乐"
+emoji = "😂"
+keywords = "欢乐,搞笑,幽默,开心"
+is_pinned = false
+
+[[tags]]
+name = "严肃"
+emoji = "🤔"
+keywords = "严肃,认真,思考,策略"
+is_pinned = false
+
+[[tags]]
+name = "刺激"
+emoji = "🎢"
+keywords = "刺激,兴奋,快节奏,激烈"
+is_pinned = false
+
+[[tags]]
+name = "放松"
+emoji = "🌴"
+keywords = "放松,休闲,轻松,慢节奏"
+is_pinned = false
+
+[[tags]]
+name = "挑战"
+emoji = "💪"
+keywords = "挑战,困难,高难度,竞技"
+is_pinned = false
+
+[[tags]]
+name = "休闲"
+emoji = "☕"
+keywords = "休闲,轻松,简单,入门"
+is_pinned = false
+
+# 天气
+[[tags]]
+name = "晴天"
+emoji = "☀️"
+keywords = "晴天,阳光,户外,好天气"
+is_pinned = false
+
+[[tags]]
+name = "雨天"
+emoji = "🌧️"
+keywords = "雨天,下雨,室内,阴天"
+is_pinned = false
+
+[[tags]]
+name = "室内"
+emoji = "🏠"
+keywords = "室内,家里,室内游戏"
+is_pinned = false
+
+[[tags]]
+name = "户外"
+emoji = "🌳"
+keywords = "户外,室外,户外游戏,公园"
+is_pinned = false
+
+[[tags]]
+name = "雪天"
+emoji = "❄️"
+keywords = "雪天,下雪,冬天,寒冷"
+is_pinned = false
+
+[[tags]]
+name = "阴天"
+emoji = "☁️"
+keywords = "阴天,多云,室内"
+is_pinned = false
+
+# 风格
+[[tags]]
+name = "科幻"
+emoji = "🚀"
+keywords = "科幻,未来,太空,科技"
+is_pinned = false
+
+[[tags]]
+name = "奇幻"
+emoji = "🧙"
+keywords = "奇幻,魔法,幻想,中世纪"
+is_pinned = false
+
+[[tags]]
+name = "历史"
+emoji = "📜"
+keywords = "历史,古代,历史背景,真实"
+is_pinned = false
+
+[[tags]]
+name = "现代"
+emoji = "🏙️"
+keywords = "现代,当代,现实,都市"
+is_pinned = false
+
+[[tags]]
+name = "恐怖"
+emoji = "👻"
+keywords = "恐怖,惊悚,恐怖,悬疑"
+is_pinned = false
+
+[[tags]]
+name = "西部"
+emoji = "🤠"
+keywords = "西部,牛仔,美国西部,荒野"
+is_pinned = false
+
+[[tags]]
+name = "战争"
+emoji = "⚔️"
+keywords = "战争,军事,战斗,策略"
+is_pinned = false
+
+[[tags]]
+name = "冒险"
+emoji = "🗺️"
+keywords = "冒险,探索,旅行,发现"
+is_pinned = false
+
+[[tags]]
+name = "动物"
+emoji = "🐾"
+keywords = "动物,自然,生物,可爱"
+is_pinned = false
+
+[[tags]]
+name = "动漫"
+emoji = "🎌"
+keywords = "动漫,二次元,日本,动画"
+is_pinned = false
+
+[[tags]]
+name = "超级英雄"
+emoji = "🦸"
+keywords = "超级英雄,漫画,英雄,能力"
+is_pinned = false
+
+[[tags]]
+name = "僵尸"
+emoji = "🧟"
+keywords = "僵尸,末日,生存,恐怖"
+is_pinned = false
+
+# 题材叙事
+[[tags]]
+name = "美少女"
+emoji = "💖"
+keywords = "美少女,萌,可爱,少女"
+is_pinned = false
+
+[[tags]]
+name = "二次元"
+emoji = "🎨"
+keywords = "二次元,动漫,ACG,日系"
+is_pinned = false
+
+[[tags]]
+name = "恐怖游戏"
+emoji = "😱"
+keywords = "恐怖游戏,惊悚游戏,恐怖,悬疑"
+is_pinned = false
+
+[[tags]]
+name = "剧本"
+emoji = "📖"
+keywords = "剧本,剧本杀,推理,剧情"
+is_pinned = false
+
+[[tags]]
+name = "角色"
+emoji = "👤"
+keywords = "角色,角色扮演,人物,扮演"
+is_pinned = false
+
+[[tags]]
+name = "亡灵"
+emoji = "💀"
+keywords = "亡灵,不死,骷髅,死亡"
+is_pinned = false
+
+[[tags]]
+name = "鬼怪"
+emoji = "👹"
+keywords = "鬼怪,妖怪,灵异,超自然"
+is_pinned = false
+
+[[tags]]
+name = "神话"
+emoji = "🏛️"
+keywords = "神话,传说,神明,古典"
+is_pinned = false
+
+[[tags]]
+name = "赛博朋克"
+emoji = "🤖"
+keywords = "赛博朋克,Cyberpunk,未来,科技"
+is_pinned = false
+
+[[tags]]
+name = "蒸汽朋克"
+emoji = "⚙️"
+keywords = "蒸汽朋克,Steampunk,维多利亚,机械"
+is_pinned = false
+
+[[tags]]
+name = "后启示录"
+emoji = "🌆"
+keywords = "后启示录,末日,废土,生存"
+is_pinned = false
+
+[[tags]]
+name = "中世纪"
+emoji = "🏰"
+keywords = "中世纪,骑士,城堡,欧洲"
+is_pinned = false
+
+[[tags]]
+name = "东方"
+emoji = "🏮"
+keywords = "东方,亚洲,中国,日本,和风"
+is_pinned = false
+
+[[tags]]
+name = "都市"
+emoji = "🌃"
+keywords = "都市,城市,现代都市,都市生活"
+is_pinned = false
+
+[[tags]]
+name = "校园"
+emoji = "🎓"
+keywords = "校园,学校,青春,学生"
+is_pinned = false
+
+[[tags]]
+name = "医院"
+emoji = "🏥"
+keywords = "医院,医疗,医生,医疗题材"
+is_pinned = false
+
+[[tags]]
+name = "监狱"
+emoji = "🔒"
+keywords = "监狱,越狱,犯罪,监禁"
+is_pinned = false
+
+[[tags]]
+name = "太空"
+emoji = "🛸"
+keywords = "太空,宇宙,星际,飞船"
+is_pinned = false
+
+[[tags]]
+name = "海洋"
+emoji = "🌊"
+keywords = "海洋,航海,海盗,船只"
+is_pinned = false
+
+[[tags]]
+name = "森林"
+emoji = "🌲"
+keywords = "森林,自然,野外,探险"
+is_pinned = false
+
+[[tags]]
+name = "沙漠"
+emoji = "🏜️"
+keywords = "沙漠,干旱,荒野,西部"
+is_pinned = false
+
+[[tags]]
+name = "吸血鬼"
+emoji = "🧛"
+keywords = "吸血鬼,血族,暗黑,哥特"
+is_pinned = false
+
+[[tags]]
+name = "狼人"
+emoji = "🐺"
+keywords = "狼人,变形,满月,兽人"
+is_pinned = false
+
+[[tags]]
+name = "龙"
+emoji = "🐉"
+keywords = "龙,巨龙,传说,魔法"
+is_pinned = false
+
+[[tags]]
+name = "魔法"
+emoji = "✨"
+keywords = "魔法,法术,巫师,超自然"
+is_pinned = false
+
+[[tags]]
+name = "超能力"
+emoji = "⚡"
+keywords = "超能力,异能,超自然,能力"
+is_pinned = false
