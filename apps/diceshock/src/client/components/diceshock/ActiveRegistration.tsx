@@ -1,6 +1,7 @@
 import {
   EyeIcon,
   PlusIcon,
+  ShareNetworkIcon,
   SignInIcon,
   XIcon,
 } from "@phosphor-icons/react/dist/ssr";
@@ -23,11 +24,13 @@ type Registration = Awaited<
 type ActiveRegistrationProps = {
   activeId: string;
   allowWatching?: boolean;
+  isGame?: boolean;
 };
 
 export default function ActiveRegistration({
   activeId,
   allowWatching = false,
+  isGame = false,
 }: ActiveRegistrationProps) {
   const { session } = useAuth();
   const messages = useMessages();
@@ -35,7 +38,6 @@ export default function ActiveRegistration({
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState<string | null>(null);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   const userId = session?.user?.id;
 
@@ -55,7 +57,6 @@ export default function ActiveRegistration({
         ]);
         setTeams(teamsData);
         setRegistrations(registrationsData);
-        setIsInitialLoad(false);
       } catch (error) {
         console.error("获取报名信息失败", error);
       } finally {
@@ -119,6 +120,35 @@ export default function ActiveRegistration({
     }
   }, [currentRegistration, messages, fetchData]);
 
+  const handleShare = useCallback(async () => {
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "约局报名",
+          text: "一起来参加这个约局吧！",
+          url,
+        });
+        messages.success("分享成功");
+      } else {
+        // 降级方案：复制链接到剪贴板
+        await navigator.clipboard.writeText(url);
+        messages.success("链接已复制到剪贴板");
+      }
+    } catch (error) {
+      // 用户取消分享或复制失败
+      if (error instanceof Error && error.name !== "AbortError") {
+        // 如果分享失败，尝试复制
+        try {
+          await navigator.clipboard.writeText(url);
+          messages.success("链接已复制到剪贴板");
+        } catch {
+          messages.error("分享失败，请手动复制链接");
+        }
+      }
+    }
+  }, [messages]);
+
   if (loading) {
     return (
       <div className="flex justify-center py-4">
@@ -145,6 +175,20 @@ export default function ActiveRegistration({
 
   return (
     <div className="mb-8">
+      {/* 约局标题和分享按钮 */}
+      {isGame && (
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-bold">报名参加</h2>
+          <button
+            className="btn btn-sm btn-outline"
+            onClick={handleShare}
+            title="分享名片"
+          >
+            <ShareNetworkIcon className="size-4" />
+            分享名片
+          </button>
+        </div>
+      )}
       {/* 队伍和观望卡片列表 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         {/* 队伍卡片 */}
@@ -162,14 +206,16 @@ export default function ActiveRegistration({
             >
               <div className="card-body p-4">
                 <div className="flex items-start justify-between mb-2">
-                  <h3 className="card-title text-lg">{team.name}</h3>
+                  <h3 className="card-title text-lg">
+                    {isGame ? "参加约局" : team.name || "队伍"}
+                  </h3>
                   {isCurrentTeam && (
                     <span className="badge badge-primary badge-sm">已加入</span>
                   )}
                 </div>
-                {team.description && (
+                {(team.description || isGame) && (
                   <p className="text-sm text-base-content/70 mb-3">
-                    {team.description}
+                    {isGame ? "报名参加并分享名片" : team.description}
                   </p>
                 )}
                 <div className="flex items-center justify-between">

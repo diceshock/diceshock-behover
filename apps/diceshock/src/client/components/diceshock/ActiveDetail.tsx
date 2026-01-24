@@ -386,6 +386,7 @@ export default function ActiveDetail({
           <ActiveRegistration
             activeId={activeId}
             allowWatching={active.allow_watching ?? false}
+            isGame={(active as any)?.is_game ?? false}
           />
         )}
 
