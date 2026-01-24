@@ -78,7 +78,7 @@ export default function AvatarMenu() {
         </ul>
 
         <div className="w-full flex items-center justify-around gap-2 border-t border-base-content/40 pt-2">
-          <button className="btn btn-ghost rounded-full">
+          <button disabled className="btn btn-ghost rounded-full">
             <ScanIcon weight="fill" className="size-5" />
 
             <span>二维码</span>

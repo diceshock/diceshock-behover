@@ -3,6 +3,7 @@ import {
   PackageIcon,
   SignOutIcon,
   SignpostIcon,
+  TagIcon,
   UsersIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import {
@@ -40,6 +41,13 @@ function RouteComponent() {
             <Link to="/dash/acitve" className="gap-12">
               <SignpostIcon className="size-6" />
               活动
+            </Link>
+          </li>
+
+          <li>
+            <Link to="/dash/game-tags" className="gap-12">
+              <TagIcon className="size-6" />
+              约局标签
             </Link>
           </li>
 

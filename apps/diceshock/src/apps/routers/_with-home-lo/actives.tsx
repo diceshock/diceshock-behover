@@ -49,9 +49,13 @@ function RouteComponent() {
   const gameDialogRef = useRef<HTMLDialogElement>(null);
   const [gameForm, setGameForm] = useState({
     event_date: "",
-    max_participants: "",
+    max_participants: "", // 队伍人数上限
     selectedBoardGames: [] as number[], // gstone_id 列表
+    selectedTags: [] as string[], // 约局标签 ID 列表
   });
+  const [gameTags, setGameTags] = useState<
+    Array<{ id: string; title: { emoji: string; tx: string } | null }>
+  >([]);
   const [gameBoardGames, setGameBoardGames] = useState<
     Array<{
       id: string;
@@ -117,6 +121,21 @@ function RouteComponent() {
   useEffect(() => {
     fetchTags();
   }, [fetchTags]);
+
+  // 获取约局标签
+  const fetchGameTags = useCallback(async () => {
+    try {
+      // 获取所有标签（管理页面创建的所有标签都可以用于约局）
+      const allTags = await trpcClientPublic.activeTags.getGameTags.query();
+      setGameTags(allTags);
+    } catch (error) {
+      console.error("获取约局标签失败", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchGameTags();
+  }, [fetchGameTags]);
 
   useEffect(() => {
     fetchActives();
@@ -525,6 +544,8 @@ function RouteComponent() {
           gameForm.selectedBoardGames.length > 0
             ? gameForm.selectedBoardGames
             : undefined,
+        tag_ids:
+          gameForm.selectedTags.length > 0 ? gameForm.selectedTags : undefined,
       });
       msg.success("约局创建成功");
       gameDialogRef.current?.close();
@@ -532,6 +553,7 @@ function RouteComponent() {
         event_date: "",
         max_participants: "",
         selectedBoardGames: [],
+        selectedTags: [],
       });
       setGameBoardGames([]);
       setGameSearchQuery("");
@@ -820,10 +842,8 @@ function RouteComponent() {
                             <div className="text-sm text-base-content/70 mb-2">
                               <div className="mb-1">
                                 <span className="font-semibold">发起者：</span>
-                                <span className="font-mono text-xs">
-                                  {gameParticipants.get(active.id)
-                                    ?.creator_id ||
-                                    (active as any).creator_id ||
+                                <span>
+                                  {creatorInfo.get(active.id)?.nickname ||
                                     "未知"}
                                 </span>
                               </div>
@@ -870,12 +890,8 @@ function RouteComponent() {
                             {/* 约局发起者标签（user图标）- 仅对约局显示 */}
                             {(active as any).is_game && (
                               <span className="badge badge-sm gap-1 badge-accent inline-flex items-center whitespace-nowrap">
-                                <span>👤</span>
-                                发起者:{" "}
-                                {creatorInfo.get(active.id)?.nickname ||
-                                  gameParticipants.get(active.id)?.creator_id ||
-                                  (active as any).creator_id ||
-                                  "未知"}
+                                <span>👤</span>{" "}
+                                {creatorInfo.get(active.id)?.nickname || "未知"}
                               </span>
                             )}
                             {/* 其他标签 */}
@@ -901,14 +917,9 @@ function RouteComponent() {
                                   const stats = registrationStats.get(
                                     active.id,
                                   );
-                                  // 约局显示人数上限
+                                  // 约局显示当前人数（通过队伍计算）
                                   if ((active as any).is_game) {
-                                    const maxParticipants = (active as any)
-                                      .max_participants;
                                     const current = stats?.current || 0;
-                                    if (maxParticipants) {
-                                      return `${current}/${maxParticipants}`;
-                                    }
                                     return `${current}+`;
                                   }
                                   if (stats) {
@@ -974,10 +985,10 @@ function RouteComponent() {
 
       {/* 约局创建弹窗 */}
       <dialog ref={gameDialogRef} className="modal">
-        <div className="modal-box max-w-2xl">
-          <h3 className="font-bold text-lg mb-4">创建约局</h3>
+        <div className="modal-box max-w-2xl max-h-[90vh] flex flex-col">
+          <h3 className="font-bold text-lg mb-4 shrink-0">创建约局</h3>
 
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 overflow-y-auto flex-1 min-h-0">
             {/* 时间选择 */}
             <div>
               <label className="label">
@@ -1016,6 +1027,44 @@ function RouteComponent() {
               />
             </div>
 
+            {/* 约局标签选择 */}
+            <div>
+              <label className="label">
+                <span className="label-text">选择约局标签（可选）</span>
+              </label>
+              {gameTags.length === 0 ? (
+                <div className="alert alert-warning">
+                  <span>暂无约局标签，请先在后台管理页面添加约局标签</span>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {gameTags.map((tag) => {
+                    const isSelected = gameForm.selectedTags.includes(tag.id);
+                    return (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        onClick={() => {
+                          setGameForm((prev) => ({
+                            ...prev,
+                            selectedTags: isSelected
+                              ? prev.selectedTags.filter((id) => id !== tag.id)
+                              : [...prev.selectedTags, tag.id],
+                          }));
+                        }}
+                        className={`badge badge-lg gap-2 ${
+                          isSelected ? "badge-primary" : "badge-outline"
+                        }`}
+                      >
+                        <span>{tag.title?.emoji || "🎲"}</span>
+                        {tag.title?.tx || "约局"}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             {/* 桌游搜索和选择 */}
             <div>
               <label className="label">
@@ -1034,21 +1083,22 @@ function RouteComponent() {
 
               {/* 搜索结果 */}
               {gameSearchQuery && gameSearchResults.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4 max-h-48 overflow-y-auto">
-                  {gameSearchResults.map((game) => {
-                    const gameContent = game.content;
-                    if (!gameContent || !game.gstone_id) return null;
+                <div className="mb-4 overflow-x-auto">
+                  <div className="flex gap-2 px-1" style={{ width: 'max-content' }}>
+                    {gameSearchResults.map((game) => {
+                      const gameContent = game.content;
+                      if (!gameContent || !game.gstone_id) return null;
 
-                    const isSelected = gameForm.selectedBoardGames.includes(
-                      game.gstone_id,
-                    );
+                      const isSelected = gameForm.selectedBoardGames.includes(
+                        game.gstone_id,
+                      );
 
-                    return (
-                      <div
-                        key={game.id}
-                        className={`card bg-base-200 shadow-sm overflow-hidden cursor-pointer ${
-                          isSelected ? "ring-2 ring-primary" : ""
-                        }`}
+                      return (
+                        <div
+                          key={game.id}
+                          className={`card bg-base-200 shadow-sm overflow-hidden cursor-pointer w-32 shrink-0 ${
+                            isSelected ? "ring-2 ring-primary" : ""
+                          }`}
                         onClick={() => {
                           const gstoneId = game.gstone_id!;
                           setGameForm((prev) => ({
@@ -1093,8 +1143,9 @@ function RouteComponent() {
                           </h4>
                         </div>
                       </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
@@ -1146,7 +1197,7 @@ function RouteComponent() {
             </div>
           </div>
 
-          <div className="modal-action">
+          <div className="modal-action shrink-0">
             <form method="dialog">
               <button className="btn btn-ghost">取消</button>
             </form>

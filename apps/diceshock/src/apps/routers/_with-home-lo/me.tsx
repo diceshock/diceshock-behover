@@ -60,12 +60,16 @@ function RouteComponent() {
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
 
-      if (!nickname.trim()) {
+      const trimmedNickname =
+        typeof nickname === "string" ? nickname.trim() : "";
+      if (!trimmedNickname) {
         messages.error("昵称不能为空");
         return;
       }
 
-      if (nickname.trim() === userInfo?.nickname) {
+      const currentNickname =
+        typeof userInfo?.nickname === "string" ? userInfo.nickname : "";
+      if (trimmedNickname === currentNickname) {
         setIsEditing(false);
         return;
       }
@@ -74,15 +78,19 @@ function RouteComponent() {
 
       try {
         const result = await trpcClientPublic.auth.updateUserInfo.mutate({
-          nickname: nickname.trim(),
+          nickname: trimmedNickname,
         });
 
         if (result.success) {
           if ("data" in result && result.data) {
-            const updatedNickname = result.data.nickname;
+            const updatedNickname =
+              typeof result.data.nickname === "string"
+                ? result.data.nickname
+                : "";
             setUserInfoIm((draft) => {
               if (!draft) return undefined;
-              draft.nickname = updatedNickname;
+              (draft as unknown as { nickname: string }).nickname =
+                updatedNickname;
               return draft;
             });
             messages.success("昵称修改成功");
@@ -108,7 +116,9 @@ function RouteComponent() {
   const handleCopyUid = useCallback(async () => {
     if (!userInfo?.uid) return;
 
-    const success = await copyToClipboard(userInfo.uid);
+    const uid =
+      typeof userInfo.uid === "string" ? userInfo.uid : String(userInfo.uid);
+    const success = await copyToClipboard(uid);
     if (success) {
       messages.success("复制成功");
     } else {
@@ -134,7 +144,8 @@ function RouteComponent() {
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
 
-      if (!phone.trim()) {
+      const trimmedPhone = typeof phone === "string" ? phone.trim() : "";
+      if (!trimmedPhone) {
         messages.error("请输入手机号");
         return;
       }
@@ -148,16 +159,22 @@ function RouteComponent() {
 
       try {
         const result = await trpcClientPublic.auth.updateUserInfo.mutate({
-          phone: phone.trim(),
+          phone: trimmedPhone,
           code: smsForm.code,
         });
 
         if (result.success) {
           if ("data" in result && result.data) {
-            const updatedPhone = result.data.phone;
+            const updatedPhone =
+              typeof result.data.phone === "string"
+                ? result.data.phone
+                : result.data.phone === null
+                  ? null
+                  : "";
             setUserInfoIm((draft) => {
               if (!draft) return undefined;
-              draft.phone = updatedPhone;
+              (draft as unknown as { phone: string | null }).phone =
+                updatedPhone;
               return draft;
             });
             messages.success("手机号修改成功");
@@ -194,7 +211,7 @@ function RouteComponent() {
             </button>
           </h1>
           <h2 className="text-sm text-center text-base-content/50 flex items-center gap-1">
-            {userInfo?.uid}
+            uid: {userInfo?.uid}
             <button
               className="btn btn-ghost btn-xs btn-circle"
               onClick={handleCopyUid}
@@ -287,7 +304,10 @@ function RouteComponent() {
               <button
                 type="submit"
                 className="btn btn-primary btn-sm"
-                disabled={isLoading || !nickname.trim()}
+                disabled={
+                  isLoading ||
+                  !(typeof nickname === "string" && nickname.trim())
+                }
               >
                 {isLoading ? "保存中..." : "确认"}
               </button>
@@ -397,7 +417,7 @@ function RouteComponent() {
                 className="btn btn-primary btn-sm"
                 disabled={
                   isLoadingPhone ||
-                  !phone.trim() ||
+                  !(typeof phone === "string" && phone.trim()) ||
                   !smsForm.code ||
                   smsForm.code.length !== 6
                 }

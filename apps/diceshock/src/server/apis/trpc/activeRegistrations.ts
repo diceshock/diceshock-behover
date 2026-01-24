@@ -69,6 +69,11 @@ const createTeam = publicProcedure
       throw new Error("活动不存在");
     }
 
+    // 约局只能有一个队伍，不允许创建新队伍
+    if (active.is_game) {
+      throw new Error("约局只能有一个队伍，不能创建新队伍");
+    }
+
     const [team] = await tdb
       .insert(activeTeamsTable)
       .values({
@@ -115,6 +120,17 @@ const deleteTeam = publicProcedure
 
     if (!teamToDelete) {
       throw new Error("队伍不存在");
+    }
+
+    // 检查是否是约局
+    const active = await tdb.query.activesTable.findFirst({
+      where: (a, { eq }) => eq(a.id, teamToDelete.active_id),
+      columns: { is_game: true },
+    });
+
+    // 约局不允许删除队伍
+    if (active?.is_game) {
+      throw new Error("约局只能有一个队伍，不能删除");
     }
 
     // 获取该活动的所有队伍，按创建时间排序

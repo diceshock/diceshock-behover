@@ -10,10 +10,11 @@ import {
 import { createFileRoute, Link } from "@tanstack/react-router";
 import MDEditor from "@uiw/react-md-editor";
 import clsx from "clsx";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import "@uiw/react-md-editor/markdown-editor.css";
 import type { BoardGame } from "@lib/utils";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import { EmojiPicker } from "@/client/components/diceshock/EmojiPicker";
 import trpcClientPublic, { trpcClientDash } from "@/shared/utils/trpc";
 
 type TagList = Awaited<ReturnType<typeof trpcClientDash.activeTags.get.query>>;
@@ -45,6 +46,9 @@ function RouteComponent() {
     ReturnType<typeof trpcClientDash.active.getById.query>
   > | null>(null);
   const [tags, setTags] = useState<TagItem[]>([]);
+  const [gameTags, setGameTags] = useState<
+    Array<{ id: string; title: { emoji: string; tx: string } | null }>
+  >([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [tagDraft, setTagDraft] = useState({ emoji: "", tx: "" });
@@ -94,6 +98,20 @@ function RouteComponent() {
       console.error("获取标签失败", error);
     }
   }, []);
+
+  const fetchGameTags = useCallback(async () => {
+    try {
+      // 获取所有标签（管理页面创建的所有标签都可以用于约局）
+      const allTags = await trpcClientDash.activeTags.getGameTags.query();
+      setGameTags(allTags);
+    } catch (error) {
+      console.error("获取约局标签失败", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchGameTags();
+  }, [fetchGameTags]);
 
   const fetchActive = useCallback(async () => {
     if (!id) {
@@ -493,53 +511,85 @@ function RouteComponent() {
                   }}
                 />
               </label>
-              <label className="label cursor-pointer gap-2">
-                <span className="label-text text-xs sm:text-sm whitespace-nowrap">
-                  开启报名
-                </span>
-                <input
-                  type="checkbox"
-                  className="toggle toggle-sm toggle-primary"
-                  checked={enableRegistration}
-                  disabled={isDeleted}
-                  onChange={async (evt) => {
-                    const newValue = evt.target.checked;
-                    setEnableRegistration(newValue);
-                    // 如果关闭报名，自动关闭观望
-                    if (!newValue && allowWatching) {
-                      setAllowWatching(false);
-                      await handleSaveStatus({
-                        enable_registration: newValue,
-                        allow_watching: false,
-                      });
-                    } else {
-                      await handleSaveStatus({
-                        enable_registration: newValue,
-                      });
-                    }
-                  }}
-                />
-              </label>
-              <label
-                className={`label gap-2 ${!enableRegistration || isDeleted ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-              >
-                <span className="label-text text-xs sm:text-sm whitespace-nowrap">
-                  允许观望
-                </span>
-                <input
-                  type="checkbox"
-                  className="toggle toggle-sm toggle-secondary"
-                  checked={allowWatching}
-                  disabled={!enableRegistration || isDeleted}
-                  onChange={async (evt) => {
-                    const newValue = evt.target.checked;
-                    setAllowWatching(newValue);
-                    await handleSaveStatus({
-                      allow_watching: newValue,
-                    });
-                  }}
-                />
-              </label>
+              {/* 约局始终开启报名和观望，不允许关闭 */}
+              {(active as any)?.is_game ? (
+                <>
+                  <label className="label gap-2 opacity-50 cursor-not-allowed">
+                    <span className="label-text text-xs sm:text-sm whitespace-nowrap">
+                      开启报名
+                    </span>
+                    <input
+                      type="checkbox"
+                      className="toggle toggle-sm toggle-primary"
+                      checked={true}
+                      disabled={true}
+                      readOnly
+                    />
+                  </label>
+                  <label className="label gap-2 opacity-50 cursor-not-allowed">
+                    <span className="label-text text-xs sm:text-sm whitespace-nowrap">
+                      允许观望
+                    </span>
+                    <input
+                      type="checkbox"
+                      className="toggle toggle-sm toggle-secondary"
+                      checked={true}
+                      disabled={true}
+                      readOnly
+                    />
+                  </label>
+                </>
+              ) : (
+                <>
+                  <label className="label cursor-pointer gap-2">
+                    <span className="label-text text-xs sm:text-sm whitespace-nowrap">
+                      开启报名
+                    </span>
+                    <input
+                      type="checkbox"
+                      className="toggle toggle-sm toggle-primary"
+                      checked={enableRegistration}
+                      disabled={isDeleted}
+                      onChange={async (evt) => {
+                        const newValue = evt.target.checked;
+                        setEnableRegistration(newValue);
+                        // 如果关闭报名，自动关闭观望
+                        if (!newValue && allowWatching) {
+                          setAllowWatching(false);
+                          await handleSaveStatus({
+                            enable_registration: newValue,
+                            allow_watching: false,
+                          });
+                        } else {
+                          await handleSaveStatus({
+                            enable_registration: newValue,
+                          });
+                        }
+                      }}
+                    />
+                  </label>
+                  <label
+                    className={`label gap-2 ${!enableRegistration || isDeleted ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                  >
+                    <span className="label-text text-xs sm:text-sm whitespace-nowrap">
+                      允许观望
+                    </span>
+                    <input
+                      type="checkbox"
+                      className="toggle toggle-sm toggle-secondary"
+                      checked={allowWatching}
+                      disabled={!enableRegistration || isDeleted}
+                      onChange={async (evt) => {
+                        const newValue = evt.target.checked;
+                        setAllowWatching(newValue);
+                        await handleSaveStatus({
+                          allow_watching: newValue,
+                        });
+                      }}
+                    />
+                  </label>
+                </>
+              )}
             </div>
 
             {/* 右侧：预览和保存按钮（桌面端） */}
@@ -675,60 +725,98 @@ function RouteComponent() {
                 <div className="card-body">
                   <h2 className="card-title">标签</h2>
                   <div className="flex flex-col gap-4">
-                    <div className="flex flex-wrap gap-2">
-                      {availableTags.map((tag) => {
-                        const title = tagTitle(tag.title);
-                        const checked = selectedTags.includes(tag.id);
-                        return (
-                          <label
-                            key={tag.id}
-                            className="badge badge-lg gap-2 cursor-pointer"
+                    {/* 如果是约局，只显示约局标签，不能创建新标签 */}
+                    {(active as any)?.is_game ? (
+                      <>
+                        <div className="alert alert-info">
+                          <span>约局只能使用后台管理的约局标签</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {gameTags.map((tag) => {
+                            const title = tagTitle(tag.title);
+                            const checked = selectedTags.includes(tag.id);
+                            return (
+                              <label
+                                key={tag.id}
+                                className="badge badge-lg gap-2 cursor-pointer"
+                              >
+                                <input
+                                  type="checkbox"
+                                  className="checkbox checkbox-sm"
+                                  checked={checked}
+                                  onChange={() =>
+                                    setSelectedTags((prev) =>
+                                      checked
+                                        ? prev.filter((id) => id !== tag.id)
+                                        : [...prev, tag.id],
+                                    )
+                                  }
+                                />
+                                <span>{title.emoji}</span>
+                                {title.tx}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex flex-wrap gap-2">
+                          {availableTags.map((tag) => {
+                            const title = tagTitle(tag.title);
+                            const checked = selectedTags.includes(tag.id);
+                            return (
+                              <label
+                                key={tag.id}
+                                className="badge badge-lg gap-2 cursor-pointer"
+                              >
+                                <input
+                                  type="checkbox"
+                                  className="checkbox checkbox-sm"
+                                  checked={checked}
+                                  onChange={() =>
+                                    setSelectedTags((prev) =>
+                                      checked
+                                        ? prev.filter((id) => id !== tag.id)
+                                        : [...prev, tag.id],
+                                    )
+                                  }
+                                />
+                                <span>{title.emoji}</span>
+                                {title.tx}
+                              </label>
+                            );
+                          })}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <EmojiPicker
+                            value={tagDraft.emoji}
+                            onChange={(emoji) =>
+                              setTagDraft((prev) => ({ ...prev, emoji }))
+                            }
+                          />
+                          <input
+                            className="input input-bordered input-sm flex-1 min-w-40"
+                            placeholder="标签名称"
+                            value={tagDraft.tx}
+                            onChange={(evt) =>
+                              setTagDraft((prev) => ({
+                                ...prev,
+                                tx: evt.target.value,
+                              }))
+                            }
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-secondary"
+                            onClick={handleCreateTag}
                           >
-                            <input
-                              type="checkbox"
-                              className="checkbox checkbox-sm"
-                              checked={checked}
-                              onChange={() =>
-                                setSelectedTags((prev) =>
-                                  checked
-                                    ? prev.filter((id) => id !== tag.id)
-                                    : [...prev, tag.id],
-                                )
-                              }
-                            />
-                            <span>{title.emoji}</span>
-                            {title.tx}
-                          </label>
-                        );
-                      })}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <EmojiPicker
-                        value={tagDraft.emoji}
-                        onChange={(emoji) =>
-                          setTagDraft((prev) => ({ ...prev, emoji }))
-                        }
-                      />
-                      <input
-                        className="input input-bordered input-sm flex-1 min-w-40"
-                        placeholder="标签名称"
-                        value={tagDraft.tx}
-                        onChange={(evt) =>
-                          setTagDraft((prev) => ({
-                            ...prev,
-                            tx: evt.target.value,
-                          }))
-                        }
-                      />
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-secondary"
-                        onClick={handleCreateTag}
-                      >
-                        新建标签
-                        <PlusIcon className="size-4" />
-                      </button>
-                    </div>
+                            新建标签
+                            <PlusIcon className="size-4" />
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -943,138 +1031,6 @@ function RouteComponent() {
   );
 }
 
-type EmojiPickerProps = {
-  value: string;
-  onChange: (value: string) => void;
-};
-
-function EmojiPicker({ value, onChange }: EmojiPickerProps) {
-  const [inputValue, setInputValue] = useState(value);
-  const selectRef = useRef<HTMLSelectElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const commonEmojis = [
-    "🏷️",
-    "📝",
-    "📌",
-    "⭐",
-    "🔥",
-    "💡",
-    "🎯",
-    "✅",
-    "❌",
-    "⚠️",
-    "📅",
-    "📊",
-    "📈",
-    "📉",
-    "🎉",
-    "🎊",
-    "🎁",
-    "🎈",
-    "🎀",
-    "🎪",
-    "🏠",
-    "🏢",
-    "🏫",
-    "🏥",
-    "🏪",
-    "🏨",
-    "🏰",
-    "⛪",
-    "🕌",
-    "🕍",
-    "🚗",
-    "🚕",
-    "🚙",
-    "🚌",
-    "🚎",
-    "🏎️",
-    "🚓",
-    "🚑",
-    "🚒",
-    "🚐",
-    "😀",
-    "😃",
-    "😄",
-    "😁",
-    "😆",
-    "😅",
-    "🤣",
-    "😂",
-    "🙂",
-    "🙃",
-    "😉",
-    "😊",
-    "😇",
-    "🥰",
-    "😍",
-    "🤩",
-    "😘",
-    "😗",
-    "😚",
-    "😙",
-    "🥳",
-    "🤗",
-    "🤔",
-    "🤨",
-    "😐",
-    "😑",
-    "😶",
-    "🙄",
-    "😏",
-    "😣",
-  ];
-
-  useEffect(() => {
-    setInputValue(value);
-  }, [value]);
-
-  const handleInputChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = evt.target.value;
-    setInputValue(newValue);
-    onChange(newValue);
-  };
-
-  const handleSelectChange = (evt: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedValue = evt.target.value;
-    if (selectedValue && selectedValue !== "") {
-      onChange(selectedValue);
-      setInputValue(selectedValue);
-      if (selectRef.current) {
-        selectRef.current.value = "";
-      }
-    }
-  };
-
-  return (
-    <div className="relative flex gap-1">
-      <input
-        ref={inputRef}
-        type="text"
-        className="input input-bordered input-sm w-20"
-        placeholder="Emoji"
-        value={inputValue}
-        onChange={handleInputChange}
-      />
-      <select
-        ref={selectRef}
-        defaultValue=""
-        className="select select-bordered select-sm w-20"
-        onChange={handleSelectChange}
-      >
-        <option value="" disabled>
-          😀
-        </option>
-        {commonEmojis.map((emoji, idx) => (
-          <option key={idx} value={emoji}>
-            {emoji}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
 
 // 报名管理 Tab 组件
 type RegistrationsTabProps = {
@@ -1089,6 +1045,7 @@ type RegistrationsTabProps = {
   >;
   onRefresh: () => void;
   onUserClick: (userId: string) => void;
+  isGame?: boolean;
 };
 
 function RegistrationsTab({
@@ -1097,6 +1054,7 @@ function RegistrationsTab({
   registrations,
   onRefresh,
   onUserClick,
+  isGame = false,
 }: RegistrationsTabProps) {
   const msg = useMsg();
   const [teamForm, setTeamForm] = useState({
@@ -1106,6 +1064,21 @@ function RegistrationsTab({
   });
   const [editingTeam, setEditingTeam] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  
+  // 约局的唯一队伍
+  const gameTeam = isGame && teams.length > 0 ? teams[0] : null;
+  const [gameMaxParticipants, setGameMaxParticipants] = useState<string>(
+    gameTeam?.max_participants ? String(gameTeam.max_participants) : "",
+  );
+
+  // 当队伍数据更新时，更新人数上限
+  useEffect(() => {
+    if (isGame && gameTeam) {
+      setGameMaxParticipants(
+        gameTeam.max_participants ? String(gameTeam.max_participants) : "",
+      );
+    }
+  }, [isGame, gameTeam]);
 
   const handleCreateTeam = async () => {
     if (!teamForm.name.trim()) {
@@ -1188,6 +1161,31 @@ function RegistrationsTab({
   const watchingCount = registrations.filter((r) => r.is_watching).length;
   const participatingCount = registrations.filter((r) => !r.is_watching).length;
 
+  // 更新约局队伍人数上限
+  const handleUpdateGameTeamMaxParticipants = async () => {
+    if (!isGame || !gameTeam) return;
+
+    const maxParticipants = gameMaxParticipants.trim()
+      ? parseInt(gameMaxParticipants, 10)
+      : null;
+
+    if (maxParticipants !== null && maxParticipants < 1) {
+      msg.warning("人数上限必须大于0");
+      return;
+    }
+
+    try {
+      await trpcClientDash.activeRegistrations.teams.update.mutate({
+        id: gameTeam.id,
+        max_participants: maxParticipants,
+      });
+      msg.success("人数上限更新成功");
+      onRefresh();
+    } catch (error) {
+      msg.error(error instanceof Error ? error.message : "更新人数上限失败");
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4">
       {/* 统计信息 */}
@@ -1206,14 +1204,45 @@ function RegistrationsTab({
         </div>
       </div>
 
-      {/* 队伍管理 */}
-      <div className="card bg-base-100 shadow-sm">
-        <div className="card-body">
-          <h2 className="card-title">队伍管理</h2>
-          <div className="flex flex-col gap-4">
-            {/* 创建队伍表单 */}
-            <div className="flex flex-col gap-2">
-              <div className="flex gap-2">
+      {/* 约局人数上限设置 */}
+      {isGame && gameTeam && (
+        <div className="card bg-base-100 shadow-sm">
+          <div className="card-body">
+            <h2 className="card-title">人数上限</h2>
+            <div className="flex gap-2 items-end">
+              <div className="flex-1">
+                <label className="label">
+                  <span className="label-text">人数上限（留空表示无上限）</span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  className="input input-bordered w-full"
+                  placeholder="例如：4"
+                  value={gameMaxParticipants}
+                  onChange={(e) => setGameMaxParticipants(e.target.value)}
+                />
+              </div>
+              <button
+                className="btn btn-primary"
+                onClick={handleUpdateGameTeamMaxParticipants}
+              >
+                保存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 队伍管理 - 约局不显示 */}
+      {!isGame && (
+        <div className="card bg-base-100 shadow-sm">
+          <div className="card-body">
+            <h2 className="card-title">队伍管理</h2>
+            <div className="flex flex-col gap-4">
+              {/* 创建队伍表单 */}
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-2">
                 <input
                   type="text"
                   className="input input-bordered flex-1"
@@ -1257,10 +1286,10 @@ function RegistrationsTab({
                 }
                 rows={2}
               />
-            </div>
+              </div>
 
-            {/* 队伍列表 */}
-            <div className="flex flex-col gap-2">
+              {/* 队伍列表 */}
+              <div className="flex flex-col gap-2">
               {teams.length === 0 ? (
                 <p className="text-base-content/50 text-center py-4">
                   暂无队伍，请先创建至少一个队伍
@@ -1390,10 +1419,11 @@ function RegistrationsTab({
                   });
                 })()
               )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* 报名列表 */}
       <div className="card bg-base-100 shadow-sm">

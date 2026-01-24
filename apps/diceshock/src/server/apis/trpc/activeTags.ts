@@ -1,6 +1,7 @@
 import db, {
   activeTagMappingsTable,
   activeTagsTable,
+  drizzle,
 } from "@lib/db";
 import { z } from "zod/v4";
 import { publicProcedure } from "./baseTRPC";
@@ -93,4 +94,104 @@ const insert = publicProcedure
     );
   });
 
-export default { get, insert };
+const updateZ = z.object({
+  id: z.string(),
+  title: activeTagTitleZ,
+});
+
+const update = publicProcedure
+  .input(updateZ)
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const { id, title } = input;
+
+    const [updatedTag] = await tdb
+      .update(activeTagsTable)
+      .set({ title })
+      .where(drizzle.eq(activeTagsTable.id, id))
+      .returning();
+
+    if (!updatedTag) {
+      throw new Error("标签更新失败");
+    }
+
+    return updatedTag;
+  });
+
+// 获取所有约局标签（不限制于已发布的活动）
+// 注意：这里返回所有标签，因为约局标签管理页面应该显示所有标签
+// 如果需要在其他地方只显示名称包含"约局"的标签，可以在前端过滤
+const getGameTags = publicProcedure.query(async ({ ctx }) => {
+  const tdb = db(ctx.env.DB);
+
+  // 获取所有标签
+  const allTags = await tdb.query.activeTagsTable.findMany();
+
+  return allTags.map((tag) => ({
+    id: tag.id,
+    title: tag.title,
+  }));
+});
+
+// 创建约局标签（不需要关联活动）
+const createGameTagZ = z.object({
+  title: activeTagTitleZ,
+});
+
+const createGameTag = publicProcedure
+  .input(createGameTagZ)
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const { title } = input;
+
+    // 检查是否已存在相同的标签
+    const existing = await tdb.query.activeTagsTable.findFirst({
+      where: (tag, { eq }) => eq(tag.title, title),
+    });
+
+    if (existing) {
+      throw new Error("标签已存在");
+    }
+
+    const [newTag] = await tdb
+      .insert(activeTagsTable)
+      .values({ title })
+      .returning();
+
+    if (!newTag) {
+      throw new Error("标签创建失败");
+    }
+
+    return newTag;
+  });
+
+// 删除标签（同时删除所有引用关系）
+const deleteZ = z.object({
+  id: z.string(),
+});
+
+const deleteTag = publicProcedure
+  .input(deleteZ)
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const { id } = input;
+
+    // 先删除所有引用该标签的映射关系
+    await tdb
+      .delete(activeTagMappingsTable)
+      .where(drizzle.eq(activeTagMappingsTable.tag_id, id));
+
+    // 然后删除标签本身
+    const [deletedTag] = await tdb
+      .delete(activeTagsTable)
+      .where(drizzle.eq(activeTagsTable.id, id))
+      .returning();
+
+    if (!deletedTag) {
+      throw new Error("标签删除失败");
+    }
+
+    return deletedTag;
+  });
+
+export default { get, insert, update, getGameTags, createGameTag, delete: deleteTag };

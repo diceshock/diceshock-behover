@@ -9,7 +9,14 @@ import users from "./users";
 
 export const appRouterDash = router({
   active,
-  activeTags,
+  activeTags: {
+    get: activeTags.get,
+    insert: activeTags.insert,
+    update: activeTags.update,
+    getGameTags: activeTags.getGameTags,
+    createGameTag: activeTags.createGameTag,
+    delete: activeTags.delete,
+  },
   activeRegistrations,
   ownedManagement,
   users,
@@ -23,8 +30,13 @@ export const appRouterPublic = router({
     getById: active.getById,
     boardGames: active.boardGames,
     createGame: active.createGame, // 约局创建需要登录，但使用 public router（内部使用 protectedProcedure）
+    updateGame: active.updateGame, // 编辑约局（需要登录，只有发起者可以编辑）
+    delete: active.delete, // 删除活动（需要权限检查）
   },
-  activeTags: { get: activeTags.get },
+  activeTags: {
+    get: activeTags.get,
+    getGameTags: activeTags.getGameTags,
+  },
   activeRegistrations: {
     teams: { get: activeRegistrations.teams.get },
     registrations: {

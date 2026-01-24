@@ -15,6 +15,7 @@ import { Route as DashIndexRouteImport } from './routers/dash/index'
 import { Route as WithHomeLoIndexRouteImport } from './routers/_with-home-lo/index'
 import { Route as DashUsersRouteImport } from './routers/dash/users'
 import { Route as DashInventoryManagementRouteImport } from './routers/dash/inventory-management'
+import { Route as DashGameTagsRouteImport } from './routers/dash/game-tags'
 import { Route as DashAcitveRouteImport } from './routers/dash/acitve'
 import { Route as WithHomeLoMeRouteImport } from './routers/_with-home-lo/me'
 import { Route as WithHomeLoInventoryRouteImport } from './routers/_with-home-lo/inventory'
@@ -53,6 +54,11 @@ const DashUsersRoute = DashUsersRouteImport.update({
 const DashInventoryManagementRoute = DashInventoryManagementRouteImport.update({
   id: '/inventory-management',
   path: '/inventory-management',
+  getParentRoute: () => DashRoute,
+} as any)
+const DashGameTagsRoute = DashGameTagsRouteImport.update({
+  id: '/game-tags',
+  path: '/game-tags',
   getParentRoute: () => DashRoute,
 } as any)
 const DashAcitveRoute = DashAcitveRouteImport.update({
@@ -116,6 +122,7 @@ export interface FileRoutesByFullPath {
   '/inventory': typeof WithHomeLoInventoryRoute
   '/me': typeof WithHomeLoMeRoute
   '/dash/acitve': typeof DashAcitveRoute
+  '/dash/game-tags': typeof DashGameTagsRoute
   '/dash/inventory-management': typeof DashInventoryManagementRoute
   '/dash/users': typeof DashUsersRoute
   '/dash/': typeof DashIndexRoute
@@ -131,6 +138,7 @@ export interface FileRoutesByTo {
   '/inventory': typeof WithHomeLoInventoryRoute
   '/me': typeof WithHomeLoMeRoute
   '/dash/acitve': typeof DashAcitveRoute
+  '/dash/game-tags': typeof DashGameTagsRoute
   '/dash/inventory-management': typeof DashInventoryManagementRoute
   '/dash/users': typeof DashUsersRoute
   '/': typeof WithHomeLoIndexRoute
@@ -150,6 +158,7 @@ export interface FileRoutesById {
   '/_with-home-lo/inventory': typeof WithHomeLoInventoryRoute
   '/_with-home-lo/me': typeof WithHomeLoMeRoute
   '/dash/acitve': typeof DashAcitveRoute
+  '/dash/game-tags': typeof DashGameTagsRoute
   '/dash/inventory-management': typeof DashInventoryManagementRoute
   '/dash/users': typeof DashUsersRoute
   '/_with-home-lo/': typeof WithHomeLoIndexRoute
@@ -170,6 +179,7 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/me'
     | '/dash/acitve'
+    | '/dash/game-tags'
     | '/dash/inventory-management'
     | '/dash/users'
     | '/dash/'
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/me'
     | '/dash/acitve'
+    | '/dash/game-tags'
     | '/dash/inventory-management'
     | '/dash/users'
     | '/'
@@ -203,6 +214,7 @@ export interface FileRouteTypes {
     | '/_with-home-lo/inventory'
     | '/_with-home-lo/me'
     | '/dash/acitve'
+    | '/dash/game-tags'
     | '/dash/inventory-management'
     | '/dash/users'
     | '/_with-home-lo/'
@@ -260,6 +272,13 @@ declare module '@tanstack/react-router' {
       path: '/inventory-management'
       fullPath: '/dash/inventory-management'
       preLoaderRoute: typeof DashInventoryManagementRouteImport
+      parentRoute: typeof DashRoute
+    }
+    '/dash/game-tags': {
+      id: '/dash/game-tags'
+      path: '/game-tags'
+      fullPath: '/dash/game-tags'
+      preLoaderRoute: typeof DashGameTagsRouteImport
       parentRoute: typeof DashRoute
     }
     '/dash/acitve': {
@@ -373,6 +392,7 @@ const DashActiveIdRouteWithChildren = DashActiveIdRoute._addFileChildren(
 
 interface DashRouteChildren {
   DashAcitveRoute: typeof DashAcitveRoute
+  DashGameTagsRoute: typeof DashGameTagsRoute
   DashInventoryManagementRoute: typeof DashInventoryManagementRoute
   DashUsersRoute: typeof DashUsersRoute
   DashIndexRoute: typeof DashIndexRoute
@@ -382,6 +402,7 @@ interface DashRouteChildren {
 
 const DashRouteChildren: DashRouteChildren = {
   DashAcitveRoute: DashAcitveRoute,
+  DashGameTagsRoute: DashGameTagsRoute,
   DashInventoryManagementRoute: DashInventoryManagementRoute,
   DashUsersRoute: DashUsersRoute,
   DashIndexRoute: DashIndexRoute,
