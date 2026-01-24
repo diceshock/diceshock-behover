@@ -37,7 +37,7 @@ function RouteComponent() {
   const handlePublish = useCallback(async () => {
     if (!active) return;
     try {
-      await trpcClientDash.active.mutation.mutate({
+      await (trpcClientDash.active as any).mutation.mutate({
         id: active.id,
         is_published: true,
       });

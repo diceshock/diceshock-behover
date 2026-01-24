@@ -18,7 +18,11 @@ export const appRouterDash = router({
 // Public API 暴露活动相关的查询接口
 export const appRouterPublic = router({
   owned,
-  active: { get: active.get, getById: active.getById },
+  active: {
+    get: active.get,
+    getById: active.getById,
+    boardGames: active.boardGames,
+  },
   activeTags: { get: activeTags.get },
   activeRegistrations: {
     teams: { get: activeRegistrations.teams.get },

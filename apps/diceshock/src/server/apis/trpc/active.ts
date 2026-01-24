@@ -1,8 +1,10 @@
 import db, {
+  activeBoardGamesTable,
   activesTable,
   activeTagMappingsTable,
   activeTagsTable,
   activeTeamsTable,
+  boardGamesTable,
   drizzle,
   pagedZ,
 } from "@lib/db";
@@ -92,12 +94,15 @@ const getByIdZ = z.object({
 const getById = publicProcedure
   .input(getByIdZ)
   .query(async ({ input, ctx }) => {
-    const active = await db(ctx.env.DB).query.activesTable.findFirst({
+    const tdb = db(ctx.env.DB);
+    const active = await tdb.query.activesTable.findFirst({
       where: (a, { eq }) => eq(a.id, input.id),
       with: {
         tags: {
           with: { tag: true },
         },
+        // 移除 boardGames 关系查询，避免 JSON 字段序列化问题
+        // boardGames 由前端单独通过 active.boardGames.get 获取
       },
     });
 
@@ -240,10 +245,7 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
   }
   if (event_date !== undefined) {
     // 将 ISO datetime string 转换为 Date 对象，如果为空字符串则设为 null
-    updateData.event_date =
-      event_date?.trim()
-        ? new Date(event_date)
-        : null;
+    updateData.event_date = event_date?.trim() ? new Date(event_date) : null;
   }
 
   // 如果正在发布活动，且之前未发布过，则设置发布时间为当前时间
@@ -334,8 +336,14 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
 const insert = async (env: Cloudflare.Env, input: z.infer<typeof insertZ>) => {
   const tdb = db(env.DB);
 
-  const { name, description, content, cover_image, tags: tagIds, event_date } =
-    input;
+  const {
+    name,
+    description,
+    content,
+    cover_image,
+    tags: tagIds,
+    event_date,
+  } = input;
 
   // 先创建活动
   const newActive = await tdb
@@ -424,4 +432,116 @@ const deleteMutation = publicProcedure
     return deleteActive(ctx.env, input);
   });
 
-export default { get, getById, mutation, delete: deleteMutation };
+// 桌游相关接口
+const getBoardGamesZ = z.object({
+  active_id: z.string(),
+  includeRemoved: z.boolean().optional().default(false), // 是否包含失效的桌游（编辑页面使用）
+});
+
+const getBoardGames = publicProcedure
+  .input(getBoardGamesZ)
+  .query(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const mappings = await tdb.query.activeBoardGamesTable.findMany({
+      where: (m, { eq }) => eq(m.active_id, input.active_id),
+      orderBy: (m, { desc }) => desc(m.create_at),
+    });
+
+    // 使用 gstone_id 查找对应的 board games
+    const gstoneIds = mappings.map((m) => m.board_game_id);
+    if (gstoneIds.length === 0) {
+      return [];
+    }
+
+    const games = await tdb.query.boardGamesTable.findMany({
+      where: (game, { and, inArray, eq }) =>
+        and(
+          inArray(game.gstone_id, gstoneIds),
+          // 如果不包含失效的桌游，只返回有效的（removeDate === new Date(0)）
+          input.includeRemoved ? undefined : eq(game.removeDate, new Date(0)),
+        ),
+    });
+
+    // 返回格式：{ gstone_id: number; content: BoardGame.BoardGameCol | null; isRemoved: boolean }
+    return games.map((game) => ({
+      gstone_id: game.gstone_id ?? 0,
+      content: game.content ?? null,
+      isRemoved: Boolean(
+        game.removeDate && game.removeDate.getTime() > new Date(0).getTime(),
+      ),
+    }));
+  });
+
+const addBoardGameZ = z.object({
+  active_id: z.string(),
+  board_game_id: z.number(), // 改为 number，因为使用 gstone_id
+});
+
+const addBoardGame = publicProcedure
+  .input(addBoardGameZ)
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const { active_id, board_game_id } = input;
+
+    // 先通过 gstone_id 查找对应的 board game，确保存在
+    const boardGame = await tdb.query.boardGamesTable.findFirst({
+      where: (game, { eq }) => eq(game.gstone_id, board_game_id),
+    });
+
+    if (!boardGame) {
+      return { success: false, message: "桌游不存在" };
+    }
+
+    // 检查是否已存在
+    const existing = await tdb.query.activeBoardGamesTable.findFirst({
+      where: (m, { and, eq }) =>
+        and(eq(m.active_id, active_id), eq(m.board_game_id, board_game_id)),
+    });
+
+    if (existing) {
+      return { success: true, message: "桌游已存在" };
+    }
+
+    // 添加关联（使用 gstone_id）
+    await tdb.insert(activeBoardGamesTable).values({
+      active_id,
+      board_game_id,
+    });
+
+    return { success: true };
+  });
+
+const removeBoardGameZ = z.object({
+  active_id: z.string(),
+  board_game_id: z.number(), // 改为 number，因为使用 gstone_id
+});
+
+const removeBoardGame = publicProcedure
+  .input(removeBoardGameZ)
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const { active_id, board_game_id } = input;
+
+    await tdb
+      .delete(activeBoardGamesTable)
+      .where(
+        drizzle.and(
+          drizzle.eq(activeBoardGamesTable.active_id, active_id),
+          drizzle.eq(activeBoardGamesTable.board_game_id, board_game_id),
+        ),
+      );
+
+    return { success: true };
+  });
+
+export default {
+  get,
+  getById,
+  mutation,
+  delete: deleteMutation,
+  boardGames: {
+    get: getBoardGames,
+    add: addBoardGame,
+    remove: removeBoardGame,
+  },
+};

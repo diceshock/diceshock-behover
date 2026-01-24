@@ -1,11 +1,14 @@
 import { Link } from "@tanstack/react-router";
 import MDEditor from "@uiw/react-md-editor";
 import { useAtomValue } from "jotai";
+import { useCallback, useEffect, useState } from "react";
 import { themeA } from "@/client/components/ThemeSwap";
 import ActiveRegistration from "@/client/components/diceshock/ActiveRegistration";
 import type { ApiRouterPublic, ApiRouterDash } from "@/shared/types";
 import type { createTRPCClient } from "@trpc/client";
 import { formatEventDate } from "@/shared/utils/formatEventDate";
+import trpcClientPublic from "@/shared/utils/trpc";
+import type { BoardGame } from "@lib/utils";
 
 type TrpcClientPublic = ReturnType<typeof createTRPCClient<ApiRouterPublic>>;
 type TrpcClientDash = ReturnType<typeof createTRPCClient<ApiRouterDash>>;
@@ -30,6 +33,26 @@ export default function ActiveDetail({
   onEdit,
 }: ActiveDetailProps) {
   const theme = useAtomValue(themeA);
+  const [boardGames, setBoardGames] = useState<
+    Array<{ gstone_id: number; content: BoardGame.BoardGameCol | null }>
+  >([]);
+
+  // 获取活动的桌游列表（展示页面，不包含失效的桌游）
+  const fetchBoardGames = useCallback(async () => {
+    try {
+      const games = await trpcClientPublic.active.boardGames.get.query({
+        active_id: activeId,
+        includeRemoved: false, // 展示页面不显示失效的桌游
+      });
+      setBoardGames(games);
+    } catch (error) {
+      console.error("获取桌游列表失败", error);
+    }
+  }, [activeId]);
+
+  useEffect(() => {
+    fetchBoardGames();
+  }, [fetchBoardGames]);
 
   return (
     <main className="w-full min-h-screen p-4 max-w-4xl mx-auto">
@@ -137,6 +160,50 @@ export default function ActiveDetail({
           />
         </div>
       </article>
+
+      {/* 已添加的桌游卡片 - 显示在文章底部 */}
+      {boardGames.length > 0 && (
+        <div className="mt-12 not-prose">
+          <h2 className="text-2xl font-bold mb-4">活动桌游</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {boardGames.map((game) => {
+                const gameContent = game.content;
+                if (!gameContent) return null;
+
+                return (
+                  <div
+                    key={game.gstone_id}
+                    className="card bg-base-100 shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+                  >
+                  {gameContent.sch_cover_url && (
+                    <figure className="h-32 overflow-hidden">
+                      <img
+                        src={gameContent.sch_cover_url}
+                        alt={gameContent.sch_name || gameContent.eng_name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display =
+                            "none";
+                        }}
+                      />
+                    </figure>
+                  )}
+                  <div className="card-body p-3">
+                    <h4 className="card-title text-sm line-clamp-2">
+                      {gameContent.sch_name || gameContent.eng_name}
+                    </h4>
+                    {gameContent.gstone_rating && (
+                      <div className="text-xs text-base-content/50">
+                        评分: {gameContent.gstone_rating.toFixed(1)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

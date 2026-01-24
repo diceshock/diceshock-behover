@@ -83,10 +83,29 @@ export const activeRegistrationsTable = sqlite.sqliteTable(
   },
 );
 
+export const activeBoardGamesTable = sqlite.sqliteTable(
+  "active_board_games_table",
+  {
+    active_id: sqlite
+      .text()
+      .notNull()
+      .references(() => activesTable.id, { onDelete: "cascade" }),
+    // 使用 gstone_id 而不是主键 id，因为迁移时主键会变
+    board_game_id: sqlite
+      .integer("board_game_id")
+      .notNull(),
+    create_at: sqlite
+      .integer("create_at", { mode: "timestamp_ms" })
+      .$defaultFn(() => new Date(Date.now())),
+  },
+  (t) => [sqlite.primaryKey({ columns: [t.active_id, t.board_game_id] })],
+);
+
 export const activeRelations = relations(activesTable, ({ many }) => ({
   tags: many(activeTagMappingsTable),
   teams: many(activeTeamsTable),
   registrations: many(activeRegistrationsTable),
+  boardGames: many(activeBoardGamesTable),
 }));
 
 export const activeTeamsRelations = relations(
@@ -152,6 +171,20 @@ export const activeTagMappingsRelations = relations(
     tag: one(activeTagsTable, {
       fields: [activeTagMappingsTable.tag_id],
       references: [activeTagsTable.id],
+    }),
+  }),
+);
+
+export const activeBoardGamesRelations = relations(
+  activeBoardGamesTable,
+  ({ one }) => ({
+    active: one(activesTable, {
+      fields: [activeBoardGamesTable.active_id],
+      references: [activesTable.id],
+    }),
+    boardGame: one(boardGamesTable, {
+      fields: [activeBoardGamesTable.board_game_id],
+      references: [boardGamesTable.id],
     }),
   }),
 );

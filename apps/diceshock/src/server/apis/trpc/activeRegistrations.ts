@@ -217,7 +217,7 @@ const createRegistration = protectedProcedure
     // 如果是报名队伍（非观望），验证队伍
     if (!input.is_watching && input.team_id) {
       const team = await tdb.query.activeTeamsTable.findFirst({
-        where: (t, { eq }) => eq(t.id, input.team_id),
+        where: (t, { eq }) => eq(t.id, input.team_id!),
         with: {
           registrations: true,
         },

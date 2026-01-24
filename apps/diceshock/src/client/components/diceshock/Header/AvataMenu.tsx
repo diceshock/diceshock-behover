@@ -1,4 +1,3 @@
-import { signOut } from "@hono/auth-js/react";
 import {
   KeyIcon,
   ScanIcon,
@@ -23,8 +22,7 @@ export default function AvatarMenu() {
       <div
         tabIndex={0}
         role="button"
-        data-tip={name}
-        className="btn btn-ghost tooltip tooltip-left rounded-full pl-1"
+        className="btn btn-ghost rounded-full pl-1"
       >
         <div className="avatar size-8 avatar-placeholder">
           <div className="bg-primary text-gray-900 w-16 rounded-full overflow-hidden">

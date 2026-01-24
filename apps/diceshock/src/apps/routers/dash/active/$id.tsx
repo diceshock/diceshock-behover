@@ -12,8 +12,9 @@ import MDEditor from "@uiw/react-md-editor";
 import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "@uiw/react-md-editor/markdown-editor.css";
+import type { BoardGame } from "@lib/utils";
 import { useMsg } from "@/client/components/diceshock/Msg";
-import { trpcClientDash } from "@/shared/utils/trpc";
+import trpcClientPublic, { trpcClientDash } from "@/shared/utils/trpc";
 
 type TagList = Awaited<ReturnType<typeof trpcClientDash.activeTags.get.query>>;
 type TagItem = TagList[number];
@@ -47,7 +48,28 @@ function RouteComponent() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [tagDraft, setTagDraft] = useState({ emoji: "", tx: "" });
-  const [activeTab, setActiveTab] = useState<"edit" | "registrations">("edit");
+  const [activeTab, setActiveTab] = useState<
+    "edit" | "registrations" | "games"
+  >("edit");
+
+  // 桌游相关状态
+  const [boardGames, setBoardGames] = useState<
+    Array<{
+      gstone_id: number;
+      content: BoardGame.BoardGameCol | null;
+      isRemoved: boolean;
+    }>
+  >([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<
+    Array<{
+      id: string;
+      gstone_id: number | null;
+      content: BoardGame.BoardGameCol | null;
+    }>
+  >([]);
+  const [loadingGames, setLoadingGames] = useState(false);
+  const [loadingSearch, setLoadingSearch] = useState(false);
 
   // 报名管理相关状态
   const [teams, setTeams] = useState<
@@ -74,37 +96,48 @@ function RouteComponent() {
   }, []);
 
   const fetchActive = useCallback(async () => {
-    if (!id) return;
+    if (!id) {
+      msg.error("活动 ID 不存在");
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const data = await trpcClientDash.active.getById.query({ id });
+      if (!data) {
+        msg.error("活动不存在");
+        setActive(null);
+        setLoading(false);
+        return;
+      }
       setActive(data);
-      if (data) {
-        setContent(data.content || "");
-        setName(data.name || "");
-        setDescription(data.description || "");
-        setCoverImage(data.cover_image || "");
-        setSelectedTags(data.tags?.map((t) => t.tag_id) || []);
-        setIsPublished(Boolean(data.is_published));
-        setIsDeleted(Boolean(data.is_deleted));
-        setEnableRegistration(Boolean(data.enable_registration));
-        setAllowWatching(Boolean(data.allow_watching));
-        // 将 event_date 转换为 datetime-local 格式 (YYYY-MM-DDTHH:mm)
-        if (data.event_date) {
-          const date = new Date(data.event_date);
-          const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, "0");
-          const day = String(date.getDate()).padStart(2, "0");
-          const hours = String(date.getHours()).padStart(2, "0");
-          const minutes = String(date.getMinutes()).padStart(2, "0");
-          setEventDate(`${year}-${month}-${day}T${hours}:${minutes}`);
-        } else {
-          setEventDate("");
-        }
+      setContent(data.content || "");
+      setName(data.name || "");
+      setDescription(data.description || "");
+      setCoverImage(data.cover_image || "");
+      setSelectedTags(data.tags?.map((t) => t.tag_id) || []);
+      setIsPublished(Boolean(data.is_published));
+      setIsDeleted(Boolean(data.is_deleted));
+      setEnableRegistration(Boolean(data.enable_registration));
+      setAllowWatching(Boolean(data.allow_watching));
+      // 将 event_date 转换为 datetime-local 格式 (YYYY-MM-DDTHH:mm)
+      if (data.event_date) {
+        const date = new Date(data.event_date);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        const hours = String(date.getHours()).padStart(2, "0");
+        const minutes = String(date.getMinutes()).padStart(2, "0");
+        setEventDate(`${year}-${month}-${day}T${hours}:${minutes}`);
+      } else {
+        setEventDate("");
       }
     } catch (error) {
-      msg.error("获取活动失败");
-      console.error(error);
+      console.error("获取活动失败", error);
+      msg.error(
+        error instanceof Error ? error.message : "获取活动失败，请稍后重试",
+      );
+      setActive(null);
     } finally {
       setLoading(false);
     }
@@ -153,6 +186,104 @@ function RouteComponent() {
       setActiveTab("edit");
     }
   }, [enableRegistration, activeTab]);
+
+  // 获取活动的桌游列表（编辑页面，包含失效的桌游）
+  const fetchBoardGames = useCallback(async () => {
+    if (!id) return;
+    try {
+      setLoadingGames(true);
+      const games = await trpcClientDash.active.boardGames.get.query({
+        active_id: id,
+        includeRemoved: true, // 编辑页面显示所有桌游（包括失效的）
+      });
+      setBoardGames(games);
+    } catch (error) {
+      console.error("获取桌游列表失败", error);
+    } finally {
+      setLoadingGames(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (activeTab === "games" && id) {
+      fetchBoardGames();
+    }
+  }, [activeTab, id, fetchBoardGames]);
+
+  // 搜索桌游
+  const searchBoardGames = useCallback(
+    async (query: string) => {
+      if (!query.trim()) {
+        setSearchResults([]);
+        return;
+      }
+
+      try {
+        setLoadingSearch(true);
+        const results = await trpcClientPublic.owned.get.query({
+          page: 1,
+          pageSize: 20,
+          params: {
+            searchWords: query,
+            tags: [],
+            numOfPlayers: undefined,
+            isBestNumOfPlayers: false,
+          },
+        });
+        setSearchResults(
+          results.map((game) => ({
+            id: game.id,
+            gstone_id: game.gstone_id,
+            content: game.content,
+          })),
+        );
+      } catch (error) {
+        console.error("搜索桌游失败", error);
+        msg.error("搜索桌游失败");
+      } finally {
+        setLoadingSearch(false);
+      }
+    },
+    [msg],
+  );
+
+  // 添加桌游
+  const handleAddBoardGame = useCallback(
+    async (gstoneId: number) => {
+      if (!id) return;
+      try {
+        await trpcClientDash.active.boardGames.add.mutate({
+          active_id: id,
+          board_game_id: gstoneId,
+        });
+        msg.success("桌游添加成功");
+        await fetchBoardGames();
+      } catch (error) {
+        console.error("添加桌游失败", error);
+        msg.error("添加桌游失败");
+      }
+    },
+    [id, fetchBoardGames, msg],
+  );
+
+  // 移除桌游
+  const handleRemoveBoardGame = useCallback(
+    async (gstoneId: number) => {
+      if (!id) return;
+      try {
+        await trpcClientDash.active.boardGames.remove.mutate({
+          active_id: id,
+          board_game_id: gstoneId,
+        });
+        msg.success("桌游移除成功");
+        await fetchBoardGames();
+      } catch (error) {
+        console.error("移除桌游失败", error);
+        msg.error("移除桌游失败");
+      }
+    },
+    [id, fetchBoardGames, msg],
+  );
 
   const availableTags = useMemo(
     () =>
@@ -268,10 +399,15 @@ function RouteComponent() {
     return (
       <main className="size-full p-4 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">活动不存在</h2>
-          <Link to="/dash/acitve" className="btn btn-primary">
-            返回列表
-          </Link>
+          <h2 className="text-2xl font-bold mb-4">活动不存在或加载失败</h2>
+          <div className="flex gap-2 justify-center">
+            <Link to="/dash/acitve" className="btn btn-primary">
+              返回列表
+            </Link>
+            <button onClick={() => fetchActive()} className="btn btn-secondary">
+              重试
+            </button>
+          </div>
         </div>
       </main>
     );
@@ -464,6 +600,13 @@ function RouteComponent() {
               <UsersIcon className="size-4 mr-1" />
               报名管理
             </button>
+            <button
+              role="tab"
+              className={clsx("tab", activeTab === "games" && "tab-active")}
+              onClick={() => setActiveTab("games")}
+            >
+              🎲 桌游
+            </button>
           </div>
 
           {/* 编辑 Tab */}
@@ -618,6 +761,173 @@ function RouteComponent() {
               }}
               onUserClick={setSelectedUserId}
             />
+          )}
+
+          {/* 桌游 Tab */}
+          {activeTab === "games" && (
+            <div className="card bg-base-100 shadow-sm">
+              <div className="card-body">
+                <h2 className="card-title">桌游管理</h2>
+                {/* 搜索框 */}
+                <div className="mb-4">
+                  <input
+                    type="text"
+                    placeholder="搜索桌游..."
+                    className="input input-bordered w-full"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      searchBoardGames(e.target.value);
+                    }}
+                  />
+                </div>
+
+                {/* 搜索结果 */}
+                {loadingSearch && (
+                  <div className="text-center py-4">
+                    <span className="loading loading-spinner loading-md"></span>
+                  </div>
+                )}
+
+                {searchQuery && searchResults.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold mb-2">搜索结果</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {searchResults.map((game) => {
+                        const gameContent = game.content;
+                        if (!gameContent || !game.gstone_id) return null;
+
+                        const isAdded = boardGames.some(
+                          (bg) => bg.gstone_id === game.gstone_id,
+                        );
+
+                        return (
+                          <div
+                            key={game.id}
+                            className="card bg-base-200 shadow-md overflow-hidden"
+                          >
+                            {gameContent.sch_cover_url && (
+                              <figure className="h-32 overflow-hidden">
+                                <img
+                                  src={gameContent.sch_cover_url}
+                                  alt={
+                                    gameContent.sch_name || gameContent.eng_name
+                                  }
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (
+                                      e.target as HTMLImageElement
+                                    ).style.display = "none";
+                                  }}
+                                />
+                              </figure>
+                            )}
+                            <div className="card-body p-3">
+                              <h4 className="card-title text-sm line-clamp-2">
+                                {gameContent.sch_name || gameContent.eng_name}
+                              </h4>
+                              <div className="card-actions justify-end">
+                                {isAdded ? (
+                                  <button
+                                    className="btn btn-sm btn-error"
+                                    onClick={() =>
+                                      handleRemoveBoardGame(game.gstone_id!)
+                                    }
+                                  >
+                                    已添加
+                                  </button>
+                                ) : (
+                                  <button
+                                    className="btn btn-sm btn-primary"
+                                    onClick={() =>
+                                      handleAddBoardGame(game.gstone_id!)
+                                    }
+                                  >
+                                    添加
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 已添加的桌游列表 */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">已添加的桌游</h3>
+                  {loadingGames ? (
+                    <div className="text-center py-4">
+                      <span className="loading loading-spinner loading-md"></span>
+                    </div>
+                  ) : boardGames.length === 0 ? (
+                    <div className="text-center py-8 text-base-content/50">
+                      暂无桌游，请搜索并添加
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {boardGames.map((game) => {
+                        const gameContent = game.content;
+                        if (!gameContent) return null;
+
+                        return (
+                          <div
+                            key={game.gstone_id}
+                            className={`card bg-base-200 shadow-md overflow-hidden ${
+                              game.isRemoved ? "opacity-50" : ""
+                            }`}
+                          >
+                            {game.isRemoved && (
+                              <div className="badge badge-warning badge-sm absolute top-2 right-2 z-10">
+                                已失效
+                              </div>
+                            )}
+                            {gameContent.sch_cover_url && (
+                              <figure className="h-32 overflow-hidden">
+                                <img
+                                  src={gameContent.sch_cover_url}
+                                  alt={
+                                    gameContent.sch_name || gameContent.eng_name
+                                  }
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (
+                                      e.target as HTMLImageElement
+                                    ).style.display = "none";
+                                  }}
+                                />
+                              </figure>
+                            )}
+                            <div className="card-body p-3">
+                              <h4 className="card-title text-sm line-clamp-2">
+                                {gameContent.sch_name || gameContent.eng_name}
+                              </h4>
+                              {gameContent.gstone_rating && (
+                                <div className="text-xs text-base-content/50">
+                                  评分: {gameContent.gstone_rating.toFixed(1)}
+                                </div>
+                              )}
+                              <div className="card-actions justify-end">
+                                <button
+                                  className="btn btn-sm btn-error"
+                                  onClick={() =>
+                                    handleRemoveBoardGame(game.gstone_id)
+                                  }
+                                >
+                                  移除
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>
