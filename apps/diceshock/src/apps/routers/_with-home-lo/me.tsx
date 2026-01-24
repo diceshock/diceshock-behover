@@ -1,6 +1,7 @@
 import {
   CopyIcon,
   PencilSimpleLineIcon,
+  PhoneIcon,
   XIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute } from "@tanstack/react-router";
@@ -115,6 +116,16 @@ function RouteComponent() {
               <CopyIcon size={16} />
             </button>
           </h2>
+        </div>
+
+        <div className="w-full flex flex-col items-center justify-center mt-12">
+          <button className="btn btn-neutral btn-xl py-12 w-full max-w-xl justify-start gap-4">
+            <PhoneIcon className="size-8" />
+            <div className="flex flex-col items-start justify-start">
+              <p className="text-lg font-bold">修改手机号</p>
+              <p className="text-sm text-neutral-content/70">当前手机号：{userInfo?.phone ?? "—"}</p>
+            </div>
+          </button>
         </div>
       </main>
 
