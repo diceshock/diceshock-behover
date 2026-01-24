@@ -316,7 +316,7 @@ function RouteComponent() {
               </div>
 
               {/* 网格布局的活动列表 - 按日期分组以支持线条连接 */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 relative">
+              <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-3 gap-12 relative">
                 {weekGroup.dates.map((dateGroup) =>
                   dateGroup.actives.map((active, index) => {
                     const pinnedTag = tags.find(
@@ -357,15 +357,16 @@ function RouteComponent() {
                           handleMouseEnter(active.dateKey, active.id)
                         }
                         onMouseLeave={handleMouseLeave}
-                        className={`group card bg-base-100 shadow-md hover:shadow-lg transition-all relative overflow-visible ${
+                        className={`group card bg-base-100 shadow-md hover:shadow-lg transition-all relative overflow-visible w-full ${
                           isCardHighlighted
-                            ? "bg-base-200/50 translate-x-1"
+                            ? "bg-base-200/50"
                             : ""
                         }`}
                       >
-                        {/* 日期标识 - 顶部水平线条，默认显示，只连接同一天的活动 */}
+                        {/* 日期标识 - 顶部水平线条（lg+），左侧竖线（md），默认显示，只连接同一天的活动 */}
+                        {/* 大屏幕：顶部水平线条 */}
                         <div
-                          className={`absolute top-0 h-1 transition-all z-30 ${
+                          className={`hidden lg:block absolute top-0 h-1 transition-colors z-30 ${
                             isLineHighlighted
                               ? "bg-secondary"
                               : "bg-primary group-hover:bg-secondary"
@@ -378,17 +379,49 @@ function RouteComponent() {
                             right: hasRightSameDate ? "-1rem" : "0",
                           }}
                         />
+                        {/* 中等屏幕：左侧竖线 */}
+                        <div
+                          className={`lg:hidden absolute left-0 top-0 bottom-0 w-1 transition-colors z-30 ${
+                            isLineHighlighted
+                              ? "bg-secondary"
+                              : "bg-primary group-hover:bg-secondary"
+                          }`}
+                          style={{
+                            borderRadius: "0.25rem 0 0 0.25rem",
+                            // 只有上边有同一天的活动时才向上延伸
+                            top: hasLeftSameDate ? "-3rem" : "0",
+                            // 只有下边有同一天的活动时才向下延伸
+                            bottom: hasRightSameDate ? "-3rem" : "0",
+                          }}
+                        />
                         {/* 周几标签 - 只在同一天的第一个活动显示 */}
                         {isFirstInDate && (
-                          <div
-                            className={`absolute left-0 -top-6 px-2 py-0.5 text-xs font-semibold bg-base-100 border rounded transition-all z-30 whitespace-nowrap shadow-sm ${
-                              isLineHighlighted
-                                ? "text-secondary border-secondary bg-secondary/20"
-                                : "text-primary border-primary/30 group-hover:text-secondary group-hover:border-secondary"
-                            }`}
-                          >
-                            {weekday}
-                          </div>
+                          <>
+                            {/* 大屏幕：顶部标签 */}
+                            <div
+                              className={`hidden lg:block absolute left-0 -top-6 px-2 py-0.5 text-xs font-semibold bg-base-100 border rounded transition-all z-40 whitespace-nowrap shadow-sm ${
+                                isLineHighlighted
+                                  ? "text-secondary border-secondary bg-base-100"
+                                  : "text-primary border-primary/30 group-hover:text-secondary group-hover:border-secondary group-hover:bg-base-100"
+                              }`}
+                            >
+                              {weekday}
+                            </div>
+                            {/* 中等屏幕：左侧旋转90度标签 */}
+                            <div
+                              className={`lg:hidden absolute -left-8 top-1/2 px-2 py-0.5 text-xs font-semibold bg-base-100 border rounded transition-all z-40 whitespace-nowrap shadow-sm ${
+                                isLineHighlighted
+                                  ? "text-secondary border-secondary bg-base-100"
+                                  : "text-primary border-primary/30 group-hover:text-secondary group-hover:border-secondary group-hover:bg-base-100"
+                              }`}
+                              style={{
+                                transform: "translateY(-50%) translateX(0.5rem) rotate(-90deg)",
+                                transformOrigin: "center",
+                              }}
+                            >
+                              {weekday}
+                            </div>
+                          </>
                         )}
 
                         {active.cover_image && (
