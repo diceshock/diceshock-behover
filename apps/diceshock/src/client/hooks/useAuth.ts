@@ -1,5 +1,5 @@
 import type { Session } from "@auth/core/types";
-import { useSession } from "@hono/auth-js/react";
+import { signOut as signOutAuthJs, useSession } from "@hono/auth-js/react";
 import { produce } from "immer";
 import { atom, useAtom, type WritableAtom } from "jotai";
 import { useHydrateAtoms } from "jotai/utils";
@@ -29,13 +29,19 @@ export default function useAuth() {
     [userInfo, setUserInfo],
   );
 
+  const signOut = useCallback(async () => {
+    await signOutAuthJs({ redirect: false });
+    window.location.href = "/";
+  }, []);
+
   return useMemo(
     () => ({
       session: session as Session | null,
       status,
       userInfo,
       setUserInfoIm,
+      signOut,
     }),
-    [session, status, userInfo, setUserInfoIm],
+    [session, status, userInfo, setUserInfoIm, signOut],
   );
 }

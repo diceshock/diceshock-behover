@@ -1,57 +1,9 @@
-/// <reference types="cloudflare-turnstile" />
-
 import { signIn } from "@hono/auth-js/react";
 import { WarningIcon, XIcon } from "@phosphor-icons/react/dist/ssr";
 import clsx from "clsx";
-import { useAtomValue } from "jotai";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useReducer,
-  useRef,
-  useState,
-} from "react";
-import { z } from "zod/v4";
-import trpcClientPublic from "@/shared/utils/trpc";
+import { useCallback, useEffect, useState } from "react";
 import Modal from "../../modal";
-import { themeA } from "../../ThemeSwap";
-
-const SITE_KEY = "0x4AAAAAACNaVUPcjZJ2BWv-";
-
-const turnstileIns: typeof turnstile | null =
-  (globalThis as any).turnstile ?? null;
-
-type SmsFormState = {
-  botcheck: null | string;
-  code: string;
-};
-
-type SmsFormAction =
-  | { type: "SET_BOTCHECK"; payload: string | null }
-  | { type: "SET_CODE"; payload: string }
-  | { type: "RESET" };
-
-const smsFormReducer = (
-  state: SmsFormState,
-  action: SmsFormAction,
-): SmsFormState => {
-  switch (action.type) {
-    case "SET_BOTCHECK":
-      return { ...state, botcheck: action.payload };
-    case "SET_CODE":
-      return { ...state, code: action.payload };
-    case "RESET":
-      return { botcheck: null, code: "" };
-    default:
-      return state;
-  }
-};
-
-const INITIAL_SMS_FORM_STATE: SmsFormState = {
-  botcheck: null,
-  code: "",
-};
+import useSmsCode from "../../../hooks/useSmsCode";
 
 export default function LoginDialog({
   isOpen,
@@ -60,120 +12,33 @@ export default function LoginDialog({
   isOpen: boolean;
   onClose: () => void;
 }) {
-  const theme = useAtomValue(themeA);
-
   const [activeTab, setActiveTab] = useState<"phonenumber" | "thirdparty">(
     "phonenumber",
   );
 
-  const [error, setError] = useState<string | null>(null);
-  const [countdown, setCountdown] = useState(0);
   const [phone, setPhone] = useState("");
 
-  const turnstileIdRef = useRef<string | null | undefined>(null);
-  const countdownTimerRef = useRef<number | null>(null);
-  const prevPhoneRef = useRef<string>("");
+  const {
+    smsForm,
+    dispatchSmsForm,
+    error,
+    setError,
+    countdown,
+    getSmsCode,
+    reset: resetSms,
+  } = useSmsCode({
+    phone,
+    containerId: "#turnstileIns-container",
+    enabled: isOpen && activeTab === "phonenumber",
+  });
 
-  const [smsForm, dispatchSmsForm] = useReducer(
-    smsFormReducer,
-    INITIAL_SMS_FORM_STATE,
-  );
-
-  useLayoutEffect(() => {
-    if (!turnstileIns || typeof window === "undefined") return;
-
-    if (!isOpen && turnstileIdRef.current) {
-      turnstileIns.remove(turnstileIdRef.current);
-      turnstileIdRef.current = null;
-    }
-
-    if (!isOpen) {
-      dispatchSmsForm({ type: "RESET" });
-      setPhone("");
-      setCountdown(0);
-      setError(null);
-      prevPhoneRef.current = "";
-      return;
-    }
-
-    turnstileIdRef.current = turnstileIns.render("#turnstileIns-container", {
-      sitekey: SITE_KEY,
-      theme: theme === "dark" ? "dark" : "light",
-      size: "normal",
-      callback: (token) => {
-        dispatchSmsForm({ type: "SET_BOTCHECK", payload: token });
-      },
-    });
-  }, [isOpen, theme]);
-
-  const getSmsCode = useCallback(async () => {
-    if (countdown > 0) return;
-
-    if (import.meta.env.PROD) {
-      if (!smsForm.botcheck) return setError("请先通过人机验证");
-    }
-
-    const phoneResult = z
-      .string()
-      .min(6)
-      .max(20)
-      .regex(/^[0-9]*$/)
-      .safeParse(phone);
-
-    if (!phoneResult.success) return setError("手机号格式错误");
-
-    setError(null);
-
-    try {
-      const result = await trpcClientPublic.auth.smsCode.mutate({
-        botcheck: smsForm.botcheck,
-        phone,
-      });
-
-      if (result.success && "code" in result) return setCountdown(20);
-
-      // 发送失败，重置人机验证
-      dispatchSmsForm({ type: "RESET" });
-      if (turnstileIns && turnstileIdRef.current) {
-        turnstileIns.reset(turnstileIdRef.current);
-      }
-
-      if (!result.success && "message" in result)
-        return setError(result.message);
-
-      setError("发送失败，请稍后重试");
-    } catch {
-      // 网络错误，重置人机验证
-      dispatchSmsForm({ type: "RESET" });
-      if (turnstileIns && turnstileIdRef.current) {
-        turnstileIns.reset(turnstileIdRef.current);
-      }
-      setError("网络错误，请稍后重试");
-    }
-  }, [phone, smsForm.botcheck, countdown]);
-
+  // 当弹窗关闭时重置状态
   useEffect(() => {
-    if (countdown > 0) {
-      countdownTimerRef.current = window.setInterval(() => {
-        setCountdown((prev) => {
-          if (prev > 1) return prev - 1;
-
-          if (!countdownTimerRef.current) return 0;
-
-          clearInterval(countdownTimerRef.current);
-          countdownTimerRef.current = null;
-          return 0;
-        });
-      }, 1000);
+    if (!isOpen) {
+      setPhone("");
+      resetSms();
     }
-
-    return () => {
-      if (countdownTimerRef.current) {
-        clearInterval(countdownTimerRef.current);
-        countdownTimerRef.current = null;
-      }
-    };
-  }, [countdown]);
+  }, [isOpen, resetSms]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
@@ -190,7 +55,7 @@ export default function LoginDialog({
       setError(`登录失败，请稍后重试: ${result?.error ?? "未知错误"}`);
       console.error(`登录失败，请稍后重试: ${result?.error ?? "未知错误"}`);
     },
-    [phone, smsForm.code],
+    [phone, smsForm.code, setError],
   );
 
   return (
@@ -259,24 +124,7 @@ export default function LoginDialog({
                 className="input input-sm"
                 value={phone}
                 onChange={(e) => {
-                  const newPhone = e.target.value;
-                  const phoneChanged = newPhone !== prevPhoneRef.current;
-
-                  // 如果手机号改变且有 token，清空 botcheck 和 code，并重置 turnstileIns
-                  if (
-                    phoneChanged &&
-                    prevPhoneRef.current &&
-                    smsForm.botcheck
-                  ) {
-                    dispatchSmsForm({ type: "RESET" });
-                    // 重置 turnstileIns widget（只有在有 token 的情况下才重置）
-                    if (turnstileIns && turnstileIdRef.current) {
-                      turnstileIns.reset(turnstileIdRef.current);
-                    }
-                  }
-
-                  setPhone(newPhone);
-                  prevPhoneRef.current = newPhone;
+                  setPhone(e.target.value);
                   setError(null);
                 }}
                 disabled={countdown > 0}

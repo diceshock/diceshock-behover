@@ -12,16 +12,11 @@ import ThemeSwap from "../../ThemeSwap";
 import LoginDialog from "./LoginDialog";
 
 export default function AvatarMenu() {
-  const { userInfo } = useAuth();
+  const { userInfo, signOut } = useAuth();
 
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
 
   const name = userInfo?.nickname ?? "Anonymous Shock";
-
-  const handleSignOut = async () => {
-    await signOut({ redirect: false });
-    window.location.href = "/";
-  };
 
   return (
     <div className="dropdown dropdown-bottom dropdown-end">
@@ -59,7 +54,7 @@ export default function AvatarMenu() {
               </li>
               <li>
                 <button
-                  onClick={handleSignOut}
+                  onClick={signOut}
                   className="px-5 py-3 flex items-center justify-between"
                 >
                   <SignOutIcon weight="fill" className="size-5" />
