@@ -90,13 +90,10 @@ function RouteComponent() {
   // 处理 hover 高亮当前悬浮的卡片
   const [hoveredActiveId, setHoveredActiveId] = useState<string | null>(null);
 
-  const handleMouseEnter = useCallback(
-    (dateKey: string, activeId: string) => {
-      setHighlightedDate(dateKey);
-      setHoveredActiveId(activeId);
-    },
-    [],
-  );
+  const handleMouseEnter = useCallback((dateKey: string, activeId: string) => {
+    setHighlightedDate(dateKey);
+    setHoveredActiveId(activeId);
+  }, []);
 
   const handleMouseLeave = useCallback(() => {
     setHighlightedDate(null);
@@ -328,7 +325,8 @@ function RouteComponent() {
                     const isPinned = pinnedTag
                       ? active.tags?.some((t) => t.tag_id === pinnedTag.id)
                       : false;
-                    const isLineHighlighted = highlightedDate === active.dateKey;
+                    const isLineHighlighted =
+                      highlightedDate === active.dateKey;
                     const isCardHighlighted = hoveredActiveId === active.id;
                     const isFirstInDate = index === 0;
                     const weekdays = [
@@ -360,7 +358,9 @@ function RouteComponent() {
                         }
                         onMouseLeave={handleMouseLeave}
                         className={`group card bg-base-100 shadow-md hover:shadow-lg transition-all relative overflow-visible ${
-                          isCardHighlighted ? "bg-base-200/50 translate-x-1" : ""
+                          isCardHighlighted
+                            ? "bg-base-200/50 translate-x-1"
+                            : ""
                         }`}
                       >
                         {/* 日期标识 - 顶部水平线条，默认显示，只连接同一天的活动 */}
