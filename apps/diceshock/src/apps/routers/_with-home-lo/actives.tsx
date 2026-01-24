@@ -343,7 +343,7 @@ function RouteComponent() {
   return (
     <main className="w-full min-h-screen p-4 pb-20 max-w-6xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-4">活动列表</h1>
+        <h1 className="text-4xl font-bold mb-4">活动&约局</h1>
 
         {/* 标签筛选 */}
         <div className="flex flex-wrap gap-2 mb-6">
