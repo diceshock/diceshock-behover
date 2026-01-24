@@ -40,7 +40,7 @@ function RouteComponent() {
           <li>
             <Link to="/dash/game-tags" className="gap-12">
               <TagIcon className="size-6" />
-              约局标签
+              标签
             </Link>
           </li>
 
