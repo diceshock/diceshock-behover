@@ -1,13 +1,13 @@
+import type { BoardGame } from "@lib/utils";
+import { PlusIcon } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import dayjs from "dayjs";
 import isoWeek from "dayjs/plugin/isoWeek";
 import weekOfYear from "dayjs/plugin/weekOfYear";
-import { PlusIcon } from "@phosphor-icons/react/dist/ssr";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import trpcClientPublic from "@/shared/utils/trpc";
-import useAuth from "@/client/hooks/useAuth";
 import { useMsg } from "@/client/components/diceshock/Msg";
-import type { BoardGame } from "@lib/utils";
+import useAuth from "@/client/hooks/useAuth";
+import trpcClientPublic from "@/shared/utils/trpc";
 
 dayjs.extend(weekOfYear);
 dayjs.extend(isoWeek);
@@ -53,11 +53,19 @@ function RouteComponent() {
     selectedBoardGames: [] as number[], // gstone_id 列表
   });
   const [gameBoardGames, setGameBoardGames] = useState<
-    Array<{ id: string; gstone_id: number | null; content: BoardGame.BoardGameCol | null }>
+    Array<{
+      id: string;
+      gstone_id: number | null;
+      content: BoardGame.BoardGameCol | null;
+    }>
   >([]);
   const [gameSearchQuery, setGameSearchQuery] = useState("");
   const [gameSearchResults, setGameSearchResults] = useState<
-    Array<{ id: string; gstone_id: number | null; content: BoardGame.BoardGameCol | null }>
+    Array<{
+      id: string;
+      gstone_id: number | null;
+      content: BoardGame.BoardGameCol | null;
+    }>
   >([]);
   const [creatingGame, setCreatingGame] = useState(false);
 
@@ -216,9 +224,10 @@ function RouteComponent() {
         if (!creatorId) return;
 
         try {
-          const creator = await trpcClientPublic.activeRegistrations.getUserDetails.query({
-            user_id: creatorId,
-          });
+          const creator =
+            await trpcClientPublic.activeRegistrations.getUserDetails.query({
+              user_id: creatorId,
+            });
           if (creator?.userInfo) {
             creatorInfoMap.set(active.id, {
               nickname: creator.userInfo.nickname,
@@ -512,9 +521,10 @@ function RouteComponent() {
         max_participants: gameForm.max_participants
           ? parseInt(gameForm.max_participants, 10)
           : null,
-        board_game_ids: gameForm.selectedBoardGames.length > 0
-          ? gameForm.selectedBoardGames
-          : undefined,
+        board_game_ids:
+          gameForm.selectedBoardGames.length > 0
+            ? gameForm.selectedBoardGames
+            : undefined,
       });
       msg.success("约局创建成功");
       gameDialogRef.current?.close();
@@ -529,9 +539,7 @@ function RouteComponent() {
       await fetchActives();
     } catch (error) {
       console.error("创建约局失败", error);
-      msg.error(
-        error instanceof Error ? error.message : "创建约局失败",
-      );
+      msg.error(error instanceof Error ? error.message : "创建约局失败");
     } finally {
       setCreatingGame(false);
     }
@@ -813,15 +821,18 @@ function RouteComponent() {
                               <div className="mb-1">
                                 <span className="font-semibold">发起者：</span>
                                 <span className="font-mono text-xs">
-                                  {gameParticipants.get(active.id)?.creator_id ||
+                                  {gameParticipants.get(active.id)
+                                    ?.creator_id ||
                                     (active as any).creator_id ||
                                     "未知"}
                                 </span>
                               </div>
-                              {gameParticipants.get(active.id)
-                                ?.participant_ids.length ? (
+                              {gameParticipants.get(active.id)?.participant_ids
+                                .length ? (
                                 <div>
-                                  <span className="font-semibold">报名者：</span>
+                                  <span className="font-semibold">
+                                    报名者：
+                                  </span>
                                   <div className="flex flex-wrap gap-1 mt-1">
                                     {gameParticipants
                                       .get(active.id)
@@ -868,7 +879,8 @@ function RouteComponent() {
                               </span>
                             )}
                             {/* 其他标签 */}
-                            {active.tags && active.tags.length > 0 &&
+                            {active.tags &&
+                              active.tags.length > 0 &&
                               active.tags.map((tagMapping) => {
                                 const title = tagTitle(tagMapping.tag?.title);
                                 return (
@@ -1066,14 +1078,11 @@ function RouteComponent() {
                           <figure className="h-20 overflow-hidden">
                             <img
                               src={gameContent.sch_cover_url}
-                              alt={
-                                gameContent.sch_name || gameContent.eng_name
-                              }
+                              alt={gameContent.sch_name || gameContent.eng_name}
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                (
-                                  e.target as HTMLImageElement
-                                ).style.display = "none";
+                                (e.target as HTMLImageElement).style.display =
+                                  "none";
                               }}
                             />
                           </figure>
@@ -1113,9 +1122,10 @@ function RouteComponent() {
                               onClick={() => {
                                 setGameForm((prev) => ({
                                   ...prev,
-                                  selectedBoardGames: prev.selectedBoardGames.filter(
-                                    (id) => id !== game.gstone_id,
-                                  ),
+                                  selectedBoardGames:
+                                    prev.selectedBoardGames.filter(
+                                      (id) => id !== game.gstone_id,
+                                    ),
                                 }));
                                 setGameBoardGames((prev) =>
                                   prev.filter(
