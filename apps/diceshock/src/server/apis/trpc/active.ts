@@ -4,7 +4,6 @@ import db, {
   activeTagMappingsTable,
   activeTagsTable,
   activeTeamsTable,
-  boardGamesTable,
   drizzle,
   pagedZ,
 } from "@lib/db";
@@ -29,25 +28,25 @@ const get = publicProcedure
 
     // 先获取所有符合条件的数据（不限制数量，以便在内存中排序）
     const allActives = await db(ctx.env.DB).query.activesTable.findMany({
-      where: (acitve, { or, and, like, eq }) =>
+      where: (active: any, { or, and, like, eq }: any) =>
         and(
           searchWords
             ? or(
-                like(acitve.name, `%${searchWords}%`),
-                like(acitve.description, `%${searchWords}%`),
+                like(active.name, `%${searchWords}%`),
+                like(active.description, `%${searchWords}%`),
               )
             : undefined,
           isPublished !== undefined
-            ? eq(acitve.is_published, isPublished)
+            ? eq(active.is_published, isPublished)
             : undefined,
           isDeleted !== undefined
-            ? eq(acitve.is_deleted, isDeleted)
+            ? eq(active.is_deleted, isDeleted)
             : undefined,
         ),
       with: {
         tags: {
           with: { tag: true },
-          where: (tag, { inArray }) =>
+          where: (tag: any, { inArray }: any) =>
             tags ? inArray(tag.tag_id, tags) : undefined,
         },
       },
@@ -58,7 +57,7 @@ const get = publicProcedure
 
     // 为每个活动添加过期状态，并排序
     const activesWithExpired = allActives
-      .map((active) => {
+      .map((active: any) => {
         const isExpired =
           active.event_date !== null &&
           active.event_date !== undefined &&
@@ -68,7 +67,7 @@ const get = publicProcedure
           isExpired,
         };
       })
-      .sort((a, b) => {
+      .sort((a: any, b: any) => {
         // 先按过期状态排序：未过期的在前（isExpired: false 在前）
         if (a.isExpired !== b.isExpired) {
           return a.isExpired ? 1 : -1;
@@ -96,7 +95,7 @@ const getById = publicProcedure
   .query(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
     const active = await tdb.query.activesTable.findFirst({
-      where: (a, { eq }) => eq(a.id, input.id),
+      where: (a: any, { eq }: any) => eq(a.id, input.id),
       with: {
         tags: {
           with: { tag: true },
@@ -181,7 +180,7 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
   ) {
     currentActive =
       (await tdb.query.activesTable.findFirst({
-        where: (a, { eq }) => eq(a.id, id),
+        where: (a: any, { eq }: any) => eq(a.id, id),
         columns: {
           is_published: true,
           publish_at: true,
@@ -277,7 +276,7 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
   ) {
     // 检查是否已有队伍
     const existingTeams = await tdb.query.activeTeamsTable.findMany({
-      where: (team, { eq }) => eq(team.active_id, id),
+      where: (team: any, { eq }: any) => eq(team.active_id, id),
     });
 
     // 如果没有队伍，创建默认队伍
@@ -293,7 +292,7 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
   // 如果没有要更新的字段，直接返回（或者只处理标签）
   if (Object.keys(updateData).length === 0 && !tagIds) {
     return await tdb.query.activesTable.findMany({
-      where: (a, { eq }) => eq(a.id, id),
+      where: (a: any, { eq }: any) => eq(a.id, id),
     });
   }
 
@@ -303,10 +302,10 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
       ? await tdb
           .update(activesTable)
           .set(updateData)
-          .where(drizzle.eq(activesTable.id, id))
+          .where((drizzle as any).eq(activesTable.id, id))
           .returning()
       : await tdb.query.activesTable.findMany({
-          where: (a, { eq }) => eq(a.id, id),
+          where: (a: any, { eq }: any) => eq(a.id, id),
         });
   console.log("更新后的 acitves:", JSON.stringify(acitves, null, 2));
 
@@ -314,31 +313,31 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
 
   await tdb
     .delete(activeTagMappingsTable)
-    .where(drizzle.eq(activeTagMappingsTable.active_id, id));
+    .where((drizzle as any).eq(activeTagMappingsTable.active_id, id));
 
   const tags = await tdb.query.activeTagsTable.findMany({
-    where: (t, { inArray }) => inArray(t.id, tagIds),
+    where: (t: any, { inArray }: any) => inArray(t.id, tagIds),
   });
 
   if (tags.length > 0) {
     await tdb
       .insert(activeTagMappingsTable)
-      .values(tags.map((t) => ({ active_id: id, tag_id: t.id })));
+      .values(tags.map((t: any) => ({ active_id: id, tag_id: t.id })));
   }
 
   // 删除未被任何活动使用的标签
   const allMappings = await tdb.query.activeTagMappingsTable.findMany();
-  const usedTagIds = new Set(allMappings.map((m) => m.tag_id));
+  const usedTagIds = new Set(allMappings.map((m: any) => m.tag_id));
 
   const allTags = await tdb.query.activeTagsTable.findMany();
   const unusedTagIds = allTags
-    .filter((tag) => !usedTagIds.has(tag.id))
-    .map((tag) => tag.id);
+    .filter((tag: any) => !usedTagIds.has(tag.id))
+    .map((tag: any) => tag.id);
 
   if (unusedTagIds.length > 0) {
     await tdb
       .delete(activeTagsTable)
-      .where(drizzle.inArray(activeTagsTable.id, unusedTagIds));
+      .where((drizzle as any).inArray(activeTagsTable.id, unusedTagIds));
   }
 
   return acitves;
@@ -371,15 +370,15 @@ const insert = async (env: Cloudflare.Env, input: z.infer<typeof insertZ>) => {
   // 如果有标签，创建标签映射
   if (tagIds && tagIds.length > 0) {
     const tags = await tdb.query.activeTagsTable.findMany({
-      where: (t, { inArray }) => inArray(t.id, tagIds),
+      where: (t: any, { inArray }: any) => inArray(t.id, tagIds),
     });
 
     if (tags.length > 0) {
       await tdb
         .insert(activeTagMappingsTable)
         .values(
-          newActive.flatMap(({ id: active_id }) =>
-            tags.map(({ id: tag_id }) => ({ active_id, tag_id })),
+          newActive.flatMap(({ id: active_id }: any) =>
+            tags.map(({ id: tag_id }: any) => ({ active_id, tag_id })),
           ),
         );
     }
@@ -402,24 +401,26 @@ const deleteActive = async (
   // 删除活动的标签映射
   await tdb
     .delete(activeTagMappingsTable)
-    .where(drizzle.eq(activeTagMappingsTable.active_id, id));
+    .where((drizzle as any).eq(activeTagMappingsTable.active_id, id));
 
   // 删除活动本身
-  await tdb.delete(activesTable).where(drizzle.eq(activesTable.id, id));
+  await tdb
+    .delete(activesTable)
+    .where((drizzle as any).eq(activesTable.id, id));
 
   // 清理未被任何活动使用的标签
   const allMappings = await tdb.query.activeTagMappingsTable.findMany();
-  const usedTagIds = new Set(allMappings.map((m) => m.tag_id));
+  const usedTagIds = new Set(allMappings.map((m: any) => m.tag_id));
 
   const allTags = await tdb.query.activeTagsTable.findMany();
   const unusedTagIds = allTags
-    .filter((tag) => !usedTagIds.has(tag.id))
-    .map((tag) => tag.id);
+    .filter((tag: any) => !usedTagIds.has(tag.id))
+    .map((tag: any) => tag.id);
 
   if (unusedTagIds.length > 0) {
     await tdb
       .delete(activeTagsTable)
-      .where(drizzle.inArray(activeTagsTable.id, unusedTagIds));
+      .where((drizzle as any).inArray(activeTagsTable.id, unusedTagIds));
   }
 
   return { success: true };
@@ -446,7 +447,7 @@ const deleteMutation = protectedProcedure
 
     // 检查活动是否存在
     const active = await tdb.query.activesTable.findFirst({
-      where: (a, { eq }) => eq(a.id, id),
+      where: (a: any, { eq }: any) => eq(a.id, id),
     });
 
     if (!active) {
@@ -477,18 +478,18 @@ const getBoardGames = publicProcedure
   .query(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
     const mappings = await tdb.query.activeBoardGamesTable.findMany({
-      where: (m, { eq }) => eq(m.active_id, input.active_id),
-      orderBy: (m, { desc }) => desc(m.create_at),
+      where: (m: any, { eq }: any) => eq(m.active_id, input.active_id),
+      orderBy: (m: any, { desc }: any) => desc(m.create_at),
     });
 
     // 使用 gstone_id 查找对应的 board games
-    const gstoneIds = mappings.map((m) => m.board_game_id);
+    const gstoneIds = mappings.map((m: any) => m.board_game_id);
     if (gstoneIds.length === 0) {
       return [];
     }
 
     const games = await tdb.query.boardGamesTable.findMany({
-      where: (game, { and, inArray, eq }) =>
+      where: (game: any, { and, inArray, eq }: any) =>
         and(
           inArray(game.gstone_id, gstoneIds),
           // 如果不包含失效的桌游，只返回有效的（removeDate === new Date(0)）
@@ -497,7 +498,7 @@ const getBoardGames = publicProcedure
     });
 
     // 返回格式：{ gstone_id: number; content: BoardGame.BoardGameCol | null; isRemoved: boolean }
-    return games.map((game) => ({
+    return games.map((game: any) => ({
       gstone_id: game.gstone_id ?? 0,
       content: game.content ?? null,
       isRemoved: Boolean(
@@ -519,7 +520,7 @@ const addBoardGame = publicProcedure
 
     // 先通过 gstone_id 查找对应的 board game，确保存在
     const boardGame = await tdb.query.boardGamesTable.findFirst({
-      where: (game, { eq }) => eq(game.gstone_id, board_game_id),
+      where: (game: any, { eq }: any) => eq(game.gstone_id, board_game_id),
     });
 
     if (!boardGame) {
@@ -528,7 +529,7 @@ const addBoardGame = publicProcedure
 
     // 检查是否已存在
     const existing = await tdb.query.activeBoardGamesTable.findFirst({
-      where: (m, { and, eq }) =>
+      where: (m: any, { and, eq }: any) =>
         and(eq(m.active_id, active_id), eq(m.board_game_id, board_game_id)),
     });
 
@@ -559,9 +560,12 @@ const removeBoardGame = publicProcedure
     await tdb
       .delete(activeBoardGamesTable)
       .where(
-        drizzle.and(
-          drizzle.eq(activeBoardGamesTable.active_id, active_id),
-          drizzle.eq(activeBoardGamesTable.board_game_id, board_game_id),
+        (drizzle as any).and(
+          (drizzle as any).eq(activeBoardGamesTable.active_id, active_id),
+          (drizzle as any).eq(
+            activeBoardGamesTable.board_game_id,
+            board_game_id,
+          ),
         ),
       );
 
@@ -619,13 +623,13 @@ const createGame = protectedProcedure
     if (tag_ids && tag_ids.length > 0) {
       // 验证标签是否存在
       const tags = await tdb.query.activeTagsTable.findMany({
-        where: (tag, { inArray }) => inArray(tag.id, tag_ids),
+        where: (tag: any, { inArray }: any) => inArray(tag.id, tag_ids),
       });
 
       // 添加所有选中的标签（管理页面创建的所有标签都可以用于约局）
       if (tags.length > 0) {
         await tdb.insert(activeTagMappingsTable).values(
-          tags.map((tag) => ({
+          tags.map((tag: any) => ({
             active_id: gameId,
             tag_id: tag.id,
           })),
@@ -664,7 +668,7 @@ const updateGame = protectedProcedure
 
     // 检查约局是否存在且是发起者
     const game = await tdb.query.activesTable.findFirst({
-      where: (a, { eq }) => eq(a.id, id),
+      where: (a: any, { eq }: any) => eq(a.id, id),
     });
 
     if (!game) {
@@ -686,14 +690,14 @@ const updateGame = protectedProcedure
         .set({
           event_date: event_date?.trim() ? new Date(event_date) : null,
         })
-        .where(drizzle.eq(activesTable.id, id));
+        .where((drizzle as any).eq(activesTable.id, id));
     }
 
     // 更新队伍人数上限（约局只有一个队伍）
     if (max_participants !== undefined) {
       const teams = await tdb.query.activeTeamsTable.findMany({
-        where: (team, { eq }) => eq(team.active_id, id),
-        orderBy: (teams, { asc }) => asc(teams.create_at),
+        where: (team: any, { eq }: any) => eq(team.active_id, id),
+        orderBy: (teams: any, { asc }: any) => asc(teams.create_at),
       });
 
       // 约局默认上限为40人，如果没填则使用默认值
@@ -704,7 +708,7 @@ const updateGame = protectedProcedure
         await tdb
           .update(activeTeamsTable)
           .set({ max_participants: finalMaxParticipants })
-          .where(drizzle.eq(activeTeamsTable.id, teams[0].id));
+          .where((drizzle as any).eq(activeTeamsTable.id, teams[0].id));
       } else {
         // 如果没有队伍，创建一个（这种情况不应该发生，但为了安全起见）
         await tdb.insert(activeTeamsTable).values({
@@ -721,17 +725,17 @@ const updateGame = protectedProcedure
       // 删除现有标签映射
       await tdb
         .delete(activeTagMappingsTable)
-        .where(drizzle.eq(activeTagMappingsTable.active_id, id));
+        .where((drizzle as any).eq(activeTagMappingsTable.active_id, id));
 
       // 添加新标签
       if (tag_ids.length > 0) {
         const tags = await tdb.query.activeTagsTable.findMany({
-          where: (tag, { inArray }) => inArray(tag.id, tag_ids),
+          where: (tag: any, { inArray }: any) => inArray(tag.id, tag_ids),
         });
 
         if (tags.length > 0) {
           await tdb.insert(activeTagMappingsTable).values(
-            tags.map((tag) => ({
+            tags.map((tag: any) => ({
               active_id: id,
               tag_id: tag.id,
             })),
@@ -745,7 +749,7 @@ const updateGame = protectedProcedure
       // 删除现有桌游映射
       await tdb
         .delete(activeBoardGamesTable)
-        .where(drizzle.eq(activeBoardGamesTable.active_id, id));
+        .where((drizzle as any).eq(activeBoardGamesTable.active_id, id));
 
       // 添加新桌游
       if (board_game_ids.length > 0) {
