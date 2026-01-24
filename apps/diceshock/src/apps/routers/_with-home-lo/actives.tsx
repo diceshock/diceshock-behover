@@ -913,7 +913,8 @@ function RouteComponent() {
                                 {/* 约局发起者标签（user图标） */}
                                 <span className="badge badge-sm gap-1 badge-accent inline-flex items-center whitespace-nowrap">
                                   <span>👤</span>{" "}
-                                  {creatorInfo.get(active.id)?.nickname || "未知"}
+                                  {creatorInfo.get(active.id)?.nickname ||
+                                    "未知"}
                                 </span>
                                 {/* 标签 */}
                                 <ActiveTags tags={active.tags} size="sm" />
