@@ -381,6 +381,12 @@ function RouteComponent() {
   const handleSave = async () => {
     if (!active) return;
 
+    // 如果是约局，验证标签数量
+    if ((active as any)?.is_game && selectedTags.length > 15) {
+      msg.warning("约局最多只能选择15个标签");
+      return;
+    }
+
     try {
       setSaving(true);
       await trpcClientDash.active.mutation.mutate({
@@ -733,28 +739,51 @@ function RouteComponent() {
                     {(active as any)?.is_game ? (
                       <>
                         <div className="alert alert-info">
-                          <span>约局只能使用后台管理的约局标签</span>
+                          <span>
+                            约局只能使用后台管理的约局标签（最多15个）
+                            {selectedTags.length > 0 && (
+                              <span className="ml-2">
+                                ({selectedTags.length}/15)
+                              </span>
+                            )}
+                          </span>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {gameTags.map((tag) => {
                             const title = tagTitle(tag.title);
                             const checked = selectedTags.includes(tag.id);
+                            const isDisabled =
+                              !checked && selectedTags.length >= 15;
                             return (
                               <label
                                 key={tag.id}
-                                className="badge badge-lg gap-2 cursor-pointer"
+                                className={`badge badge-lg gap-2 ${
+                                  isDisabled
+                                    ? "opacity-50 cursor-not-allowed"
+                                    : "cursor-pointer"
+                                }`}
                               >
                                 <input
                                   type="checkbox"
                                   className="checkbox checkbox-sm"
                                   checked={checked}
-                                  onChange={() =>
-                                    setSelectedTags((prev) =>
-                                      checked
-                                        ? prev.filter((id) => id !== tag.id)
-                                        : [...prev, tag.id],
-                                    )
-                                  }
+                                  disabled={isDisabled}
+                                  onChange={() => {
+                                    if (checked) {
+                                      setSelectedTags((prev) =>
+                                        prev.filter((id) => id !== tag.id),
+                                      );
+                                    } else {
+                                      if (selectedTags.length >= 15) {
+                                        msg.warning("最多只能选择15个标签");
+                                        return;
+                                      }
+                                      setSelectedTags((prev) => [
+                                        ...prev,
+                                        tag.id,
+                                      ]);
+                                    }
+                                  }}
                                 />
                                 <span>{title.emoji}</span>
                                 {title.tx}
@@ -1035,7 +1064,6 @@ function RouteComponent() {
   );
 }
 
-
 // 报名管理 Tab 组件
 type RegistrationsTabProps = {
   activeId: string;
@@ -1068,7 +1096,7 @@ function RegistrationsTab({
   });
   const [editingTeam, setEditingTeam] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  
+
   // 约局的唯一队伍
   const gameTeam = isGame && teams.length > 0 ? teams[0] : null;
   const [gameMaxParticipants, setGameMaxParticipants] = useState<string>(
@@ -1247,182 +1275,182 @@ function RegistrationsTab({
               {/* 创建队伍表单 */}
               <div className="flex flex-col gap-2">
                 <div className="flex gap-2">
-                <input
-                  type="text"
-                  className="input input-bordered flex-1"
-                  placeholder="队伍名称"
-                  value={teamForm.name}
-                  onChange={(e) =>
-                    setTeamForm((prev) => ({ ...prev, name: e.target.value }))
-                  }
-                />
-                <input
-                  type="number"
-                  className="input input-bordered w-32"
-                  placeholder="人数上限（留空无上限）"
-                  value={teamForm.max_participants}
+                  <input
+                    type="text"
+                    className="input input-bordered flex-1"
+                    placeholder="队伍名称"
+                    value={teamForm.name}
+                    onChange={(e) =>
+                      setTeamForm((prev) => ({ ...prev, name: e.target.value }))
+                    }
+                  />
+                  <input
+                    type="number"
+                    className="input input-bordered w-32"
+                    placeholder="人数上限（留空无上限）"
+                    value={teamForm.max_participants}
+                    onChange={(e) =>
+                      setTeamForm((prev) => ({
+                        ...prev,
+                        max_participants: e.target.value,
+                      }))
+                    }
+                    min="1"
+                  />
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleCreateTeam}
+                    disabled={creating}
+                  >
+                    <PlusIcon className="size-4" />
+                    创建队伍
+                  </button>
+                </div>
+                <textarea
+                  className="textarea textarea-bordered textarea-sm"
+                  placeholder="队伍描述（可选）"
+                  value={teamForm.description}
                   onChange={(e) =>
                     setTeamForm((prev) => ({
                       ...prev,
-                      max_participants: e.target.value,
+                      description: e.target.value,
                     }))
                   }
-                  min="1"
+                  rows={2}
                 />
-                <button
-                  className="btn btn-primary"
-                  onClick={handleCreateTeam}
-                  disabled={creating}
-                >
-                  <PlusIcon className="size-4" />
-                  创建队伍
-                </button>
-              </div>
-              <textarea
-                className="textarea textarea-bordered textarea-sm"
-                placeholder="队伍描述（可选）"
-                value={teamForm.description}
-                onChange={(e) =>
-                  setTeamForm((prev) => ({
-                    ...prev,
-                    description: e.target.value,
-                  }))
-                }
-                rows={2}
-              />
               </div>
 
               {/* 队伍列表 */}
               <div className="flex flex-col gap-2">
-              {teams.length === 0 ? (
-                <p className="text-base-content/50 text-center py-4">
-                  暂无队伍，请先创建至少一个队伍
-                </p>
-              ) : (
-                (() => {
-                  // 按创建时间排序，第一个队伍不能删除
-                  const sortedTeams = [...teams].sort((a, b) => {
-                    const aTime = a.create_at
-                      ? new Date(a.create_at).getTime()
-                      : 0;
-                    const bTime = b.create_at
-                      ? new Date(b.create_at).getTime()
-                      : 0;
-                    return aTime - bTime;
-                  });
-                  const firstTeamId = sortedTeams[0]?.id;
+                {teams.length === 0 ? (
+                  <p className="text-base-content/50 text-center py-4">
+                    暂无队伍，请先创建至少一个队伍
+                  </p>
+                ) : (
+                  (() => {
+                    // 按创建时间排序，第一个队伍不能删除
+                    const sortedTeams = [...teams].sort((a, b) => {
+                      const aTime = a.create_at
+                        ? new Date(a.create_at).getTime()
+                        : 0;
+                      const bTime = b.create_at
+                        ? new Date(b.create_at).getTime()
+                        : 0;
+                      return aTime - bTime;
+                    });
+                    const firstTeamId = sortedTeams[0]?.id;
 
-                  return teams.map((team) => {
-                    const isFirstTeam = team.id === firstTeamId;
-                    return (
-                      <div
-                        key={team.id}
-                        className="flex items-center justify-between p-3 border border-base-300 rounded-lg"
-                      >
-                        <div className="flex-1">
-                          {editingTeam === team.id ? (
-                            <div className="flex flex-col gap-2">
-                              <div className="flex gap-2">
-                                <input
-                                  type="text"
-                                  className="input input-sm input-bordered flex-1"
-                                  defaultValue={team.name}
-                                  onBlur={(e) => {
-                                    if (e.target.value !== team.name) {
-                                      handleUpdateTeam(team.id, {
-                                        name: e.target.value,
-                                      });
-                                    }
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                      e.currentTarget.blur();
-                                    }
-                                  }}
-                                  autoFocus
-                                />
-                                <input
-                                  type="number"
-                                  className="input input-sm input-bordered w-24"
-                                  defaultValue={team.max_participants ?? ""}
-                                  placeholder="无上限"
-                                  onBlur={(e) => {
-                                    const value = e.target.value
-                                      ? parseInt(e.target.value, 10)
-                                      : null;
-                                    if (value !== team.max_participants) {
-                                      handleUpdateTeam(team.id, {
-                                        max_participants: value,
-                                      });
-                                    }
-                                  }}
-                                  min="1"
-                                />
-                              </div>
-                              <textarea
-                                className="textarea textarea-sm textarea-bordered"
-                                defaultValue={team.description ?? ""}
-                                placeholder="队伍描述（可选）"
-                                onBlur={(e) => {
-                                  const newDescription =
-                                    e.target.value.trim() || undefined;
-                                  if (
-                                    newDescription !==
-                                    (team.description || undefined)
-                                  ) {
-                                    handleUpdateTeam(team.id, {
-                                      description: newDescription,
-                                    });
-                                  }
-                                }}
-                                rows={2}
-                              />
-                            </div>
-                          ) : (
-                            <div>
-                              <div className="font-semibold">{team.name}</div>
-                              {team.description && (
-                                <div className="text-sm text-base-content/60 mt-1">
-                                  {team.description}
+                    return teams.map((team) => {
+                      const isFirstTeam = team.id === firstTeamId;
+                      return (
+                        <div
+                          key={team.id}
+                          className="flex items-center justify-between p-3 border border-base-300 rounded-lg"
+                        >
+                          <div className="flex-1">
+                            {editingTeam === team.id ? (
+                              <div className="flex flex-col gap-2">
+                                <div className="flex gap-2">
+                                  <input
+                                    type="text"
+                                    className="input input-sm input-bordered flex-1"
+                                    defaultValue={team.name}
+                                    onBlur={(e) => {
+                                      if (e.target.value !== team.name) {
+                                        handleUpdateTeam(team.id, {
+                                          name: e.target.value,
+                                        });
+                                      }
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        e.currentTarget.blur();
+                                      }
+                                    }}
+                                    autoFocus
+                                  />
+                                  <input
+                                    type="number"
+                                    className="input input-sm input-bordered w-24"
+                                    defaultValue={team.max_participants ?? ""}
+                                    placeholder="无上限"
+                                    onBlur={(e) => {
+                                      const value = e.target.value
+                                        ? parseInt(e.target.value, 10)
+                                        : null;
+                                      if (value !== team.max_participants) {
+                                        handleUpdateTeam(team.id, {
+                                          max_participants: value,
+                                        });
+                                      }
+                                    }}
+                                    min="1"
+                                  />
                                 </div>
-                              )}
-                              <div className="text-sm text-base-content/70 mt-1">
-                                {team.current_count} /{" "}
-                                {team.max_participants ?? "∞"} 人
-                                {team.is_full && (
-                                  <span className="text-error ml-2">
-                                    （已满）
-                                  </span>
-                                )}
+                                <textarea
+                                  className="textarea textarea-sm textarea-bordered"
+                                  defaultValue={team.description ?? ""}
+                                  placeholder="队伍描述（可选）"
+                                  onBlur={(e) => {
+                                    const newDescription =
+                                      e.target.value.trim() || undefined;
+                                    if (
+                                      newDescription !==
+                                      (team.description || undefined)
+                                    ) {
+                                      handleUpdateTeam(team.id, {
+                                        description: newDescription,
+                                      });
+                                    }
+                                  }}
+                                  rows={2}
+                                />
                               </div>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex gap-2">
-                          {editingTeam !== team.id && (
-                            <>
-                              <button
-                                className="btn btn-ghost btn-sm"
-                                onClick={() => setEditingTeam(team.id)}
-                              >
-                                <PencilLineIcon className="size-4" />
-                              </button>
-                              {!isFirstTeam && (
+                            ) : (
+                              <div>
+                                <div className="font-semibold">{team.name}</div>
+                                {team.description && (
+                                  <div className="text-sm text-base-content/60 mt-1">
+                                    {team.description}
+                                  </div>
+                                )}
+                                <div className="text-sm text-base-content/70 mt-1">
+                                  {team.current_count} /{" "}
+                                  {team.max_participants ?? "∞"} 人
+                                  {team.is_full && (
+                                    <span className="text-error ml-2">
+                                      （已满）
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            {editingTeam !== team.id && (
+                              <>
                                 <button
-                                  className="btn btn-ghost btn-sm text-error"
-                                  onClick={() => handleDeleteTeam(team.id)}
+                                  className="btn btn-ghost btn-sm"
+                                  onClick={() => setEditingTeam(team.id)}
                                 >
-                                  <TrashIcon className="size-4" />
+                                  <PencilLineIcon className="size-4" />
                                 </button>
-                              )}
-                            </>
-                          )}
+                                {!isFirstTeam && (
+                                  <button
+                                    className="btn btn-ghost btn-sm text-error"
+                                    onClick={() => handleDeleteTeam(team.id)}
+                                  >
+                                    <TrashIcon className="size-4" />
+                                  </button>
+                                )}
+                              </>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  });
-                })()
-              )}
+                      );
+                    });
+                  })()
+                )}
               </div>
             </div>
           </div>

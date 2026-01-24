@@ -231,7 +231,9 @@ function RouteComponent() {
 
           // 如果是约局，存储发起者和报名者信息
           if ((active as any).is_game) {
-            const participantIds = registrations.map((reg: Registration) => reg.user_id);
+            const participantIds = registrations.map(
+              (reg: Registration) => reg.user_id,
+            );
             gameParticipantsMap.set(active.id, {
               creator_id: (active as any).creator_id || null,
               participant_ids: participantIds,
@@ -319,7 +321,9 @@ function RouteComponent() {
     // 根据选中的标签筛选
     if (selectedTags.length > 0) {
       result = result.filter((active) =>
-        active.tags?.some((t: { tag_id: string }) => selectedTags.includes(t.tag_id)),
+        active.tags?.some((t: { tag_id: string }) =>
+          selectedTags.includes(t.tag_id),
+        ),
       );
     }
 
@@ -556,6 +560,12 @@ function RouteComponent() {
       return;
     }
 
+    // 验证标签数量
+    if (gameForm.selectedTags.length > 15) {
+      msg.warning("最多只能选择15个标签");
+      return;
+    }
+
     try {
       setCreatingGame(true);
       await trpcClientPublic.active.createGame.mutate({
@@ -730,7 +740,9 @@ function RouteComponent() {
                       (tag) => tagTitle(tag.title).tx === "置顶",
                     );
                     const isPinned = pinnedTag
-                      ? active.tags?.some((t: { tag_id: string }) => t.tag_id === pinnedTag.id)
+                      ? active.tags?.some(
+                          (t: { tag_id: string }) => t.tag_id === pinnedTag.id,
+                        )
                       : false;
                     const isLineHighlighted =
                       highlightedDate === active.dateKey;
@@ -845,20 +857,53 @@ function RouteComponent() {
                         )}
                         <div className="card-body">
                           <div className="flex items-start justify-between gap-2">
-                            <h2 className="card-title text-lg">
-                              {isPinned && (
-                                <span className="text-primary" title="置顶">
-                                  📌
-                                </span>
-                              )}
-                              {(active as any).is_game ? (
-                                <span className="badge badge-sm badge-accent mr-2">
-                                  约局
-                                </span>
-                              ) : (
-                                active.name
-                              )}
-                            </h2>
+                            {(active as any).is_game ? (
+                              // 约局：标签放在标题位置
+                              <div className="flex flex-wrap items-center gap-1 flex-1">
+                                {isPinned && (
+                                  <span className="text-primary" title="置顶">
+                                    📌
+                                  </span>
+                                )}
+                                {active.tags && active.tags.length > 0 ? (
+                                  active.tags
+                                    .slice(0, 15)
+                                    .map(
+                                      (tagMapping: {
+                                        tag_id: string;
+                                        tag?: TagItem | null;
+                                      }) => {
+                                        const title = tagTitle(
+                                          tagMapping.tag?.title,
+                                        );
+                                        return (
+                                          <span
+                                            key={tagMapping.tag_id}
+                                            className="badge badge-sm gap-1 inline-flex items-center whitespace-nowrap"
+                                          >
+                                            <span>{title.emoji}</span>
+                                            {title.tx}
+                                          </span>
+                                        );
+                                      },
+                                    )
+                                ) : (
+                                  <span className="badge badge-sm badge-ghost">
+                                    约局
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              // 非约局活动：显示标题
+                              <h2 className="card-title text-lg">
+                                {isPinned && (
+                                  <span className="text-primary" title="置顶">
+                                    📌
+                                  </span>
+                                )}
+                                {active.name}
+                              </h2>
+                            )}
                           </div>
                           {/* 约局显示发起者和报名者 */}
                           {(active as any).is_game && (
@@ -917,21 +962,27 @@ function RouteComponent() {
                                 {creatorInfo.get(active.id)?.nickname || "未知"}
                               </span>
                             )}
-                            {/* 其他标签 */}
-                            {active.tags &&
+                            {/* 非约局活动的标签 */}
+                            {!(active as any).is_game &&
+                              active.tags &&
                               active.tags.length > 0 &&
-                              active.tags.map((tagMapping: { tag_id: string; tag?: TagItem | null }) => {
-                                const title = tagTitle(tagMapping.tag?.title);
-                                return (
-                                  <span
-                                    key={tagMapping.tag_id}
-                                    className="badge badge-sm gap-1 inline-flex items-center whitespace-nowrap"
-                                  >
-                                    <span>{title.emoji}</span>
-                                    {title.tx}
-                                  </span>
-                                );
-                              })}
+                              active.tags.map(
+                                (tagMapping: {
+                                  tag_id: string;
+                                  tag?: TagItem | null;
+                                }) => {
+                                  const title = tagTitle(tagMapping.tag?.title);
+                                  return (
+                                    <span
+                                      key={tagMapping.tag_id}
+                                      className="badge badge-sm gap-1 inline-flex items-center whitespace-nowrap"
+                                    >
+                                      <span>{title.emoji}</span>
+                                      {title.tx}
+                                    </span>
+                                  );
+                                },
+                              )}
                             {/* 报名和观望标签 */}
                             {active.enable_registration && (
                               <span className="badge badge-sm badge-info gap-1 items-center inline-flex whitespace-nowrap">
@@ -1053,7 +1104,14 @@ function RouteComponent() {
             {/* 约局标签选择 */}
             <div>
               <label className="label">
-                <span className="label-text">选择约局标签（可选）</span>
+                <span className="label-text">
+                  选择约局标签（可选，最多15个）
+                  {gameForm.selectedTags.length > 0 && (
+                    <span className="text-sm text-base-content/60 ml-2">
+                      ({gameForm.selectedTags.length}/15)
+                    </span>
+                  )}
+                </span>
               </label>
               <input
                 type="text"
@@ -1081,15 +1139,37 @@ function RouteComponent() {
                         key={tag.id}
                         type="button"
                         onClick={() => {
-                          setGameForm((prev) => ({
-                            ...prev,
-                            selectedTags: isSelected
-                              ? prev.selectedTags.filter((id) => id !== tag.id)
-                              : [...prev.selectedTags, tag.id],
-                          }));
+                          setGameForm((prev) => {
+                            if (isSelected) {
+                              // 取消选择
+                              return {
+                                ...prev,
+                                selectedTags: prev.selectedTags.filter(
+                                  (id) => id !== tag.id,
+                                ),
+                              };
+                            } else {
+                              // 选择：检查是否超过15个
+                              if (prev.selectedTags.length >= 15) {
+                                msg.warning("最多只能选择15个标签");
+                                return prev;
+                              }
+                              return {
+                                ...prev,
+                                selectedTags: [...prev.selectedTags, tag.id],
+                              };
+                            }
+                          });
                         }}
+                        disabled={
+                          !isSelected && gameForm.selectedTags.length >= 15
+                        }
                         className={`badge badge-lg gap-2 ${
                           isSelected ? "badge-primary" : "badge-outline"
+                        } ${
+                          !isSelected && gameForm.selectedTags.length >= 15
+                            ? "opacity-50 cursor-not-allowed"
+                            : ""
                         }`}
                       >
                         <span>{tag.title?.emoji || "🎲"}</span>

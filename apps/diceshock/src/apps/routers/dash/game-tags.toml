@@ -95,51 +95,51 @@ is_pinned = false
 [[tags]]
 name = "COC"
 emoji = "🐙"
-keywords = "克苏鲁,COC,调查,恐怖,跑团"
+keywords = "克苏鲁,COC,调查,恐怖,跑团,kesulu,kcl,diaocha,dc"
 is_pinned = false
 
 [[tags]]
 name = "COC 7版"
 emoji = "🐙"
-keywords = "克苏鲁,COC,7版,调查,恐怖,跑团"
+keywords = "克苏鲁,COC,7版,调查,恐怖,跑团,kesulu,kcl,7ban,7b"
 is_pinned = false
 
 [[tags]]
 name = "COC 6版"
 emoji = "🐙"
-keywords = "克苏鲁,COC,6版,调查,恐怖,跑团"
+keywords = "克苏鲁,COC,6版,调查,恐怖,跑团,kesulu,kcl,6ban,6b"
 is_pinned = false
 
 # 麻将
 [[tags]]
 name = "日麻"
 emoji = "🀄"
-keywords = "日本麻将,日麻,立直,雀魂"
+keywords = "日本麻将,日麻,立直,雀魂,ribenmajiang,rbmj,rima,rm,lizhi,lz"
 is_pinned = true
 
 [[tags]]
 name = "公式战"
 emoji = "🏆"
-keywords = "公式战,比赛,竞技,官方"
+keywords = "公式战,比赛,竞技,官方,gongshizhan,gsz,bisai,bs"
 is_pinned = true
 
 # TCG 集换式卡牌游戏
 [[tags]]
 name = "TCG"
 emoji = "🎴"
-keywords = "TCG,集换式卡牌,卡牌游戏,收集"
+keywords = "TCG,集换式卡牌,卡牌游戏,收集,jihuanshikapai,jhskp"
 is_pinned = true
 
 [[tags]]
 name = "万智牌"
 emoji = "🔮"
-keywords = "万智牌,MTG,Magic,TCG,卡牌"
+keywords = "万智牌,MTG,Magic,TCG,卡牌,wanzhipai,wzp"
 is_pinned = false
 
 [[tags]]
 name = "游戏王"
 emoji = "⚡"
-keywords = "游戏王,Yu-Gi-Oh,YGO,OCG,TCG,卡牌"
+keywords = "游戏王,Yu-Gi-Oh,YGO,OCG,TCG,卡牌,youxiwang,yxw"
 is_pinned = false
 
 [[tags]]
@@ -207,188 +207,188 @@ is_pinned = false
 [[tags]]
 name = "友情局"
 emoji = "💕"
-keywords = "友情局,朋友,轻松,休闲"
+keywords = "友情局,朋友,轻松,休闲,youqingju,yqj,youqing,yq"
 is_pinned = false
 
 [[tags]]
 name = "胡闹局"
 emoji = "🤪"
-keywords = "胡闹局,搞笑,欢乐,娱乐"
+keywords = "胡闹局,搞笑,欢乐,娱乐,hunaoju,hnj,hunao,hn"
 is_pinned = false
 
 [[tags]]
 name = "村规局"
 emoji = "🏘️"
-keywords = "村规局,村规,自定义规则,非官方"
+keywords = "村规局,村规,自定义规则,非官方,cunguiju,cgj,cungui,cg"
 is_pinned = false
 
 [[tags]]
 name = "剧情团"
 emoji = "📚"
-keywords = "剧情团,剧情,角色扮演,故事"
+keywords = "剧情团,剧情,角色扮演,故事,juqingtuan,jqt,juqing,jq"
 is_pinned = false
 
 [[tags]]
 name = "踢门团"
 emoji = "🚪"
-keywords = "踢门团,战斗,地牢,冒险"
+keywords = "踢门团,战斗,地牢,冒险,timentuan,tmt,timen,tm"
 is_pinned = false
 
 [[tags]]
 name = "竞技局"
 emoji = "🏆"
-keywords = "竞技局,比赛,竞技,正式"
+keywords = "竞技局,比赛,竞技,正式,jingjiju,jjj,jingji,jj"
 is_pinned = false
 
 [[tags]]
 name = "比赛"
 emoji = "🏅"
-keywords = "比赛,竞赛,竞技,赛事"
+keywords = "比赛,竞赛,竞技,赛事,bisai,bs,jingsai,js"
 is_pinned = false
 
 [[tags]]
 name = "裁判"
 emoji = "⚖️"
-keywords = "裁判,官方,监督,规则"
+keywords = "裁判,官方,监督,规则,caipan,cp,guifan,gf"
 is_pinned = false
 
 [[tags]]
 name = "严肃对局"
 emoji = "😐"
-keywords = "严肃对局,认真,正式,严格"
+keywords = "严肃对局,认真,正式,严格,yansuduiju,ysdj,yansu,ys"
 is_pinned = false
 
 [[tags]]
 name = "锦标赛"
 emoji = "🥇"
-keywords = "锦标赛,比赛,竞技,正式"
+keywords = "锦标赛,比赛,竞技,正式,jinbiaosai,jbs,jinbiao,jb"
 is_pinned = false
 
 [[tags]]
 name = "预选赛"
 emoji = "🎯"
-keywords = "预选赛,选拔,比赛,竞技"
+keywords = "预选赛,选拔,比赛,竞技,yuxuansai,yxs,yuxuan,yx"
 is_pinned = false
 
 [[tags]]
 name = "决赛"
 emoji = "👑"
-keywords = "决赛,最终,比赛,竞技"
+keywords = "决赛,最终,比赛,竞技,juesai,js,zuizhong,zz"
 is_pinned = false
 
 [[tags]]
 name = "积分赛"
 emoji = "📊"
-keywords = "积分赛,积分,排名,比赛"
+keywords = "积分赛,积分,排名,比赛,jifensai,jfs,jifen,jf"
 is_pinned = false
 
 [[tags]]
 name = "淘汰赛"
 emoji = "❌"
-keywords = "淘汰赛,淘汰,比赛,竞技"
+keywords = "淘汰赛,淘汰,比赛,竞技,taotaisai,tts,taotai,tt"
 is_pinned = false
 
 [[tags]]
 name = "循环赛"
 emoji = "🔄"
-keywords = "循环赛,循环,比赛,竞技"
+keywords = "循环赛,循环,比赛,竞技,xunhuansai,xhs,xunhuan,xh"
 is_pinned = false
 
 [[tags]]
 name = "练习局"
 emoji = "📖"
-keywords = "练习局,练习,学习,新手"
+keywords = "练习局,练习,学习,新手,lianxiju,lxj,lianxi,lx"
 is_pinned = false
 
 [[tags]]
 name = "教学局"
 emoji = "👨‍🏫"
-keywords = "教学局,教学,教学,指导"
+keywords = "教学局,教学,教学,指导,jiaoxueju,jxj,jiaoxue,jx"
 is_pinned = false
 
 [[tags]]
 name = "娱乐局"
 emoji = "🎮"
-keywords = "娱乐局,娱乐,休闲,放松"
+keywords = "娱乐局,娱乐,休闲,放松,yuleju,ylj,yule,yl"
 is_pinned = false
 
 [[tags]]
 name = "新游戏测试"
 emoji = "🆕"
-keywords = "新游戏测试,测试,新游戏,试玩"
+keywords = "新游戏测试,测试,新游戏,试玩,xinyouxicheshi,xyxcs,ceshi,cs"
 is_pinned = false
 
 [[tags]]
 name = "自制游戏"
 emoji = "🛠️"
-keywords = "自制游戏,DIY,自制,原创"
+keywords = "自制游戏,DIY,自制,原创,zizhiyouxi,zzyx,zizhi,zz"
 is_pinned = false
 
 [[tags]]
 name = "单人游戏"
 emoji = "1️⃣"
-keywords = "单人游戏,Solo,单人,1人"
+keywords = "单人游戏,Solo,单人,1人,danrenyouxi,dryx,danren,dr"
 is_pinned = false
 
 [[tags]]
 name = "Puzzle"
 emoji = "🧩"
-keywords = "Puzzle,解谜,拼图,益智"
+keywords = "Puzzle,解谜,拼图,益智,jiemi,jm,pintu,pt"
 is_pinned = false
 
 [[tags]]
 name = "亲友"
 emoji = "👨‍👩‍👧‍👦"
-keywords = "亲友,家人,朋友,熟人"
+keywords = "亲友,家人,朋友,熟人,qinyou,qy,jiaren,jr"
 is_pinned = false
 
 # 桌游机制
 [[tags]]
 name = "工人放置"
 emoji = "👷"
-keywords = "工人放置,Worker Placement,机制"
+keywords = "工人放置,Worker Placement,机制,gongrenfangzhi,grfz,gongren,gr"
 is_pinned = false
 
 [[tags]]
 name = "区域控制"
 emoji = "🗺️"
-keywords = "区域控制,Area Control,区域,地图"
+keywords = "区域控制,Area Control,区域,地图,quyukongzhi,qykz,quyu,qy"
 is_pinned = false
 
 [[tags]]
 name = "手牌管理"
 emoji = "🃏"
-keywords = "手牌管理,Hand Management,卡牌,手牌"
+keywords = "手牌管理,Hand Management,卡牌,手牌,shoupaiguanli,spgl,shoupai,sp"
 is_pinned = false
 
 [[tags]]
 name = "引擎构筑"
 emoji = "⚙️"
-keywords = "引擎构筑,Engine Building,组合,机制"
+keywords = "引擎构筑,Engine Building,组合,机制,yinqinggouzhu,yqgz,yinqing,yq"
 is_pinned = false
 
 [[tags]]
 name = "牌组构筑"
 emoji = "📚"
-keywords = "牌组构筑,Deck Building,卡牌,构筑"
+keywords = "牌组构筑,Deck Building,卡牌,构筑,paizugouzhu,pzgz,paizu,pz"
 is_pinned = false
 
 [[tags]]
 name = "骰子驱动"
 emoji = "🎲"
-keywords = "骰子,骰子驱动,Dice Rolling,随机"
+keywords = "骰子,骰子驱动,Dice Rolling,随机,shaiziqudong,szqd,shaizi,sz"
 is_pinned = false
 
 [[tags]]
 name = "拍卖竞价"
 emoji = "🔨"
-keywords = "拍卖,竞价,Auction,机制"
+keywords = "拍卖,竞价,Auction,机制,paimaijingjia,pmjj,paimai,pm"
 is_pinned = false
 
 [[tags]]
 name = "资源管理"
 emoji = "💰"
-keywords = "资源管理,Resource Management,资源,经济"
+keywords = "资源管理,Resource Management,资源,经济,ziyuanguanli,zygl,ziyuan,zy"
 is_pinned = false
 
 [[tags]]
@@ -461,209 +461,209 @@ is_pinned = false
 [[tags]]
 name = "单人游戏"
 emoji = "1️⃣"
-keywords = "1人,单人,Solo,单人游戏"
+keywords = "1人,单人,Solo,单人游戏,danrenyouxi,dryx,danren,dr"
 is_pinned = false
 
 [[tags]]
 name = "双人游戏"
 emoji = "2️⃣"
-keywords = "2人,双人,Two Player,对战"
+keywords = "2人,双人,Two Player,对战,shuangrenyouxi,sryx,shuangren,sr"
 is_pinned = false
 
 [[tags]]
 name = "3-4人"
 emoji = "👥"
-keywords = "3人,4人,3-4人,小团体"
+keywords = "3人,4人,3-4人,小团体,xiaotuanti,xtt,xiaotuan,xt"
 is_pinned = false
 
 [[tags]]
 name = "5-6人"
 emoji = "👥"
-keywords = "5人,6人,5-6人,中团体"
+keywords = "5人,6人,5-6人,中团体,zhongtuanti,ztt,zhongtuan,zt"
 is_pinned = false
 
 [[tags]]
 name = "7+人"
 emoji = "👥"
-keywords = "7人,8人,多人,大团体,聚会"
+keywords = "7人,8人,多人,大团体,聚会,duoren,dr,datuanti,dtt"
 is_pinned = false
 
 # 心情
 [[tags]]
 name = "轻松"
 emoji = "😊"
-keywords = "轻松,休闲,放松,愉快"
+keywords = "轻松,休闲,放松,愉快,qingsong,qs,fangsong,fs"
 is_pinned = false
 
 [[tags]]
 name = "紧张"
 emoji = "😰"
-keywords = "紧张,刺激,压力,挑战"
+keywords = "紧张,刺激,压力,挑战,jinzhang,jz,ciji,cj"
 is_pinned = false
 
 [[tags]]
 name = "欢乐"
 emoji = "😂"
-keywords = "欢乐,搞笑,幽默,开心"
+keywords = "欢乐,搞笑,幽默,开心,huanle,hl,gaoxiao,gx"
 is_pinned = false
 
 [[tags]]
 name = "严肃"
 emoji = "🤔"
-keywords = "严肃,认真,思考,策略"
+keywords = "严肃,认真,思考,策略,yansu,ys,renzhen,rz"
 is_pinned = false
 
 [[tags]]
 name = "刺激"
 emoji = "🎢"
-keywords = "刺激,兴奋,快节奏,激烈"
+keywords = "刺激,兴奋,快节奏,激烈,ciji,cj,xingfen,xf"
 is_pinned = false
 
 [[tags]]
 name = "放松"
 emoji = "🌴"
-keywords = "放松,休闲,轻松,慢节奏"
+keywords = "放松,休闲,轻松,慢节奏,fangsong,fs,xiuxian,xx"
 is_pinned = false
 
 [[tags]]
 name = "挑战"
 emoji = "💪"
-keywords = "挑战,困难,高难度,竞技"
+keywords = "挑战,困难,高难度,竞技,tiaozhan,tz,kunnan,kn"
 is_pinned = false
 
 [[tags]]
 name = "休闲"
 emoji = "☕"
-keywords = "休闲,轻松,简单,入门"
+keywords = "休闲,轻松,简单,入门,xiuxian,xx,jiandan,jd"
 is_pinned = false
 
 # 天气
 [[tags]]
 name = "晴天"
 emoji = "☀️"
-keywords = "晴天,阳光,户外,好天气"
+keywords = "晴天,阳光,户外,好天气,qingtian,qt,yangguang,yg"
 is_pinned = false
 
 [[tags]]
 name = "雨天"
 emoji = "🌧️"
-keywords = "雨天,下雨,室内,阴天"
+keywords = "雨天,下雨,室内,阴天,yutian,yt,xiayu,xy"
 is_pinned = false
 
 [[tags]]
 name = "室内"
 emoji = "🏠"
-keywords = "室内,家里,室内游戏"
+keywords = "室内,家里,室内游戏,shinei,sn,jiali,jl"
 is_pinned = false
 
 [[tags]]
 name = "户外"
 emoji = "🌳"
-keywords = "户外,室外,户外游戏,公园"
+keywords = "户外,室外,户外游戏,公园,huwai,hw,shiwai,sw"
 is_pinned = false
 
 [[tags]]
 name = "雪天"
 emoji = "❄️"
-keywords = "雪天,下雪,冬天,寒冷"
+keywords = "雪天,下雪,冬天,寒冷,xuetian,xt,xiaxue,xx"
 is_pinned = false
 
 [[tags]]
 name = "阴天"
 emoji = "☁️"
-keywords = "阴天,多云,室内"
+keywords = "阴天,多云,室内,yintian,yt,duoyun,dy"
 is_pinned = false
 
 # 风格
 [[tags]]
 name = "科幻"
 emoji = "🚀"
-keywords = "科幻,未来,太空,科技"
+keywords = "科幻,未来,太空,科技,kehuan,kh,weilai,wl"
 is_pinned = false
 
 [[tags]]
 name = "奇幻"
 emoji = "🧙"
-keywords = "奇幻,魔法,幻想,中世纪"
+keywords = "奇幻,魔法,幻想,中世纪,qihuan,qh,mofa,mf"
 is_pinned = false
 
 [[tags]]
 name = "历史"
 emoji = "📜"
-keywords = "历史,古代,历史背景,真实"
+keywords = "历史,古代,历史背景,真实,lishi,ls,gudai,gd"
 is_pinned = false
 
 [[tags]]
 name = "现代"
 emoji = "🏙️"
-keywords = "现代,当代,现实,都市"
+keywords = "现代,当代,现实,都市,xiandai,xd,dangdai,dd"
 is_pinned = false
 
 [[tags]]
 name = "恐怖"
 emoji = "👻"
-keywords = "恐怖,惊悚,恐怖,悬疑"
+keywords = "恐怖,惊悚,恐怖,悬疑,kongbu,kb,jingsong,js"
 is_pinned = false
 
 [[tags]]
 name = "西部"
 emoji = "🤠"
-keywords = "西部,牛仔,美国西部,荒野"
+keywords = "西部,牛仔,美国西部,荒野,xibu,xb,niuzai,nz"
 is_pinned = false
 
 [[tags]]
 name = "战争"
 emoji = "⚔️"
-keywords = "战争,军事,战斗,策略"
+keywords = "战争,军事,战斗,策略,zhanzheng,zz,junshi,js"
 is_pinned = false
 
 [[tags]]
 name = "冒险"
 emoji = "🗺️"
-keywords = "冒险,探索,旅行,发现"
+keywords = "冒险,探索,旅行,发现,maoxian,mx,tansuo,ts"
 is_pinned = false
 
 [[tags]]
 name = "动物"
 emoji = "🐾"
-keywords = "动物,自然,生物,可爱"
+keywords = "动物,自然,生物,可爱,dongwu,dw,ziran,zr"
 is_pinned = false
 
 [[tags]]
 name = "动漫"
 emoji = "🎌"
-keywords = "动漫,二次元,日本,动画"
+keywords = "动漫,二次元,日本,动画,dongman,dm,riben,rb"
 is_pinned = false
 
 [[tags]]
 name = "超级英雄"
 emoji = "🦸"
-keywords = "超级英雄,漫画,英雄,能力"
+keywords = "超级英雄,漫画,英雄,能力,chaojiyingxiong,cjyx,yingxiong,yx"
 is_pinned = false
 
 [[tags]]
 name = "僵尸"
 emoji = "🧟"
-keywords = "僵尸,末日,生存,恐怖"
+keywords = "僵尸,末日,生存,恐怖,jiangshi,js,mori,mr"
 is_pinned = false
 
 # 题材叙事
 [[tags]]
 name = "美少女"
 emoji = "💖"
-keywords = "美少女,萌,可爱,少女"
+keywords = "美少女,萌,可爱,少女,meishaonv,msn,keai,ka"
 is_pinned = false
 
 [[tags]]
 name = "二次元"
 emoji = "🎨"
-keywords = "二次元,动漫,ACG,日系"
+keywords = "二次元,动漫,ACG,日系,erciyuan,ecy,acg"
 is_pinned = false
 
 [[tags]]
 name = "恐怖游戏"
 emoji = "😱"
-keywords = "恐怖游戏,惊悚游戏,恐怖,悬疑"
+keywords = "恐怖游戏,惊悚游戏,恐怖,悬疑,kongbuyouxi,kbyx,kongbu,kb"
 is_pinned = false
 
 [[tags]]
@@ -801,5 +801,524 @@ is_pinned = false
 [[tags]]
 name = "超能力"
 emoji = "⚡"
-keywords = "超能力,异能,超自然,能力"
+keywords = "超能力,异能,超自然,能力,chaonengli,cnl"
+is_pinned = false
+
+# 年份
+[[tags]]
+name = "2024"
+emoji = "📅"
+keywords = "2024,2024年,今年"
+is_pinned = false
+
+[[tags]]
+name = "2023"
+emoji = "📅"
+keywords = "2023,2023年,去年"
+is_pinned = false
+
+[[tags]]
+name = "2022"
+emoji = "📅"
+keywords = "2022,2022年"
+is_pinned = false
+
+[[tags]]
+name = "2021"
+emoji = "📅"
+keywords = "2021,2021年"
+is_pinned = false
+
+[[tags]]
+name = "2020"
+emoji = "📅"
+keywords = "2020,2020年"
+is_pinned = false
+
+[[tags]]
+name = "2019"
+emoji = "📅"
+keywords = "2019,2019年"
+is_pinned = false
+
+[[tags]]
+name = "2018"
+emoji = "📅"
+keywords = "2018,2018年"
+is_pinned = false
+
+[[tags]]
+name = "2017"
+emoji = "📅"
+keywords = "2017,2017年"
+is_pinned = false
+
+[[tags]]
+name = "2016"
+emoji = "📅"
+keywords = "2016,2016年"
+is_pinned = false
+
+[[tags]]
+name = "2015"
+emoji = "📅"
+keywords = "2015,2015年"
+is_pinned = false
+
+[[tags]]
+name = "2014"
+emoji = "📅"
+keywords = "2014,2014年"
+is_pinned = false
+
+[[tags]]
+name = "2013"
+emoji = "📅"
+keywords = "2013,2013年"
+is_pinned = false
+
+[[tags]]
+name = "2012"
+emoji = "📅"
+keywords = "2012,2012年"
+is_pinned = false
+
+[[tags]]
+name = "2011"
+emoji = "📅"
+keywords = "2011,2011年"
+is_pinned = false
+
+[[tags]]
+name = "2010"
+emoji = "📅"
+keywords = "2010,2010年"
+is_pinned = false
+
+[[tags]]
+name = "2009"
+emoji = "📅"
+keywords = "2009,2009年"
+is_pinned = false
+
+[[tags]]
+name = "2008"
+emoji = "📅"
+keywords = "2008,2008年"
+is_pinned = false
+
+[[tags]]
+name = "2007"
+emoji = "📅"
+keywords = "2007,2007年"
+is_pinned = false
+
+[[tags]]
+name = "2006"
+emoji = "📅"
+keywords = "2006,2006年"
+is_pinned = false
+
+[[tags]]
+name = "2005"
+emoji = "📅"
+keywords = "2005,2005年"
+is_pinned = false
+
+[[tags]]
+name = "2004"
+emoji = "📅"
+keywords = "2004,2004年"
+is_pinned = false
+
+[[tags]]
+name = "2003"
+emoji = "📅"
+keywords = "2003,2003年"
+is_pinned = false
+
+[[tags]]
+name = "2002"
+emoji = "📅"
+keywords = "2002,2002年"
+is_pinned = false
+
+[[tags]]
+name = "2001"
+emoji = "📅"
+keywords = "2001,2001年"
+is_pinned = false
+
+[[tags]]
+name = "2000"
+emoji = "📅"
+keywords = "2000,2000年"
+is_pinned = false
+
+[[tags]]
+name = "1990年代"
+emoji = "📅"
+keywords = "1990年代,90年代,九十年代,1990s"
+is_pinned = false
+
+[[tags]]
+name = "1980年代"
+emoji = "📅"
+keywords = "1980年代,80年代,八十年代,1980s"
+is_pinned = false
+
+[[tags]]
+name = "1970年代"
+emoji = "📅"
+keywords = "1970年代,70年代,七十年代,1970s"
+is_pinned = false
+
+[[tags]]
+name = "1960年代"
+emoji = "📅"
+keywords = "1960年代,60年代,六十年代,1960s"
+is_pinned = false
+
+[[tags]]
+name = "1950年代"
+emoji = "📅"
+keywords = "1950年代,50年代,五十年代,1950s"
+is_pinned = false
+
+[[tags]]
+name = "1940年代"
+emoji = "📅"
+keywords = "1940年代,40年代,四十年代,1940s"
+is_pinned = false
+
+[[tags]]
+name = "1930年代"
+emoji = "📅"
+keywords = "1930年代,30年代,三十年代,1930s"
+is_pinned = false
+
+[[tags]]
+name = "1920年代"
+emoji = "📅"
+keywords = "1920年代,20年代,二十年代,1920s"
+is_pinned = false
+
+[[tags]]
+name = "1910年代"
+emoji = "📅"
+keywords = "1910年代,10年代,一十年代,1910s"
+is_pinned = false
+
+[[tags]]
+name = "新世纪"
+emoji = "🌅"
+keywords = "新世纪,2000年后,21世纪,2000s"
+is_pinned = false
+
+[[tags]]
+name = "近十五年"
+emoji = "📆"
+keywords = "近十五年,最近15年,2010-2024"
+is_pinned = false
+
+[[tags]]
+name = "近十年"
+emoji = "📆"
+keywords = "近十年,最近10年,2015-2024"
+is_pinned = false
+
+[[tags]]
+name = "近五年"
+emoji = "📆"
+keywords = "近五年,最近5年,2020-2024"
+is_pinned = false
+
+[[tags]]
+name = "近三年"
+emoji = "📆"
+keywords = "近三年,最近3年,2022-2024"
+is_pinned = false
+
+[[tags]]
+name = "近一年"
+emoji = "📆"
+keywords = "近一年,最近1年,2024"
+is_pinned = false
+
+# 地区
+[[tags]]
+name = "国产"
+emoji = "🇨🇳"
+keywords = "国产,中国,大陆,国内,guochan,gc,zhongguo,zg"
+is_pinned = false
+
+[[tags]]
+name = "欧美"
+emoji = "🌍"
+keywords = "欧美,欧洲,美国,西方,oumei,om,ouzhou,oz"
+is_pinned = false
+
+[[tags]]
+name = "日本"
+emoji = "🇯🇵"
+keywords = "日本,日系,和风,riben,rb,rixi,rx"
+is_pinned = false
+
+[[tags]]
+name = "韩国"
+emoji = "🇰🇷"
+keywords = "韩国,韩系,han guo,hg,hanxi,hx"
+is_pinned = false
+
+[[tags]]
+name = "台湾"
+emoji = "🇹🇼"
+keywords = "台湾,台版,繁体,繁体中文,taiwan,tw"
+is_pinned = false
+
+[[tags]]
+name = "香港"
+emoji = "🇭🇰"
+keywords = "香港,港版,繁体,繁体中文,xianggang,xg"
+is_pinned = false
+
+[[tags]]
+name = "欧洲"
+emoji = "🇪🇺"
+keywords = "欧洲,欧版,欧盟,ouzhou,oz,ouban,ob"
+is_pinned = false
+
+[[tags]]
+name = "美国"
+emoji = "🇺🇸"
+keywords = "美国,美版,北美,meiguo,mg,meiban,mb"
+is_pinned = false
+
+[[tags]]
+name = "英国"
+emoji = "🇬🇧"
+keywords = "英国,英版,yingguo,yg,yingban,yb"
+is_pinned = false
+
+[[tags]]
+name = "德国"
+emoji = "🇩🇪"
+keywords = "德国,德版,deguo,dg,deban,db"
+is_pinned = false
+
+[[tags]]
+name = "法国"
+emoji = "🇫🇷"
+keywords = "法国,法版,faguo,fg,faban,fb"
+is_pinned = false
+
+[[tags]]
+name = "意大利"
+emoji = "🇮🇹"
+keywords = "意大利,意版,yidali,ydl,yiban,yb"
+is_pinned = false
+
+[[tags]]
+name = "西班牙"
+emoji = "🇪🇸"
+keywords = "西班牙,西版,xibanya,xby,xiban,xb"
+is_pinned = false
+
+[[tags]]
+name = "俄罗斯"
+emoji = "🇷🇺"
+keywords = "俄罗斯,俄版,eluosi,els,eban,eb"
+is_pinned = false
+
+[[tags]]
+name = "亚洲"
+emoji = "🌏"
+keywords = "亚洲,亚版,yazhou,yz,yaban,yb"
+is_pinned = false
+
+[[tags]]
+name = "东南亚"
+emoji = "🌴"
+keywords = "东南亚,东盟,dongnanya,dny"
+is_pinned = false
+
+[[tags]]
+name = "澳洲"
+emoji = "🇦🇺"
+keywords = "澳洲,澳大利亚,澳版,aozhou,az"
+is_pinned = false
+
+[[tags]]
+name = "加拿大"
+emoji = "🇨🇦"
+keywords = "加拿大,加版,jianada,jnd,jiaban,jb"
+is_pinned = false
+
+[[tags]]
+name = "拉美"
+emoji = "🌎"
+keywords = "拉美,拉丁美洲,南美,lami,lm"
+is_pinned = false
+
+# 行业
+[[tags]]
+name = "金融"
+emoji = "💰"
+keywords = "金融,银行,投资,理财,jinrong,jr,yinhang,yh"
+is_pinned = false
+
+[[tags]]
+name = "工业"
+emoji = "🏭"
+keywords = "工业,制造业,工厂,生产,gongye,gy,zhizaoye,zzy"
+is_pinned = false
+
+[[tags]]
+name = "流水线"
+emoji = "⚙️"
+keywords = "流水线,生产线,装配线,liushuixian,lsx,shengchanxian,scx"
+is_pinned = false
+
+[[tags]]
+name = "工人"
+emoji = "👷"
+keywords = "工人,劳工,蓝领,体力劳动,gongren,gr,laogong,lg"
+is_pinned = false
+
+[[tags]]
+name = "经理"
+emoji = "👔"
+keywords = "经理,管理,管理者,白领,jingli,jl,guanli,gl"
+is_pinned = false
+
+[[tags]]
+name = "投资"
+emoji = "📈"
+keywords = "投资,股票,证券,理财,touzi,tz,gupiao,gp"
+is_pinned = false
+
+[[tags]]
+name = "计算机"
+emoji = "💻"
+keywords = "计算机,IT,编程,软件,技术,jisuanji,jsj,biancheng,bc"
+is_pinned = false
+
+[[tags]]
+name = "移民"
+emoji = "✈️"
+keywords = "移民,迁徙,移居,新移民,yimin,ym,qianxi,qx"
+is_pinned = false
+
+[[tags]]
+name = "医疗"
+emoji = "🏥"
+keywords = "医疗,医院,医生,护士,yiliao,yl,yisheng,ys"
+is_pinned = false
+
+[[tags]]
+name = "教育"
+emoji = "📚"
+keywords = "教育,学校,教师,学习,jiaoyu,jy,xuexiao,xx"
+is_pinned = false
+
+[[tags]]
+name = "餐饮"
+emoji = "🍽️"
+keywords = "餐饮,餐厅,厨师,服务,canyin,cy,canting,ct"
+is_pinned = false
+
+[[tags]]
+name = "零售"
+emoji = "🛒"
+keywords = "零售,商店,销售,购物,lingshou,ls,shangdian,sd"
+is_pinned = false
+
+[[tags]]
+name = "建筑"
+emoji = "🏗️"
+keywords = "建筑,建造,施工,房地产,jianzhu,jz,shigong,sg"
+is_pinned = false
+
+[[tags]]
+name = "运输"
+emoji = "🚚"
+keywords = "运输,物流,快递,货运,yunshu,ys,wuliu,wl"
+is_pinned = false
+
+[[tags]]
+name = "农业"
+emoji = "🌾"
+keywords = "农业,农场,农民,种植,nongye,ny,nongchang,nc"
+is_pinned = false
+
+[[tags]]
+name = "矿业"
+emoji = "⛏️"
+keywords = "矿业,采矿,矿工,资源,kuangye,ky,caikuang,ck"
+is_pinned = false
+
+[[tags]]
+name = "能源"
+emoji = "⚡"
+keywords = "能源,电力,石油,天然气,nengyuan,ny,diànli,dl"
+is_pinned = false
+
+[[tags]]
+name = "媒体"
+emoji = "📺"
+keywords = "媒体,新闻,记者,传媒,meiti,mt,xinwen,xw"
+is_pinned = false
+
+[[tags]]
+name = "艺术"
+emoji = "🎨"
+keywords = "艺术,创作,艺术家,设计,yishu,ys,chuangzuo,cz"
+is_pinned = false
+
+[[tags]]
+name = "娱乐"
+emoji = "🎬"
+keywords = "娱乐,演艺,演员,表演,yule,yl,yanyuan,yy"
+is_pinned = false
+
+[[tags]]
+name = "体育"
+emoji = "⚽"
+keywords = "体育,运动,运动员,竞技,tiyu,ty,yundong,yd"
+is_pinned = false
+
+[[tags]]
+name = "法律"
+emoji = "⚖️"
+keywords = "法律,律师,法庭,司法,falv,fl,lvshi,ls"
+is_pinned = false
+
+[[tags]]
+name = "警察"
+emoji = "👮"
+keywords = "警察,执法,治安,刑侦,jingcha,jc,zhifa,zf"
+is_pinned = false
+
+[[tags]]
+name = "消防"
+emoji = "🚒"
+keywords = "消防,救火,消防员,紧急,xiaofang,xf,jiuhuo,jh"
+is_pinned = false
+
+[[tags]]
+name = "军人"
+emoji = "🎖️"
+keywords = "军人,军队,士兵,军事,junren,jr,jundui,jd"
+is_pinned = false
+
+[[tags]]
+name = "科研"
+emoji = "🔬"
+keywords = "科研,研究,科学家,实验室,keyan,ky,yanjiu,yj"
+is_pinned = false
+
+[[tags]]
+name = "工程师"
+emoji = "🔧"
+keywords = "工程师,技术,设计,开发,gongchengshi,gcs,jishu,js"
 is_pinned = false
