@@ -2,7 +2,6 @@ import db, {
   activeTagMappingsTable,
   activeTagsTable,
 } from "@lib/db";
-import { createPortal } from "react-dom";
 import { z } from "zod/v4";
 import { publicProcedure } from "./baseTRPC";
 

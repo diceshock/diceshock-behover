@@ -111,12 +111,16 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
   } = input;
 
   // 如果正在发布活动，先查询当前状态
-  let currentActive: { is_published: boolean | null; publish_at: Date | null } | null = null;
+  let currentActive: {
+    is_published: boolean | null;
+    publish_at: Date | null;
+  } | null = null;
   if (is_published === true) {
-    currentActive = await tdb.query.activesTable.findFirst({
-      where: (a, { eq }) => eq(a.id, id),
-      columns: { is_published: true, publish_at: true },
-    });
+    currentActive =
+      (await tdb.query.activesTable.findFirst({
+        where: (a, { eq }) => eq(a.id, id),
+        columns: { is_published: true, publish_at: true },
+      })) ?? null;
   }
 
   // 构建更新对象，只包含已定义的字段
