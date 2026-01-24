@@ -1,8 +1,4 @@
-import db, {
-  activeTagMappingsTable,
-  activeTagsTable,
-  drizzle,
-} from "@lib/db";
+import db, { activeTagMappingsTable, activeTagsTable, drizzle } from "@lib/db";
 import { z } from "zod/v4";
 import { publicProcedure } from "./baseTRPC";
 
@@ -44,6 +40,8 @@ const get = publicProcedure.query(async ({ ctx }) => {
   return tags.map((tag) => ({
     id: tag.id,
     title: tag.title,
+    keywords: tag.keywords,
+    is_pinned: tag.is_pinned,
   }));
 });
 
@@ -97,17 +95,33 @@ const insert = publicProcedure
 const updateZ = z.object({
   id: z.string(),
   title: activeTagTitleZ,
+  keywords: z.string().optional(),
+  is_pinned: z.boolean().optional(),
 });
 
 const update = publicProcedure
   .input(updateZ)
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
-    const { id, title } = input;
+    const { id, title, keywords, is_pinned } = input;
+
+    const updateData: {
+      title: typeof title;
+      keywords?: string | null;
+      is_pinned?: boolean;
+    } = {
+      title,
+    };
+    if (keywords !== undefined) {
+      updateData.keywords = keywords || null;
+    }
+    if (is_pinned !== undefined) {
+      updateData.is_pinned = is_pinned;
+    }
 
     const [updatedTag] = await tdb
       .update(activeTagsTable)
-      .set({ title })
+      .set(updateData)
       .where(drizzle.eq(activeTagsTable.id, id))
       .returning();
 
@@ -121,28 +135,71 @@ const update = publicProcedure
 // 获取所有约局标签（不限制于已发布的活动）
 // 注意：这里返回所有标签，因为约局标签管理页面应该显示所有标签
 // 如果需要在其他地方只显示名称包含"约局"的标签，可以在前端过滤
-const getGameTags = publicProcedure.query(async ({ ctx }) => {
-  const tdb = db(ctx.env.DB);
+const getGameTags = publicProcedure
+  .input(
+    z
+      .object({
+        search: z.string().optional(),
+        onlyPinned: z.boolean().optional(), // 是否只返回置顶标签
+      })
+      .optional(),
+  )
+  .query(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const searchQuery = input?.search?.trim().toLowerCase();
+    const onlyPinned = input?.onlyPinned;
 
-  // 获取所有标签
-  const allTags = await tdb.query.activeTagsTable.findMany();
+    // 获取所有标签
+    let allTags = await tdb.query.activeTagsTable.findMany();
 
-  return allTags.map((tag) => ({
-    id: tag.id,
-    title: tag.title,
-  }));
-});
+    // 如果只返回置顶标签，先过滤
+    if (onlyPinned) {
+      allTags = allTags.filter((tag) => tag.is_pinned === true);
+    }
+
+    // 如果有搜索查询，进行模糊匹配
+    let filteredTags = allTags;
+    if (searchQuery) {
+      filteredTags = allTags.filter((tag) => {
+        const title = tag.title?.tx?.toLowerCase() || "";
+        const keywords = tag.keywords?.toLowerCase() || "";
+        const emoji = tag.title?.emoji || "";
+
+        return (
+          title.includes(searchQuery) ||
+          keywords.includes(searchQuery) ||
+          emoji.includes(searchQuery)
+        );
+      });
+    }
+
+    // 排序：置顶的在前，然后按 id 排序
+    filteredTags.sort((a, b) => {
+      if (a.is_pinned && !b.is_pinned) return -1;
+      if (!a.is_pinned && b.is_pinned) return 1;
+      return a.id.localeCompare(b.id);
+    });
+
+    return filteredTags.map((tag) => ({
+      id: tag.id,
+      title: tag.title,
+      keywords: tag.keywords,
+      is_pinned: tag.is_pinned,
+    }));
+  });
 
 // 创建约局标签（不需要关联活动）
 const createGameTagZ = z.object({
   title: activeTagTitleZ,
+  keywords: z.string().optional(),
+  is_pinned: z.boolean().optional(),
 });
 
 const createGameTag = publicProcedure
   .input(createGameTagZ)
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
-    const { title } = input;
+    const { title, keywords, is_pinned } = input;
 
     // 检查是否已存在相同的标签
     const existing = await tdb.query.activeTagsTable.findFirst({
@@ -155,7 +212,11 @@ const createGameTag = publicProcedure
 
     const [newTag] = await tdb
       .insert(activeTagsTable)
-      .values({ title })
+      .values({
+        title,
+        keywords: keywords || null,
+        is_pinned: is_pinned || false,
+      })
       .returning();
 
     if (!newTag) {
@@ -194,4 +255,11 @@ const deleteTag = publicProcedure
     return deletedTag;
   });
 
-export default { get, insert, update, getGameTags, createGameTag, delete: deleteTag };
+export default {
+  get,
+  insert,
+  update,
+  getGameTags,
+  createGameTag,
+  delete: deleteTag,
+};

@@ -54,8 +54,14 @@ function RouteComponent() {
     selectedTags: [] as string[], // 约局标签 ID 列表
   });
   const [gameTags, setGameTags] = useState<
-    Array<{ id: string; title: { emoji: string; tx: string } | null }>
+    Array<{
+      id: string;
+      title: { emoji: string; tx: string } | null;
+      keywords: string | null;
+      is_pinned: boolean | null;
+    }>
   >([]);
+  const [gameTagSearchQuery, setGameTagSearchQuery] = useState("");
   const [gameBoardGames, setGameBoardGames] = useState<
     Array<{
       id: string;
@@ -125,13 +131,16 @@ function RouteComponent() {
   // 获取约局标签
   const fetchGameTags = useCallback(async () => {
     try {
-      // 获取所有标签（管理页面创建的所有标签都可以用于约局）
-      const allTags = await trpcClientPublic.activeTags.getGameTags.query();
+      // 如果没有搜索查询，默认只显示置顶标签；有搜索查询时显示所有匹配的标签
+      const allTags = await trpcClientPublic.activeTags.getGameTags.query({
+        search: gameTagSearchQuery || undefined,
+        onlyPinned: !gameTagSearchQuery, // 没有搜索时只显示置顶标签
+      });
       setGameTags(allTags);
     } catch (error) {
       console.error("获取约局标签失败", error);
     }
-  }, []);
+  }, [gameTagSearchQuery]);
 
   useEffect(() => {
     fetchGameTags();
@@ -1032,9 +1041,22 @@ function RouteComponent() {
               <label className="label">
                 <span className="label-text">选择约局标签（可选）</span>
               </label>
+              <input
+                type="text"
+                className="input input-bordered w-full mb-2"
+                placeholder="搜索标签（留空则只显示置顶标签）..."
+                value={gameTagSearchQuery}
+                onChange={(e) => {
+                  setGameTagSearchQuery(e.target.value);
+                }}
+              />
               {gameTags.length === 0 ? (
                 <div className="alert alert-warning">
-                  <span>暂无约局标签，请先在后台管理页面添加约局标签</span>
+                  <span>
+                    {gameTagSearchQuery
+                      ? "未找到匹配的标签"
+                      : "暂无置顶标签，请先在后台管理页面添加并置顶标签，或使用搜索查找所有标签"}
+                  </span>
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-2">

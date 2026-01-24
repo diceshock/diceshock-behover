@@ -1,4 +1,4 @@
-import { TrashIcon } from "@phosphor-icons/react/dist/ssr";
+import { PencilSimpleIcon, TrashIcon } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { EmojiPicker } from "@/client/components/diceshock/EmojiPicker";
@@ -17,20 +17,31 @@ function RouteComponent() {
   const msg = useMsg();
   const [tags, setTags] = useState<TagItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
   const [editingTag, setEditingTag] = useState<{
     id: string;
     emoji: string;
     tx: string;
+    keywords: string;
+    is_pinned: boolean;
   } | null>(null);
 
-  const [newTagDraft, setNewTagDraft] = useState({ emoji: "🎲", tx: "" });
+  const [newTagDraft, setNewTagDraft] = useState({
+    emoji: "🎲",
+    tx: "",
+    keywords: "",
+    is_pinned: false,
+  });
   const [creatingTag, setCreatingTag] = useState(false);
   const [deletingTagId, setDeletingTagId] = useState<string | null>(null);
+  const [togglingPinId, setTogglingPinId] = useState<string | null>(null);
 
   const fetchTags = useCallback(async () => {
     try {
       setLoading(true);
-      const gameTags = await trpcClientDash.activeTags.getGameTags.query();
+      const gameTags = await trpcClientDash.activeTags.getGameTags.query({
+        search: searchQuery || undefined,
+      });
       setTags(gameTags);
     } catch (error) {
       console.error("获取约局标签失败", error);
@@ -38,7 +49,7 @@ function RouteComponent() {
     } finally {
       setLoading(false);
     }
-  }, [msg]);
+  }, [msg, searchQuery]);
 
   useEffect(() => {
     fetchTags();
@@ -49,6 +60,8 @@ function RouteComponent() {
       id: tag.id,
       emoji: tag.title?.emoji || "🎲",
       tx: tag.title?.tx || "约局",
+      keywords: tag.keywords || "",
+      is_pinned: tag.is_pinned || false,
     });
   };
 
@@ -67,6 +80,8 @@ function RouteComponent() {
           emoji: editingTag.emoji.trim() || "🎲",
           tx: editingTag.tx.trim(),
         },
+        keywords: editingTag.keywords.trim() || undefined,
+        is_pinned: editingTag.is_pinned,
       });
       msg.success("标签更新成功");
       setEditingTag(null);
@@ -94,9 +109,11 @@ function RouteComponent() {
           emoji: newTagDraft.emoji.trim() || "🎲",
           tx: newTagDraft.tx.trim(),
         },
+        keywords: newTagDraft.keywords.trim() || undefined,
+        is_pinned: newTagDraft.is_pinned,
       });
       msg.success("标签创建成功");
-      setNewTagDraft({ emoji: "🎲", tx: "" });
+      setNewTagDraft({ emoji: "🎲", tx: "", keywords: "", is_pinned: false });
       await fetchTags();
     } catch (error) {
       console.error("创建标签失败", error);
@@ -131,6 +148,31 @@ function RouteComponent() {
     [msg, fetchTags],
   );
 
+  const handleTogglePin = useCallback(
+    async (tagId: string, currentPinned: boolean) => {
+      try {
+        setTogglingPinId(tagId);
+        await trpcClientDash.activeTags.update.mutate({
+          id: tagId,
+          title: tags.find((t) => t.id === tagId)?.title || {
+            emoji: "🎲",
+            tx: "约局",
+          },
+          keywords: tags.find((t) => t.id === tagId)?.keywords || undefined,
+          is_pinned: !currentPinned,
+        });
+        msg.success(currentPinned ? "已取消置顶" : "已置顶");
+        await fetchTags();
+      } catch (error) {
+        console.error("切换置顶状态失败", error);
+        msg.error(error instanceof Error ? error.message : "切换置顶状态失败");
+      } finally {
+        setTogglingPinId(null);
+      }
+    },
+    [msg, fetchTags, tags],
+  );
+
   if (loading) {
     return (
       <main className="size-full p-4">
@@ -143,14 +185,36 @@ function RouteComponent() {
 
   return (
     <main className="size-full p-4">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">约局标签管理</h1>
+
+        {/* 搜索框和添加新标签 */}
+        <div className="card bg-base-200 mb-6">
+          <div className="card-body">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <label className="label">
+                  <span className="label-text">搜索标签</span>
+                </label>
+                <input
+                  type="text"
+                  className="input input-bordered w-full"
+                  placeholder="搜索标签名称、关键字或 emoji..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* 添加新标签 */}
         <div className="card bg-base-200 mb-6">
           <div className="card-body">
             <h2 className="card-title mb-4">添加新约局标签</h2>
-            <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="label">
                   <span className="label-text">图标 (Emoji)</span>
@@ -176,6 +240,39 @@ function RouteComponent() {
                   placeholder="约局"
                 />
               </div>
+              <div>
+                <label className="label">
+                  <span className="label-text">关键字（可选）</span>
+                </label>
+                <input
+                  type="text"
+                  className="input input-bordered w-full"
+                  value={newTagDraft.keywords}
+                  onChange={(e) =>
+                    setNewTagDraft((prev) => ({
+                      ...prev,
+                      keywords: e.target.value,
+                    }))
+                  }
+                  placeholder="多个关键字用逗号分隔"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-4 mt-4">
+              <label className="label cursor-pointer gap-2">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-sm"
+                  checked={newTagDraft.is_pinned}
+                  onChange={(e) =>
+                    setNewTagDraft((prev) => ({
+                      ...prev,
+                      is_pinned: e.target.checked,
+                    }))
+                  }
+                />
+                <span className="label-text">置顶</span>
+              </label>
               <button
                 onClick={handleCreateTag}
                 disabled={creatingTag || !newTagDraft.tx.trim()}
@@ -190,106 +287,177 @@ function RouteComponent() {
           </div>
         </div>
 
-        {/* 现有标签列表 */}
-        <h2 className="text-2xl font-bold mb-4">现有约局标签</h2>
-        {tags.length === 0 ? (
-          <div className="card bg-base-200">
-            <div className="card-body">
-              <p className="text-center text-base-content/60">暂无约局标签</p>
+        {/* 标签表格 */}
+        <div className="card bg-base-200">
+          <div className="card-body p-0">
+            <div className="overflow-x-auto">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>置顶</th>
+                    <th>图标</th>
+                    <th>标签名称</th>
+                    <th>关键字</th>
+                    <th>标签 ID</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tags.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="text-center py-8">
+                        <p className="text-base-content/60">暂无约局标签</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    tags.map((tag) => {
+                      const isEditing = editingTag?.id === tag.id;
+                      return (
+                        <tr
+                          key={tag.id}
+                          className={tag.is_pinned ? "bg-base-300/50" : ""}
+                        >
+                          <td>
+                            {isEditing ? (
+                              <input
+                                type="checkbox"
+                                className="checkbox checkbox-sm"
+                                checked={editingTag.is_pinned}
+                                onChange={(e) =>
+                                  setEditingTag((prev) =>
+                                    prev
+                                      ? { ...prev, is_pinned: e.target.checked }
+                                      : null,
+                                  )
+                                }
+                              />
+                            ) : (
+                              <input
+                                type="checkbox"
+                                className="checkbox checkbox-sm"
+                                checked={tag.is_pinned || false}
+                                disabled={togglingPinId === tag.id}
+                                onChange={() =>
+                                  handleTogglePin(
+                                    tag.id,
+                                    tag.is_pinned || false,
+                                  )
+                                }
+                              />
+                            )}
+                          </td>
+                          <td>
+                            {isEditing ? (
+                              <EmojiPicker
+                                value={editingTag.emoji}
+                                onChange={(emoji) =>
+                                  setEditingTag((prev) =>
+                                    prev ? { ...prev, emoji } : null,
+                                  )
+                                }
+                              />
+                            ) : (
+                              <span className="text-2xl">
+                                {tag.title?.emoji || "🎲"}
+                              </span>
+                            )}
+                          </td>
+                          <td>
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                className="input input-sm input-bordered w-full max-w-xs"
+                                value={editingTag.tx}
+                                onChange={(e) =>
+                                  setEditingTag((prev) =>
+                                    prev
+                                      ? { ...prev, tx: e.target.value }
+                                      : null,
+                                  )
+                                }
+                                placeholder="约局"
+                              />
+                            ) : (
+                              <span className="font-medium">
+                                {tag.title?.tx || "约局"}
+                              </span>
+                            )}
+                          </td>
+                          <td>
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                className="input input-sm input-bordered w-full max-w-xs"
+                                value={editingTag.keywords}
+                                onChange={(e) =>
+                                  setEditingTag((prev) =>
+                                    prev
+                                      ? { ...prev, keywords: e.target.value }
+                                      : null,
+                                  )
+                                }
+                                placeholder="多个关键字用逗号分隔"
+                              />
+                            ) : (
+                              <span className="text-sm text-base-content/70">
+                                {tag.keywords || "—"}
+                              </span>
+                            )}
+                          </td>
+                          <td>
+                            <span className="text-xs font-mono text-base-content/60">
+                              {tag.id}
+                            </span>
+                          </td>
+                          <td>
+                            {isEditing ? (
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={handleSaveEdit}
+                                  className="btn btn-xs btn-primary"
+                                >
+                                  保存
+                                </button>
+                                <button
+                                  onClick={handleCancelEdit}
+                                  className="btn btn-xs btn-ghost"
+                                >
+                                  取消
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleStartEdit(tag)}
+                                  className="btn btn-xs btn-outline"
+                                >
+                                  <PencilSimpleIcon className="size-3" />
+                                  编辑
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteTag(tag.id)}
+                                  disabled={deletingTagId === tag.id}
+                                  className="btn btn-xs btn-error"
+                                >
+                                  {deletingTagId === tag.id ? (
+                                    <span className="loading loading-spinner loading-xs" />
+                                  ) : (
+                                    <TrashIcon className="size-3" />
+                                  )}
+                                  删除
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {tags.map((tag) => {
-              const isEditing = editingTag?.id === tag.id;
-              return (
-                <div key={tag.id} className="card bg-base-200">
-                  <div className="card-body">
-                    {isEditing ? (
-                      <div className="flex flex-col gap-4">
-                        <div>
-                          <label className="label">
-                            <span className="label-text">图标 (Emoji)</span>
-                          </label>
-                          <EmojiPicker
-                            value={editingTag.emoji}
-                            onChange={(emoji) =>
-                              setEditingTag((prev) =>
-                                prev ? { ...prev, emoji } : null,
-                              )
-                            }
-                          />
-                        </div>
-                        <div>
-                          <label className="label">
-                            <span className="label-text">标签名称</span>
-                          </label>
-                          <input
-                            type="text"
-                            className="input input-bordered w-full"
-                            value={editingTag.tx}
-                            onChange={(e) =>
-                              setEditingTag((prev) =>
-                                prev ? { ...prev, tx: e.target.value } : null,
-                              )
-                            }
-                            placeholder="约局"
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={handleSaveEdit}
-                            className="btn btn-primary"
-                          >
-                            保存
-                          </button>
-                          <button
-                            onClick={handleCancelEdit}
-                            className="btn btn-ghost"
-                          >
-                            取消
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="badge badge-lg gap-2">
-                            <span>{tag.title?.emoji || "🎲"}</span>
-                            {tag.title?.tx || "约局"}
-                          </span>
-                          <span className="text-sm text-base-content/60">
-                            标签 ID: {tag.id}
-                          </span>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleStartEdit(tag)}
-                            className="btn btn-sm btn-outline"
-                          >
-                            编辑
-                          </button>
-                          <button
-                            onClick={() => handleDeleteTag(tag.id)}
-                            disabled={deletingTagId === tag.id}
-                            className="btn btn-sm btn-error"
-                          >
-                            {deletingTagId === tag.id ? (
-                              <span className="loading loading-spinner loading-sm" />
-                            ) : (
-                              <TrashIcon className="size-4" />
-                            )}
-                            删除
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        </div>
       </div>
     </main>
   );

@@ -53,8 +53,14 @@ export default function ActiveDetail({
     selectedTags: [] as string[],
   });
   const [editGameTags, setEditGameTags] = useState<
-    Array<{ id: string; title: { emoji: string; tx: string } | null }>
+    Array<{
+      id: string;
+      title: { emoji: string; tx: string } | null;
+      keywords: string | null;
+      is_pinned: boolean | null;
+    }>
   >([]);
+  const [editGameTagSearchQuery, setEditGameTagSearchQuery] = useState("");
   const [editBoardGames, setEditBoardGames] = useState<
     Array<{
       id: string;
@@ -98,12 +104,16 @@ export default function ActiveDetail({
   // 获取约局标签
   const fetchEditGameTags = useCallback(async () => {
     try {
-      const tags = await trpcClientPublic.activeTags.getGameTags.query();
-      setEditGameTags(tags);
+      // 如果没有搜索查询，默认只显示置顶标签；有搜索查询时显示所有匹配的标签
+      const allTags = await trpcClientPublic.activeTags.getGameTags.query({
+        search: editGameTagSearchQuery || undefined,
+        onlyPinned: !editGameTagSearchQuery, // 没有搜索时只显示置顶标签
+      });
+      setEditGameTags(allTags);
     } catch (error) {
       console.error("获取约局标签失败", error);
     }
-  }, []);
+  }, [editGameTagSearchQuery]);
 
   useEffect(() => {
     if (isCreator) {
@@ -118,14 +128,11 @@ export default function ActiveDetail({
     try {
       // 加载时间
       const eventDate = (active as any)?.event_date
-        ? new Date((active as any).event_date)
-            .toISOString()
-            .slice(0, 16)
+        ? new Date((active as any).event_date).toISOString().slice(0, 16)
         : "";
 
       // 加载标签
-      const tagIds =
-        active?.tags?.map((tagMapping) => tagMapping.tag.id) || [];
+      const tagIds = active?.tags?.map((tagMapping) => tagMapping.tag.id) || [];
 
       // 加载桌游
       const games = await trpcClientPublic.active.boardGames.get.query({
@@ -220,9 +227,7 @@ export default function ActiveDetail({
       window.location.reload();
     } catch (error) {
       console.error("更新约局失败", error);
-      messages.error(
-        error instanceof Error ? error.message : "更新约局失败",
-      );
+      messages.error(error instanceof Error ? error.message : "更新约局失败");
     } finally {
       setUpdatingGame(false);
     }
@@ -256,9 +261,7 @@ export default function ActiveDetail({
       navigate({ to: "/actives" });
     } catch (error) {
       console.error("删除约局失败", error);
-      messages.error(
-        error instanceof Error ? error.message : "删除约局失败",
-      );
+      messages.error(error instanceof Error ? error.message : "删除约局失败");
     } finally {
       setDeleting(false);
     }
@@ -301,10 +304,7 @@ export default function ActiveDetail({
               </Link>
             )}
             {onPublish && !active?.is_deleted && (
-              <button
-                className="btn btn-sm btn-primary"
-                onClick={onPublish}
-              >
+              <button className="btn btn-sm btn-primary" onClick={onPublish}>
                 发布
               </button>
             )}
@@ -401,16 +401,16 @@ export default function ActiveDetail({
       {boardGames.length > 0 && (
         <div className="mt-12 not-prose">
           <h2 className="text-2xl font-bold mb-4">活动桌游</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {boardGames.map((game) => {
-                const gameContent = game.content;
-                if (!gameContent) return null;
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {boardGames.map((game) => {
+              const gameContent = game.content;
+              if (!gameContent) return null;
 
-                return (
-                  <div
-                    key={game.gstone_id}
-                    className="card bg-base-100 shadow-md overflow-hidden hover:shadow-lg transition-shadow"
-                  >
+              return (
+                <div
+                  key={game.gstone_id}
+                  className="card bg-base-100 shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+                >
                   {gameContent.sch_cover_url && (
                     <figure className="h-32 overflow-hidden">
                       <img
@@ -418,8 +418,7 @@ export default function ActiveDetail({
                         alt={gameContent.sch_name || gameContent.eng_name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).style.display =
-                            "none";
+                          (e.target as HTMLImageElement).style.display = "none";
                         }}
                       />
                     </figure>
@@ -491,9 +490,22 @@ export default function ActiveDetail({
                 <label className="label">
                   <span className="label-text">选择约局标签（可选）</span>
                 </label>
+                <input
+                  type="text"
+                  className="input input-bordered w-full mb-2"
+                  placeholder="搜索标签（留空则只显示置顶标签）..."
+                  value={editGameTagSearchQuery}
+                  onChange={(e) => {
+                    setEditGameTagSearchQuery(e.target.value);
+                  }}
+                />
                 {editGameTags.length === 0 ? (
                   <div className="alert alert-warning">
-                    <span>暂无约局标签，请先在后台管理页面添加约局标签</span>
+                    <span>
+                      {editGameTagSearchQuery
+                        ? "未找到匹配的标签"
+                        : "暂无置顶标签，请先在后台管理页面添加并置顶标签，或使用搜索查找所有标签"}
+                    </span>
                   </div>
                 ) : (
                   <div className="flex flex-wrap gap-2">
@@ -507,7 +519,9 @@ export default function ActiveDetail({
                             setEditForm((prev) => ({
                               ...prev,
                               selectedTags: isSelected
-                                ? prev.selectedTags.filter((id) => id !== tag.id)
+                                ? prev.selectedTags.filter(
+                                    (id) => id !== tag.id,
+                                  )
                                 : [...prev.selectedTags, tag.id],
                             }));
                           }}
@@ -543,7 +557,10 @@ export default function ActiveDetail({
                 {/* 搜索结果 */}
                 {editSearchQuery && editSearchResults.length > 0 && (
                   <div className="mb-4 overflow-x-auto">
-                    <div className="flex gap-2 px-1" style={{ width: 'max-content' }}>
+                    <div
+                      className="flex gap-2 px-1"
+                      style={{ width: "max-content" }}
+                    >
                       {editSearchResults.map((game) => {
                         const gameContent = game.content;
                         if (!gameContent || !game.gstone_id) return null;
@@ -558,51 +575,54 @@ export default function ActiveDetail({
                             className={`card bg-base-200 shadow-sm overflow-hidden cursor-pointer w-32 shrink-0 ${
                               isSelected ? "ring-2 ring-primary" : ""
                             }`}
-                          onClick={() => {
-                            const gstoneId = game.gstone_id!;
-                            setEditForm((prev) => ({
-                              ...prev,
-                              selectedBoardGames: isSelected
-                                ? prev.selectedBoardGames.filter(
-                                    (id) => id !== gstoneId,
-                                  )
-                                : [...prev.selectedBoardGames, gstoneId],
-                            }));
-                            // 添加到已选择列表以便显示
-                            if (!isSelected) {
-                              setEditBoardGames((prev) => {
-                                if (prev.some((g) => g.gstone_id === gstoneId)) {
-                                  return prev;
-                                }
-                                return [...prev, game];
-                              });
-                            } else {
-                              setEditBoardGames((prev) =>
-                                prev.filter((g) => g.gstone_id !== gstoneId),
-                              );
-                            }
-                          }}
-                        >
-                          {gameContent.sch_cover_url && (
-                            <figure className="h-20 overflow-hidden">
-                              <img
-                                src={gameContent.sch_cover_url}
-                                alt={
-                                  gameContent.sch_name || gameContent.eng_name
-                                }
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display =
-                                    "none";
-                                }}
-                              />
-                            </figure>
-                          )}
-                          <div className="card-body p-2">
-                            <h4 className="card-title text-xs line-clamp-2">
-                              {gameContent.sch_name || gameContent.eng_name}
-                            </h4>
-                          </div>
+                            onClick={() => {
+                              const gstoneId = game.gstone_id!;
+                              setEditForm((prev) => ({
+                                ...prev,
+                                selectedBoardGames: isSelected
+                                  ? prev.selectedBoardGames.filter(
+                                      (id) => id !== gstoneId,
+                                    )
+                                  : [...prev.selectedBoardGames, gstoneId],
+                              }));
+                              // 添加到已选择列表以便显示
+                              if (!isSelected) {
+                                setEditBoardGames((prev) => {
+                                  if (
+                                    prev.some((g) => g.gstone_id === gstoneId)
+                                  ) {
+                                    return prev;
+                                  }
+                                  return [...prev, game];
+                                });
+                              } else {
+                                setEditBoardGames((prev) =>
+                                  prev.filter((g) => g.gstone_id !== gstoneId),
+                                );
+                              }
+                            }}
+                          >
+                            {gameContent.sch_cover_url && (
+                              <figure className="h-20 overflow-hidden">
+                                <img
+                                  src={gameContent.sch_cover_url}
+                                  alt={
+                                    gameContent.sch_name || gameContent.eng_name
+                                  }
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (
+                                      e.target as HTMLImageElement
+                                    ).style.display = "none";
+                                  }}
+                                />
+                              </figure>
+                            )}
+                            <div className="card-body p-2">
+                              <h4 className="card-title text-xs line-clamp-2">
+                                {gameContent.sch_name || gameContent.eng_name}
+                              </h4>
+                            </div>
                           </div>
                         );
                       })}
@@ -613,13 +633,17 @@ export default function ActiveDetail({
                 {/* 已选择的桌游 */}
                 {editForm.selectedBoardGames.length > 0 && (
                   <div>
-                    <div className="text-sm font-semibold mb-2">已选择的桌游</div>
+                    <div className="text-sm font-semibold mb-2">
+                      已选择的桌游
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       {editBoardGames
                         .filter(
                           (game) =>
                             game.gstone_id &&
-                            editForm.selectedBoardGames.includes(game.gstone_id),
+                            editForm.selectedBoardGames.includes(
+                              game.gstone_id,
+                            ),
                         )
                         .map((game) => {
                           const gameContent = game.content;

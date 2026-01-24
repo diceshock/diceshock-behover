@@ -144,6 +144,8 @@ export const activeRegistrationsRelations = relations(
 export const activeTagsTable = sqlite.sqliteTable("active_tags_table", {
   id: sqlite.text().$defaultFn(createId).primaryKey(),
   title: sqlite.text({ mode: "json" }).$type<{ tx: string; emoji: string }>(),
+  keywords: sqlite.text(), // 用于辅助搜索的关键字，多个关键字用逗号分隔
+  is_pinned: sqlite.int({ mode: "boolean" }).$default(() => false), // 是否置顶
 });
 
 export const activeTagRelations = relations(activeTagsTable, ({ many }) => ({
