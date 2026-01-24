@@ -50,7 +50,7 @@ export default function LoginDialog({
         redirect: false,
       });
 
-      if (result?.ok) window.location.reload();
+      if (result?.ok) return window.location.reload();
 
       setError(`登录失败，请稍后重试: ${result?.error ?? "未知错误"}`);
       console.error(`登录失败，请稍后重试: ${result?.error ?? "未知错误"}`);

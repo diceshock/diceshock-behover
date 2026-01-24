@@ -70,7 +70,7 @@ const smsCode = publicProcedure
 
     const tdb = db(env.DB);
     const existingAccount = await tdb.query.accounts.findFirst({
-      where: (acc, { eq, and }) =>
+      where: (acc: any, { eq, and }: any) =>
         and(eq(acc.provider, "SMS"), eq(acc.providerAccountId, phone)),
     });
 
@@ -108,7 +108,16 @@ const smsCode = publicProcedure
           responseBody: response.body,
           templateCode: sendSmsRequest.templateCode,
         });
-        return { success: false, message: "无法发送短信, 请联系管理员" };
+
+        // 根据错误码返回不同的错误信息
+        let errorMessage = "无法发送短信, 请联系管理员";
+        if (responseCode === "isv.MOBILE_NUMBER_ILLEGAL") {
+          errorMessage = "手机号码格式错误，请检查后重试";
+        } else if (responseCode === "isv.BUSINESS_LIMIT_CONTROL") {
+          errorMessage = "发送次数过多，请稍后再试";
+        }
+
+        return { success: false, message: errorMessage };
       }
 
       const expirationTtl = 60 * 5;
@@ -208,7 +217,7 @@ const updateUserInfo = protectedProcedure
 
         // 检查新手机号是否已被占用
         const existingAccount = await tdb.query.accounts.findFirst({
-          where: (acc, { eq, and }) =>
+          where: (acc: any, { eq, and }: any) =>
             and(
               eq(acc.provider, "SMS"),
               eq(acc.providerAccountId, trimmedPhone),
@@ -227,7 +236,7 @@ const updateUserInfo = protectedProcedure
 
       // 更新或创建 accounts 表记录
       const currentUserAccount = await tdb.query.accounts.findFirst({
-        where: (acc, { eq, and }) =>
+        where: (acc: any, { eq, and }: any) =>
           and(eq(acc.userId, userId), eq(acc.provider, "SMS")),
       });
 
@@ -238,9 +247,9 @@ const updateUserInfo = protectedProcedure
             .update(accounts)
             .set({ providerAccountId: trimmedPhone })
             .where(
-              drizzle.and(
-                drizzle.eq(accounts.userId, userId),
-                drizzle.eq(accounts.provider, "SMS"),
+              (drizzle as any).and(
+                (drizzle as any).eq(accounts.userId, userId),
+                (drizzle as any).eq(accounts.provider, "SMS"),
               ),
             );
         } else {
@@ -257,9 +266,9 @@ const updateUserInfo = protectedProcedure
         await tdb
           .delete(accounts)
           .where(
-            drizzle.and(
-              drizzle.eq(accounts.userId, userId),
-              drizzle.eq(accounts.provider, "SMS"),
+            (drizzle as any).and(
+              (drizzle as any).eq(accounts.userId, userId),
+              (drizzle as any).eq(accounts.provider, "SMS"),
             ),
           );
       }
@@ -270,7 +279,7 @@ const updateUserInfo = protectedProcedure
       const [updatedUserInfo] = await tdb
         .update(userInfoTable)
         .set(updateData)
-        .where(drizzle.eq(userInfoTable.id, userId))
+        .where((drizzle as any).eq(userInfoTable.id, userId))
         .returning();
 
       if (!updatedUserInfo) {
