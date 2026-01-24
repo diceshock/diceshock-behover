@@ -4,8 +4,14 @@ import auth from "./auth";
 import { router } from "./baseTRPC";
 import owned from "./owned";
 import ownedManagement from "./ownedManagement";
+import users from "./users";
 
-export const appRouterDash = router({ active, activeTags, ownedManagement });
+export const appRouterDash = router({
+  active,
+  activeTags,
+  ownedManagement,
+  users,
+});
 
 // Public API 暴露活动相关的查询接口
 export const appRouterPublic = router({
