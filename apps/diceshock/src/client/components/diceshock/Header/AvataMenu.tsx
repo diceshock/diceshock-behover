@@ -4,13 +4,13 @@ import {
   SignOutIcon,
   UserIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import { Link } from "@tanstack/react-router";
+import { ClientOnly, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import useAuth from "@/client/hooks/useAuth";
 import ThemeSwap from "../../ThemeSwap";
 import LoginDialog from "./LoginDialog";
 
-export default function AvatarMenu() {
+function AvatarMenuContent() {
   const { userInfo, signOut } = useAuth();
 
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
@@ -95,5 +95,28 @@ export default function AvatarMenu() {
         onClose={() => setIsLoginDialogOpen(false)}
       />
     </div>
+  );
+}
+
+function AvatarMenuSkeleton() {
+  return (
+    <div className="dropdown dropdown-bottom dropdown-end">
+      <div
+        tabIndex={0}
+        role="button"
+        className="btn btn-ghost rounded-full pl-1"
+      >
+        <div className="skeleton rounded-full size-8" />
+        <div className="skeleton h-4 w-20" />
+      </div>
+    </div>
+  );
+}
+
+export default function AvatarMenu() {
+  return (
+    <ClientOnly fallback={<AvatarMenuSkeleton />}>
+      <AvatarMenuContent />
+    </ClientOnly>
   );
 }

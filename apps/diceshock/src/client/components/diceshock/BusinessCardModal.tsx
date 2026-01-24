@@ -41,7 +41,8 @@ export default function BusinessCardModal({
     const fetchBusinessCard = async () => {
       try {
         setIsLoadingCard(true);
-        const data = await trpcClientPublic.businessCard.getMyBusinessCard.query({});
+        const data =
+          await trpcClientPublic.businessCard.getMyBusinessCard.query({});
         setBusinessCard(data);
         if (data) {
           setFormData({
@@ -75,7 +76,8 @@ export default function BusinessCardModal({
         });
         messages.success("名片保存成功");
         // 重新获取名片数据
-        const data = await trpcClientPublic.businessCard.getMyBusinessCard.query({});
+        const data =
+          await trpcClientPublic.businessCard.getMyBusinessCard.query({});
         setBusinessCard(data);
         onSuccess?.();
         if (!required) {
@@ -83,9 +85,7 @@ export default function BusinessCardModal({
         }
       } catch (error) {
         console.error("保存名片失败", error);
-        messages.error(
-          error instanceof Error ? error.message : "保存名片失败",
-        );
+        messages.error(error instanceof Error ? error.message : "保存名片失败");
       } finally {
         setLoading(false);
       }

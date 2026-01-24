@@ -204,67 +204,97 @@ function RouteComponent() {
 
   return (
     <>
-      <main className="min-h-[calc(100vh-32rem)] w-full flex-col items-center mt-40">
-        <div className="mx-auto w-fit">
-          <h1 className="text-5xl text-center align-baseline">
-            {userInfo?.nickname ?? "Anonymous Shock"}
+      <main className="min-h-[calc(100vh-32rem)] w-full flex-col items-center mt-20 sm:mt-32 md:mt-40 px-4">
+        <div className="mx-auto w-full max-w-xl">
+          <div className="flex flex-col items-center gap-3 mb-8 sm:mb-12">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl text-center align-baseline flex items-center gap-2 flex-wrap justify-center">
+              <span className="break-words">
+                {userInfo?.nickname ?? "Anonymous Shock"}
+              </span>
+              <button
+                className="btn btn-ghost btn-circle btn-sm sm:btn-md shrink-0"
+                onClick={handleEditClick}
+                aria-label="编辑昵称"
+              >
+                <PencilSimpleLineIcon className="size-4 sm:size-5 md:size-6" />
+              </button>
+            </h1>
+            <h2 className="text-xs sm:text-sm text-center text-base-content/50 flex items-center gap-1.5 flex-wrap justify-center">
+              <span>uid: {userInfo?.uid}</span>
+              <button
+                className="btn btn-ghost btn-xs btn-circle shrink-0"
+                onClick={handleCopyUid}
+                aria-label="复制UID"
+              >
+                <CopyIcon className="size-3 sm:size-4" />
+              </button>
+            </h2>
+          </div>
+
+          <div className="w-full flex flex-col items-center justify-center gap-3 sm:gap-4">
             <button
-              className="btn btn-ghost btn-circle mt-1.5"
-              onClick={handleEditClick}
+              onClick={handleEditPhoneClick}
+              className="card bg-base-200 hover:bg-base-300 transition-colors w-full cursor-pointer border border-base-content/10 hover:border-base-content/20 shadow-sm hover:shadow-md"
             >
-              <PencilSimpleLineIcon size={24} />
+              <div className="card-body p-4 sm:p-6 md:p-8">
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="shrink-0 p-2 sm:p-2.5 bg-primary/10 rounded-lg">
+                    <PhoneIcon className="size-5 sm:size-6 md:size-8 text-primary" />
+                  </div>
+                  <div className="flex flex-col items-start justify-start flex-1 min-w-0">
+                    <p className="text-base sm:text-lg font-bold mb-1">
+                      修改手机号
+                    </p>
+                    <p className="text-xs sm:text-sm text-base-content/60 break-words">
+                      当前手机号：{userInfo?.phone ?? "—"}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </button>
-          </h1>
-          <h2 className="text-sm text-center text-base-content/50 flex items-center gap-1">
-            uid: {userInfo?.uid}
+
             <button
-              className="btn btn-ghost btn-xs btn-circle"
-              onClick={handleCopyUid}
+              onClick={() => setIsEditingBusinessCard(true)}
+              className="card bg-base-200 hover:bg-base-300 transition-colors w-full cursor-pointer border border-base-content/10 hover:border-base-content/20 shadow-sm hover:shadow-md"
             >
-              <CopyIcon size={16} />
+              <div className="card-body p-4 sm:p-6 md:p-8">
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="shrink-0 p-2 sm:p-2.5 bg-primary/10 rounded-lg">
+                    <ChatsTeardropIcon className="size-5 sm:size-6 md:size-8 text-primary" />
+                  </div>
+                  <div className="flex flex-col items-start justify-start flex-1 min-w-0">
+                    <p className="text-base sm:text-lg font-bold mb-1">
+                      登记/修改名片
+                    </p>
+                    <p className="text-xs sm:text-sm text-base-content/60 break-words">
+                      当你报名约局, 组织者可以查看你的名片
+                    </p>
+                  </div>
+                </div>
+              </div>
             </button>
-          </h2>
-        </div>
 
-        <div className="w-full flex flex-col items-center justify-center mt-12 gap-4">
-          <button
-            onClick={handleEditPhoneClick}
-            className="btn btn-neutral btn-xl py-12 w-full max-w-xl justify-start gap-4"
-          >
-            <PhoneIcon className="size-8" />
-            <div className="flex flex-col items-start justify-start">
-              <p className="text-lg font-bold">修改手机号</p>
-              <p className="text-sm text-neutral-content/70">
-                当前手机号：{userInfo?.phone ?? "—"}
-              </p>
-            </div>
-          </button>
-
-          <button
-            onClick={() => setIsEditingBusinessCard(true)}
-            className="btn btn-neutral btn-xl py-12 w-full max-w-xl justify-start gap-4"
-          >
-            <ChatsTeardropIcon className="size-8" />
-            <div className="flex flex-col items-start justify-start">
-              <p className="text-lg font-bold">登记/修改名片</p>
-              <p className="text-sm text-neutral-content/70">
-                当你报名约局, 组织者可以查看你的名片
-              </p>
-            </div>
-          </button>
-
-          <button
-            onClick={signOut}
-            className="btn btn-neutral btn-xl py-12 w-full max-w-xl justify-start gap-4"
-          >
-            <SignOutIcon className="size-8" />
-            <div className="flex flex-col items-start justify-start">
-              <p className="text-lg font-bold">退出登录</p>
-              <p className="text-sm text-neutral-content/70">
-                退出登录后，您将需要重新登录
-              </p>
-            </div>
-          </button>
+            <button
+              onClick={signOut}
+              className="card bg-base-200 hover:bg-base-300 transition-colors w-full cursor-pointer border border-base-content/10 hover:border-base-content/20 shadow-sm hover:shadow-md"
+            >
+              <div className="card-body p-4 sm:p-6 md:p-8">
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="shrink-0 p-2 sm:p-2.5 bg-error/10 rounded-lg">
+                    <SignOutIcon className="size-5 sm:size-6 md:size-8 text-error" />
+                  </div>
+                  <div className="flex flex-col items-start justify-start flex-1 min-w-0">
+                    <p className="text-base sm:text-lg font-bold mb-1">
+                      退出登录
+                    </p>
+                    <p className="text-xs sm:text-sm text-base-content/60 break-words">
+                      退出登录后，您将需要重新登录
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </button>
+          </div>
         </div>
       </main>
 
@@ -277,33 +307,36 @@ function RouteComponent() {
       >
         <div
           className={clsx(
-            "modal-box max-w-none md:max-w-120 min-h-64 max-h-[80vh] rounded-xl px-0 pb-4 flex flex-col",
+            "modal-box max-w-none md:max-w-120 min-h-48 sm:min-h-64 max-h-[85vh] sm:max-h-[80vh] rounded-xl px-0 pb-4 flex flex-col",
             "absolute not-md:bottom-0 not-md:left-0 not-md:w-full not-md:rounded-none overflow-visible",
             "border border-base-content/30",
           )}
         >
           <button
             onClick={handleClose}
-            className="btn btn-sm btn-circle absolute top-4 right-4"
+            className="btn btn-sm btn-circle absolute top-3 right-3 sm:top-4 sm:right-4 z-10"
             disabled={isLoading}
+            aria-label="关闭"
           >
             <XIcon className="size-4" weight="bold" />
           </button>
 
-          <h3 className="text-base font-bold px-7 pb-4 flex items-center gap-1">
+          <h3 className="text-sm sm:text-base font-bold px-4 sm:px-7 pt-4 sm:pt-6 pb-3 sm:pb-4 flex items-center gap-1">
             修改昵称
           </h3>
 
           <form
             onSubmit={handleSubmit}
-            className="flex flex-col gap-4 py-4 px-12"
+            className="flex flex-col gap-3 sm:gap-4 py-2 sm:py-4 px-4 sm:px-6 md:px-12"
           >
-            <label className="flex flex-row gap-2">
-              <span className="label text-sm min-w-20">昵称:</span>
+            <label className="flex flex-col sm:flex-row gap-2">
+              <span className="label text-xs sm:text-sm min-w-16 sm:min-w-20 pt-1">
+                昵称:
+              </span>
               <input
                 type="text"
                 placeholder="请输入新昵称"
-                className="input input-sm flex-1"
+                className="input input-sm sm:input-md flex-1"
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
                 disabled={isLoading}
@@ -311,7 +344,7 @@ function RouteComponent() {
               />
             </label>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
                 className="btn btn-sm btn-ghost"

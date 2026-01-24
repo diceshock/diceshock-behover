@@ -8,9 +8,9 @@ export const Route = createFileRoute("/_with-home-lo/diceshock-agents")({
 function RouteComponent() {
   return (
     <>
-      <Agents className="mt-[10rem]" />
+      <Agents className="mt-40" />
 
-      <div className="w-full h-[20rem]" />
+      <div className="w-full h-80" />
     </>
   );
 }
