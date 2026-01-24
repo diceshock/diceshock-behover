@@ -35,28 +35,44 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
           return token;
         }
 
-        console.log("[登录流程] JWT回调: 处理用户信息", { userId: user.id, userName: user.name, phone: "phone" in user ? user.phone : undefined });
+        console.log("[登录流程] JWT回调: 处理用户信息", {
+          userId: user.id,
+          userName: user.name,
+          phone: "phone" in user ? user.phone : undefined,
+        });
 
         token.sub = user.id;
         token.name = user.name;
 
         if ("phone" in user && user.phone) token.phone = user.phone;
 
-        console.log("[登录流程] JWT回调: Token已更新", { sub: token.sub, name: token.name, phone: token.phone });
+        console.log("[登录流程] JWT回调: Token已更新", {
+          sub: token.sub,
+          name: token.name,
+          phone: token.phone,
+        });
         return token;
       },
       async session({ session, token }) {
         if (!session.user || !token.sub) {
-          console.log("[登录流程] Session回调: 无用户或token.sub，返回现有session");
+          console.log(
+            "[登录流程] Session回调: 无用户或token.sub，返回现有session",
+          );
           return session;
         }
 
-        console.log("[登录流程] Session回调: 更新session", { userId: token.sub, userName: token.name });
+        console.log("[登录流程] Session回调: 更新session", {
+          userId: token.sub,
+          userName: token.name,
+        });
 
         session.user.id = token.sub;
         session.user.name = token.name as string;
 
-        console.log("[登录流程] Session回调: Session已更新", { userId: session.user.id, userName: session.user.name });
+        console.log("[登录流程] Session回调: Session已更新", {
+          userId: session.user.id,
+          userName: session.user.name,
+        });
         return session;
       },
     },
@@ -76,11 +92,18 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
       authorize: async (credentials) => {
         const { phone, code } = credentials as { phone: string; code: string };
 
-        console.log("[登录流程] 开始验证登录", { phone, codeLength: code?.length });
+        console.log("[登录流程] 开始验证登录", {
+          phone,
+          codeLength: code?.length,
+        });
 
         const smsCode = await KV.get(getSmsTmpCodeKey(phone));
 
-        console.log("[登录流程] 验证码验证", { phone, codeMatch: smsCode === code, storedCode: smsCode ? "***" : null });
+        console.log("[登录流程] 验证码验证", {
+          phone,
+          codeMatch: smsCode === code,
+          storedCode: smsCode ? "***" : null,
+        });
 
         if (smsCode !== code) {
           console.log("[登录流程] 验证码错误，登录失败", { phone });
@@ -98,7 +121,9 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
 
         // 如果账号已存在，查找对应的用户
         if (existingAccount) {
-          console.log("[登录流程] 找到现有账号", { userId: existingAccount.userId });
+          console.log("[登录流程] 找到现有账号", {
+            userId: existingAccount.userId,
+          });
 
           const existingUser = await tdb.query.users.findFirst({
             where: (user: any, { eq }: any) =>
@@ -111,10 +136,16 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
               name: existingUser.name || genNickname(),
               phone,
             };
-            console.log("[登录流程] 返回现有用户", { userId: userData.id, userName: userData.name, phone: userData.phone });
+            console.log("[登录流程] 返回现有用户", {
+              userId: userData.id,
+              userName: userData.name,
+              phone: userData.phone,
+            });
             return userData;
           } else {
-            console.log("[登录流程] 账号存在但用户不存在", { userId: existingAccount.userId });
+            console.log("[登录流程] 账号存在但用户不存在", {
+              userId: existingAccount.userId,
+            });
           }
         }
 
@@ -125,7 +156,10 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
         });
 
         if (existingUserInfo) {
-          console.log("[登录流程] 在 userInfoTable 中找到现有用户", { userId: existingUserInfo.id, uid: existingUserInfo.uid });
+          console.log("[登录流程] 在 userInfoTable 中找到现有用户", {
+            userId: existingUserInfo.id,
+            uid: existingUserInfo.uid,
+          });
 
           // 确保 users 表中存在该用户
           let existingUser = await tdb.query.users.findFirst({
@@ -133,13 +167,19 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
           });
 
           if (!existingUser) {
-            console.log("[登录流程] users 表中不存在，创建用户记录", { userId: existingUserInfo.id });
-            await tdb.insert(users).values({
-              id: existingUserInfo.id,
-              name: existingUserInfo.nickname || genNickname(),
-            }).onConflictDoNothing();
+            console.log("[登录流程] users 表中不存在，创建用户记录", {
+              userId: existingUserInfo.id,
+            });
+            await tdb
+              .insert(users)
+              .values({
+                id: existingUserInfo.id,
+                name: existingUserInfo.nickname || genNickname(),
+              })
+              .onConflictDoNothing();
             existingUser = await tdb.query.users.findFirst({
-              where: (user: any, { eq }: any) => eq(user.id, existingUserInfo.id),
+              where: (user: any, { eq }: any) =>
+                eq(user.id, existingUserInfo.id),
             });
           }
 
@@ -150,7 +190,10 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
           });
 
           if (!accountExists) {
-            console.log("[登录流程] account 表中不存在，创建 account 记录", { userId: existingUserInfo.id, phone });
+            console.log("[登录流程] account 表中不存在，创建 account 记录", {
+              userId: existingUserInfo.id,
+              phone,
+            });
             try {
               await tdb.insert(accounts).values({
                 userId: existingUserInfo.id,
@@ -158,13 +201,26 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
                 provider: "SMS",
                 providerAccountId: phone,
               });
-              console.log("[登录流程] account 记录创建成功", { userId: existingUserInfo.id, phone });
+              console.log("[登录流程] account 记录创建成功", {
+                userId: existingUserInfo.id,
+                phone,
+              });
             } catch (error: any) {
               // 如果因为主键冲突失败，说明记录已存在（可能是并发情况）
-              if (error?.message?.includes("UNIQUE constraint") || error?.code === "SQLITE_CONSTRAINT_UNIQUE") {
-                console.log("[登录流程] account 记录已存在（并发情况）", { userId: existingUserInfo.id, phone });
+              if (
+                error?.message?.includes("UNIQUE constraint") ||
+                error?.code === "SQLITE_CONSTRAINT_UNIQUE"
+              ) {
+                console.log("[登录流程] account 记录已存在（并发情况）", {
+                  userId: existingUserInfo.id,
+                  phone,
+                });
               } else {
-                console.error("[登录流程] 创建 account 记录失败", { error, userId: existingUserInfo.id, phone });
+                console.error("[登录流程] 创建 account 记录失败", {
+                  error,
+                  userId: existingUserInfo.id,
+                  phone,
+                });
                 throw error;
               }
             }
@@ -172,17 +228,26 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
 
           const userData = {
             id: existingUserInfo.id,
-            name: existingUser?.name || existingUserInfo.nickname || genNickname(),
+            name:
+              existingUser?.name || existingUserInfo.nickname || genNickname(),
             phone,
           };
-          console.log("[登录流程] 返回现有用户（从 userInfoTable）", { userId: userData.id, userName: userData.name, phone: userData.phone });
+          console.log("[登录流程] 返回现有用户（从 userInfoTable）", {
+            userId: userData.id,
+            userName: userData.name,
+            phone: userData.phone,
+          });
           return userData;
         }
 
         // 如果都不存在，创建新用户（DrizzleAdapter 会自动创建 user 和 account）
         console.log("[登录流程] 未找到任何现有记录，创建新用户", { phone });
         const newUser = { id: crypto.randomUUID(), name: genNickname(), phone };
-        console.log("[登录流程] 创建新用户", { userId: newUser.id, userName: newUser.name, phone: newUser.phone });
+        console.log("[登录流程] 创建新用户", {
+          userId: newUser.id,
+          userName: newUser.name,
+          phone: newUser.phone,
+        });
         return newUser;
       },
     }),
