@@ -621,15 +621,20 @@ const createGame = protectedProcedure
 
     // 添加约局标签（从已有的约局标签中选择）
     if (tag_ids && tag_ids.length > 0) {
-      // 验证标签是否存在
+      // 验证标签是否存在且符合约局要求（不能是置顶标签，必须启用约局）
       const tags = await tdb.query.activeTagsTable.findMany({
         where: (tag: any, { inArray }: any) => inArray(tag.id, tag_ids),
       });
 
-      // 添加所有选中的标签（管理页面创建的所有标签都可以用于约局）
-      if (tags.length > 0) {
+      // 过滤掉置顶标签和未启用约局的标签（约局不能使用置顶标签）
+      const validTags = tags.filter(
+        (tag: any) => !tag.is_pinned && tag.is_game_enabled === true,
+      );
+
+      // 添加所有符合条件的标签
+      if (validTags.length > 0) {
         await tdb.insert(activeTagMappingsTable).values(
-          tags.map((tag: any) => ({
+          validTags.map((tag: any) => ({
             active_id: gameId,
             tag_id: tag.id,
           })),
@@ -733,9 +738,14 @@ const updateGame = protectedProcedure
           where: (tag: any, { inArray }: any) => inArray(tag.id, tag_ids),
         });
 
-        if (tags.length > 0) {
+        // 过滤掉置顶标签和未启用约局的标签（约局不能使用置顶标签）
+        const validTags = tags.filter(
+          (tag: any) => !tag.is_pinned && tag.is_game_enabled === true,
+        );
+
+        if (validTags.length > 0) {
           await tdb.insert(activeTagMappingsTable).values(
-            tags.map((tag: any) => ({
+            validTags.map((tag: any) => ({
               active_id: id,
               tag_id: tag.id,
             })),

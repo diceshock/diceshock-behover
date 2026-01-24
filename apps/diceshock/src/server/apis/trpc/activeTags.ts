@@ -42,6 +42,7 @@ const get = publicProcedure.query(async ({ ctx }) => {
     title: tag.title,
     keywords: tag.keywords,
     is_pinned: tag.is_pinned,
+    is_game_enabled: tag.is_game_enabled,
   }));
 });
 
@@ -97,18 +98,20 @@ const updateZ = z.object({
   title: activeTagTitleZ,
   keywords: z.string().optional(),
   is_pinned: z.boolean().optional(),
+  is_game_enabled: z.boolean().optional(),
 });
 
 const update = publicProcedure
   .input(updateZ)
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
-    const { id, title, keywords, is_pinned } = input;
+    const { id, title, keywords, is_pinned, is_game_enabled } = input;
 
     const updateData: {
       title: typeof title;
       keywords?: string | null;
       is_pinned?: boolean;
+      is_game_enabled?: boolean;
     } = {
       title,
     };
@@ -117,6 +120,9 @@ const update = publicProcedure
     }
     if (is_pinned !== undefined) {
       updateData.is_pinned = is_pinned;
+    }
+    if (is_game_enabled !== undefined) {
+      updateData.is_game_enabled = is_game_enabled;
     }
 
     const [updatedTag] = await tdb
@@ -132,15 +138,15 @@ const update = publicProcedure
     return updatedTag;
   });
 
-// 获取所有约局标签（不限制于已发布的活动）
-// 注意：这里返回所有标签，因为约局标签管理页面应该显示所有标签
-// 如果需要在其他地方只显示名称包含"约局"的标签，可以在前端过滤
+// 获取所有标签（全局标签管理）
 const getGameTags = publicProcedure
   .input(
     z
       .object({
         search: z.string().optional(),
         onlyPinned: z.boolean().optional(), // 是否只返回置顶标签
+        onlyGameEnabled: z.boolean().optional(), // 是否只返回启用约局的标签
+        excludePinned: z.boolean().optional(), // 是否排除置顶标签（约局场景使用）
       })
       .optional(),
   )
@@ -148,6 +154,8 @@ const getGameTags = publicProcedure
     const tdb = db(ctx.env.DB);
     const searchQuery = input?.search?.trim().toLowerCase();
     const onlyPinned = input?.onlyPinned;
+    const onlyGameEnabled = input?.onlyGameEnabled;
+    const excludePinned = input?.excludePinned;
 
     // 获取所有标签
     let allTags = await tdb.query.activeTagsTable.findMany();
@@ -155,6 +163,16 @@ const getGameTags = publicProcedure
     // 如果只返回置顶标签，先过滤
     if (onlyPinned) {
       allTags = allTags.filter((tag) => tag.is_pinned === true);
+    }
+
+    // 如果排除置顶标签（约局场景），过滤掉置顶标签
+    if (excludePinned) {
+      allTags = allTags.filter((tag) => tag.is_pinned !== true);
+    }
+
+    // 如果只返回启用约局的标签，先过滤
+    if (onlyGameEnabled) {
+      allTags = allTags.filter((tag) => tag.is_game_enabled === true);
     }
 
     // 如果有搜索查询，进行模糊匹配
@@ -185,21 +203,23 @@ const getGameTags = publicProcedure
       title: tag.title,
       keywords: tag.keywords,
       is_pinned: tag.is_pinned,
+      is_game_enabled: tag.is_game_enabled,
     }));
   });
 
-// 创建约局标签（不需要关联活动）
+// 创建标签（不需要关联活动）
 const createGameTagZ = z.object({
   title: activeTagTitleZ,
   keywords: z.string().optional(),
   is_pinned: z.boolean().optional(),
+  is_game_enabled: z.boolean().optional(),
 });
 
 const createGameTag = publicProcedure
   .input(createGameTagZ)
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
-    const { title, keywords, is_pinned } = input;
+    const { title, keywords, is_pinned, is_game_enabled } = input;
 
     // 检查是否已存在相同的标签
     const existing = await tdb.query.activeTagsTable.findFirst({
@@ -216,6 +236,7 @@ const createGameTag = publicProcedure
         title,
         keywords: keywords || null,
         is_pinned: is_pinned || false,
+        is_game_enabled: is_game_enabled || false,
       })
       .returning();
 
@@ -264,6 +285,7 @@ const importTagsZ = z.object({
         emoji: z.string().optional(),
         keywords: z.string().optional(),
         is_pinned: z.boolean().optional(),
+        is_game_enabled: z.boolean().optional(),
       }),
     )
     .min(1),
@@ -298,6 +320,7 @@ const importTags = publicProcedure
               title: { tx: string; emoji: string };
               keywords?: string | null;
               is_pinned?: boolean;
+              is_game_enabled?: boolean;
             } = {
               title: {
                 tx: tagData.name.trim(),
@@ -315,6 +338,14 @@ const importTags = publicProcedure
               updateData.is_pinned = tagData.is_pinned;
             }
 
+            // 如果 TOML 中提供了 is_game_enabled，使用 TOML 的值；否则默认启用（true）
+            if (tagData.is_game_enabled !== undefined) {
+              updateData.is_game_enabled = tagData.is_game_enabled;
+            } else {
+              // 默认启用约局
+              updateData.is_game_enabled = true;
+            }
+
             await tdb
               .update(activeTagsTable)
               .set(updateData)
@@ -327,7 +358,7 @@ const importTags = publicProcedure
           continue;
         }
 
-        // 创建新标签
+        // 创建新标签（默认启用约局）
         await tdb.insert(activeTagsTable).values({
           title: {
             tx: tagData.name.trim(),
@@ -335,6 +366,7 @@ const importTags = publicProcedure
           },
           keywords: tagData.keywords?.trim() || null,
           is_pinned: tagData.is_pinned || false,
+          is_game_enabled: tagData.is_game_enabled !== undefined ? tagData.is_game_enabled : true,
         });
 
         results.created++;

@@ -26,6 +26,7 @@ function RouteComponent() {
     tx: string;
     keywords: string;
     is_pinned: boolean;
+    is_game_enabled: boolean;
   } | null>(null);
 
   const [newTagDraft, setNewTagDraft] = useState({
@@ -33,27 +34,35 @@ function RouteComponent() {
     tx: "",
     keywords: "",
     is_pinned: false,
+    is_game_enabled: false,
   });
   const [creatingTag, setCreatingTag] = useState(false);
   const [deletingTagId, setDeletingTagId] = useState<string | null>(null);
   const [togglingPinId, setTogglingPinId] = useState<string | null>(null);
+  const [togglingGameEnabledId, setTogglingGameEnabledId] = useState<
+    string | null
+  >(null);
   const [importToml, setImportToml] = useState(defaultTagsToml);
   const [importing, setImporting] = useState(false);
+  const [filterOnlyPinned, setFilterOnlyPinned] = useState(false);
+  const [filterOnlyGameEnabled, setFilterOnlyGameEnabled] = useState(false);
 
   const fetchTags = useCallback(async () => {
     try {
       setLoading(true);
       const gameTags = await trpcClientDash.activeTags.getGameTags.query({
         search: searchQuery || undefined,
+        onlyPinned: filterOnlyPinned || undefined,
+        onlyGameEnabled: filterOnlyGameEnabled || undefined,
       });
       setTags(gameTags);
     } catch (error) {
-      console.error("获取约局标签失败", error);
-      msg.error("获取约局标签失败");
+      console.error("获取标签失败", error);
+      msg.error("获取标签失败");
     } finally {
       setLoading(false);
     }
-  }, [msg, searchQuery]);
+  }, [msg, searchQuery, filterOnlyPinned, filterOnlyGameEnabled]);
 
   useEffect(() => {
     fetchTags();
@@ -66,6 +75,7 @@ function RouteComponent() {
       tx: tag.title?.tx || "约局",
       keywords: tag.keywords || "",
       is_pinned: tag.is_pinned || false,
+      is_game_enabled: tag.is_game_enabled || false,
     });
   };
 
@@ -86,6 +96,7 @@ function RouteComponent() {
         },
         keywords: editingTag.keywords.trim() || undefined,
         is_pinned: editingTag.is_pinned,
+        is_game_enabled: editingTag.is_game_enabled,
       });
       msg.success("标签更新成功");
       setEditingTag(null);
@@ -115,9 +126,16 @@ function RouteComponent() {
         },
         keywords: newTagDraft.keywords.trim() || undefined,
         is_pinned: newTagDraft.is_pinned,
+        is_game_enabled: newTagDraft.is_game_enabled,
       });
       msg.success("标签创建成功");
-      setNewTagDraft({ emoji: "🎲", tx: "", keywords: "", is_pinned: false });
+      setNewTagDraft({
+        emoji: "🎲",
+        tx: "",
+        keywords: "",
+        is_pinned: false,
+        is_game_enabled: false,
+      });
       await fetchTags();
     } catch (error) {
       console.error("创建标签失败", error);
@@ -170,6 +188,7 @@ function RouteComponent() {
           },
           keywords: tag.keywords || undefined,
           is_pinned: !currentPinned,
+          is_game_enabled: tag.is_game_enabled,
         });
         msg.success(currentPinned ? "已取消置顶" : "已置顶");
         await fetchTags();
@@ -178,6 +197,38 @@ function RouteComponent() {
         msg.error(error instanceof Error ? error.message : "切换置顶状态失败");
       } finally {
         setTogglingPinId(null);
+      }
+    },
+    [msg, fetchTags, tags],
+  );
+
+  const handleToggleGameEnabled = useCallback(
+    async (tagId: string, currentEnabled: boolean) => {
+      const tag = tags.find((t) => t.id === tagId);
+      if (!tag) {
+        msg.error("标签不存在");
+        return;
+      }
+
+      try {
+        setTogglingGameEnabledId(tagId);
+        await trpcClientDash.activeTags.update.mutate({
+          id: tagId,
+          title: tag.title || {
+            emoji: "🎲",
+            tx: "约局",
+          },
+          keywords: tag.keywords || undefined,
+          is_pinned: tag.is_pinned,
+          is_game_enabled: !currentEnabled,
+        });
+        msg.success(currentEnabled ? "已禁用约局" : "已启用约局");
+        await fetchTags();
+      } catch (error) {
+        console.error("切换约局状态失败", error);
+        msg.error(error instanceof Error ? error.message : "切换约局状态失败");
+      } finally {
+        setTogglingGameEnabledId(null);
       }
     },
     [msg, fetchTags, tags],
@@ -214,6 +265,7 @@ function RouteComponent() {
         emoji?: string;
         keywords?: string;
         is_pinned?: boolean;
+        is_game_enabled?: boolean;
       } = {};
 
       // 解析 name
@@ -240,6 +292,14 @@ function RouteComponent() {
         tag.is_pinned = pinnedMatch[1] === "true";
       }
 
+      // 解析 is_game_enabled
+      const gameEnabledMatch = block.match(
+        /is_game_enabled\s*=\s*(true|false)/,
+      );
+      if (gameEnabledMatch) {
+        tag.is_game_enabled = gameEnabledMatch[1] === "true";
+      }
+
       if (tag.name) {
         tags.push(
           tag as {
@@ -247,6 +307,7 @@ function RouteComponent() {
             emoji?: string;
             keywords?: string;
             is_pinned?: boolean;
+            is_game_enabled?: boolean;
           },
         );
       }
@@ -315,9 +376,9 @@ function RouteComponent() {
     <main className="size-full p-4">
       <div className="max-w-6xl mx-auto">
         <DashBackButton />
-        <h1 className="text-3xl font-bold mb-6">约局标签管理</h1>
+        <h1 className="text-3xl font-bold mb-6">全局标签管理</h1>
 
-        {/* 搜索框和添加新标签 */}
+        {/* 搜索框和筛选器 */}
         <div className="card bg-base-200 mb-6">
           <div className="card-body">
             <div className="flex flex-col md:flex-row gap-4">
@@ -335,6 +396,26 @@ function RouteComponent() {
                   }}
                 />
               </div>
+            </div>
+            <div className="flex flex-wrap gap-4 mt-4">
+              <label className="label cursor-pointer gap-2">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-sm"
+                  checked={filterOnlyPinned}
+                  onChange={(e) => setFilterOnlyPinned(e.target.checked)}
+                />
+                <span className="label-text">只显示置顶</span>
+              </label>
+              <label className="label cursor-pointer gap-2">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-sm"
+                  checked={filterOnlyGameEnabled}
+                  onChange={(e) => setFilterOnlyGameEnabled(e.target.checked)}
+                />
+                <span className="label-text">只显示启用约局</span>
+              </label>
             </div>
           </div>
         </div>
@@ -359,12 +440,15 @@ function RouteComponent() {
 name = "标签名称"
 emoji = "🎲"
 keywords = "关键字1,关键字2"
-is_pinned = false`}
+is_pinned = false
+is_game_enabled = true`}
                 />
                 <div className="label">
                   <span className="label-text-alt text-base-content/60">
                     提示：如果标签名称已存在，默认将跳过该标签。设置 rewrite =
-                    true 可覆盖同名标签。
+                    true
+                    可覆盖同名标签。默认情况下，导入的标签会启用约局（is_game_enabled
+                    = true）。
                   </span>
                 </div>
               </div>
@@ -385,7 +469,7 @@ is_pinned = false`}
         {/* 添加新标签 */}
         <div className="card bg-base-200 mb-6">
           <div className="card-body">
-            <h2 className="card-title mb-4">添加新约局标签</h2>
+            <h2 className="card-title mb-4">添加新标签</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="label">
@@ -443,7 +527,21 @@ is_pinned = false`}
                     }))
                   }
                 />
-                <span className="label-text">置顶</span>
+                <span className="label-text">置顶（仅活动）</span>
+              </label>
+              <label className="label cursor-pointer gap-2">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-sm"
+                  checked={newTagDraft.is_game_enabled}
+                  onChange={(e) =>
+                    setNewTagDraft((prev) => ({
+                      ...prev,
+                      is_game_enabled: e.target.checked,
+                    }))
+                  }
+                />
+                <span className="label-text">启用约局</span>
               </label>
               <button
                 onClick={handleCreateTag}
@@ -466,7 +564,8 @@ is_pinned = false`}
               <table className="table">
                 <thead>
                   <tr>
-                    <th>置顶</th>
+                    <th>置顶（仅活动）</th>
+                    <th>启用约局</th>
                     <th>图标</th>
                     <th>标签名称</th>
                     <th>关键字</th>
@@ -477,8 +576,8 @@ is_pinned = false`}
                 <tbody>
                   {tags.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="text-center py-8">
-                        <p className="text-base-content/60">暂无约局标签</p>
+                      <td colSpan={7} className="text-center py-8">
+                        <p className="text-base-content/60">暂无标签</p>
                       </td>
                     </tr>
                   ) : (
@@ -512,6 +611,36 @@ is_pinned = false`}
                                 onChange={(e) => {
                                   const newValue = e.target.checked;
                                   handleTogglePin(tag.id, !newValue);
+                                }}
+                              />
+                            )}
+                          </td>
+                          <td>
+                            {isEditing && editingTag ? (
+                              <input
+                                type="checkbox"
+                                className="checkbox checkbox-sm"
+                                checked={editingTag?.is_game_enabled || false}
+                                onChange={(e) =>
+                                  setEditingTag((prev) =>
+                                    prev
+                                      ? {
+                                          ...prev,
+                                          is_game_enabled: e.target.checked,
+                                        }
+                                      : null,
+                                  )
+                                }
+                              />
+                            ) : (
+                              <input
+                                type="checkbox"
+                                className="toggle toggle-sm"
+                                checked={tag.is_game_enabled || false}
+                                disabled={togglingGameEnabledId === tag.id}
+                                onChange={(e) => {
+                                  const newValue = e.target.checked;
+                                  handleToggleGameEnabled(tag.id, !newValue);
                                 }}
                               />
                             )}

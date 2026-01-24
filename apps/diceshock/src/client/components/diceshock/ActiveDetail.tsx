@@ -111,10 +111,11 @@ export default function ActiveDetail({
   // 获取约局标签
   const fetchEditGameTags = useCallback(async () => {
     try {
-      // 如果没有搜索查询，默认只显示置顶标签；有搜索查询时显示所有匹配的标签
+      // 约局标签：排除置顶标签（置顶只有活动有），只显示启用约局的标签
       const allTags = await trpcClientPublic.activeTags.getGameTags.query({
         search: editGameTagSearchQuery || undefined,
-        onlyPinned: !editGameTagSearchQuery, // 没有搜索时只显示置顶标签
+        excludePinned: true, // 约局不显示置顶标签
+        onlyGameEnabled: true, // 只显示启用约局的标签
       });
       setEditGameTags(allTags);
     } catch (error) {
