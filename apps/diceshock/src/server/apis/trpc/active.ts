@@ -9,7 +9,7 @@ import db, {
   pagedZ,
 } from "@lib/db";
 import z4, { z } from "zod/v4";
-import { publicProcedure, protectedProcedure } from "./baseTRPC";
+import { protectedProcedure, publicProcedure } from "./baseTRPC";
 
 export const getFilterZ = z4.object({
   searchWords: z4.string().nonempty().optional(),
@@ -425,7 +425,7 @@ const deleteActive = async (
   return { success: true };
 };
 
-const mutation = publicProcedure
+const mutation = protectedProcedure
   .input(postInputZ)
   .mutation(async ({ input, ctx }) => {
     console.log("mutation 输入:", { hasId: "id" in input, input });
@@ -437,7 +437,7 @@ const mutation = publicProcedure
     return insert(ctx.env, input);
   });
 
-const deleteMutation = publicProcedure
+const deleteMutation = protectedProcedure
   .input(deleteZ)
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);

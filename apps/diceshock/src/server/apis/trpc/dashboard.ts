@@ -1,6 +1,6 @@
 import db, { activesTable, drizzle, users } from "@lib/db";
-import { publicProcedure } from "./baseTRPC";
 import dayjs from "dayjs";
+import { publicProcedure } from "./baseTRPC";
 
 // 获取仪表盘统计数据
 const getStats = publicProcedure.query(async ({ ctx }) => {
@@ -44,10 +44,7 @@ const getStats = publicProcedure.query(async ({ ctx }) => {
 
   const allActives = await tdb.query.activesTable.findMany({
     where: (active, { and, eq, gte }) =>
-      and(
-        eq(active.is_deleted, false),
-        gte(active.publish_at, thirtyDaysAgo),
-      ),
+      and(eq(active.is_deleted, false), gte(active.publish_at, thirtyDaysAgo)),
     columns: {
       publish_at: true,
     },

@@ -167,7 +167,7 @@ const registrationCreateZ = z.object({
   is_watching: z.boolean().default(false),
 });
 
-// 获取活动的所有报名
+// 获取活动的所有报名（不返回手机号，只返回 id, uid, nickname）
 const getRegistrations = publicProcedure
   .input(z.object({ active_id: z.string() }))
   .query(async ({ input, ctx }) => {
@@ -190,7 +190,15 @@ const getRegistrations = publicProcedure
       user: reg.user
         ? {
             ...reg.user,
-            userInfo: reg.user.userInfo,
+            userInfo: reg.user.userInfo
+              ? {
+                  id: reg.user.userInfo.id,
+                  uid: reg.user.userInfo.uid,
+                  nickname: reg.user.userInfo.nickname,
+                  create_at: reg.user.userInfo.create_at,
+                  // 不返回 phone
+                }
+              : null,
           }
         : null,
     }));
@@ -345,8 +353,38 @@ const deleteRegistration = protectedProcedure
     return { success: true };
   });
 
-// 获取用户详情
+// 获取用户详情（不返回手机号，只返回 id, uid, nickname）- public 版本
 const getUserDetails = publicProcedure
+  .input(z.object({ user_id: z.string() }))
+  .query(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const user = await tdb.query.users.findFirst({
+      where: (u, { eq }) => eq(u.id, input.user_id),
+      with: {
+        userInfo: true,
+      },
+    });
+
+    if (!user) {
+      throw new Error("用户不存在");
+    }
+
+    return {
+      ...user,
+      userInfo: user.userInfo
+        ? {
+            id: user.userInfo.id,
+            uid: user.userInfo.uid,
+            nickname: user.userInfo.nickname,
+            create_at: user.userInfo.create_at,
+            // 不返回 phone
+          }
+        : null,
+    };
+  });
+
+// 获取用户详情（包含手机号）- dash 版本
+const getUserDetailsDash = protectedProcedure
   .input(z.object({ user_id: z.string() }))
   .query(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
@@ -380,4 +418,5 @@ export default {
     delete: deleteRegistration,
   },
   getUserDetails,
+  getUserDetailsDash,
 };

@@ -1,7 +1,7 @@
 import type Dysmsapi20170525 from "@alicloud/dysmsapi20170525";
 import { initTRPC, TRPCError } from "@trpc/server";
-import type { HonoCtxEnv } from "@/shared/types";
 import type { UserInfo } from "@/server/middlewares/auth";
+import type { HonoCtxEnv } from "@/shared/types";
 
 const t = initTRPC
   .context<{

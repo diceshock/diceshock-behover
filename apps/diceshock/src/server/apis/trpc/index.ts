@@ -19,7 +19,10 @@ export const appRouterDash = router({
     delete: activeTags.delete,
     importTags: activeTags.importTags,
   },
-  activeRegistrations,
+  activeRegistrations: {
+    ...activeRegistrations,
+    getUserDetails: activeRegistrations.getUserDetailsDash, // dash 使用包含手机号的版本
+  },
   dashboard,
   ownedManagement,
   users,

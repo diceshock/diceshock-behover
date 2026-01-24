@@ -55,7 +55,7 @@ const smsCode = publicProcedure
     // 之前的逻辑是：如果是登录/注册流程，如果手机号已存在，返回错误（让用户直接登录）
     // 但是这里复用了 smsCode 接口。如果用户在修改手机号，输入的手机号可能还没注册。
     // 如果输入的手机号已经注册了，这里会返回错误，这对于修改手机号来说是合理的：不能修改为一个已注册的手机号。
-    
+
     // 但是，原来的逻辑是：
     /*
     if (existingAccount) {
@@ -67,7 +67,7 @@ const smsCode = publicProcedure
     */
     // 这对于登录流程是好的。对于修改手机号流程，如果手机号已注册，确实不能修改为该手机号。
     // 但是提示语 "请直接登录" 可能不太合适。不过暂时可以接受，或者前端处理错误信息。
-    
+
     const tdb = db(env.DB);
     const existingAccount = await tdb.query.accounts.findFirst({
       where: (acc, { eq, and }) =>
@@ -209,7 +209,10 @@ const updateUserInfo = protectedProcedure
         // 检查新手机号是否已被占用
         const existingAccount = await tdb.query.accounts.findFirst({
           where: (acc, { eq, and }) =>
-            and(eq(acc.provider, "SMS"), eq(acc.providerAccountId, trimmedPhone)),
+            and(
+              eq(acc.provider, "SMS"),
+              eq(acc.providerAccountId, trimmedPhone),
+            ),
         });
 
         if (existingAccount && existingAccount.userId !== userId) {
