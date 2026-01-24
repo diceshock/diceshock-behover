@@ -1,7 +1,7 @@
 import Credentials from "@auth/core/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { type AuthConfig, getAuthUser, initAuthConfig } from "@hono/auth-js";
-import db, { userInfoTable, users } from "@lib/db";
+import db, { drizzle, userInfoTable, users } from "@lib/db";
 import { createSelectSchema } from "drizzle-zod";
 import type { Context } from "hono";
 import { nanoid } from "nanoid/non-secure";
@@ -30,19 +30,21 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
     basePath: "/api/auth",
     callbacks: {
       async jwt({ token, user }) {
-        // 当用户首次登录时，user 对象存在
-        if (user) {
-          token.sub = user.id;
-          token.name = user.name;
-        }
+        if (!user) return token;
+
+        token.sub = user.id;
+        token.name = user.name;
+
+        if ("phone" in user && user.phone) token.phone = user.phone;
+
         return token;
       },
       async session({ session, token }) {
-        // 将 token 中的信息同步到 session
-        if (session.user && token.sub) {
-          session.user.id = token.sub;
-          session.user.name = token.name as string;
-        }
+        if (!session.user || !token.sub) return session;
+
+        session.user.id = token.sub;
+        session.user.name = token.name as string;
+
         return session;
       },
     },
@@ -105,6 +107,8 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
       .onConflictDoNothing();
   }
 
+  const phone = (authUser.token?.phone ?? null) as string | null;
+
   const userInfoRaw = await db(c.env.DB).query.userInfoTable.findFirst({
     where: (userInfo, { eq }) => eq(userInfo.id, id),
   });
@@ -116,12 +120,13 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
 
     const [userInfo] = await db(c.env.DB)
       .insert(userInfoTable)
-      .values({ id, uid, nickname })
+      .values({ id, uid, nickname, phone })
       .returning();
 
     if (userInfo)
       injectCrossDataToCtx(c, {
         UserInfo: {
+          phone,
           uid: userInfo.uid,
           nickname: userInfo.nickname,
         },
@@ -130,8 +135,20 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
     return next();
   }
 
+  // 如果 token 中有 phone，且与数据库中的不同，则更新
+  if (phone && userInfoRaw.phone !== phone) {
+    const tdb = db(c.env.DB);
+    await tdb
+      .update(userInfoTable)
+      .set({ phone })
+      .where(drizzle.eq(userInfoTable.id, id));
+    // 更新本地变量以反映最新值
+    userInfoRaw.phone = phone;
+  }
+
   injectCrossDataToCtx(c, {
     UserInfo: {
+      phone: userInfoRaw.phone || phone,
       uid: userInfoRaw.uid,
       nickname: userInfoRaw.nickname,
     },

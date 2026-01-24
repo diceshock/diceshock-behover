@@ -107,6 +107,7 @@ export const userInfoTable = sqlite.sqliteTable("user_info", {
     .integer("create_at", { mode: "timestamp_ms" })
     .$defaultFn(() => new Date(Date.now())),
   nickname: sqlite.text("nickname").notNull(),
+  phone: sqlite.text("phone"),
 });
 
 export const userInfoRelations = relations(userInfoTable, ({ one }) => ({

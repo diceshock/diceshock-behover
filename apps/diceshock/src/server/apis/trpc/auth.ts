@@ -49,6 +49,20 @@ const smsCode = publicProcedure
       }
     }
 
+    // 检查手机号是否已注册
+    const tdb = db(env.DB);
+    const existingAccount = await tdb.query.accounts.findFirst({
+      where: (acc, { eq, and }) =>
+        and(eq(acc.provider, "SMS"), eq(acc.providerAccountId, phone)),
+    });
+
+    if (existingAccount) {
+      return {
+        success: false,
+        message: "该手机号已注册，请直接登录",
+      };
+    }
+
     const verificationCode = customAlphabet("0123456789", 6)();
 
     const sendSmsRequest = new $Dysmsapi20170525.SendSmsRequest({

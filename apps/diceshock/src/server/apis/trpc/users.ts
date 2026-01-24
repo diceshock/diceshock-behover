@@ -1,11 +1,4 @@
-import db, {
-  accounts,
-  drizzle,
-  pagedZ,
-  sessions,
-  userInfoTable,
-  users,
-} from "@lib/db";
+import db, { drizzle, pagedZ, sessions, userInfoTable, users } from "@lib/db";
 import z4, { z } from "zod/v4";
 import { publicProcedure } from "./baseTRPC";
 
@@ -25,34 +18,24 @@ const get = publicProcedure
     const tdb = db(ctx.env.DB);
 
     // 构建查询条件
-    let whereCondition: Parameters<
-      typeof tdb.query.users.findMany
-    >[0]["where"] = undefined;
+    let whereCondition: any;
 
     if (searchWords) {
-      // 先查找匹配的 userInfo (uid, nickname)
+      // 先查找匹配的 userInfo (uid, nickname, phone)
       const matchingUserInfos = await tdb.query.userInfoTable.findMany({
         where: (userInfo, { or, like }) =>
           or(
             like(userInfo.uid, `%${searchWords}%`),
             like(userInfo.nickname, `%${searchWords}%`),
+            like(userInfo.phone, `%${searchWords}%`),
           ),
       });
 
       const matchingUserIds = matchingUserInfos.map((ui) => ui.id);
 
-      // 查找匹配的 accounts (providerAccountId 可能是手机号)
-      const matchingAccounts = await tdb.query.accounts.findMany({
-        where: (account, { like }) =>
-          like(account.providerAccountId, `%${searchWords}%`),
-      });
-
-      const matchingAccountUserIds = matchingAccounts.map((a) => a.userId);
-
       // 查找匹配的 users (id, name, email)
       const allMatchingIds = new Set([
         ...matchingUserIds,
-        ...matchingAccountUserIds,
         ...(searchWords.includes("@") ? [] : []), // 如果包含 @，可能是邮箱
       ]);
 
@@ -62,14 +45,14 @@ const get = publicProcedure
       }
 
       if (allMatchingIds.size > 0) {
-        whereCondition = (user, { or, inArray, like }) =>
+        whereCondition = (user: any, { or, inArray, like }: any) =>
           or(
             inArray(user.id, Array.from(allMatchingIds)),
             like(user.name, `%${searchWords}%`),
             like(user.email, `%${searchWords}%`),
           );
       } else {
-        whereCondition = (user, { or, like }) =>
+        whereCondition = (user: any, { or, like }: any) =>
           or(
             like(user.name, `%${searchWords}%`),
             like(user.email, `%${searchWords}%`),
@@ -77,32 +60,45 @@ const get = publicProcedure
       }
     }
 
-    const userList = await tdb.query.users.findMany({
-      where: whereCondition,
+    const queryOptions: any = {
       with: {
         userInfo: true,
       },
       limit: pageSize,
       offset: (page - 1) * pageSize,
-      orderBy: (users, { desc }) => desc(users.id),
+      orderBy: (users: any, { desc }: any) => desc(users.id),
+    };
+
+    if (whereCondition) {
+      queryOptions.where = whereCondition;
+    }
+
+    const userList = await tdb.query.users.findMany(queryOptions);
+
+    // 组合数据：直接使用 userInfo.phone，并保留 userInfo 对象
+    return userList.map((user) => {
+      const userWithInfo = user as typeof user & {
+        userInfo: {
+          phone: string | null;
+          nickname: string;
+          uid: string;
+          create_at: Date | null;
+        } | null;
+      };
+      return {
+        ...user,
+        phone: userWithInfo.userInfo?.phone || null,
+        userInfo: userWithInfo.userInfo || null,
+      } as typeof user & {
+        phone: string | null;
+        userInfo: {
+          phone: string | null;
+          nickname: string;
+          uid: string;
+          create_at: Date | null;
+        } | null;
+      };
     });
-
-    // 获取每个用户的账户信息（用于获取手机号）
-    const userIds = userList.map((u) => u.id);
-    const userAccounts = await tdb.query.accounts.findMany({
-      where: (account, { inArray, eq }) =>
-        inArray(account.userId, userIds) && eq(account.provider, "SMS"),
-    });
-
-    const accountsByUserId = new Map(
-      userAccounts.map((acc) => [acc.userId, acc.providerAccountId]),
-    );
-
-    // 组合数据
-    return userList.map((user) => ({
-      ...user,
-      phone: accountsByUserId.get(user.id) || null,
-    }));
   });
 
 const getByIdZ = z.object({
@@ -123,15 +119,19 @@ const getById = publicProcedure
 
     if (!user) return null;
 
-    // 获取手机号
-    const account = await tdb.query.accounts.findFirst({
-      where: (acc, { eq, and }) =>
-        and(eq(acc.userId, input.id), eq(acc.provider, "SMS")),
-    });
+    const userWithInfo = user as typeof user & {
+      userInfo: {
+        phone: string | null;
+        nickname: string;
+        uid: string;
+        create_at: Date | null;
+      } | null;
+    };
 
     return {
       ...user,
-      phone: account?.providerAccountId || null,
+      phone: userWithInfo.userInfo?.phone || null,
+      userInfo: userWithInfo.userInfo,
     };
   });
 
@@ -156,63 +156,33 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
 
   // 更新用户基本信息
   if (Object.keys(updateData).length > 0) {
-    await tdb
-      .update(users)
-      .set(updateData)
-      .where(drizzle.eq(users.id, id));
+    await tdb.update(users).set(updateData).where(drizzle.eq(users.id, id));
   }
 
-  // 更新用户信息（nickname）
+  // 更新用户信息（nickname 和 phone）
+  const userInfoUpdateData: {
+    nickname?: string;
+    phone?: string | null;
+  } = {};
+
   if (nickname !== undefined) {
     const trimmedNickname = nickname.trim();
     if (trimmedNickname) {
-      await tdb
-        .update(userInfoTable)
-        .set({ nickname: trimmedNickname })
-        .where(drizzle.eq(userInfoTable.id, id));
+      userInfoUpdateData.nickname = trimmedNickname;
     }
   }
 
-  // 更新手机号（通过更新 account）
   if (phone !== undefined) {
     const trimmedPhone = phone.trim();
-    const existingAccount = await tdb.query.accounts.findFirst({
-      where: (acc, { eq, and }) =>
-        and(eq(acc.userId, id), eq(acc.provider, "SMS")),
-    });
+    userInfoUpdateData.phone = trimmedPhone || null;
+  }
 
-    if (trimmedPhone) {
-      if (existingAccount) {
-        // 更新现有账户
-        await tdb
-          .update(accounts)
-          .set({ providerAccountId: trimmedPhone })
-          .where(
-            drizzle.and(
-              drizzle.eq(accounts.userId, id),
-              drizzle.eq(accounts.provider, "SMS"),
-            ),
-          );
-      } else {
-        // 创建新账户
-        await tdb.insert(accounts).values({
-          userId: id,
-          type: "credentials",
-          provider: "SMS",
-          providerAccountId: trimmedPhone,
-        });
-      }
-    } else if (existingAccount) {
-      // 如果手机号为空且存在账户，删除账户
-      await tdb
-        .delete(accounts)
-        .where(
-          drizzle.and(
-            drizzle.eq(accounts.userId, id),
-            drizzle.eq(accounts.provider, "SMS"),
-          ),
-        );
-    }
+  // 更新 userInfo 表
+  if (Object.keys(userInfoUpdateData).length > 0) {
+    await tdb
+      .update(userInfoTable)
+      .set(userInfoUpdateData)
+      .where(drizzle.eq(userInfoTable.id, id));
   }
 
   // 返回更新后的用户信息
@@ -225,14 +195,19 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
 
   if (!updatedUser) return null;
 
-  const account = await tdb.query.accounts.findFirst({
-    where: (acc, { eq, and }) =>
-      and(eq(acc.userId, id), eq(acc.provider, "SMS")),
-  });
+  const updatedUserWithInfo = updatedUser as typeof updatedUser & {
+    userInfo: {
+      phone: string | null;
+      nickname: string;
+      uid: string;
+      create_at: Date | null;
+    } | null;
+  };
 
   return {
     ...updatedUser,
-    phone: account?.providerAccountId || null,
+    phone: updatedUserWithInfo.userInfo?.phone || null,
+    userInfo: updatedUserWithInfo.userInfo,
   };
 };
 
@@ -254,9 +229,7 @@ const disable = publicProcedure
     const { id } = input;
 
     // 删除用户的所有 session
-    await tdb
-      .delete(sessions)
-      .where(drizzle.eq(sessions.userId, id));
+    await tdb.delete(sessions).where(drizzle.eq(sessions.userId, id));
 
     return { success: true };
   });
