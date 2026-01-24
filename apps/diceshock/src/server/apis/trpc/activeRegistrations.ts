@@ -224,10 +224,7 @@ const createRegistration = protectedProcedure
     // 检查是否已经报名（一个用户在一个活动中只能报名一次，包括观望）
     const existing = await tdb.query.activeRegistrationsTable.findFirst({
       where: (reg, { eq, and }) =>
-        and(
-          eq(reg.active_id, input.active_id),
-          eq(reg.user_id, userId),
-        ),
+        and(eq(reg.active_id, input.active_id), eq(reg.user_id, userId)),
     });
 
     // 如果是报名队伍（非观望），验证队伍
@@ -245,9 +242,7 @@ const createRegistration = protectedProcedure
 
       // 过滤掉观望状态的报名和当前用户的报名（如果已存在）
       const participatingRegistrations = team.registrations.filter(
-        (reg) =>
-          !reg.is_watching &&
-          (!existing || reg.user_id !== userId),
+        (reg) => !reg.is_watching && (!existing || reg.user_id !== userId),
       );
 
       // 检查队伍是否已满
@@ -256,6 +251,31 @@ const createRegistration = protectedProcedure
         participatingRegistrations.length >= team.max_participants
       ) {
         throw new Error("队伍已满");
+      }
+
+      // 检查整个活动的总上限（如果活动有上限）
+      if (active.max_participants !== null) {
+        // 获取所有队伍的报名（不包括观望和当前用户的报名）
+        const allTeams = await tdb.query.activeTeamsTable.findMany({
+          where: (t, { eq }) => eq(t.active_id, input.active_id),
+          with: {
+            registrations: true,
+          },
+        });
+
+        const allParticipatingRegistrations = allTeams.flatMap((t) =>
+          t.registrations.filter(
+            (reg) => !reg.is_watching && (!existing || reg.user_id !== userId),
+          ),
+        );
+
+        // 如果当前用户要加入，需要检查加入后是否超过上限
+        const willExceedLimit =
+          allParticipatingRegistrations.length >= active.max_participants;
+
+        if (willExceedLimit) {
+          throw new Error("活动报名人数已达上限");
+        }
       }
     }
 

@@ -4,6 +4,7 @@ import MDEditor from "@uiw/react-md-editor";
 import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { themeA } from "@/client/components/ThemeSwap";
+import { ActiveTags } from "@/client/components/diceshock/ActiveTags";
 import ActiveRegistration from "@/client/components/diceshock/ActiveRegistration";
 import useAuth from "@/client/hooks/useAuth";
 import { useMessages } from "@/client/hooks/useMessages";
@@ -152,10 +153,11 @@ export default function ActiveDetail({
       const teams = await trpcClientPublic.activeRegistrations.teams.get.query({
         active_id: activeId,
       });
+      // 约局默认上限为40人，如果没填则显示默认值
       const maxParticipants =
         teams.length > 0 && teams[0].max_participants
           ? String(teams[0].max_participants)
-          : "";
+          : "40";
 
       setEditForm({
         event_date: eventDate,
@@ -206,6 +208,12 @@ export default function ActiveDetail({
 
   // 保存编辑
   const handleUpdateGame = useCallback(async () => {
+    // 验证标签数量
+    if (editForm.selectedTags.length > 15) {
+      messages.warning("最多只能选择15个标签");
+      return;
+    }
+
     try {
       setUpdatingGame(true);
       await trpcClientPublic.active.updateGame.mutate({
@@ -213,13 +221,13 @@ export default function ActiveDetail({
         event_date: editForm.event_date || undefined,
         max_participants: editForm.max_participants
           ? parseInt(editForm.max_participants, 10)
-          : null,
+          : 40, // 默认40人
         board_game_ids:
           editForm.selectedBoardGames.length > 0
             ? editForm.selectedBoardGames
             : undefined,
-        tag_ids:
-          editForm.selectedTags.length > 0 ? editForm.selectedTags : undefined,
+        // 传递标签数组，空数组表示删除所有标签
+        tag_ids: editForm.selectedTags,
       });
       messages.success("约局更新成功");
       editDialogRef.current?.close();
@@ -360,19 +368,7 @@ export default function ActiveDetail({
             </p>
           )}
 
-          <div className="flex flex-wrap gap-2 mb-4">
-            {active?.tags?.map((tagMapping) => (
-              <span
-                key={tagMapping.tag.id}
-                className="badge badge-primary badge-lg"
-              >
-                {tagMapping.tag.title?.emoji && (
-                  <span className="mr-1">{tagMapping.tag.title.emoji}</span>
-                )}
-                {tagMapping.tag.title?.tx || "未命名"}
-              </span>
-            ))}
-          </div>
+          <ActiveTags tags={active?.tags} size="lg" className="mb-4" />
 
           {active?.event_date && (
             <div className="text-lg font-semibold text-primary mb-2">
@@ -469,13 +465,13 @@ export default function ActiveDetail({
               {/* 人数上限 */}
               <div>
                 <label className="label">
-                  <span className="label-text">人数上限（留空表示无上限）</span>
+                  <span className="label-text">人数上限（默认40人）</span>
                 </label>
                 <input
                   type="number"
                   min="1"
                   className="input input-bordered w-full"
-                  placeholder="例如：4"
+                  placeholder="例如：40（默认40人）"
                   value={editForm.max_participants}
                   onChange={(e) =>
                     setEditForm((prev) => ({
@@ -489,8 +485,16 @@ export default function ActiveDetail({
               {/* 约局标签选择 */}
               <div>
                 <label className="label">
-                  <span className="label-text">选择约局标签（可选）</span>
+                  <span className="label-text">
+                    选择约局标签（可选，最多15个）
+                    {editForm.selectedTags.length > 0 && (
+                      <span className="text-sm text-base-content/60 ml-2">
+                        ({editForm.selectedTags.length}/15)
+                      </span>
+                    )}
+                  </span>
                 </label>
+
                 <input
                   type="text"
                   className="input input-bordered w-full mb-2"
@@ -500,42 +504,159 @@ export default function ActiveDetail({
                     setEditGameTagSearchQuery(e.target.value);
                   }}
                 />
-                {editGameTags.length === 0 ? (
-                  <div className="alert alert-warning">
-                    <span>
-                      {editGameTagSearchQuery
-                        ? "未找到匹配的标签"
-                        : "暂无置顶标签，请先在后台管理页面添加并置顶标签，或使用搜索查找所有标签"}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {editGameTags.map((tag) => {
-                      const isSelected = editForm.selectedTags.includes(tag.id);
-                      return (
-                        <button
-                          key={tag.id}
-                          type="button"
-                          onClick={() => {
-                            setEditForm((prev) => ({
-                              ...prev,
-                              selectedTags: isSelected
-                                ? prev.selectedTags.filter(
+
+                {/* 搜索结果 */}
+                {editGameTagSearchQuery && editGameTags.length > 0 && (
+                  <div className="mb-4">
+                    <div className="text-sm font-semibold mb-2">搜索结果</div>
+                    <div className="flex flex-wrap gap-2">
+                      {editGameTags.map((tag) => {
+                        const isSelected = editForm.selectedTags.includes(
+                          tag.id,
+                        );
+                        const isDisabled =
+                          !isSelected && editForm.selectedTags.length >= 15;
+                        return (
+                          <button
+                            key={tag.id}
+                            type="button"
+                            onClick={() => {
+                              if (isSelected) {
+                                setEditForm((prev) => ({
+                                  ...prev,
+                                  selectedTags: prev.selectedTags.filter(
                                     (id) => id !== tag.id,
-                                  )
-                                : [...prev.selectedTags, tag.id],
-                            }));
-                          }}
-                          className={`badge badge-lg gap-2 ${
-                            isSelected ? "badge-primary" : "badge-outline"
-                          }`}
-                        >
-                          <span>{tag.title?.emoji || "🎲"}</span>
-                          {tag.title?.tx || "约局"}
-                        </button>
-                      );
-                    })}
+                                  ),
+                                }));
+                              } else {
+                                if (editForm.selectedTags.length >= 15) {
+                                  messages.warning("最多只能选择15个标签");
+                                  return;
+                                }
+                                setEditForm((prev) => ({
+                                  ...prev,
+                                  selectedTags: [...prev.selectedTags, tag.id],
+                                }));
+                              }
+                            }}
+                            disabled={isDisabled}
+                            className={`badge badge-lg gap-2 ${
+                              isSelected ? "badge-primary" : "badge-outline"
+                            } ${
+                              isDisabled ? "opacity-50 cursor-not-allowed" : ""
+                            }`}
+                          >
+                            <span>{tag.title?.emoji || "🎲"}</span>
+                            {tag.title?.tx || "约局"}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
+                )}
+
+                {/* 已选择的标签 */}
+                {editForm.selectedTags.length > 0 && (
+                  <div>
+                    <div className="text-sm font-semibold mb-2">
+                      已选择的标签
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {editGameTags
+                        .filter((tag) => editForm.selectedTags.includes(tag.id))
+                        .map((tag) => {
+                          return (
+                            <div
+                              key={tag.id}
+                              className="badge badge-primary gap-2"
+                            >
+                              <span>{tag.title?.emoji || "🎲"}</span>
+                              {tag.title?.tx || "约局"}
+                              <button
+                                onClick={() => {
+                                  setEditForm((prev) => ({
+                                    ...prev,
+                                    selectedTags: prev.selectedTags.filter(
+                                      (id) => id !== tag.id,
+                                    ),
+                                  }));
+                                }}
+                                className="btn btn-xs btn-circle btn-ghost"
+                              >
+                                {"×"}
+                              </button>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 标签选择区域（无搜索时显示置顶标签） */}
+                {!editGameTagSearchQuery && (
+                  <>
+                    {editGameTags.length === 0 ? (
+                      <div className="alert alert-warning">
+                        <span>
+                          暂无置顶标签，请先在后台管理页面添加并置顶标签，或使用搜索查找所有标签
+                        </span>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="text-sm font-semibold mb-2">
+                          可选择的标签
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {editGameTags.map((tag) => {
+                            const isSelected = editForm.selectedTags.includes(
+                              tag.id,
+                            );
+                            const isDisabled =
+                              !isSelected && editForm.selectedTags.length >= 15;
+                            return (
+                              <button
+                                key={tag.id}
+                                type="button"
+                                onClick={() => {
+                                  if (isSelected) {
+                                    setEditForm((prev) => ({
+                                      ...prev,
+                                      selectedTags: prev.selectedTags.filter(
+                                        (id) => id !== tag.id,
+                                      ),
+                                    }));
+                                  } else {
+                                    if (editForm.selectedTags.length >= 15) {
+                                      messages.warning("最多只能选择15个标签");
+                                      return;
+                                    }
+                                    setEditForm((prev) => ({
+                                      ...prev,
+                                      selectedTags: [
+                                        ...prev.selectedTags,
+                                        tag.id,
+                                      ],
+                                    }));
+                                  }
+                                }}
+                                disabled={isDisabled}
+                                className={`badge badge-lg gap-2 ${
+                                  isSelected ? "badge-primary" : "badge-outline"
+                                } ${
+                                  isDisabled
+                                    ? "opacity-50 cursor-not-allowed"
+                                    : ""
+                                }`}
+                              >
+                                <span>{tag.title?.emoji || "🎲"}</span>
+                                {tag.title?.tx || "约局"}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 

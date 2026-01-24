@@ -5,6 +5,7 @@ import dayjs from "dayjs";
 import isoWeek from "dayjs/plugin/isoWeek";
 import weekOfYear from "dayjs/plugin/weekOfYear";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ActiveTags } from "@/client/components/diceshock/ActiveTags";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import useAuth from "@/client/hooks/useAuth";
 import trpcClientPublic from "@/shared/utils/trpc";
@@ -63,7 +64,7 @@ function RouteComponent() {
   const gameDialogRef = useRef<HTMLDialogElement>(null);
   const [gameForm, setGameForm] = useState({
     event_date: "",
-    max_participants: "", // 队伍人数上限
+    max_participants: "40", // 队伍人数上限，默认40人
     selectedBoardGames: [] as number[], // gstone_id 列表
     selectedTags: [] as string[], // 约局标签 ID 列表
   });
@@ -172,6 +173,10 @@ function RouteComponent() {
   const [creatorInfo, setCreatorInfo] = useState<
     Map<string, { nickname: string; uid: string } | null>
   >(new Map());
+  // 存储报名者信息（用于显示报名者昵称）
+  const [participantInfo, setParticipantInfo] = useState<
+    Map<string, Map<string, { nickname: string; uid: string }>>
+  >(new Map());
 
   // 获取所有开启报名的活动的报名统计
   useEffect(() => {
@@ -254,43 +259,83 @@ function RouteComponent() {
     }
   }, [actives]);
 
-  // 获取发起者信息的 useEffect
+  // 获取发起者和报名者信息的 useEffect
   useEffect(() => {
-    const fetchCreatorInfo = async () => {
+    const fetchUserInfo = async () => {
       const creatorInfoMap = new Map<
         string,
         { nickname: string; uid: string } | null
+      >();
+      const participantInfoMap = new Map<
+        string,
+        Map<string, { nickname: string; uid: string }>
       >();
 
       const gameActives = actives.filter((active) => (active as any).is_game);
       const promises = gameActives.map(async (active) => {
         const creatorId = (active as any).creator_id;
-        if (!creatorId) return;
+        const participants = gameParticipants.get(active.id);
 
-        try {
-          const creator =
-            await trpcClientPublic.activeRegistrations.getUserDetails.query({
-              user_id: creatorId,
-            });
-          if (creator?.userInfo) {
-            creatorInfoMap.set(active.id, {
-              nickname: creator.userInfo.nickname,
-              uid: creator.userInfo.uid,
-            });
+        // 获取发起者信息
+        if (creatorId) {
+          try {
+            const creator =
+              await trpcClientPublic.activeRegistrations.getUserDetails.query({
+                user_id: creatorId,
+              });
+            if (creator?.userInfo) {
+              creatorInfoMap.set(active.id, {
+                nickname: creator.userInfo.nickname,
+                uid: creator.userInfo.uid,
+              });
+            }
+          } catch (error) {
+            console.error(`获取发起者信息失败:`, error);
           }
-        } catch (error) {
-          console.error(`获取发起者信息失败:`, error);
+        }
+
+        // 获取报名者信息
+        if (participants && participants.participant_ids.length > 0) {
+          const activeParticipantMap = new Map<
+            string,
+            { nickname: string; uid: string }
+          >();
+          const participantPromises = participants.participant_ids.map(
+            async (userId) => {
+              try {
+                const user =
+                  await trpcClientPublic.activeRegistrations.getUserDetails.query(
+                    {
+                      user_id: userId,
+                    },
+                  );
+                if (user?.userInfo) {
+                  activeParticipantMap.set(userId, {
+                    nickname: user.userInfo.nickname,
+                    uid: user.userInfo.uid,
+                  });
+                }
+              } catch (error) {
+                console.error(`获取报名者 ${userId} 信息失败:`, error);
+              }
+            },
+          );
+          await Promise.all(participantPromises);
+          if (activeParticipantMap.size > 0) {
+            participantInfoMap.set(active.id, activeParticipantMap);
+          }
         }
       });
 
       await Promise.all(promises);
       setCreatorInfo(creatorInfoMap);
+      setParticipantInfo(participantInfoMap);
     };
 
-    if (actives.length > 0) {
-      fetchCreatorInfo();
+    if (actives.length > 0 && gameParticipants.size > 0) {
+      fetchUserInfo();
     }
-  }, [actives]);
+  }, [actives, gameParticipants]);
 
   // 处理 hover 高亮同一天的活动线条
   const [highlightedDate, setHighlightedDate] = useState<string | null>(null);
@@ -572,7 +617,7 @@ function RouteComponent() {
         event_date: gameForm.event_date,
         max_participants: gameForm.max_participants
           ? parseInt(gameForm.max_participants, 10)
-          : null,
+          : 40, // 默认40人
         board_game_ids:
           gameForm.selectedBoardGames.length > 0
             ? gameForm.selectedBoardGames
@@ -584,7 +629,7 @@ function RouteComponent() {
       gameDialogRef.current?.close();
       setGameForm({
         event_date: "",
-        max_participants: "",
+        max_participants: "40", // 重置为默认值40
         selectedBoardGames: [],
         selectedTags: [],
       });
@@ -866,27 +911,11 @@ function RouteComponent() {
                                   </span>
                                 )}
                                 {active.tags && active.tags.length > 0 ? (
-                                  active.tags
-                                    .slice(0, 15)
-                                    .map(
-                                      (tagMapping: {
-                                        tag_id: string;
-                                        tag?: TagItem | null;
-                                      }) => {
-                                        const title = tagTitle(
-                                          tagMapping.tag?.title,
-                                        );
-                                        return (
-                                          <span
-                                            key={tagMapping.tag_id}
-                                            className="badge badge-sm gap-1 inline-flex items-center whitespace-nowrap"
-                                          >
-                                            <span>{title.emoji}</span>
-                                            {title.tx}
-                                          </span>
-                                        );
-                                      },
-                                    )
+                                  <ActiveTags
+                                    tags={active.tags}
+                                    size="sm"
+                                    maxTags={15}
+                                  />
                                 ) : (
                                   <span className="badge badge-sm badge-ghost">
                                     约局
@@ -924,14 +953,19 @@ function RouteComponent() {
                                   <div className="flex flex-wrap gap-1 mt-1">
                                     {gameParticipants
                                       .get(active.id)
-                                      ?.participant_ids.map((userId) => (
-                                        <span
-                                          key={userId}
-                                          className="badge badge-xs font-mono"
-                                        >
-                                          {userId}
-                                        </span>
-                                      ))}
+                                      ?.participant_ids.map((userId) => {
+                                        const userInfo = participantInfo
+                                          .get(active.id)
+                                          ?.get(userId);
+                                        return (
+                                          <span
+                                            key={userId}
+                                            className="badge badge-xs"
+                                          >
+                                            {userInfo?.nickname || userId}
+                                          </span>
+                                        );
+                                      })}
                                   </div>
                                 </div>
                               ) : (
@@ -962,27 +996,8 @@ function RouteComponent() {
                                 {creatorInfo.get(active.id)?.nickname || "未知"}
                               </span>
                             )}
-                            {/* 非约局活动的标签 */}
-                            {!(active as any).is_game &&
-                              active.tags &&
-                              active.tags.length > 0 &&
-                              active.tags.map(
-                                (tagMapping: {
-                                  tag_id: string;
-                                  tag?: TagItem | null;
-                                }) => {
-                                  const title = tagTitle(tagMapping.tag?.title);
-                                  return (
-                                    <span
-                                      key={tagMapping.tag_id}
-                                      className="badge badge-sm gap-1 inline-flex items-center whitespace-nowrap"
-                                    >
-                                      <span>{title.emoji}</span>
-                                      {title.tx}
-                                    </span>
-                                  );
-                                },
-                              )}
+                            {/* 标签（活动和约局都显示） */}
+                            <ActiveTags tags={active.tags} size="sm" />
                             {/* 报名和观望标签 */}
                             {active.enable_registration && (
                               <span className="badge badge-sm badge-info gap-1 items-center inline-flex whitespace-nowrap">
@@ -991,12 +1006,8 @@ function RouteComponent() {
                                   const stats = registrationStats.get(
                                     active.id,
                                   );
-                                  // 约局显示当前人数（通过队伍计算）
-                                  if ((active as any).is_game) {
-                                    const current = stats?.current || 0;
-                                    return `${current}+`;
-                                  }
                                   if (stats) {
+                                    // 如果有上限，显示 当前/上限；无上限显示 当前+
                                     if (stats.total === -1) {
                                       return `${stats.current}+`;
                                     }
@@ -1084,13 +1095,13 @@ function RouteComponent() {
             {/* 人数上限 */}
             <div>
               <label className="label">
-                <span className="label-text">人数上限（留空表示无上限）</span>
+                <span className="label-text">人数上限（默认40人）</span>
               </label>
               <input
                 type="number"
                 min="1"
                 className="input input-bordered w-full"
-                placeholder="例如：4"
+                placeholder="例如：40（默认40人）"
                 value={gameForm.max_participants}
                 onChange={(e) =>
                   setGameForm((prev) => ({

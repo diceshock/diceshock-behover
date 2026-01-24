@@ -607,11 +607,12 @@ const createGame = protectedProcedure
     const gameId = newGame[0].id;
 
     // 创建唯一队伍（约局只有一个队伍，名称为空）
+    // 约局默认上限为40人，如果没填则使用默认值
     await tdb.insert(activeTeamsTable).values({
       active_id: gameId,
       name: "", // 队伍名称为空
       description: null,
-      max_participants: max_participants ?? null, // 使用传入的人数上限
+      max_participants: max_participants ?? 40, // 使用传入的人数上限，默认为40
     });
 
     // 添加约局标签（从已有的约局标签中选择）
@@ -695,11 +696,14 @@ const updateGame = protectedProcedure
         orderBy: (teams, { asc }) => asc(teams.create_at),
       });
 
+      // 约局默认上限为40人，如果没填则使用默认值
+      const finalMaxParticipants = max_participants ?? 40;
+
       if (teams.length > 0) {
         // 更新第一个（也是唯一的）队伍的人数上限
         await tdb
           .update(activeTeamsTable)
-          .set({ max_participants: max_participants })
+          .set({ max_participants: finalMaxParticipants })
           .where(drizzle.eq(activeTeamsTable.id, teams[0].id));
       } else {
         // 如果没有队伍，创建一个（这种情况不应该发生，但为了安全起见）
@@ -707,7 +711,7 @@ const updateGame = protectedProcedure
           active_id: id,
           name: "", // 队伍名称为空
           description: null,
-          max_participants: max_participants,
+          max_participants: finalMaxParticipants,
         });
       }
     }

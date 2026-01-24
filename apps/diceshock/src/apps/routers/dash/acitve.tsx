@@ -6,6 +6,7 @@ import {
   XIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { ActiveTags } from "@/client/components/diceshock/ActiveTags";
 import { EmojiPicker } from "@/client/components/diceshock/EmojiPicker";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import dayjs from "dayjs";
@@ -590,25 +591,13 @@ function RouteComponent() {
                       </Link>
                     </td>
                     <td>
-                      <div className="flex flex-wrap gap-2">
-                        {tagsForRow.length === 0 && (
-                          <span className="text-xs text-base-content/50">
-                            暂无
-                          </span>
-                        )}
-                        {tagsForRow.map((tag) => {
-                          const title = tagTitle(tag.tag?.title);
-                          return (
-                            <div
-                              key={tag.tag_id}
-                              className="badge shrink-0 text-nowrap badge-sm gap-1 badge-neutral"
-                            >
-                              <span>{title.emoji}</span>
-                              {title.tx}
-                            </div>
-                          );
-                        })}
-                      </div>
+                      {tagsForRow.length === 0 ? (
+                        <span className="text-xs text-base-content/50">
+                          暂无
+                        </span>
+                      ) : (
+                        <ActiveTags tags={tagsForRow} size="sm" />
+                      )}
                     </td>
                     <td>
                       {active.publish_at
@@ -1153,4 +1142,3 @@ function TagAutocompleteInput({
     </div>
   );
 }
-
