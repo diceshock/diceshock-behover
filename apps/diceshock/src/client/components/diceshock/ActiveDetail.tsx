@@ -1,4 +1,8 @@
-import { PencilLineIcon, TrashIcon } from "@phosphor-icons/react/dist/ssr";
+import {
+  AddressBookIcon,
+  PencilLineIcon,
+  TrashIcon,
+} from "@phosphor-icons/react/dist/ssr";
 import { Link, useNavigate } from "@tanstack/react-router";
 import MDEditor from "@uiw/react-md-editor";
 import { useAtomValue } from "jotai";
@@ -6,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { themeA } from "@/client/components/ThemeSwap";
 import { ActiveTags } from "@/client/components/diceshock/ActiveTags";
 import ActiveRegistration from "@/client/components/diceshock/ActiveRegistration";
+import ParticipantsBusinessCardsModal from "@/client/components/diceshock/ParticipantsBusinessCardsModal";
 import useAuth from "@/client/hooks/useAuth";
 import { useMessages } from "@/client/hooks/useMessages";
 import type { ApiRouterPublic, ApiRouterDash } from "@/shared/types";
@@ -44,6 +49,7 @@ export default function ActiveDetail({
     Array<{ gstone_id: number; content: BoardGame.BoardGameCol | null }>
   >([]);
   const [deleting, setDeleting] = useState(false);
+  const [showParticipantsCards, setShowParticipantsCards] = useState(false);
 
   // 编辑约局弹窗相关状态
   const editDialogRef = useRef<HTMLDialogElement>(null);
@@ -339,6 +345,13 @@ export default function ActiveDetail({
             {/* 发起者操作按钮 */}
             {isCreator && (
               <div className="flex gap-2 ml-4">
+                <button
+                  onClick={() => setShowParticipantsCards(true)}
+                  className="btn btn-sm btn-outline"
+                >
+                  <AddressBookIcon className="size-4 mr-1" />
+                  查看参与者名片
+                </button>
                 <button
                   onClick={handleOpenEdit}
                   className="btn btn-sm btn-outline"
@@ -824,6 +837,15 @@ export default function ActiveDetail({
             <button>关闭</button>
           </form>
         </dialog>
+      )}
+
+      {/* 参与者名片弹窗 */}
+      {isCreator && (active as any)?.is_game && (
+        <ParticipantsBusinessCardsModal
+          isOpen={showParticipantsCards}
+          onClose={() => setShowParticipantsCards(false)}
+          activeId={activeId}
+        />
       )}
     </main>
   );

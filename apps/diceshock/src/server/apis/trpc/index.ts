@@ -3,6 +3,7 @@ import activeRegistrations from "./activeRegistrations";
 import activeTags from "./activeTags";
 import auth from "./auth";
 import { router } from "./baseTRPC";
+import businessCard from "./businessCard";
 import dashboard from "./dashboard";
 import owned from "./owned";
 import ownedManagement from "./ownedManagement";
@@ -53,4 +54,10 @@ export const appRouterPublic = router({
     getUserDetails: activeRegistrations.getUserDetails,
   },
   auth: { smsCode: auth.smsCode, updateUserInfo: auth.updateUserInfo },
+  businessCard: {
+    getMyBusinessCard: businessCard.getMyBusinessCard,
+    upsertBusinessCard: businessCard.upsertBusinessCard,
+    getBusinessCardByUserId: businessCard.getBusinessCardByUserId,
+    getParticipantsBusinessCards: businessCard.getParticipantsBusinessCards,
+  },
 });

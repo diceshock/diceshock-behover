@@ -219,12 +219,42 @@ export const userInfoTable = sqlite.sqliteTable("user_info", {
   phone: sqlite.text("phone"),
 });
 
+export const userBusinessCardTable = sqlite.sqliteTable(
+  "user_business_card",
+  {
+    id: sqlite
+      .text("id")
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+    share_phone: sqlite.int({ mode: "boolean" }).$default(() => false), // 是否分享手机号码
+    wechat: sqlite.text(), // 微信号码
+    qq: sqlite.text(), // QQ号码
+    custom_content: sqlite.text(), // 自定义内容
+    create_at: sqlite
+      .integer("create_at", { mode: "timestamp_ms" })
+      .$defaultFn(() => new Date(Date.now())),
+    update_at: sqlite
+      .integer("update_at", { mode: "timestamp_ms" })
+      .$defaultFn(() => new Date(Date.now())),
+  },
+);
+
 export const userInfoRelations = relations(userInfoTable, ({ one }) => ({
   user: one(users, {
     fields: [userInfoTable.id],
     references: [users.id],
   }),
 }));
+
+export const userBusinessCardRelations = relations(
+  userBusinessCardTable,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [userBusinessCardTable.id],
+      references: [users.id],
+    }),
+  }),
+);
 
 export const usersRelations = relations(users, ({ one }) => ({
   userInfo: one(userInfoTable, {

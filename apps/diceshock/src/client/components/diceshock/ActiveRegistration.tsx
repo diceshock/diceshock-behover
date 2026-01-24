@@ -7,6 +7,7 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
+import BusinessCardModal from "@/client/components/diceshock/BusinessCardModal";
 import useAuth from "@/client/hooks/useAuth";
 import { useMessages } from "@/client/hooks/useMessages";
 import trpcClientPublic from "@/shared/utils/trpc";
@@ -38,8 +39,39 @@ export default function ActiveRegistration({
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState<string | null>(null);
+  const [showBusinessCardModal, setShowBusinessCardModal] = useState(false);
+  const [pendingJoin, setPendingJoin] = useState<{
+    teamId: string | null;
+    isWatching: boolean;
+  } | null>(null);
 
   const userId = session?.user?.id;
+  const [businessCard, setBusinessCard] = useState<{
+    share_phone: boolean | null;
+    wechat: string | null;
+    qq: string | null;
+    custom_content: string | null;
+  } | null>(null);
+  const [isLoadingBusinessCard, setIsLoadingBusinessCard] = useState(false);
+
+  // 检查是否有名片
+  useEffect(() => {
+    if (!userId || !isGame) return;
+
+    const fetchBusinessCard = async () => {
+      try {
+        setIsLoadingBusinessCard(true);
+        const data = await trpcClientPublic.businessCard.getMyBusinessCard.query({});
+        setBusinessCard(data);
+      } catch (error) {
+        console.error("获取名片失败", error);
+      } finally {
+        setIsLoadingBusinessCard(false);
+      }
+    };
+
+    fetchBusinessCard();
+  }, [userId, isGame]);
 
   const fetchData = useCallback(
     async (showLoading = false) => {
@@ -82,6 +114,13 @@ export default function ActiveRegistration({
         return;
       }
 
+      // 如果是约局且没有名片，先要求填写名片
+      if (isGame && !isWatching && !businessCard) {
+        setPendingJoin({ teamId, isWatching });
+        setShowBusinessCardModal(true);
+        return;
+      }
+
       try {
         setJoining(teamId || "watching");
         await trpcClientPublic.activeRegistrations.registrations.create.mutate({
@@ -100,8 +139,36 @@ export default function ActiveRegistration({
         setJoining(null);
       }
     },
-    [activeId, userId, messages, fetchData],
+    [activeId, userId, messages, fetchData, isGame, businessCard],
   );
+
+  // 名片保存成功后的回调
+  const handleBusinessCardSuccess = useCallback(async () => {
+    setShowBusinessCardModal(false);
+    if (pendingJoin) {
+      // 重新获取名片信息
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      // 继续报名流程
+      const { teamId, isWatching } = pendingJoin;
+      setPendingJoin(null);
+      try {
+        setJoining(teamId || "watching");
+        await trpcClientPublic.activeRegistrations.registrations.create.mutate({
+          active_id: activeId,
+          team_id: teamId || undefined,
+          is_watching: isWatching,
+        });
+        messages.success("加入成功");
+        await fetchData(false);
+      } catch (error) {
+        messages.error(
+          error instanceof Error ? error.message : "操作失败，请稍后重试",
+        );
+      } finally {
+        setJoining(null);
+      }
+    }
+  }, [pendingJoin, activeId, messages, fetchData]);
 
   const handleLeave = useCallback(async () => {
     if (!currentRegistration) return;
@@ -329,6 +396,19 @@ export default function ActiveRegistration({
             </div>
           </div>
         </div>
+      )}
+
+      {/* 名片编辑弹窗（报名时必填） */}
+      {isGame && (
+        <BusinessCardModal
+          isOpen={showBusinessCardModal}
+          onClose={() => {
+            setShowBusinessCardModal(false);
+            setPendingJoin(null);
+          }}
+          onSuccess={handleBusinessCardSuccess}
+          required={true}
+        />
       )}
     </div>
   );

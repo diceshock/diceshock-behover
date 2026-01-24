@@ -1,4 +1,5 @@
 import {
+  ChatsTeardropIcon,
   CopyIcon,
   PencilSimpleLineIcon,
   PhoneIcon,
@@ -9,6 +10,7 @@ import {
 import { createFileRoute } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useState } from "react";
+import BusinessCardModal from "@/client/components/diceshock/BusinessCardModal";
 import Modal from "@/client/components/modal";
 import useAuth from "@/client/hooks/useAuth";
 import { useMessages } from "@/client/hooks/useMessages";
@@ -31,6 +33,9 @@ function RouteComponent() {
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [phone, setPhone] = useState("");
   const [isLoadingPhone, setIsLoadingPhone] = useState(false);
+
+  // 名片编辑相关状态
+  const [isEditingBusinessCard, setIsEditingBusinessCard] = useState(false);
 
   const {
     smsForm,
@@ -236,10 +241,10 @@ function RouteComponent() {
           </button>
 
           <button
-            onClick={signOut}
+            onClick={() => setIsEditingBusinessCard(true)}
             className="btn btn-neutral btn-xl py-12 w-full max-w-xl justify-start gap-4"
           >
-            <SignOutIcon className="size-8" />
+            <ChatsTeardropIcon className="size-8" />
             <div className="flex flex-col items-start justify-start">
               <p className="text-lg font-bold">登记/修改名片</p>
               <p className="text-sm text-neutral-content/70">
@@ -442,6 +447,12 @@ function RouteComponent() {
           </form>
         </div>
       </Modal>
+
+      {/* 名片编辑弹窗 */}
+      <BusinessCardModal
+        isOpen={isEditingBusinessCard}
+        onClose={() => setIsEditingBusinessCard(false)}
+      />
     </>
   );
 }
