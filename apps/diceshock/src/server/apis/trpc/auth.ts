@@ -1,9 +1,10 @@
 import * as $Dysmsapi20170525 from "@alicloud/dysmsapi20170525";
 import * as $Util from "@alicloud/tea-util";
+import db, { drizzle, userInfoTable } from "@lib/db";
 import { customAlphabet } from "nanoid";
 import z from "zod/v4";
 import { getSmsTmpCodeKey } from "@/server/utils/auth";
-import { publicProcedure } from "./baseTRPC";
+import { protectedProcedure, publicProcedure } from "./baseTRPC";
 
 export interface TurnstileResponse {
   success: boolean;
@@ -121,4 +122,60 @@ const smsCode = publicProcedure
     }
   });
 
-export default { smsCode };
+const updateUserInfo = protectedProcedure
+  .input(
+    z.object({
+      nickname: z.string().optional(),
+    }),
+  )
+  .mutation(async ({ input, ctx }) => {
+    const { userId, env } = ctx;
+
+    if (!userId) {
+      return { success: false, message: "用户未登录" };
+    }
+
+    // 如果没有提供 nickname，直接返回
+    if (input.nickname === undefined) {
+      return { success: false, message: "没有需要更新的字段" };
+    }
+
+    // 验证 nickname 不能为空
+    if (!input.nickname.trim()) {
+      return { success: false, message: "昵称不能为空" };
+    }
+
+    // 构建更新对象
+    const updateData = {
+      nickname: input.nickname.trim(),
+    };
+
+    try {
+      const tdb = db(env.DB);
+      const [updatedUserInfo] = await tdb
+        .update(userInfoTable)
+        .set(updateData)
+        .where(drizzle.eq(userInfoTable.id, userId))
+        .returning();
+
+      if (!updatedUserInfo) {
+        return { success: false, message: "用户信息不存在" };
+      }
+
+      return {
+        success: true,
+        data: {
+          uid: updatedUserInfo.uid,
+          nickname: updatedUserInfo.nickname,
+        },
+      };
+    } catch (error) {
+      console.error("更新用户信息失败:", error);
+      return {
+        success: false,
+        message: "更新用户信息失败, 请稍后重试",
+      };
+    }
+  });
+
+export default { smsCode, updateUserInfo };

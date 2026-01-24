@@ -5,6 +5,7 @@ import {
   SignOutIcon,
   UserIcon,
 } from "@phosphor-icons/react/dist/ssr";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import useAuth from "@/client/hooks/useAuth";
 import ThemeSwap from "../../ThemeSwap";
@@ -47,11 +48,14 @@ export default function AvatarMenu() {
           {userInfo && (
             <>
               <li>
-                <a className="px-5 py-3 flex items-center justify-between">
+                <Link
+                  to="/me"
+                  className="px-5 py-3 flex items-center justify-between"
+                >
                   <UserIcon weight="fill" className="size-5" />
 
                   <span>我的账户</span>
-                </a>
+                </Link>
               </li>
               <li>
                 <button

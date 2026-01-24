@@ -16,6 +16,7 @@ import { Route as WithHomeLoIndexRouteImport } from './routers/_with-home-lo/ind
 import { Route as DashUsersRouteImport } from './routers/dash/users'
 import { Route as DashInventoryManagementRouteImport } from './routers/dash/inventory-management'
 import { Route as DashAcitveRouteImport } from './routers/dash/acitve'
+import { Route as WithHomeLoMeRouteImport } from './routers/_with-home-lo/me'
 import { Route as WithHomeLoInventoryRouteImport } from './routers/_with-home-lo/inventory'
 import { Route as WithHomeLoDiceshockAgentsRouteImport } from './routers/_with-home-lo/diceshock-agents'
 import { Route as WithHomeLoContactUsRouteImport } from './routers/_with-home-lo/contact-us'
@@ -57,6 +58,11 @@ const DashAcitveRoute = DashAcitveRouteImport.update({
   path: '/acitve',
   getParentRoute: () => DashRoute,
 } as any)
+const WithHomeLoMeRoute = WithHomeLoMeRouteImport.update({
+  id: '/me',
+  path: '/me',
+  getParentRoute: () => WithHomeLoRoute,
+} as any)
 const WithHomeLoInventoryRoute = WithHomeLoInventoryRouteImport.update({
   id: '/inventory',
   path: '/inventory',
@@ -96,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/contact-us': typeof WithHomeLoContactUsRoute
   '/diceshock-agents': typeof WithHomeLoDiceshockAgentsRoute
   '/inventory': typeof WithHomeLoInventoryRoute
+  '/me': typeof WithHomeLoMeRoute
   '/dash/acitve': typeof DashAcitveRoute
   '/dash/inventory-management': typeof DashInventoryManagementRoute
   '/dash/users': typeof DashUsersRoute
@@ -108,6 +115,7 @@ export interface FileRoutesByTo {
   '/contact-us': typeof WithHomeLoContactUsRoute
   '/diceshock-agents': typeof WithHomeLoDiceshockAgentsRoute
   '/inventory': typeof WithHomeLoInventoryRoute
+  '/me': typeof WithHomeLoMeRoute
   '/dash/acitve': typeof DashAcitveRoute
   '/dash/inventory-management': typeof DashInventoryManagementRoute
   '/dash/users': typeof DashUsersRoute
@@ -124,6 +132,7 @@ export interface FileRoutesById {
   '/_with-home-lo/contact-us': typeof WithHomeLoContactUsRoute
   '/_with-home-lo/diceshock-agents': typeof WithHomeLoDiceshockAgentsRoute
   '/_with-home-lo/inventory': typeof WithHomeLoInventoryRoute
+  '/_with-home-lo/me': typeof WithHomeLoMeRoute
   '/dash/acitve': typeof DashAcitveRoute
   '/dash/inventory-management': typeof DashInventoryManagementRoute
   '/dash/users': typeof DashUsersRoute
@@ -141,6 +150,7 @@ export interface FileRouteTypes {
     | '/contact-us'
     | '/diceshock-agents'
     | '/inventory'
+    | '/me'
     | '/dash/acitve'
     | '/dash/inventory-management'
     | '/dash/users'
@@ -153,6 +163,7 @@ export interface FileRouteTypes {
     | '/contact-us'
     | '/diceshock-agents'
     | '/inventory'
+    | '/me'
     | '/dash/acitve'
     | '/dash/inventory-management'
     | '/dash/users'
@@ -168,6 +179,7 @@ export interface FileRouteTypes {
     | '/_with-home-lo/contact-us'
     | '/_with-home-lo/diceshock-agents'
     | '/_with-home-lo/inventory'
+    | '/_with-home-lo/me'
     | '/dash/acitve'
     | '/dash/inventory-management'
     | '/dash/users'
@@ -233,6 +245,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashAcitveRouteImport
       parentRoute: typeof DashRoute
     }
+    '/_with-home-lo/me': {
+      id: '/_with-home-lo/me'
+      path: '/me'
+      fullPath: '/me'
+      preLoaderRoute: typeof WithHomeLoMeRouteImport
+      parentRoute: typeof WithHomeLoRoute
+    }
     '/_with-home-lo/inventory': {
       id: '/_with-home-lo/inventory'
       path: '/inventory'
@@ -283,6 +302,7 @@ interface WithHomeLoRouteChildren {
   WithHomeLoContactUsRoute: typeof WithHomeLoContactUsRoute
   WithHomeLoDiceshockAgentsRoute: typeof WithHomeLoDiceshockAgentsRoute
   WithHomeLoInventoryRoute: typeof WithHomeLoInventoryRoute
+  WithHomeLoMeRoute: typeof WithHomeLoMeRoute
   WithHomeLoIndexRoute: typeof WithHomeLoIndexRoute
   WithHomeLoActiveIdRoute: typeof WithHomeLoActiveIdRoute
 }
@@ -292,6 +312,7 @@ const WithHomeLoRouteChildren: WithHomeLoRouteChildren = {
   WithHomeLoContactUsRoute: WithHomeLoContactUsRoute,
   WithHomeLoDiceshockAgentsRoute: WithHomeLoDiceshockAgentsRoute,
   WithHomeLoInventoryRoute: WithHomeLoInventoryRoute,
+  WithHomeLoMeRoute: WithHomeLoMeRoute,
   WithHomeLoIndexRoute: WithHomeLoIndexRoute,
   WithHomeLoActiveIdRoute: WithHomeLoActiveIdRoute,
 }

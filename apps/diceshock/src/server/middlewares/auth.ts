@@ -11,7 +11,10 @@ import { FACTORY } from "../factory";
 import { injectCrossDataToCtx } from "../utils";
 import { genNickname, getSmsTmpCodeKey } from "../utils/auth";
 
-export const userInfoZ = createSelectSchema(userInfoTable).omit({ id: true, create_at: true });
+export const userInfoZ = createSelectSchema(userInfoTable).omit({
+  id: true,
+  create_at: true,
+});
 
 export type UserInfo = z.infer<typeof userInfoZ>;
 
@@ -120,7 +123,6 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
       injectCrossDataToCtx(c, {
         UserInfo: {
           uid: userInfo.uid,
-          create_at: userInfo.create_at,
           nickname: userInfo.nickname,
         },
       });
@@ -131,10 +133,21 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
   injectCrossDataToCtx(c, {
     UserInfo: {
       uid: userInfoRaw.uid,
-      create_at: userInfoRaw.create_at,
       nickname: userInfoRaw.nickname,
     },
   });
 
   return next();
+});
+
+const WHITE_LIST = [/^\/me/] satisfies RegExp[];
+
+export const authGuard = FACTORY.createMiddleware(async (c, next) => {
+  if (!WHITE_LIST.some((i) => i.test(c.req.path))) return next();
+
+  const { UserInfo } = c.get("InjectCrossData") ?? {};
+
+  if (UserInfo) return next();
+
+  c.redirect("/");
 });

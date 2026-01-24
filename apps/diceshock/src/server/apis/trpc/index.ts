@@ -12,5 +12,5 @@ export const appRouterPublic = router({
   owned,
   active: { get: active.get, getById: active.getById },
   activeTags: { get: activeTags.get },
-  auth: { smsCode: auth.smsCode },
+  auth: { smsCode: auth.smsCode, updateUserInfo: auth.updateUserInfo },
 });
