@@ -182,10 +182,10 @@ export default function ActiveRegistration({
           <button
             className="btn btn-sm btn-outline"
             onClick={handleShare}
-            title="分享名片"
+            title="分享"
           >
             <ShareNetworkIcon className="size-4" />
-            分享名片
+            分享
           </button>
         </div>
       )}
@@ -215,7 +215,7 @@ export default function ActiveRegistration({
                 </div>
                 {(team.description || isGame) && (
                   <p className="text-sm text-base-content/70 mb-3">
-                    {isGame ? "报名参加并分享名片" : team.description}
+                    {isGame ? "报名参加并分享你的名片给组织者" : team.description}
                   </p>
                 )}
                 <div className="flex items-center justify-between">
