@@ -1,4 +1,9 @@
-import { EyeIcon, PlusIcon, SignInIcon, XIcon } from "@phosphor-icons/react/dist/ssr";
+import {
+  EyeIcon,
+  PlusIcon,
+  SignInIcon,
+  XIcon,
+} from "@phosphor-icons/react/dist/ssr";
 import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import useAuth from "@/client/hooks/useAuth";
@@ -57,9 +62,7 @@ export default function ActiveRegistration({
     fetchData();
   }, [fetchData]);
 
-  const currentRegistration = registrations.find(
-    (r) => r.user_id === userId,
-  );
+  const currentRegistration = registrations.find((r) => r.user_id === userId);
 
   const handleJoin = useCallback(
     async (teamId: string | null, isWatching: boolean) => {
@@ -92,11 +95,9 @@ export default function ActiveRegistration({
     if (!currentRegistration) return;
 
     try {
-      await trpcClientPublic.activeRegistrations.registrations.delete.mutate(
-        {
-          id: currentRegistration.id,
-        },
-      );
+      await trpcClientPublic.activeRegistrations.registrations.delete.mutate({
+        id: currentRegistration.id,
+      });
       messages.success("已退出");
       await fetchData();
     } catch (error) {
@@ -130,16 +131,8 @@ export default function ActiveRegistration({
 
   const isWatching = currentRegistration?.is_watching ?? false;
 
-  // 统计信息 - 队伍数量 + 观望（如果允许）
-  const totalOptions = teams.length + (allowWatching ? 1 : 0);
-
   return (
     <div className="mb-8">
-      {/* 统计信息 */}
-      <div className="mb-4 text-sm text-base-content/70">
-        <span>共 {totalOptions} 个选项</span>
-      </div>
-
       {/* 队伍和观望卡片列表 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         {/* 队伍卡片 */}
@@ -190,8 +183,12 @@ export default function ActiveRegistration({
                     <button
                       className="btn btn-sm btn-primary"
                       onClick={() => handleJoin(team.id, false)}
-                      disabled={joining !== null || (team.is_full && !isCurrentTeam)}
-                      title={team.is_full && !isCurrentTeam ? "队伍已满" : "加入"}
+                      disabled={
+                        joining !== null || (team.is_full && !isCurrentTeam)
+                      }
+                      title={
+                        team.is_full && !isCurrentTeam ? "队伍已满" : "加入"
+                      }
                     >
                       {joining === team.id ? (
                         <span className="loading loading-spinner loading-xs"></span>

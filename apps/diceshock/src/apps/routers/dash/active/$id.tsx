@@ -206,9 +206,7 @@ function RouteComponent() {
         });
         await fetchActive();
       } catch (error) {
-        msg.error(
-          error instanceof Error ? error.message : "保存失败",
-        );
+        msg.error(error instanceof Error ? error.message : "保存失败");
         console.error(error);
         // 恢复状态
         await fetchActive();
@@ -987,8 +985,12 @@ function RegistrationsTab({
                                 defaultValue={team.description ?? ""}
                                 placeholder="队伍描述（可选）"
                                 onBlur={(e) => {
-                                  const newDescription = e.target.value.trim() || undefined;
-                                  if (newDescription !== (team.description || undefined)) {
+                                  const newDescription =
+                                    e.target.value.trim() || undefined;
+                                  if (
+                                    newDescription !==
+                                    (team.description || undefined)
+                                  ) {
                                     handleUpdateTeam(team.id, {
                                       description: newDescription,
                                     });
