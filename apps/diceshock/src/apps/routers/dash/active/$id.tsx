@@ -277,9 +277,8 @@ function RouteComponent() {
               </Link>
               <div className="flex items-center gap-2 sm:hidden">
                 <Link
-                  to="/active/$id"
+                  to="/dash/active/$id/preview"
                   params={{ id: active.id }}
-                  target="_blank"
                   className="btn btn-ghost btn-sm btn-square"
                 >
                   <ArrowBendUpRightIcon className="size-4" />
@@ -385,9 +384,8 @@ function RouteComponent() {
             {/* 右侧：预览和保存按钮（桌面端） */}
             <div className="hidden sm:flex items-center gap-2">
               <Link
-                to="/active/$id"
+                to="/dash/active/$id/preview"
                 params={{ id: active.id }}
-                target="_blank"
                 className="btn btn-ghost btn-sm"
               >
                 预览
