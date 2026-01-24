@@ -84,7 +84,7 @@ export default function LoginDialog({
           登录/注册
         </h3>
 
-        <div role="tablist" className="tabs tabs-border ml-4">
+        {/* <div role="tablist" className="tabs tabs-border ml-4">
           <button
             role="tab"
             className={clsx("tab", activeTab === "phonenumber" && "tab-active")}
@@ -99,7 +99,7 @@ export default function LoginDialog({
           >
             第三方登录
           </button>
-        </div>
+        </div> */}
 
         {activeTab === "phonenumber" && (
           <form
