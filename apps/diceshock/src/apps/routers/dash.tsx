@@ -5,7 +5,12 @@ import {
   SignpostIcon,
   UsersIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
+import {
+  ClientOnly,
+  createFileRoute,
+  Link,
+  Outlet,
+} from "@tanstack/react-router";
 import ThemeSwap from "@/client/components/ThemeSwap";
 
 export const Route = createFileRoute("/dash")({
@@ -14,7 +19,7 @@ export const Route = createFileRoute("/dash")({
 
 function RouteComponent() {
   return (
-    <>
+    <ClientOnly>
       <aside className="fixed w-20 hover:w-auto h-screen bg-secondary overflow-hidden z-50">
         <ul className="menu menu-xl rounded-none bg-base-200 rounded-box w-56 h-screen">
           <li>
@@ -67,6 +72,6 @@ function RouteComponent() {
       <main className="flex min-h-screen pl-20">
         <Outlet />
       </main>
-    </>
+    </ClientOnly>
   );
 }

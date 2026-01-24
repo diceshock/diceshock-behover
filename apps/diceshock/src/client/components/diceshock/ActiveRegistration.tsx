@@ -35,31 +35,41 @@ export default function ActiveRegistration({
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState<string | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   const userId = session?.user?.id;
 
-  const fetchData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const [teamsData, registrationsData] = await Promise.all([
-        trpcClientPublic.activeRegistrations.teams.get.query({
-          active_id: activeId,
-        }),
-        trpcClientPublic.activeRegistrations.registrations.get.query({
-          active_id: activeId,
-        }),
-      ]);
-      setTeams(teamsData);
-      setRegistrations(registrationsData);
-    } catch (error) {
-      console.error("获取报名信息失败", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [activeId]);
+  const fetchData = useCallback(
+    async (showLoading = false) => {
+      try {
+        if (showLoading) {
+          setLoading(true);
+        }
+        const [teamsData, registrationsData] = await Promise.all([
+          trpcClientPublic.activeRegistrations.teams.get.query({
+            active_id: activeId,
+          }),
+          trpcClientPublic.activeRegistrations.registrations.get.query({
+            active_id: activeId,
+          }),
+        ]);
+        setTeams(teamsData);
+        setRegistrations(registrationsData);
+        setIsInitialLoad(false);
+      } catch (error) {
+        console.error("获取报名信息失败", error);
+      } finally {
+        if (showLoading) {
+          setLoading(false);
+        }
+      }
+    },
+    [activeId],
+  );
 
   useEffect(() => {
-    fetchData();
+    // 首次加载时显示 loading
+    fetchData(true);
   }, [fetchData]);
 
   const currentRegistration = registrations.find((r) => r.user_id === userId);
@@ -79,7 +89,8 @@ export default function ActiveRegistration({
           is_watching: isWatching,
         });
         messages.success(isWatching ? "已加入观望" : "加入成功");
-        await fetchData();
+        // 不显示 loading，避免闪烁
+        await fetchData(false);
       } catch (error) {
         messages.error(
           error instanceof Error ? error.message : "操作失败，请稍后重试",
@@ -99,7 +110,8 @@ export default function ActiveRegistration({
         id: currentRegistration.id,
       });
       messages.success("已退出");
-      await fetchData();
+      // 不显示 loading，避免闪烁
+      await fetchData(false);
     } catch (error) {
       messages.error(
         error instanceof Error ? error.message : "操作失败，请稍后重试",

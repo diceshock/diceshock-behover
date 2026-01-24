@@ -276,13 +276,24 @@ function RouteComponent() {
                 <span className="hidden sm:inline">返回</span>
               </Link>
               <div className="flex items-center gap-2 sm:hidden">
-                <Link
-                  to="/dash/active/$id/preview"
-                  params={{ id: active.id }}
-                  className="btn btn-ghost btn-sm btn-square"
-                >
-                  <ArrowBendUpRightIcon className="size-4" />
-                </Link>
+                {active && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.open(
+                        new URL(
+                          `/dash/active/preview/${active.id}`,
+                          window.location.origin,
+                        ).href,
+                        "_blank",
+                        "noopener,noreferrer",
+                      );
+                    }}
+                    className="btn btn-ghost btn-sm btn-square"
+                  >
+                    <ArrowBendUpRightIcon className="size-4" />
+                  </button>
+                )}
                 <button
                   onClick={handleSave}
                   disabled={saving}
@@ -383,14 +394,16 @@ function RouteComponent() {
 
             {/* 右侧：预览和保存按钮（桌面端） */}
             <div className="hidden sm:flex items-center gap-2">
-              <Link
-                to="/dash/active/$id/preview"
-                params={{ id: active.id }}
-                className="btn btn-ghost btn-sm"
-              >
-                预览
-                <ArrowBendUpRightIcon className="size-4" />
-              </Link>
+              {active && (
+                <Link
+                  to="/dash/active/preview/$id"
+                  params={{ id: active.id }}
+                  className="btn btn-ghost btn-sm"
+                >
+                  预览
+                  <ArrowBendUpRightIcon className="size-4" />
+                </Link>
+              )}
               <button
                 onClick={handleSave}
                 disabled={saving}

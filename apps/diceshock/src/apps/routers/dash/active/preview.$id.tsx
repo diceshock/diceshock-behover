@@ -1,10 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
+import trpcClientDash from "@/shared/utils/trpc";
 import ActiveDetail from "@/client/components/diceshock/ActiveDetail";
 import { useMsg } from "@/client/components/diceshock/Msg";
-import { trpcClientDash } from "@/shared/utils/trpc";
 
-export const Route = createFileRoute("/dash/active/$id/preview")({
+export const Route = createFileRoute("/dash/active/preview/$id")({
   component: RouteComponent,
 });
 
@@ -37,7 +37,7 @@ function RouteComponent() {
   const handlePublish = useCallback(async () => {
     if (!active) return;
     try {
-      await (trpcClientDash.active as any).mutation.mutate({
+      await trpcClientDash.active.mutation.mutate({
         id: active.id,
         is_published: true,
       });

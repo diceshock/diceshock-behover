@@ -23,6 +23,7 @@ import { Route as WithHomeLoContactUsRouteImport } from './routers/_with-home-lo
 import { Route as WithHomeLoActivesRouteImport } from './routers/_with-home-lo/actives'
 import { Route as DashActiveIdRouteImport } from './routers/dash/active/$id'
 import { Route as WithHomeLoActiveIdRouteImport } from './routers/_with-home-lo/active/$id'
+import { Route as DashActivePreviewIdRouteImport } from './routers/dash/active/preview.$id'
 import { Route as DashActiveIdPreviewRouteImport } from './routers/dash/active/$id/preview'
 
 const DashRoute = DashRouteImport.update({
@@ -95,6 +96,11 @@ const WithHomeLoActiveIdRoute = WithHomeLoActiveIdRouteImport.update({
   path: '/active/$id',
   getParentRoute: () => WithHomeLoRoute,
 } as any)
+const DashActivePreviewIdRoute = DashActivePreviewIdRouteImport.update({
+  id: '/active/preview/$id',
+  path: '/active/preview/$id',
+  getParentRoute: () => DashRoute,
+} as any)
 const DashActiveIdPreviewRoute = DashActiveIdPreviewRouteImport.update({
   id: '/preview',
   path: '/preview',
@@ -116,6 +122,7 @@ export interface FileRoutesByFullPath {
   '/active/$id': typeof WithHomeLoActiveIdRoute
   '/dash/active/$id': typeof DashActiveIdRouteWithChildren
   '/dash/active/$id/preview': typeof DashActiveIdPreviewRoute
+  '/dash/active/preview/$id': typeof DashActivePreviewIdRoute
 }
 export interface FileRoutesByTo {
   '/actives': typeof WithHomeLoActivesRoute
@@ -131,6 +138,7 @@ export interface FileRoutesByTo {
   '/active/$id': typeof WithHomeLoActiveIdRoute
   '/dash/active/$id': typeof DashActiveIdRouteWithChildren
   '/dash/active/$id/preview': typeof DashActiveIdPreviewRoute
+  '/dash/active/preview/$id': typeof DashActivePreviewIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/_with-home-lo/active/$id': typeof WithHomeLoActiveIdRoute
   '/dash/active/$id': typeof DashActiveIdRouteWithChildren
   '/dash/active/$id/preview': typeof DashActiveIdPreviewRoute
+  '/dash/active/preview/$id': typeof DashActivePreviewIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
     | '/active/$id'
     | '/dash/active/$id'
     | '/dash/active/$id/preview'
+    | '/dash/active/preview/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/actives'
@@ -182,6 +192,7 @@ export interface FileRouteTypes {
     | '/active/$id'
     | '/dash/active/$id'
     | '/dash/active/$id/preview'
+    | '/dash/active/preview/$id'
   id:
     | '__root__'
     | '/_with-home-lo'
@@ -199,6 +210,7 @@ export interface FileRouteTypes {
     | '/_with-home-lo/active/$id'
     | '/dash/active/$id'
     | '/dash/active/$id/preview'
+    | '/dash/active/preview/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -306,6 +318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WithHomeLoActiveIdRouteImport
       parentRoute: typeof WithHomeLoRoute
     }
+    '/dash/active/preview/$id': {
+      id: '/dash/active/preview/$id'
+      path: '/active/preview/$id'
+      fullPath: '/dash/active/preview/$id'
+      preLoaderRoute: typeof DashActivePreviewIdRouteImport
+      parentRoute: typeof DashRoute
+    }
     '/dash/active/$id/preview': {
       id: '/dash/active/$id/preview'
       path: '/preview'
@@ -358,6 +377,7 @@ interface DashRouteChildren {
   DashUsersRoute: typeof DashUsersRoute
   DashIndexRoute: typeof DashIndexRoute
   DashActiveIdRoute: typeof DashActiveIdRouteWithChildren
+  DashActivePreviewIdRoute: typeof DashActivePreviewIdRoute
 }
 
 const DashRouteChildren: DashRouteChildren = {
@@ -366,6 +386,7 @@ const DashRouteChildren: DashRouteChildren = {
   DashUsersRoute: DashUsersRoute,
   DashIndexRoute: DashIndexRoute,
   DashActiveIdRoute: DashActiveIdRouteWithChildren,
+  DashActivePreviewIdRoute: DashActivePreviewIdRoute,
 }
 
 const DashRouteWithChildren = DashRoute._addFileChildren(DashRouteChildren)
