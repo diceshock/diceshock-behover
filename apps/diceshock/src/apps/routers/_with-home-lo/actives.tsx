@@ -176,8 +176,10 @@ function RouteComponent() {
   const filteredActives = useMemo(() => {
     let result = actives;
 
-    // 默认过滤掉过期活动，除非 showExpired 为 true
-    if (!showExpired) {
+    // 过期活动筛选：如果开启，只显示过期活动；如果关闭，只显示未过期活动
+    if (showExpired) {
+      result = result.filter((active) => active.isExpired);
+    } else {
       result = result.filter((active) => !active.isExpired);
     }
 
@@ -188,8 +190,8 @@ function RouteComponent() {
       );
     }
 
-    // 根据时间筛选
-    if (timeFilter && timeFilter !== null) {
+    // 根据时间筛选（只对未过期活动生效）
+    if (timeFilter && timeFilter !== null && !showExpired) {
       const now = dayjs();
       result = result.filter((active) => {
         if (!active.event_date) return false;
@@ -239,9 +241,20 @@ function RouteComponent() {
   }, [filteredActives]);
 
   // 按周分组，并进一步按日期分组，用于显示周标题和连接线条
+  // 过期活动单独分组为"过期活动"
   const weekGroups = useMemo(() => {
+    // 分离过期和未过期活动
+    const expiredActives = flattenedActives.filter(
+      (active) => active.isExpired,
+    );
+    const nonExpiredActives = flattenedActives.filter(
+      (active) => !active.isExpired,
+    );
+
     const groups = new Map<string, Map<string, typeof flattenedActives>>();
-    flattenedActives.forEach((active) => {
+
+    // 处理未过期活动，按周分组
+    nonExpiredActives.forEach((active) => {
       if (!groups.has(active.weekKey)) {
         groups.set(active.weekKey, new Map());
       }
@@ -252,8 +265,38 @@ function RouteComponent() {
       weekGroup.get(active.dateKey)!.push(active);
     });
 
+    // 处理过期活动，单独分组
+    if (expiredActives.length > 0) {
+      const expiredGroup = new Map<string, typeof flattenedActives>();
+      expiredActives.forEach((active) => {
+        if (!expiredGroup.has(active.dateKey)) {
+          expiredGroup.set(active.dateKey, []);
+        }
+        expiredGroup.get(active.dateKey)!.push(active);
+      });
+      groups.set("expired", expiredGroup);
+    }
+
     return Array.from(groups.entries())
       .map(([weekKey, dateMap]) => {
+        // 过期活动特殊处理
+        if (weekKey === "expired") {
+          const dates = Array.from(dateMap.entries())
+            .map(([dateKey, actives]) => ({
+              dateKey,
+              date: actives[0]?.eventDate || dayjs(),
+              actives,
+            }))
+            .sort((a, b) => b.date.valueOf() - a.date.valueOf()); // 过期活动按时间倒序
+          return {
+            weekKey: "expired",
+            weekStart: dayjs(0), // 用于排序，过期活动排在最后
+            dates,
+            isExpired: true,
+          };
+        }
+
+        // 未过期活动按周分组
         const weekStart =
           Array.from(dateMap.values())[0]?.[0]?.eventDate.startOf("isoWeek") ||
           dayjs();
@@ -268,13 +311,24 @@ function RouteComponent() {
           weekKey,
           weekStart,
           dates,
+          isExpired: false,
         };
       })
-      .sort((a, b) => a.weekStart.valueOf() - b.weekStart.valueOf());
+      .sort((a, b) => {
+        // 过期活动排在最后
+        if (a.isExpired && !b.isExpired) return 1;
+        if (!a.isExpired && b.isExpired) return -1;
+        return a.weekStart.valueOf() - b.weekStart.valueOf();
+      });
   }, [flattenedActives]);
 
   // 获取周标题
-  const getWeekTitle = (weekStart: dayjs.Dayjs) => {
+  const getWeekTitle = (weekStart: dayjs.Dayjs, isExpired?: boolean) => {
+    // 过期活动显示"过期活动"
+    if (isExpired) {
+      return { main: "过期活动", sub: null };
+    }
+
     const now = dayjs();
     const weekEnd = weekStart.add(6, "day");
     const weekNumber = weekStart.isoWeek();
@@ -430,11 +484,18 @@ function RouteComponent() {
               <div className="divider mt-12 mb-24">
                 <div className="flex flex-col items-center gap-1">
                   <h2 className="text-2xl font-bold text-base-content">
-                    {getWeekTitle(weekGroup.weekStart).main}
+                    {
+                      getWeekTitle(weekGroup.weekStart, weekGroup.isExpired)
+                        .main
+                    }
                   </h2>
-                  {getWeekTitle(weekGroup.weekStart).sub && (
+                  {getWeekTitle(weekGroup.weekStart, weekGroup.isExpired)
+                    .sub && (
                     <div className="text-sm text-base-content/50">
-                      {getWeekTitle(weekGroup.weekStart).sub}
+                      {
+                        getWeekTitle(weekGroup.weekStart, weekGroup.isExpired)
+                          .sub
+                      }
                     </div>
                   )}
                 </div>
