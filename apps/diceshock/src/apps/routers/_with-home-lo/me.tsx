@@ -234,6 +234,20 @@ function RouteComponent() {
               </p>
             </div>
           </button>
+
+          <button
+            onClick={signOut}
+            className="btn btn-neutral btn-xl py-12 w-full max-w-xl justify-start gap-4"
+          >
+            <SignOutIcon className="size-8" />
+            <div className="flex flex-col items-start justify-start">
+              <p className="text-lg font-bold">登记/修改名片</p>
+              <p className="text-sm text-neutral-content/70">
+                当你报名约局, 组织者可以查看你的名片
+              </p>
+            </div>
+          </button>
+
           <button
             onClick={signOut}
             className="btn btn-neutral btn-xl py-12 w-full max-w-xl justify-start gap-4"

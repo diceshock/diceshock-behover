@@ -165,17 +165,9 @@ function RouteComponent() {
     fetchActives();
   }, [fetchActives]);
 
-  // 存储约局的报名者信息（用于显示发起者和所有报名者）
-  const [gameParticipants, setGameParticipants] = useState<
-    Map<string, { creator_id: string | null; participant_ids: string[] }>
-  >(new Map());
   // 存储发起者信息（用于显示发起者昵称）
   const [creatorInfo, setCreatorInfo] = useState<
     Map<string, { nickname: string; uid: string } | null>
-  >(new Map());
-  // 存储报名者信息（用于显示报名者昵称）
-  const [participantInfo, setParticipantInfo] = useState<
-    Map<string, Map<string, { nickname: string; uid: string }>>
   >(new Map());
 
   // 获取所有开启报名的活动的报名统计
@@ -184,10 +176,6 @@ function RouteComponent() {
       const statsMap = new Map<
         string,
         { total: number; current: number; watching: number }
-      >();
-      const gameParticipantsMap = new Map<
-        string,
-        { creator_id: string | null; participant_ids: string[] }
       >();
 
       // 只获取开启报名的活动
@@ -233,17 +221,6 @@ function RouteComponent() {
             current: currentCount,
             watching: watchingCount,
           });
-
-          // 如果是约局，存储发起者和报名者信息
-          if ((active as any).is_game) {
-            const participantIds = registrations.map(
-              (reg: Registration) => reg.user_id,
-            );
-            gameParticipantsMap.set(active.id, {
-              creator_id: (active as any).creator_id || null,
-              participant_ids: participantIds,
-            });
-          }
         } catch (error) {
           console.error(`获取活动 ${active.id} 的报名统计失败:`, error);
         }
@@ -251,7 +228,6 @@ function RouteComponent() {
 
       await Promise.all(promises);
       setRegistrationStats(statsMap);
-      setGameParticipants(gameParticipantsMap);
     };
 
     if (actives.length > 0) {
@@ -259,22 +235,17 @@ function RouteComponent() {
     }
   }, [actives]);
 
-  // 获取发起者和报名者信息的 useEffect
+  // 获取发起者信息的 useEffect
   useEffect(() => {
     const fetchUserInfo = async () => {
       const creatorInfoMap = new Map<
         string,
         { nickname: string; uid: string } | null
       >();
-      const participantInfoMap = new Map<
-        string,
-        Map<string, { nickname: string; uid: string }>
-      >();
 
       const gameActives = actives.filter((active) => (active as any).is_game);
       const promises = gameActives.map(async (active) => {
         const creatorId = (active as any).creator_id;
-        const participants = gameParticipants.get(active.id);
 
         // 获取发起者信息
         if (creatorId) {
@@ -293,49 +264,16 @@ function RouteComponent() {
             console.error(`获取发起者信息失败:`, error);
           }
         }
-
-        // 获取报名者信息
-        if (participants && participants.participant_ids.length > 0) {
-          const activeParticipantMap = new Map<
-            string,
-            { nickname: string; uid: string }
-          >();
-          const participantPromises = participants.participant_ids.map(
-            async (userId) => {
-              try {
-                const user =
-                  await trpcClientPublic.activeRegistrations.getUserDetails.query(
-                    {
-                      user_id: userId,
-                    },
-                  );
-                if (user?.userInfo) {
-                  activeParticipantMap.set(userId, {
-                    nickname: user.userInfo.nickname,
-                    uid: user.userInfo.uid,
-                  });
-                }
-              } catch (error) {
-                console.error(`获取报名者 ${userId} 信息失败:`, error);
-              }
-            },
-          );
-          await Promise.all(participantPromises);
-          if (activeParticipantMap.size > 0) {
-            participantInfoMap.set(active.id, activeParticipantMap);
-          }
-        }
       });
 
       await Promise.all(promises);
       setCreatorInfo(creatorInfoMap);
-      setParticipantInfo(participantInfoMap);
     };
 
-    if (actives.length > 0 && gameParticipants.size > 0) {
+    if (actives.length > 0) {
       fetchUserInfo();
     }
-  }, [actives, gameParticipants]);
+  }, [actives]);
 
   // 处理 hover 高亮同一天的活动线条
   const [highlightedDate, setHighlightedDate] = useState<string | null>(null);
@@ -749,7 +687,7 @@ function RouteComponent() {
       ) : (
         <div className="space-y-8">
           {weekGroups.map((weekGroup) => (
-            <div key={weekGroup.weekKey} className="space-y-4">
+            <div key={weekGroup.weekKey} className="space-y-6">
               {/* 周标题 */}
               <div className="divider mt-12 mb-24 relative">
                 {/* 年份标签 - 在分割线最左边 */}
@@ -778,7 +716,7 @@ function RouteComponent() {
               </div>
 
               {/* 网格布局的活动列表 - 按日期分组以支持线条连接 */}
-              <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-3 gap-4 relative">
+              <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-3 gap-x-4 gap-y-12 relative">
                 {weekGroup.dates.map((dateGroup) =>
                   dateGroup.actives.map((active, index) => {
                     const pinnedTag = tags.find(
@@ -903,55 +841,72 @@ function RouteComponent() {
                         <div className="card-body">
                           <div className="flex items-start justify-between gap-2">
                             {(active as any).is_game ? (
-                              // 约局：将下面的标签作为标题放在这里
-                              <div className="flex flex-wrap items-center gap-1 flex-1">
-                                {isPinned && (
-                                  <span className="text-primary" title="置顶">
-                                    📌
-                                  </span>
-                                )}
-                                {/* 约局发起者标签（user图标） */}
-                                <span className="badge badge-sm gap-1 badge-accent inline-flex items-center whitespace-nowrap">
-                                  <span>👤</span>{" "}
-                                  {creatorInfo.get(active.id)?.nickname ||
-                                    "未知"}
-                                </span>
+                              // 约局：显示标题和标签
+                              <div className="flex-1">
+                                {/* 约局标题 */}
+                                <h2 className="card-title text-lg mb-2">
+                                  {isPinned && (
+                                    <span className="text-primary" title="置顶">
+                                      📌
+                                    </span>
+                                  )}
+                                  {(() => {
+                                    const creatorName =
+                                      creatorInfo.get(active.id)?.nickname ||
+                                      "未知";
+                                    // 如果昵称超过10个字符，截断并加上...
+                                    const displayName =
+                                      creatorName.length > 10
+                                        ? creatorName.slice(0, 10) + "..."
+                                        : creatorName;
+                                    return `${displayName}的约局`;
+                                  })()}
+                                </h2>
                                 {/* 标签 */}
-                                <ActiveTags tags={active.tags} size="sm" />
-                                {/* 报名和观望标签 */}
-                                {active.enable_registration && (
-                                  <span className="badge badge-sm badge-info gap-1 items-center inline-flex whitespace-nowrap">
-                                    <span>👥</span>
-                                    {(() => {
-                                      const stats = registrationStats.get(
-                                        active.id,
-                                      );
-                                      if (stats) {
-                                        // 如果有上限，显示 当前/上限；无上限显示 当前+
-                                        if (stats.total === -1) {
-                                          return `${stats.current}+`;
+                                <div className="flex flex-wrap items-center gap-1">
+                                  {/* 约局发起者标签（user图标） */}
+                                  <span className="badge badge-sm gap-1 badge-accent inline-flex items-center whitespace-nowrap">
+                                    <span>👤</span>{" "}
+                                    {creatorInfo.get(active.id)?.nickname ||
+                                      "未知"}
+                                  </span>
+                                  {/* 标签 */}
+                                  <ActiveTags tags={active.tags} size="sm" />
+                                  {/* 报名和观望标签 */}
+                                  {active.enable_registration && (
+                                    <span className="badge badge-sm badge-info gap-1 items-center inline-flex whitespace-nowrap">
+                                      <span>👥</span>
+                                      {(() => {
+                                        const stats = registrationStats.get(
+                                          active.id,
+                                        );
+                                        if (stats) {
+                                          // 如果有上限，显示 当前/上限；无上限显示 当前+
+                                          if (stats.total === -1) {
+                                            return `${stats.current}+`;
+                                          }
+                                          return `${stats.current}/${stats.total}`;
                                         }
-                                        return `${stats.current}/${stats.total}`;
-                                      }
-                                      return "报名中";
-                                    })()}
-                                  </span>
-                                )}
-                                {active.allow_watching && (
-                                  <span className="badge badge-sm badge-warning gap-1 items-center inline-flex whitespace-nowrap">
-                                    <span>👀</span>
-                                    观望
-                                    {(() => {
-                                      const stats = registrationStats.get(
-                                        active.id,
-                                      );
-                                      if (stats && stats.watching > 0) {
-                                        return ` (${stats.watching})`;
-                                      }
-                                      return "";
-                                    })()}
-                                  </span>
-                                )}
+                                        return "报名中";
+                                      })()}
+                                    </span>
+                                  )}
+                                  {active.allow_watching && (
+                                    <span className="badge badge-sm badge-warning gap-1 items-center inline-flex whitespace-nowrap">
+                                      <span>👀</span>
+                                      观望
+                                      {(() => {
+                                        const stats = registrationStats.get(
+                                          active.id,
+                                        );
+                                        if (stats && stats.watching > 0) {
+                                          return ` (${stats.watching})`;
+                                        }
+                                        return "";
+                                      })()}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             ) : (
                               // 非约局活动：显示标题
@@ -965,47 +920,6 @@ function RouteComponent() {
                               </h2>
                             )}
                           </div>
-                          {/* 约局显示发起者和报名者 */}
-                          {(active as any).is_game && (
-                            <div className="text-sm text-base-content/70 mb-2">
-                              <div className="mb-1">
-                                <span className="font-semibold">发起者：</span>
-                                <span>
-                                  {creatorInfo.get(active.id)?.nickname ||
-                                    "未知"}
-                                </span>
-                              </div>
-                              {gameParticipants.get(active.id)?.participant_ids
-                                .length ? (
-                                <div>
-                                  <span className="font-semibold">
-                                    报名者：
-                                  </span>
-                                  <div className="flex flex-wrap gap-1 mt-1">
-                                    {gameParticipants
-                                      .get(active.id)
-                                      ?.participant_ids.map((userId) => {
-                                        const userInfo = participantInfo
-                                          .get(active.id)
-                                          ?.get(userId);
-                                        return (
-                                          <span
-                                            key={userId}
-                                            className="badge badge-xs"
-                                          >
-                                            {userInfo?.nickname || userId}
-                                          </span>
-                                        );
-                                      })}
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="text-xs text-base-content/50">
-                                  暂无报名者
-                                </div>
-                              )}
-                            </div>
-                          )}
                           {active.description && !(active as any).is_game && (
                             <p className="text-sm text-base-content/70 line-clamp-2">
                               {active.description}
