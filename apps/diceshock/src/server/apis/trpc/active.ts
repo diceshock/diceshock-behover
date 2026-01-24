@@ -9,7 +9,7 @@ import db, {
   pagedZ,
 } from "@lib/db";
 import z4, { z } from "zod/v4";
-import { publicProcedure } from "./baseTRPC";
+import { publicProcedure, protectedProcedure } from "./baseTRPC";
 
 export const getFilterZ = z4.object({
   searchWords: z4.string().nonempty().optional(),
@@ -534,6 +534,77 @@ const removeBoardGame = publicProcedure
     return { success: true };
   });
 
+// 约局相关接口
+const createGameZ = z.object({
+  event_date: z.string(), // ISO datetime string
+  max_participants: z.number().int().positive().nullable().optional(), // 人数上限，null 表示无上限
+  board_game_ids: z.array(z.number()).optional(), // 桌游 gstone_id 列表
+});
+
+const createGame = protectedProcedure
+  .input(createGameZ)
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const { event_date, max_participants, board_game_ids } = input;
+    const userId = ctx.userId!;
+
+    // 查找"约局"标签，如果不存在则创建
+    let gameTag = await tdb.query.activeTagsTable.findFirst({
+      where: (tag, { like }) => like(tag.title, "%约局%"),
+    });
+
+    if (!gameTag) {
+      // 创建约局标签
+      const [newTag] = await tdb
+        .insert(activeTagsTable)
+        .values({
+          title: { emoji: "🎲", tx: "约局" },
+        })
+        .returning();
+      gameTag = newTag;
+    }
+
+    // 创建约局活动（没有标题和正文）
+    const newGame = await tdb
+      .insert(activesTable)
+      .values({
+        name: null, // 约局没有标题
+        description: null,
+        content: null, // 约局没有正文
+        is_game: true,
+        creator_id: userId,
+        max_participants: max_participants ?? null,
+        event_date: event_date?.trim() ? new Date(event_date) : null,
+        enable_registration: true, // 约局默认开启报名
+        is_published: true, // 约局默认发布
+      })
+      .returning();
+
+    if (newGame.length === 0) {
+      throw new Error("创建约局失败");
+    }
+
+    const gameId = newGame[0].id;
+
+    // 添加约局标签
+    await tdb.insert(activeTagMappingsTable).values({
+      active_id: gameId,
+      tag_id: gameTag.id,
+    });
+
+    // 添加桌游
+    if (board_game_ids && board_game_ids.length > 0) {
+      await tdb.insert(activeBoardGamesTable).values(
+        board_game_ids.map((gstone_id) => ({
+          active_id: gameId,
+          board_game_id: gstone_id,
+        })),
+      );
+    }
+
+    return newGame[0];
+  });
+
 export default {
   get,
   getById,
@@ -544,4 +615,5 @@ export default {
     add: addBoardGame,
     remove: removeBoardGame,
   },
+  createGame,
 };

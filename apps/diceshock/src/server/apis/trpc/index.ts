@@ -22,6 +22,7 @@ export const appRouterPublic = router({
     get: active.get,
     getById: active.getById,
     boardGames: active.boardGames,
+    createGame: active.createGame, // 约局创建需要登录，但使用 public router（内部使用 protectedProcedure）
   },
   activeTags: { get: activeTags.get },
   activeRegistrations: {

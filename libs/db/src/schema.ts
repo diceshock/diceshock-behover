@@ -45,6 +45,10 @@ export const activesTable = sqlite.sqliteTable("actives_table", {
   event_date: sqlite.integer({ mode: "timestamp_ms" }),
   content: sqlite.text(),
   cover_image: sqlite.text(),
+  // 约局相关字段
+  is_game: sqlite.int({ mode: "boolean" }).$default(() => false), // 是否是约局
+  creator_id: sqlite.text(), // 约局发起者 ID
+  max_participants: sqlite.integer(), // 约局人数上限（null 表示无上限）
 });
 
 export const activeTeamsTable = sqlite.sqliteTable("active_teams_table", {

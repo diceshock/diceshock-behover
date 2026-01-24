@@ -2,8 +2,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import dayjs from "dayjs";
 import isoWeek from "dayjs/plugin/isoWeek";
 import weekOfYear from "dayjs/plugin/weekOfYear";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { PlusIcon } from "@phosphor-icons/react/dist/ssr";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import trpcClientPublic from "@/shared/utils/trpc";
+import useAuth from "@/client/hooks/useAuth";
+import { useMsg } from "@/client/components/diceshock/Msg";
+import type { BoardGame } from "@lib/utils";
 
 dayjs.extend(weekOfYear);
 dayjs.extend(isoWeek);
@@ -28,6 +32,8 @@ export const Route = createFileRoute("/_with-home-lo/actives")({
 type TimeFilter = "本周" | "下周" | "本月" | "本季度" | "年内" | "更远" | null;
 
 function RouteComponent() {
+  const { session } = useAuth();
+  const msg = useMsg();
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showExpired, setShowExpired] = useState(false);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>(null);
@@ -38,6 +44,22 @@ function RouteComponent() {
   const [registrationStats, setRegistrationStats] = useState<
     Map<string, { total: number; current: number; watching: number }>
   >(new Map());
+
+  // 约局相关状态
+  const gameDialogRef = useRef<HTMLDialogElement>(null);
+  const [gameForm, setGameForm] = useState({
+    event_date: "",
+    max_participants: "",
+    selectedBoardGames: [] as number[], // gstone_id 列表
+  });
+  const [gameBoardGames, setGameBoardGames] = useState<
+    Array<{ id: string; gstone_id: number | null; content: BoardGame.BoardGameCol | null }>
+  >([]);
+  const [gameSearchQuery, setGameSearchQuery] = useState("");
+  const [gameSearchResults, setGameSearchResults] = useState<
+    Array<{ id: string; gstone_id: number | null; content: BoardGame.BoardGameCol | null }>
+  >([]);
+  const [creatingGame, setCreatingGame] = useState(false);
 
   const fetchActives = useCallback(async () => {
     try {
@@ -92,12 +114,25 @@ function RouteComponent() {
     fetchActives();
   }, [fetchActives]);
 
+  // 存储约局的报名者信息（用于显示发起者和所有报名者）
+  const [gameParticipants, setGameParticipants] = useState<
+    Map<string, { creator_id: string | null; participant_ids: string[] }>
+  >(new Map());
+  // 存储发起者信息（用于显示发起者昵称）
+  const [creatorInfo, setCreatorInfo] = useState<
+    Map<string, { nickname: string; uid: string } | null>
+  >(new Map());
+
   // 获取所有开启报名的活动的报名统计
   useEffect(() => {
     const fetchRegistrationStats = async () => {
       const statsMap = new Map<
         string,
         { total: number; current: number; watching: number }
+      >();
+      const gameParticipantsMap = new Map<
+        string,
+        { creator_id: string | null; participant_ids: string[] }
       >();
 
       // 只获取开启报名的活动
@@ -143,6 +178,15 @@ function RouteComponent() {
             current: currentCount,
             watching: watchingCount,
           });
+
+          // 如果是约局，存储发起者和报名者信息
+          if ((active as any).is_game) {
+            const participantIds = registrations.map((reg) => reg.user_id);
+            gameParticipantsMap.set(active.id, {
+              creator_id: (active as any).creator_id || null,
+              participant_ids: participantIds,
+            });
+          }
         } catch (error) {
           console.error(`获取活动 ${active.id} 的报名统计失败:`, error);
         }
@@ -150,10 +194,48 @@ function RouteComponent() {
 
       await Promise.all(promises);
       setRegistrationStats(statsMap);
+      setGameParticipants(gameParticipantsMap);
     };
 
     if (actives.length > 0) {
       fetchRegistrationStats();
+    }
+  }, [actives]);
+
+  // 获取发起者信息的 useEffect
+  useEffect(() => {
+    const fetchCreatorInfo = async () => {
+      const creatorInfoMap = new Map<
+        string,
+        { nickname: string; uid: string } | null
+      >();
+
+      const gameActives = actives.filter((active) => (active as any).is_game);
+      const promises = gameActives.map(async (active) => {
+        const creatorId = (active as any).creator_id;
+        if (!creatorId) return;
+
+        try {
+          const creator = await trpcClientPublic.activeRegistrations.getUserDetails.query({
+            user_id: creatorId,
+          });
+          if (creator?.userInfo) {
+            creatorInfoMap.set(active.id, {
+              nickname: creator.userInfo.nickname,
+              uid: creator.userInfo.uid,
+            });
+          }
+        } catch (error) {
+          console.error(`获取发起者信息失败:`, error);
+        }
+      });
+
+      await Promise.all(promises);
+      setCreatorInfo(creatorInfoMap);
+    };
+
+    if (actives.length > 0) {
+      fetchCreatorInfo();
     }
   }, [actives]);
 
@@ -386,6 +468,75 @@ function RouteComponent() {
     );
   }, []);
 
+  // 搜索桌游（用于约局）
+  const searchGameBoardGames = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setGameSearchResults([]);
+      return;
+    }
+
+    try {
+      const results = await trpcClientPublic.owned.get.query({
+        page: 1,
+        pageSize: 20,
+        params: {
+          searchWords: query,
+          tags: [],
+          numOfPlayers: undefined,
+          isBestNumOfPlayers: false,
+        },
+      });
+      setGameSearchResults(
+        results.map((game) => ({
+          id: game.id,
+          gstone_id: game.gstone_id,
+          content: game.content,
+        })),
+      );
+    } catch (error) {
+      console.error("搜索桌游失败", error);
+    }
+  }, []);
+
+  // 创建约局
+  const handleCreateGame = useCallback(async () => {
+    if (!gameForm.event_date.trim()) {
+      msg.warning("请选择约局时间");
+      return;
+    }
+
+    try {
+      setCreatingGame(true);
+      await trpcClientPublic.active.createGame.mutate({
+        event_date: gameForm.event_date,
+        max_participants: gameForm.max_participants
+          ? parseInt(gameForm.max_participants, 10)
+          : null,
+        board_game_ids: gameForm.selectedBoardGames.length > 0
+          ? gameForm.selectedBoardGames
+          : undefined,
+      });
+      msg.success("约局创建成功");
+      gameDialogRef.current?.close();
+      setGameForm({
+        event_date: "",
+        max_participants: "",
+        selectedBoardGames: [],
+      });
+      setGameBoardGames([]);
+      setGameSearchQuery("");
+      setGameSearchResults([]);
+      await fetchActives();
+    } catch (error) {
+      console.error("创建约局失败", error);
+      msg.error(
+        error instanceof Error ? error.message : "创建约局失败",
+      );
+    } finally {
+      setCreatingGame(false);
+    }
+  }, [gameForm, msg, fetchActives]);
+
   if (loading) {
     return (
       <main className="w-full min-h-screen p-4 flex items-center justify-center">
@@ -397,7 +548,18 @@ function RouteComponent() {
   return (
     <main className="w-full min-h-screen p-4 pb-20 max-w-6xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-4">活动&约局</h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-4xl font-bold">活动&约局</h1>
+          {session && (
+            <button
+              onClick={() => gameDialogRef.current?.showModal()}
+              className="btn btn-primary gap-2"
+            >
+              <PlusIcon className="size-5" />
+              约局
+            </button>
+          )}
+        </div>
 
         {/* 标签筛选 */}
         <div className="flex flex-wrap gap-2 mb-6">
@@ -636,39 +798,107 @@ function RouteComponent() {
                                   📌
                                 </span>
                               )}
-                              {active.name}
+                              {(active as any).is_game ? (
+                                <span className="badge badge-sm badge-accent mr-2">
+                                  约局
+                                </span>
+                              ) : (
+                                active.name
+                              )}
                             </h2>
                           </div>
-                          {active.description && (
+                          {/* 约局显示发起者和报名者 */}
+                          {(active as any).is_game && (
+                            <div className="text-sm text-base-content/70 mb-2">
+                              <div className="mb-1">
+                                <span className="font-semibold">发起者：</span>
+                                <span className="font-mono text-xs">
+                                  {gameParticipants.get(active.id)?.creator_id ||
+                                    (active as any).creator_id ||
+                                    "未知"}
+                                </span>
+                              </div>
+                              {gameParticipants.get(active.id)
+                                ?.participant_ids.length ? (
+                                <div>
+                                  <span className="font-semibold">报名者：</span>
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {gameParticipants
+                                      .get(active.id)
+                                      ?.participant_ids.map((userId) => (
+                                        <span
+                                          key={userId}
+                                          className="badge badge-xs font-mono"
+                                        >
+                                          {userId}
+                                        </span>
+                                      ))}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="text-xs text-base-content/50">
+                                  暂无报名者
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {active.description && !(active as any).is_game && (
                             <p className="text-sm text-base-content/70 line-clamp-2">
                               {active.description}
                             </p>
                           )}
-                          {active.tags && active.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {active.tags.map((tagMapping) => {
+                          {/* 标签显示：活动和约局标签在最前面，报名标签也在同一行 */}
+                          <div className="flex flex-wrap items-center gap-1 mt-2">
+                            {/* 活动标签（闪电图标）- 仅对非约局活动显示 */}
+                            {!(active as any).is_game && (
+                              <span className="badge badge-sm gap-1 badge-primary inline-flex items-center whitespace-nowrap">
+                                <span>⚡</span>
+                                活动
+                              </span>
+                            )}
+                            {/* 约局发起者标签（user图标）- 仅对约局显示 */}
+                            {(active as any).is_game && (
+                              <span className="badge badge-sm gap-1 badge-accent inline-flex items-center whitespace-nowrap">
+                                <span>👤</span>
+                                发起者:{" "}
+                                {creatorInfo.get(active.id)?.nickname ||
+                                  gameParticipants.get(active.id)?.creator_id ||
+                                  (active as any).creator_id ||
+                                  "未知"}
+                              </span>
+                            )}
+                            {/* 其他标签 */}
+                            {active.tags && active.tags.length > 0 &&
+                              active.tags.map((tagMapping) => {
                                 const title = tagTitle(tagMapping.tag?.title);
                                 return (
                                   <span
                                     key={tagMapping.tag_id}
-                                    className="badge badge-sm gap-1"
+                                    className="badge badge-sm gap-1 inline-flex items-center whitespace-nowrap"
                                   >
                                     <span>{title.emoji}</span>
                                     {title.tx}
                                   </span>
                                 );
                               })}
-                            </div>
-                          )}
-                          {/* 报名和观望标签 */}
-                          <div className="flex flex-wrap gap-2 mt-2">
+                            {/* 报名和观望标签 */}
                             {active.enable_registration && (
-                              <span className="badge badge-sm badge-info gap-1 items-center">
+                              <span className="badge badge-sm badge-info gap-1 items-center inline-flex whitespace-nowrap">
                                 <span>👥</span>
                                 {(() => {
                                   const stats = registrationStats.get(
                                     active.id,
                                   );
+                                  // 约局显示人数上限
+                                  if ((active as any).is_game) {
+                                    const maxParticipants = (active as any)
+                                      .max_participants;
+                                    const current = stats?.current || 0;
+                                    if (maxParticipants) {
+                                      return `${current}/${maxParticipants}`;
+                                    }
+                                    return `${current}+`;
+                                  }
                                   if (stats) {
                                     if (stats.total === -1) {
                                       return `${stats.current}+`;
@@ -680,7 +910,7 @@ function RouteComponent() {
                               </span>
                             )}
                             {active.allow_watching && (
-                              <span className="badge badge-sm badge-warning gap-1 items-center">
+                              <span className="badge badge-sm badge-warning gap-1 items-center inline-flex whitespace-nowrap">
                                 <span>👀</span>
                                 观望
                                 {(() => {
@@ -729,6 +959,203 @@ function RouteComponent() {
           ))}
         </div>
       )}
+
+      {/* 约局创建弹窗 */}
+      <dialog ref={gameDialogRef} className="modal">
+        <div className="modal-box max-w-2xl">
+          <h3 className="font-bold text-lg mb-4">创建约局</h3>
+
+          <div className="flex flex-col gap-4">
+            {/* 时间选择 */}
+            <div>
+              <label className="label">
+                <span className="label-text">约局时间 *</span>
+              </label>
+              <input
+                type="datetime-local"
+                className="input input-bordered w-full"
+                value={gameForm.event_date}
+                onChange={(e) =>
+                  setGameForm((prev) => ({
+                    ...prev,
+                    event_date: e.target.value,
+                  }))
+                }
+              />
+            </div>
+
+            {/* 人数上限 */}
+            <div>
+              <label className="label">
+                <span className="label-text">人数上限（留空表示无上限）</span>
+              </label>
+              <input
+                type="number"
+                min="1"
+                className="input input-bordered w-full"
+                placeholder="例如：4"
+                value={gameForm.max_participants}
+                onChange={(e) =>
+                  setGameForm((prev) => ({
+                    ...prev,
+                    max_participants: e.target.value,
+                  }))
+                }
+              />
+            </div>
+
+            {/* 桌游搜索和选择 */}
+            <div>
+              <label className="label">
+                <span className="label-text">添加桌游（可选）</span>
+              </label>
+              <input
+                type="text"
+                className="input input-bordered w-full mb-2"
+                placeholder="搜索桌游..."
+                value={gameSearchQuery}
+                onChange={(e) => {
+                  setGameSearchQuery(e.target.value);
+                  searchGameBoardGames(e.target.value);
+                }}
+              />
+
+              {/* 搜索结果 */}
+              {gameSearchQuery && gameSearchResults.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4 max-h-48 overflow-y-auto">
+                  {gameSearchResults.map((game) => {
+                    const gameContent = game.content;
+                    if (!gameContent || !game.gstone_id) return null;
+
+                    const isSelected = gameForm.selectedBoardGames.includes(
+                      game.gstone_id,
+                    );
+
+                    return (
+                      <div
+                        key={game.id}
+                        className={`card bg-base-200 shadow-sm overflow-hidden cursor-pointer ${
+                          isSelected ? "ring-2 ring-primary" : ""
+                        }`}
+                        onClick={() => {
+                          const gstoneId = game.gstone_id!;
+                          setGameForm((prev) => ({
+                            ...prev,
+                            selectedBoardGames: isSelected
+                              ? prev.selectedBoardGames.filter(
+                                  (id) => id !== gstoneId,
+                                )
+                              : [...prev.selectedBoardGames, gstoneId],
+                          }));
+                          // 添加到已选择列表以便显示
+                          if (!isSelected) {
+                            setGameBoardGames((prev) => {
+                              if (prev.some((g) => g.gstone_id === gstoneId)) {
+                                return prev;
+                              }
+                              return [...prev, game];
+                            });
+                          } else {
+                            setGameBoardGames((prev) =>
+                              prev.filter((g) => g.gstone_id !== gstoneId),
+                            );
+                          }
+                        }}
+                      >
+                        {gameContent.sch_cover_url && (
+                          <figure className="h-20 overflow-hidden">
+                            <img
+                              src={gameContent.sch_cover_url}
+                              alt={
+                                gameContent.sch_name || gameContent.eng_name
+                              }
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (
+                                  e.target as HTMLImageElement
+                                ).style.display = "none";
+                              }}
+                            />
+                          </figure>
+                        )}
+                        <div className="card-body p-2">
+                          <h4 className="card-title text-xs line-clamp-2">
+                            {gameContent.sch_name || gameContent.eng_name}
+                          </h4>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* 已选择的桌游 */}
+              {gameForm.selectedBoardGames.length > 0 && (
+                <div>
+                  <div className="text-sm font-semibold mb-2">已选择的桌游</div>
+                  <div className="flex flex-wrap gap-2">
+                    {gameBoardGames
+                      .filter(
+                        (game) =>
+                          game.gstone_id &&
+                          gameForm.selectedBoardGames.includes(game.gstone_id),
+                      )
+                      .map((game) => {
+                        const gameContent = game.content;
+                        if (!gameContent || !game.gstone_id) return null;
+                        return (
+                          <div
+                            key={game.gstone_id}
+                            className="badge badge-primary gap-2"
+                          >
+                            {gameContent.sch_name || gameContent.eng_name}
+                            <button
+                              onClick={() => {
+                                setGameForm((prev) => ({
+                                  ...prev,
+                                  selectedBoardGames: prev.selectedBoardGames.filter(
+                                    (id) => id !== game.gstone_id,
+                                  ),
+                                }));
+                                setGameBoardGames((prev) =>
+                                  prev.filter(
+                                    (g) => g.gstone_id !== game.gstone_id,
+                                  ),
+                                );
+                              }}
+                              className="btn btn-xs btn-circle btn-ghost"
+                            >
+                              {"×"}
+                            </button>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="modal-action">
+            <form method="dialog">
+              <button className="btn btn-ghost">取消</button>
+            </form>
+            <button
+              onClick={handleCreateGame}
+              disabled={creatingGame}
+              className="btn btn-primary"
+            >
+              {creatingGame && (
+                <span className="loading loading-spinner loading-sm" />
+              )}
+              创建约局
+            </button>
+          </div>
+        </div>
+        <form method="dialog" className="modal-backdrop">
+          <button>关闭</button>
+        </form>
+      </dialog>
     </main>
   );
 }
