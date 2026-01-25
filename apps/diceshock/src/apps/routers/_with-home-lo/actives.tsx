@@ -1,12 +1,11 @@
-import type { BoardGame } from "@lib/utils";
 import { PlusIcon } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import dayjs from "dayjs";
 import isoWeek from "dayjs/plugin/isoWeek";
 import weekOfYear from "dayjs/plugin/weekOfYear";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActiveTags } from "@/client/components/diceshock/ActiveTags";
-import { useMsg } from "@/client/components/diceshock/Msg";
+import GameDialog from "@/client/components/diceshock/GameDialog";
 import useAuth from "@/client/hooks/useAuth";
 import trpcClientPublic from "@/shared/utils/trpc";
 
@@ -31,9 +30,6 @@ type Registration = Awaited<
   >
 >[number];
 
-type BoardGameItem = Awaited<
-  ReturnType<typeof trpcClientPublic.owned.get.query>
->[number];
 
 const tagTitle = (tag?: TagItem["title"] | null) => ({
   emoji: tag?.emoji ?? "🏷️",
@@ -48,7 +44,6 @@ type TimeFilter = "本周" | "下周" | "本月" | "本季度" | "年内" | "更
 
 function RouteComponent() {
   const { session } = useAuth();
-  const msg = useMsg();
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showExpired, setShowExpired] = useState(false);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>(null);
@@ -71,38 +66,7 @@ function RouteComponent() {
   >(new Map());
 
   // 约局相关状态
-  const gameDialogRef = useRef<HTMLDialogElement>(null);
-  const [gameForm, setGameForm] = useState({
-    event_date: "",
-    max_participants: "40", // 队伍人数上限，默认40人
-    selectedBoardGames: [] as number[], // gstone_id 列表
-    selectedTags: [] as string[], // 约局标签 ID 列表
-  });
-  const [gameTags, setGameTags] = useState<
-    Array<{
-      id: string;
-      title: { emoji: string; tx: string } | null;
-      keywords: string | null;
-      is_pinned: boolean | null;
-    }>
-  >([]);
-  const [gameTagSearchQuery, setGameTagSearchQuery] = useState("");
-  const [gameBoardGames, setGameBoardGames] = useState<
-    Array<{
-      id: string;
-      gstone_id: number | null;
-      content: BoardGame.BoardGameCol | null;
-    }>
-  >([]);
-  const [gameSearchQuery, setGameSearchQuery] = useState("");
-  const [gameSearchResults, setGameSearchResults] = useState<
-    Array<{
-      id: string;
-      gstone_id: number | null;
-      content: BoardGame.BoardGameCol | null;
-    }>
-  >([]);
-  const [creatingGame, setCreatingGame] = useState(false);
+  const [gameDialogOpen, setGameDialogOpen] = useState(false);
 
   const fetchActives = useCallback(async () => {
     try {
@@ -162,24 +126,7 @@ function RouteComponent() {
     fetchTags();
   }, [fetchTags]);
 
-  // 获取约局标签
-  const fetchGameTags = useCallback(async () => {
-    try {
-      // 约局标签：排除置顶标签，只显示启用约局的标签
-      const allTags = await trpcClientPublic.activeTags.getGameTags.query({
-        search: gameTagSearchQuery || undefined,
-        excludePinned: true, // 约局不显示置顶标签
-        onlyGameEnabled: true, // 只显示启用约局的标签
-      });
-      setGameTags(allTags);
-    } catch (error) {
-      console.error("获取约局标签失败", error);
-    }
-  }, [gameTagSearchQuery]);
-
-  useEffect(() => {
-    fetchGameTags();
-  }, [fetchGameTags]);
+  // 获取约局标签的逻辑已移到 GameDialog 组件中
 
   useEffect(() => {
     fetchActives();
@@ -526,82 +473,10 @@ function RouteComponent() {
     );
   }, []);
 
-  // 搜索桌游（用于约局）
-  const searchGameBoardGames = useCallback(async (query: string) => {
-    if (!query.trim()) {
-      setGameSearchResults([]);
-      return;
-    }
-
-    try {
-      const results = await trpcClientPublic.owned.get.query({
-        page: 1,
-        pageSize: 20,
-        params: {
-          searchWords: query,
-          tags: [],
-          numOfPlayers: undefined,
-          isBestNumOfPlayers: false,
-        },
-      });
-      setGameSearchResults(
-        results.map((game: BoardGameItem) => ({
-          id: game.id,
-          gstone_id: game.gstone_id,
-          content: game.content,
-        })),
-      );
-    } catch (error) {
-      console.error("搜索桌游失败", error);
-    }
-  }, []);
-
-  // 创建约局
-  const handleCreateGame = useCallback(async () => {
-    if (!gameForm.event_date.trim()) {
-      msg.warning("请选择约局时间");
-      return;
-    }
-
-    // 验证标签数量
-    if (gameForm.selectedTags.length > 15) {
-      msg.warning("最多只能选择15个标签");
-      return;
-    }
-
-    try {
-      setCreatingGame(true);
-      await trpcClientPublic.active.createGame.mutate({
-        event_date: gameForm.event_date,
-        max_participants: gameForm.max_participants
-          ? parseInt(gameForm.max_participants, 10)
-          : 40, // 默认40人
-        board_game_ids:
-          gameForm.selectedBoardGames.length > 0
-            ? gameForm.selectedBoardGames
-            : undefined,
-        tag_ids:
-          gameForm.selectedTags.length > 0 ? gameForm.selectedTags : undefined,
-      });
-      msg.success("约局创建成功");
-      gameDialogRef.current?.close();
-      setGameForm({
-        event_date: "",
-        max_participants: "40", // 重置为默认值40
-        selectedBoardGames: [],
-        selectedTags: [],
-      });
-      setGameBoardGames([]);
-      setGameSearchQuery("");
-      setGameSearchResults([]);
-      await fetchActives();
-    } catch (error) {
-      console.error("创建约局失败", error);
-      msg.error(error instanceof Error ? error.message : "创建约局失败");
-    } finally {
-      setCreatingGame(false);
-    }
-  }, [gameForm, msg, fetchActives]);
+  // 创建约局成功后的回调
+  const handleGameSuccess = useCallback(() => {
+    fetchActives();
+  }, [fetchActives]);
 
   if (loading) {
     return (
@@ -618,7 +493,7 @@ function RouteComponent() {
           <h1 className="text-4xl font-bold">活动&约局</h1>
           {session && (
             <button
-              onClick={() => gameDialogRef.current?.showModal()}
+              onClick={() => setGameDialogOpen(true)}
               className="btn btn-primary gap-2"
             >
               <PlusIcon className="size-5" />
@@ -1082,289 +957,14 @@ function RouteComponent() {
         </div>
       )}
 
-      {/* 约局创建弹窗 */}
-      <dialog ref={gameDialogRef} className="modal">
-        <div className="modal-box max-w-2xl max-h-[90vh] flex flex-col">
-          <h3 className="font-bold text-lg mb-4 shrink-0">创建约局</h3>
-
-          <div className="flex flex-col gap-4 overflow-y-auto flex-1 min-h-0">
-            {/* 时间选择 */}
-            <div>
-              <label className="label">
-                <span className="label-text">约局时间 *</span>
-              </label>
-              <input
-                type="datetime-local"
-                className="input input-bordered w-full"
-                value={gameForm.event_date}
-                onChange={(e) =>
-                  setGameForm((prev) => ({
-                    ...prev,
-                    event_date: e.target.value,
-                  }))
-                }
-              />
-            </div>
-
-            {/* 人数上限 */}
-            <div>
-              <label className="label">
-                <span className="label-text">人数上限（默认40人）</span>
-              </label>
-              <input
-                type="number"
-                min="1"
-                className="input input-bordered w-full"
-                placeholder="例如：40（默认40人）"
-                value={gameForm.max_participants}
-                onChange={(e) =>
-                  setGameForm((prev) => ({
-                    ...prev,
-                    max_participants: e.target.value,
-                  }))
-                }
-              />
-            </div>
-
-            {/* 约局标签选择 */}
-            <div>
-              <label className="label">
-                <span className="label-text">
-                  选择约局标签（可选，最多15个）
-                  {gameForm.selectedTags.length > 0 && (
-                    <span className="text-sm text-base-content/60 ml-2">
-                      ({gameForm.selectedTags.length}/15)
-                    </span>
-                  )}
-                </span>
-              </label>
-              <input
-                type="text"
-                className="input input-bordered w-full mb-2"
-                placeholder="搜索标签（留空则只显示置顶标签）..."
-                value={gameTagSearchQuery}
-                onChange={(e) => {
-                  setGameTagSearchQuery(e.target.value);
-                }}
-              />
-              {gameTags.length === 0 ? (
-                <div className="alert alert-warning">
-                  <span>
-                    {gameTagSearchQuery
-                      ? "未找到匹配的标签"
-                      : "暂无置顶标签，请先在后台管理页面添加并置顶标签，或使用搜索查找所有标签"}
-                  </span>
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {gameTags.map((tag) => {
-                    const isSelected = gameForm.selectedTags.includes(tag.id);
-                    return (
-                      <button
-                        key={tag.id}
-                        type="button"
-                        onClick={() => {
-                          setGameForm((prev) => {
-                            if (isSelected) {
-                              // 取消选择
-                              return {
-                                ...prev,
-                                selectedTags: prev.selectedTags.filter(
-                                  (id) => id !== tag.id,
-                                ),
-                              };
-                            } else {
-                              // 选择：检查是否超过15个
-                              if (prev.selectedTags.length >= 15) {
-                                msg.warning("最多只能选择15个标签");
-                                return prev;
-                              }
-                              return {
-                                ...prev,
-                                selectedTags: [...prev.selectedTags, tag.id],
-                              };
-                            }
-                          });
-                        }}
-                        disabled={
-                          !isSelected && gameForm.selectedTags.length >= 15
-                        }
-                        className={`badge badge-lg gap-2 ${
-                          isSelected ? "badge-primary" : "badge-outline"
-                        } ${
-                          !isSelected && gameForm.selectedTags.length >= 15
-                            ? "opacity-50 cursor-not-allowed"
-                            : ""
-                        }`}
-                      >
-                        <span>{tag.title?.emoji || "🎲"}</span>
-                        {tag.title?.tx || "约局"}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* 桌游搜索和选择 */}
-            <div>
-              <label className="label">
-                <span className="label-text">添加桌游（可选）</span>
-              </label>
-              <input
-                type="text"
-                className="input input-bordered w-full mb-2"
-                placeholder="搜索桌游..."
-                value={gameSearchQuery}
-                onChange={(e) => {
-                  setGameSearchQuery(e.target.value);
-                  searchGameBoardGames(e.target.value);
-                }}
-              />
-
-              {/* 搜索结果 */}
-              {gameSearchQuery && gameSearchResults.length > 0 && (
-                <div className="mb-4 overflow-x-auto">
-                  <div
-                    className="flex gap-2 px-1"
-                    style={{ width: "max-content" }}
-                  >
-                    {gameSearchResults.map((game) => {
-                      const gameContent = game.content;
-                      if (!gameContent || !game.gstone_id) return null;
-
-                      const isSelected = gameForm.selectedBoardGames.includes(
-                        game.gstone_id,
-                      );
-
-                      return (
-                        <div
-                          key={game.id}
-                          className={`card bg-base-200 shadow-sm overflow-hidden cursor-pointer w-32 shrink-0 ${
-                            isSelected ? "ring-2 ring-primary" : ""
-                          }`}
-                          onClick={() => {
-                            const gstoneId = game.gstone_id!;
-                            setGameForm((prev) => ({
-                              ...prev,
-                              selectedBoardGames: isSelected
-                                ? prev.selectedBoardGames.filter(
-                                    (id) => id !== gstoneId,
-                                  )
-                                : [...prev.selectedBoardGames, gstoneId],
-                            }));
-                            // 添加到已选择列表以便显示
-                            if (!isSelected) {
-                              setGameBoardGames((prev) => {
-                                if (
-                                  prev.some((g) => g.gstone_id === gstoneId)
-                                ) {
-                                  return prev;
-                                }
-                                return [...prev, game];
-                              });
-                            } else {
-                              setGameBoardGames((prev) =>
-                                prev.filter((g) => g.gstone_id !== gstoneId),
-                              );
-                            }
-                          }}
-                        >
-                          {gameContent.sch_cover_url && (
-                            <figure className="h-20 overflow-hidden">
-                              <img
-                                src={gameContent.sch_cover_url}
-                                alt={
-                                  gameContent.sch_name || gameContent.eng_name
-                                }
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display =
-                                    "none";
-                                }}
-                              />
-                            </figure>
-                          )}
-                          <div className="card-body p-2">
-                            <h4 className="card-title text-xs line-clamp-2">
-                              {gameContent.sch_name || gameContent.eng_name}
-                            </h4>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* 已选择的桌游 */}
-              {gameForm.selectedBoardGames.length > 0 && (
-                <div>
-                  <div className="text-sm font-semibold mb-2">已选择的桌游</div>
-                  <div className="flex flex-wrap gap-2">
-                    {gameBoardGames
-                      .filter(
-                        (game) =>
-                          game.gstone_id &&
-                          gameForm.selectedBoardGames.includes(game.gstone_id),
-                      )
-                      .map((game) => {
-                        const gameContent = game.content;
-                        if (!gameContent || !game.gstone_id) return null;
-                        return (
-                          <div
-                            key={game.gstone_id}
-                            className="badge badge-primary gap-2"
-                          >
-                            {gameContent.sch_name || gameContent.eng_name}
-                            <button
-                              onClick={() => {
-                                setGameForm((prev) => ({
-                                  ...prev,
-                                  selectedBoardGames:
-                                    prev.selectedBoardGames.filter(
-                                      (id) => id !== game.gstone_id,
-                                    ),
-                                }));
-                                setGameBoardGames((prev) =>
-                                  prev.filter(
-                                    (g) => g.gstone_id !== game.gstone_id,
-                                  ),
-                                );
-                              }}
-                              className="btn btn-xs btn-circle btn-ghost"
-                            >
-                              {"×"}
-                            </button>
-                          </div>
-                        );
-                      })}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="modal-action shrink-0">
-            <form method="dialog">
-              <button className="btn btn-ghost">取消</button>
-            </form>
-            <button
-              onClick={handleCreateGame}
-              disabled={creatingGame}
-              className="btn btn-primary"
-            >
-              {creatingGame && (
-                <span className="loading loading-spinner loading-sm" />
-              )}
-              创建约局
-            </button>
-          </div>
-        </div>
-        <form method="dialog" className="modal-backdrop">
-          <button>关闭</button>
-        </form>
-      </dialog>
+      {/* 约局创建/编辑弹窗 */}
+      <GameDialog
+        isOpen={gameDialogOpen}
+        onToggle={({ open }) => {
+          setGameDialogOpen(open);
+        }}
+        onSuccess={handleGameSuccess}
+      />
     </main>
   );
 }

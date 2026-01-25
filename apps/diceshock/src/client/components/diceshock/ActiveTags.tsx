@@ -41,7 +41,7 @@ export function ActiveTags({
   const displayTags = maxTags ? tags.slice(0, maxTags) : tags;
 
   return (
-    <>
+    <div className={`flex flex-wrap gap-2 ${className}`}>
       {displayTags.map((tagMapping) => {
         const tag = tagMapping.tag;
         if (!tag) return null;
@@ -49,13 +49,13 @@ export function ActiveTags({
         return (
           <span
             key={tagMapping.tag_id}
-            className={`badge shrink-0 text-nowrap ${sizeClass} gap-1 badge-neutral inline-flex items-center whitespace-nowrap ${className}`}
+            className={`badge shrink-0 text-nowrap ${sizeClass} gap-1 badge-neutral inline-flex items-center whitespace-nowrap`}
           >
             <span>{title.emoji}</span>
             {title.tx}
           </span>
         );
       })}
-    </>
+    </div>
   );
 }

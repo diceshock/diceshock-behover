@@ -659,14 +659,14 @@ const createGame = dashProcedure
 
     // 添加约局标签（从已有的约局标签中选择）
     if (tag_ids && tag_ids.length > 0) {
-      // 验证标签是否存在且符合约局要求（不能是置顶标签，必须启用约局）
+      // 验证标签是否存在且符合约局要求（必须启用约局）
       const tags = await tdb.query.activeTagsTable.findMany({
         where: (tag: any, { inArray }: any) => inArray(tag.id, tag_ids),
       });
 
-      // 过滤掉置顶标签和未启用约局的标签（约局不能使用置顶标签）
+      // 过滤掉未启用约局的标签（允许使用置顶标签）
       const validTags = tags.filter(
-        (tag: any) => !tag.is_pinned && tag.is_game_enabled === true,
+        (tag: any) => tag.is_game_enabled === true,
       );
 
       // 添加所有符合条件的标签
@@ -776,9 +776,9 @@ const updateGame = dashProcedure
           where: (tag: any, { inArray }: any) => inArray(tag.id, tag_ids),
         });
 
-        // 过滤掉置顶标签和未启用约局的标签（约局不能使用置顶标签）
+        // 过滤掉未启用约局的标签（允许使用置顶标签）
         const validTags = tags.filter(
-          (tag: any) => !tag.is_pinned && tag.is_game_enabled === true,
+          (tag: any) => tag.is_game_enabled === true,
         );
 
         if (validTags.length > 0) {
