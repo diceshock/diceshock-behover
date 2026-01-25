@@ -54,6 +54,16 @@ function RouteComponent() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>(null);
   const [actives, setActives] = useState<ActiveItem[]>([]);
   const [tags, setTags] = useState<TagItem[]>([]);
+  const [allTags, setAllTags] = useState<
+    Array<{
+      id: string;
+      title: { emoji: string; tx: string } | null;
+      keywords: string | null;
+      is_pinned: boolean | null;
+      is_game_enabled: boolean | null;
+    }>
+  >([]);
+  const [tagSearchQuery, setTagSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   // 存储每个活动的报名统计信息
   const [registrationStats, setRegistrationStats] = useState<
@@ -132,12 +142,20 @@ function RouteComponent() {
 
   const fetchTags = useCallback(async () => {
     try {
-      const data = await trpcClientPublic.activeTags.get.query();
-      setTags(data);
+      // 获取所有标签（活动版本：支持置顶标签和非约局标签）
+      const data = await trpcClientPublic.activeTags.getGameTags.query({
+        search: tagSearchQuery || undefined,
+        // 活动可以使用所有标签，包括置顶标签和非约局标签
+      });
+      setAllTags(data);
+
+      // 同时获取已发布活动使用的标签（用于筛选）
+      const publishedTags = await trpcClientPublic.activeTags.get.query();
+      setTags(publishedTags);
     } catch (error) {
       console.error("获取标签失败", error);
     }
-  }, []);
+  }, [tagSearchQuery]);
 
   useEffect(() => {
     fetchTags();
@@ -609,39 +627,79 @@ function RouteComponent() {
         </div>
 
         {/* 标签筛选 */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          {/* 过期活动标签 */}
-          <button
-            onClick={() => setShowExpired(!showExpired)}
-            className={`badge badge-lg gap-2 cursor-pointer transition-all ${
-              showExpired
-                ? "badge-secondary"
-                : "badge-outline hover:badge-secondary"
-            }`}
-          >
-            <span>⏰</span>
-            过期活动
-          </button>
+        <div className="mb-6">
+          <div className="flex flex-wrap gap-2 mb-4">
+            {/* 过期活动标签 */}
+            <button
+              onClick={() => setShowExpired(!showExpired)}
+              className={`badge badge-lg gap-2 cursor-pointer transition-all ${
+                showExpired
+                  ? "badge-secondary"
+                  : "badge-outline hover:badge-secondary"
+              }`}
+            >
+              <span>⏰</span>
+              过期活动
+            </button>
 
-          {/* 普通标签 */}
-          {tags.map((tag) => {
-            const title = tagTitle(tag.title);
-            const isSelected = selectedTags.includes(tag.id);
-            return (
-              <button
-                key={tag.id}
-                onClick={() => toggleTag(tag.id)}
-                className={`badge badge-lg gap-2 cursor-pointer transition-all ${
-                  isSelected
-                    ? "badge-primary"
-                    : "badge-outline hover:badge-primary"
-                }`}
-              >
-                <span>{title.emoji}</span>
-                {title.tx}
-              </button>
-            );
-          })}
+            {/* 已选中的标签 */}
+            {selectedTags.length > 0 && (
+              <>
+                {allTags
+                  .filter((tag) => selectedTags.includes(tag.id))
+                  .map((tag) => {
+                    const title = tagTitle(tag.title);
+                    return (
+                      <button
+                        key={tag.id}
+                        onClick={() => toggleTag(tag.id)}
+                        className="badge badge-lg gap-2 badge-primary cursor-pointer"
+                      >
+                        <span>{title.emoji}</span>
+                        {title.tx}
+                      </button>
+                    );
+                  })}
+              </>
+            )}
+          </div>
+
+          {/* 标签搜索和选择 */}
+          <div>
+            <input
+              type="text"
+              className="input input-bordered w-full mb-2"
+              placeholder="搜索标签（留空则显示所有标签）..."
+              value={tagSearchQuery}
+              onChange={(e) => {
+                setTagSearchQuery(e.target.value);
+              }}
+            />
+            {allTags.length === 0 ? (
+              <div className="alert alert-warning">
+                <span>{tagSearchQuery ? "未找到匹配的标签" : "暂无标签"}</span>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {allTags
+                  .filter((tag) => !selectedTags.includes(tag.id))
+                  .map((tag) => {
+                    const title = tagTitle(tag.title);
+                    return (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        onClick={() => toggleTag(tag.id)}
+                        className="badge badge-lg gap-2 badge-outline hover:badge-primary cursor-pointer"
+                      >
+                        <span>{title.emoji}</span>
+                        {title.tx}
+                      </button>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* 时间筛选 */}

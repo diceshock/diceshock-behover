@@ -14,7 +14,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import "@uiw/react-md-editor/markdown-editor.css";
 import type { BoardGame } from "@lib/utils";
 import { useMsg } from "@/client/components/diceshock/Msg";
-import { EmojiPicker } from "@/client/components/diceshock/EmojiPicker";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import trpcClientPublic, { trpcClientDash } from "@/shared/utils/trpc";
 
@@ -47,12 +46,27 @@ function RouteComponent() {
     ReturnType<typeof trpcClientDash.active.getById.query>
   > | null>(null);
   const [tags, setTags] = useState<TagItem[]>([]);
-  const [gameTags, setGameTags] = useState<
-    Array<{ id: string; title: { emoji: string; tx: string } | null }>
+  const [allTags, setAllTags] = useState<
+    Array<{
+      id: string;
+      title: { emoji: string; tx: string } | null;
+      keywords: string | null;
+      is_pinned: boolean | null;
+      is_game_enabled: boolean | null;
+    }>
   >([]);
+  const [gameTags, setGameTags] = useState<
+    Array<{
+      id: string;
+      title: { emoji: string; tx: string } | null;
+      keywords: string | null;
+      is_pinned: boolean | null;
+      is_game_enabled: boolean | null;
+    }>
+  >([]);
+  const [tagSearchQuery, setTagSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [tagDraft, setTagDraft] = useState({ emoji: "", tx: "" });
   const [activeTab, setActiveTab] = useState<
     "edit" | "registrations" | "games"
   >("edit");
@@ -93,6 +107,7 @@ function RouteComponent() {
 
   const fetchTags = useCallback(async () => {
     try {
+      // 获取已发布活动使用的标签（用于显示）
       const data = await trpcClientDash.activeTags.get.query();
       setTags(data);
     } catch (error) {
@@ -100,10 +115,26 @@ function RouteComponent() {
     }
   }, []);
 
+  const fetchAllTags = useCallback(async () => {
+    try {
+      // 获取所有标签（活动版本：支持置顶标签和非约局标签）
+      const data = await trpcClientDash.activeTags.getGameTags.query({
+        search: tagSearchQuery || undefined,
+        // 活动可以使用所有标签，包括置顶标签和非约局标签
+      });
+      setAllTags(data);
+    } catch (error) {
+      console.error("获取所有标签失败", error);
+    }
+  }, [tagSearchQuery]);
+
   const fetchGameTags = useCallback(async () => {
     try {
-      // 获取所有标签（管理页面创建的所有标签都可以用于约局）
-      const allTags = await trpcClientDash.activeTags.getGameTags.query();
+      // 约局标签：排除置顶标签（置顶只有活动有），只显示启用约局的标签
+      const allTags = await trpcClientDash.activeTags.getGameTags.query({
+        excludePinned: true, // 约局不显示置顶标签
+        onlyGameEnabled: true, // 只显示启用约局的标签
+      });
       setGameTags(allTags);
     } catch (error) {
       console.error("获取约局标签失败", error);
@@ -189,8 +220,13 @@ function RouteComponent() {
 
   useEffect(() => {
     fetchTags();
+    fetchAllTags();
     fetchActive();
-  }, [fetchTags, fetchActive]);
+  }, [fetchTags, fetchAllTags, fetchActive]);
+
+  useEffect(() => {
+    fetchGameTags();
+  }, [fetchGameTags]);
 
   useEffect(() => {
     if (activeTab === "registrations" && id && enableRegistration) {
@@ -304,53 +340,6 @@ function RouteComponent() {
     [id, fetchBoardGames, msg],
   );
 
-  const availableTags = useMemo(
-    () =>
-      tags.sort((a, b) => {
-        const aSelected = selectedTags.includes(a.id);
-        const bSelected = selectedTags.includes(b.id);
-        if (aSelected && !bSelected) return -1;
-        if (!aSelected && bSelected) return 1;
-        return (a.title?.tx ?? "").localeCompare(b.title?.tx ?? "");
-      }),
-    [tags, selectedTags],
-  );
-
-  const handleCreateTag = useCallback(async () => {
-    if (!active || !tagDraft.tx.trim()) {
-      if (!tagDraft.tx.trim()) {
-        msg.warning("请输入标签名称");
-      }
-      return;
-    }
-    try {
-      const result = await trpcClientDash.activeTags.insert.mutate([
-        {
-          activeId: active.id,
-          title: {
-            emoji: tagDraft.emoji.trim() || "🏷️",
-            tx: tagDraft.tx.trim(),
-          },
-        },
-      ]);
-
-      const created = result.find(
-        (tag): tag is TagItem => tag && "id" in tag && "title" in tag,
-      );
-      if (!created) {
-        msg.error("标签创建失败");
-        return;
-      }
-
-      setTags((prev) => [...prev, created]);
-      setSelectedTags((prev) => [...prev, created.id]);
-      setTagDraft({ emoji: "", tx: "" });
-      msg.success("标签创建成功");
-    } catch (error) {
-      msg.error("创建标签失败");
-      console.error(error);
-    }
-  }, [active, tagDraft, msg]);
 
   // 立即保存状态字段（发布状态、垃圾桶、开启报名、允许观望）
   const handleSaveStatus = useCallback(
@@ -794,14 +783,35 @@ function RouteComponent() {
                       </>
                     ) : (
                       <>
+                        <div className="alert alert-info">
+                          <span>
+                            活动可以使用所有标签（包括置顶标签和非约局标签）
+                            {selectedTags.length > 0 && (
+                              <span className="ml-2">
+                                ({selectedTags.length} 个已选择)
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        <input
+                          type="text"
+                          className="input input-bordered w-full mb-2"
+                          placeholder="搜索标签（留空则显示所有标签）..."
+                          value={tagSearchQuery}
+                          onChange={(e) => {
+                            setTagSearchQuery(e.target.value);
+                          }}
+                        />
                         <div className="flex flex-wrap gap-2">
-                          {availableTags.map((tag) => {
+                          {allTags.map((tag) => {
                             const title = tagTitle(tag.title);
                             const checked = selectedTags.includes(tag.id);
                             return (
                               <label
                                 key={tag.id}
-                                className="badge badge-lg gap-2 cursor-pointer"
+                                className={`badge badge-lg gap-2 cursor-pointer ${
+                                  checked ? "badge-primary" : "badge-outline"
+                                }`}
                               >
                                 <input
                                   type="checkbox"
@@ -821,33 +831,15 @@ function RouteComponent() {
                             );
                           })}
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                          <EmojiPicker
-                            value={tagDraft.emoji}
-                            onChange={(emoji) =>
-                              setTagDraft((prev) => ({ ...prev, emoji }))
-                            }
-                          />
-                          <input
-                            className="input input-bordered input-sm flex-1 min-w-40"
-                            placeholder="标签名称"
-                            value={tagDraft.tx}
-                            onChange={(evt) =>
-                              setTagDraft((prev) => ({
-                                ...prev,
-                                tx: evt.target.value,
-                              }))
-                            }
-                          />
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-secondary"
-                            onClick={handleCreateTag}
-                          >
-                            新建标签
-                            <PlusIcon className="size-4" />
-                          </button>
-                        </div>
+                        {allTags.length === 0 && (
+                          <div className="alert alert-warning">
+                            <span>
+                              {tagSearchQuery
+                                ? "未找到匹配的标签"
+                                : "暂无标签，请先在标签管理页面创建标签"}
+                            </span>
+                          </div>
+                        )}
                       </>
                     )}
                   </div>

@@ -1540,3 +1540,122 @@ emoji = "🔧"
 keywords = "工程师,技术,设计,开发,gongchengshi,gcs,jishu,js"
 is_pinned = false
 is_game_enabled = true
+
+[[tags]]
+name = "时间不定人齐就开"
+emoji = "⏰"
+keywords = "时间不定人齐就开,人齐就开,人齐开始,时间灵活,shijianbuding,renqijiukai,rqjk"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "时间可议"
+emoji = "💬"
+keywords = "时间可议,时间商量,时间协商,时间待定,shijiankeyi,sjky,shangliang,xieshang"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "到时不候"
+emoji = "⏱️"
+keywords = "到时不候,准时开始,准时开,不等人,daoshibuhou,dshb,zhunshi,bu deng"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "时间灵活"
+emoji = "🕐"
+keywords = "时间灵活,随时可开,时间自由,灵活安排,shijianlinghuo,sjlh,suishikekai,sskk"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "沟通交流"
+emoji = "💭"
+keywords = "沟通交流,交流,沟通,讨论,聊天,goutongjiaoliu,gtjl,jiaoliu,jl,liaotian,lt"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "微信沟通"
+emoji = "💬"
+keywords = "微信沟通,微信,wechat,wx,weixin,微信联系,微信交流,weixingoutong,wxgt"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "QQ沟通"
+emoji = "💬"
+keywords = "QQ沟通,QQ,qq,qq联系,qq交流,qqgoutong,qqgt"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "电话沟通"
+emoji = "📞"
+keywords = "电话沟通,电话,电话联系,电话交流,dianhuagoutong,dhgt,dianhua,dh"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "TRPG群群友"
+emoji = "👥"
+keywords = "TRPG群群友,trpg群,trpg,trpg群友,trpgqun,trpgqy,群友,qy"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "大群沟通"
+emoji = "👥"
+keywords = "大群沟通,大群,大群交流,大群联系,daqungoutong,dqgt,daqun,dq"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "微信大群沟通"
+emoji = "👥"
+keywords = "微信大群沟通,微信大群,wechat大群,wx大群,weixindaqun,wxdq,wxdaqungoutong,wxdqgt"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "QQ大群沟通"
+emoji = "👥"
+keywords = "QQ大群沟通,QQ大群,qq大群,qqdaqun,qqdq,qqdaqungoutong,qqdqgt"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "Runespark大群沟通"
+emoji = "👥"
+keywords = "Runespark大群沟通,runespark大群,runespark,runespark大群沟通,runesparkdaqun,runesparkdq,runesparkdaqungoutong,runesparkdqgt"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "联系辣条"
+emoji = "🍟"
+keywords = "联系辣条,辣条,laitiao,lt,联系lt,联系laitiao,lianxilaitiao,lxlt"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "联系店长"
+emoji = "👔"
+keywords = "联系店长,店长,店长联系,联系店主,dianzhang,dz,lianxidianzhang,lxdz"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "商业团"
+emoji = "💰"
+keywords = "商业团,商业,付费团,收费团,shangyetuan,syt,fufeituan,fft,shoufeituan,sft"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "非商业团"
+emoji = "🎲"
+keywords = "非商业团,非商业,免费团,公益团,feishangyetuan,fsyt,mianfeituan,mft,gongyituan,gyt"
+is_pinned = false
+is_game_enabled = true
