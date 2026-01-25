@@ -309,33 +309,51 @@ export default function ActiveDetail({
               const gameContent = game.content;
               if (!gameContent) return null;
 
+              const coverUrl =
+                gameContent.sch_cover_url || gameContent.eng_cover_url;
+
               return (
                 <div
                   key={game.gstone_id}
                   className="card bg-base-100 shadow-md overflow-hidden hover:shadow-lg transition-shadow"
                 >
-                  {gameContent.sch_cover_url && (
-                    <figure className="h-32 overflow-hidden">
+                  {coverUrl ? (
+                    <figure className="h-48 md:h-60 lg:h-72 overflow-hidden relative bg-base-300">
                       <img
-                        src={gameContent.sch_cover_url}
+                        src={coverUrl}
                         alt={gameContent.sch_name || gameContent.eng_name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
+                          // 如果图片加载失败，隐藏图片但保留容器
                           (e.target as HTMLImageElement).style.display = "none";
                         }}
                       />
-                    </figure>
-                  )}
-                  <div className="card-body p-3">
-                    <h4 className="card-title text-sm line-clamp-2">
-                      {gameContent.sch_name || gameContent.eng_name}
-                    </h4>
-                    {gameContent.gstone_rating && (
-                      <div className="text-xs text-base-content/50">
-                        评分: {gameContent.gstone_rating.toFixed(1)}
+                      {/* 渐变遮罩层 */}
+                      <div className="absolute inset-0 bg-linear-to-b from-transparent via-transparent to-black/30 pointer-events-none" />
+                      {/* 标题覆盖在图片上 */}
+                      <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
+                        <h4 className="card-title text-sm md:text-base text-white line-clamp-2 drop-shadow-lg">
+                          {gameContent.sch_name || gameContent.eng_name}
+                        </h4>
+                        {gameContent.gstone_rating && (
+                          <div className="text-xs text-white/90 mt-1 drop-shadow">
+                            评分: {gameContent.gstone_rating.toFixed(1)}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
+                    </figure>
+                  ) : (
+                    <div className="card-body p-3">
+                      <h4 className="card-title text-sm line-clamp-2">
+                        {gameContent.sch_name || gameContent.eng_name}
+                      </h4>
+                      {gameContent.gstone_rating && (
+                        <div className="text-xs text-base-content/50">
+                          评分: {gameContent.gstone_rating.toFixed(1)}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}

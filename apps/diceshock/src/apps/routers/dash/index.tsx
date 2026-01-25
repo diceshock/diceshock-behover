@@ -1,17 +1,17 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import {
+  EnvelopeIcon,
+  HouseIcon,
+  PackageIcon,
+  RobotIcon,
   SignpostIcon,
   TagIcon,
-  UsersIcon,
-  HouseIcon,
   UserIcon,
-  PackageIcon,
-  EnvelopeIcon,
-  RobotIcon,
+  UsersIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import { trpcClientDash } from "@/shared/utils/trpc";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import InventoryManagementCard from "@/client/components/diceshock/InventoryManagementCard";
+import { trpcClientDash } from "@/shared/utils/trpc";
 
 export const Route = createFileRoute("/dash/")({
   component: RouteComponent,
