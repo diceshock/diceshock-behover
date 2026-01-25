@@ -74,8 +74,7 @@ export default function ActiveDetail({
       session.user.id === activeGame.creator_id
     );
   }, [
-    (active as any)?.is_game,
-    (active as any)?.creator_id,
+    active,
     session?.user?.id,
   ]);
 
