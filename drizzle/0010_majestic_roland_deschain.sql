@@ -1,0 +1,1 @@
+ALTER TABLE `active_teams_table` ADD `description` text;

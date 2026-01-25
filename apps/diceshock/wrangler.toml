@@ -4,6 +4,7 @@ name = "diceshock-behover"
 compatibility_date = "2025-09-24"
 main = "./src/main.tsx"
 compatibility_flags = ["nodejs_compat"]
+account_id = "3244c8f91cd34317ce18652158e5853a"
 
 [observability]
 enabled = false
@@ -22,6 +23,10 @@ head_sampling_rate = 1
 
 [version_metadata]
 binding = "CF_VERSION_METADATA"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "59911665c0654c54814d81fbb213aae4"
 
 [[d1_databases]]
 binding = "DB"

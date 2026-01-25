@@ -37,10 +37,12 @@ const MainHomePageRoute = MainHomePageRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof MainHomePageRoute
   '/dash': typeof DashLazyRouteWithChildren
   '/dash/graphiql': typeof DashGraphiqlRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof MainHomePageRoute
   '/dash': typeof DashLazyRouteWithChildren
   '/dash/graphiql': typeof DashGraphiqlRoute
 }
@@ -53,9 +55,9 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/dash' | '/dash/graphiql'
+  fullPaths: '/' | '/dash' | '/dash/graphiql'
   fileRoutesByTo: FileRoutesByTo
-  to: '/dash' | '/dash/graphiql'
+  to: '/' | '/dash' | '/dash/graphiql'
   id: '__root__' | '/_main' | '/dash' | '/_main/_homePage' | '/dash/graphiql'
   fileRoutesById: FileRoutesById
 }
@@ -76,7 +78,7 @@ declare module '@tanstack/react-router' {
     '/_main': {
       id: '/_main'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof MainRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -90,7 +92,7 @@ declare module '@tanstack/react-router' {
     '/_main/_homePage': {
       id: '/_main/_homePage'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof MainHomePageRouteImport
       parentRoute: typeof MainRoute
     }

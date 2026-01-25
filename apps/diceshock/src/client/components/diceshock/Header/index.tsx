@@ -2,7 +2,7 @@ import { CaretDownIcon } from "@phosphor-icons/react/dist/ssr";
 import { Link } from "@tanstack/react-router";
 import type React from "react";
 import LongTextLogo from "@/client/assets/svg/black-simplify-with-text-logo.svg?react";
-import ThemeSwap from "@/client/components/ThemeSwap";
+import AvatarMenu from "./AvataMenu";
 
 type PageType = {
   title: React.ReactNode;
@@ -17,7 +17,7 @@ const PAGES: PageType[] = [
     href: `/inventory`,
   },
   {
-    title: "活动",
+    title: "活动&约局",
     href: `/actives`,
   },
   {
@@ -27,7 +27,6 @@ const PAGES: PageType[] = [
   {
     title: "联系我们",
     href: `/contact-us`,
-    
   },
 ];
 
@@ -45,11 +44,7 @@ const getSideMenu = (pages: PageType[]) =>
       if (href)
         return (
           <li key={i}>
-            {spa ? (
-              <Link to={href}>{title}</Link>
-            ) : (
-              <a href={href}>{title}</a>
-            )}
+            {spa ? <Link to={href}>{title}</Link> : <a href={href}>{title}</a>}
           </li>
         );
 
@@ -99,7 +94,7 @@ const Header = () => (
           </div>
           <ul
             tabIndex={0}
-            className="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-52 p-2 shadow"
+            className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow"
           >
             {getSideMenu(PAGES)}
           </ul>
@@ -114,20 +109,8 @@ const Header = () => (
         <ul className="menu menu-horizontal px-1">{getMidMenu(PAGES)}</ul>
       </div>
 
-      <div className="navbar-end gap-2 pr-2">
-        <ThemeSwap
-          className={{ outer: "btn btn-circle btn-ghost", icon: "w-5" }}
-        />
-
-        {/* <Link to="/agent" className="btn btn-ghost rounded-full pl-1">
-                    <div className="avatar size-8 avatar-placeholder">
-                        <div className="bg-primary text-gray-900 w-16 rounded-full">
-                            <span className="text-lg">Jo</span>
-                        </div>
-                    </div>
-
-                    <p className="max-w-20 truncate">John 117</p>
-                </Link> */}
+      <div className="navbar-end pr-2">
+        <AvatarMenu />
       </div>
     </nav>
   </header>

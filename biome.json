@@ -14,7 +14,11 @@
     "rules": {
       "recommended": true,
       "a11y": "off",
+      "complexity": {
+        "useLiteralKeys": "off"
+      },
       "suspicious": {
+        "noConfusingVoidType": "off",
         "noArrayIndexKey": "off",
         "noExplicitAny": "off"
       },

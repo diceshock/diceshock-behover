@@ -1,9 +1,13 @@
 import { ArrowUpIcon } from "@phosphor-icons/react/dist/ssr";
-import { Link } from "@tanstack/react-router";
+import { Link, useParams } from "@tanstack/react-router";
 import Logo from "@/client/assets/svg/black-simplify-with-text-logo.svg?react";
 import Gradient from "./Gradient";
 
 const Footer = () => {
+  // 从路由参数中获取活动 ID（如果存在）
+  const params = useParams({ strict: false });
+  const activeId = params?.id;
+
   return (
     <>
       <Gradient
@@ -40,9 +44,19 @@ const Footer = () => {
           <Link to="/actives" className="link link-hover">
             活动
           </Link>
-          <a href="/dash" className="link link-hover">
-            后台
-          </a>
+          {activeId ? (
+            <Link
+              to="/dash/active/$id"
+              params={{ id: activeId }}
+              className="link link-hover"
+            >
+              后台
+            </Link>
+          ) : (
+            <a href="/dash" className="link link-hover">
+              后台
+            </a>
+          )}
         </nav>
         <nav>
           <h6 className="footer-title">关于我们</h6>

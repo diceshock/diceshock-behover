@@ -35,8 +35,8 @@ export const filterCfgA = atom<FilterCfg>({
 const Filter: React.FC<{ className?: string }> = ({ className }) => {
   const [filter, setFilter] = useAtom(filterCfgA);
   const setFilterIm = useCallback(
-    (recipe: Recipe<FilterCfg>) => setFilter(produce(recipe)),
-    [setFilter],
+    (recipe: Recipe<FilterCfg>) => setFilter(produce(filter, recipe)),
+    [filter, setFilter],
   );
 
   const dialogRef = useRef<HTMLDialogElement>(null);

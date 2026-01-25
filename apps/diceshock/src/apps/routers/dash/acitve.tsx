@@ -1,34 +1,22 @@
 import {
-  ArrowBendUpRightIcon,
-  MagicWandIcon,
   PencilLineIcon,
   PlusIcon,
-  PushPinIcon,
   ToggleRightIcon,
   TrashIcon,
-  UsersIcon,
   XIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { ActiveTags } from "@/client/components/diceshock/ActiveTags";
+import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import dayjs from "dayjs";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import { trpcClientDash } from "@/shared/utils/trpc";
 
-type ActiveList = Awaited<
-  ReturnType<typeof trpcClientDash.active.get.query>
->;
+type ActiveList = Awaited<ReturnType<typeof trpcClientDash.active.get.query>>;
 type ActiveItem = ActiveList[number];
 
-type TagList = Awaited<
-  ReturnType<typeof trpcClientDash.activeTags.get.query>
->;
+type TagList = Awaited<ReturnType<typeof trpcClientDash.activeTags.get.query>>;
 type TagItem = TagList[number];
 
 type StatusFilter = "all" | "published" | "trash";
@@ -45,14 +33,6 @@ const tagTitle = (tag?: TagItem["title"] | null) => ({
   tx: tag?.tx ?? "未命名",
 });
 
-const isSelectableTag = (
-  value: unknown
-): value is { id: string; title: TagItem["title"] } => {
-  if (!value || typeof value !== "object") return false;
-  const record = value as Record<string, unknown>;
-  return typeof record.id === "string";
-};
-
 export const Route = createFileRoute("/dash/acitve")({
   component: RouteComponent,
 });
@@ -65,6 +45,16 @@ function RouteComponent() {
   const [page, setPage] = useState(1);
   const [actives, setActives] = useState<ActiveItem[]>([]);
   const [tags, setTags] = useState<TagItem[]>([]);
+  const [allTags, setAllTags] = useState<
+    Array<{
+      id: string;
+      title: { emoji: string; tx: string } | null;
+      keywords: string | null;
+      is_pinned: boolean | null;
+      is_game_enabled: boolean | null;
+    }>
+  >([]);
+  const [tagSearchQuery, setTagSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
@@ -92,7 +82,6 @@ function RouteComponent() {
     name: "",
     description: "",
     tags: [] as string[],
-    newTags: [] as Array<{ emoji: string; tx: string }>,
   });
   const [createPending, setCreatePending] = useState(false);
 
@@ -107,7 +96,6 @@ function RouteComponent() {
   const [editPending, setEditPending] = useState(false);
 
   const [pendingDelete, setPendingDelete] = useState<ActiveItem | null>(null);
-  const [tagDraft, setTagDraft] = useState({ emoji: "", tx: "" });
 
   const statusParams = useMemo(() => {
     if (status === "trash") return { isDeleted: true, isPublished: undefined };
@@ -117,13 +105,26 @@ function RouteComponent() {
 
   const refreshTags = useCallback(async () => {
     try {
+      // 获取已发布活动使用的标签（用于筛选）
       const data = await trpcClientDash.activeTags.get.query();
       setTags(data);
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "获取标签失败");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [msg]);
+
+  const refreshAllTags = useCallback(async () => {
+    try {
+      // 获取所有标签（活动版本：支持置顶标签和非约局标签）
+      const data = await trpcClientDash.activeTags.getGameTags.query({
+        search: tagSearchQuery || undefined,
+        // 活动可以使用所有标签，包括置顶标签和非约局标签
+      });
+      setAllTags(data);
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "获取所有标签失败");
+    }
+  }, [tagSearchQuery, msg]);
 
   const refreshActives = useCallback(async () => {
     setLoading(true);
@@ -164,27 +165,23 @@ function RouteComponent() {
 
       setActives(data);
       setSelectedRows((prev) =>
-        prev.filter((id) => data.some((active) => active.id === id))
+        prev.filter((id) => data.some((active) => active.id === id)),
       );
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "获取活动失败");
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, msg]);
 
   useEffect(() => {
     refreshTags();
-  }, [refreshTags]);
-
-  const selectedTagsKey = useMemo(
-    () => selectedTags.sort().join(","),
-    [selectedTags]
-  );
+    refreshAllTags();
+  }, [refreshTags, refreshAllTags]);
 
   useEffect(() => {
     refreshActives();
-  }, [refreshActives, status, searchWords, selectedTagsKey]);
+  }, [refreshActives]);
 
   // 监听删除对话框的关闭事件，确保状态同步
   useEffect(() => {
@@ -209,12 +206,14 @@ function RouteComponent() {
   const toggleFilterTag = (tagId: string) => {
     setPage(1);
     setSelectedTags((prev) =>
-      prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
+      prev.includes(tagId)
+        ? prev.filter((id) => id !== tagId)
+        : [...prev, tagId],
     );
   };
 
   const openCreateDialog = () => {
-    setCreateForm({ name: "", description: "", tags: [], newTags: [] });
+    setCreateForm({ name: "", description: "", tags: [] });
     createDialogRef.current?.showModal();
   };
 
@@ -227,39 +226,16 @@ function RouteComponent() {
 
     setCreatePending(true);
     try {
-      // 先创建活动
-      const newActive = await trpcClientDash.active.mutation.mutate({
+      // 创建活动
+      await trpcClientDash.active.mutation.mutate({
         name: createForm.name.trim(),
         description: createForm.description.trim() || undefined,
         tags: createForm.tags,
       });
 
-      // 如果有新标签，创建并关联
-      if (createForm.newTags.length > 0 && Array.isArray(newActive) && newActive[0]?.id) {
-        const activeId = newActive[0].id;
-        const tagResults = await trpcClientDash.activeTags.insert.mutate(
-          createForm.newTags.map((tag) => ({
-            activeId,
-            title: { emoji: tag.emoji.trim(), tx: tag.tx.trim() },
-          }))
-        );
-
-        const createdTagIds = tagResults
-          .filter(isSelectableTag)
-          .map((tag) => tag.id);
-
-        if (createdTagIds.length > 0) {
-          // 更新活动，添加新创建的标签
-          await trpcClientDash.active.mutation.mutate({
-            id: activeId,
-            tags: [...createForm.tags, ...createdTagIds],
-          });
-        }
-      }
-
       msg.success("活动已创建");
       createDialogRef.current?.close();
-      setCreateForm({ name: "", description: "", tags: [], newTags: [] });
+      setCreateForm({ name: "", description: "", tags: [] });
       setPage(1);
       await refreshActives();
       await refreshTags();
@@ -279,7 +255,6 @@ function RouteComponent() {
       is_published: Boolean(active.is_published),
       is_deleted: Boolean(active.is_deleted),
     });
-    setTagDraft({ emoji: "", tx: "" });
     editDialogRef.current?.showModal();
   };
 
@@ -308,47 +283,10 @@ function RouteComponent() {
     }
   };
 
-  const handleCreateTag = async () => {
-    if (!editForm) return;
-    if (!tagDraft.emoji.trim() || !tagDraft.tx.trim()) {
-      msg.warning("请先填写 Emoji 与标签名称");
-      return;
-    }
-
-    try {
-      const result = await trpcClientDash.activeTags.insert.mutate([
-        {
-          activeId: editForm.id,
-          title: { emoji: tagDraft.emoji.trim(), tx: tagDraft.tx.trim() },
-        },
-      ]);
-
-      const created = result.find(isSelectableTag);
-      if (!created) {
-        msg.error("标签创建失败");
-        return;
-      }
-
-      setEditForm((prev) =>
-        prev
-          ? {
-            ...prev,
-            tags: [...new Set([...prev.tags, created.id])],
-          }
-          : prev
-      );
-      setTagDraft({ emoji: "", tx: "" });
-      await refreshActives();
-      await refreshTags();
-      msg.success("标签已添加");
-    } catch (err) {
-      msg.error(err instanceof Error ? err.message : "创建标签失败");
-    }
-  };
 
   const patchActive = async (
     id: string,
-    patch: { is_deleted?: boolean; is_published?: boolean }
+    patch: { is_deleted?: boolean; is_published?: boolean },
   ) => {
     try {
       await trpcClientDash.active.mutation.mutate({ id, ...patch });
@@ -371,7 +309,7 @@ function RouteComponent() {
   const confirmDelete = async () => {
     if (!pendingDelete) return;
     await patchActive(pendingDelete.id, {
-      is_deleted: !Boolean(pendingDelete.is_deleted),
+      is_deleted: !pendingDelete.is_deleted,
     });
     deleteDialogRef.current?.close();
     setPendingDelete(null);
@@ -406,30 +344,41 @@ function RouteComponent() {
 
   const toggleRow = (id: string) => {
     setSelectedRows((prev) =>
-      prev.includes(id) ? prev.filter((row) => row !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((row) => row !== id) : [...prev, id],
     );
   };
 
-  const availableTags = useMemo(
-    () => {
-      const sorted = [...tags].sort((a, b) => {
-        const aSelected = selectedTags.includes(a.id);
-        const bSelected = selectedTags.includes(b.id);
+  const availableTags = useMemo(() => {
+    const sorted = [...tags].sort((a, b) => {
+      const aSelected = selectedTags.includes(a.id);
+      const bSelected = selectedTags.includes(b.id);
 
-        // 选中的标签排在前面
-        if (aSelected && !bSelected) return -1;
-        if (!aSelected && bSelected) return 1;
+      // 选中的标签排在前面
+      if (aSelected && !bSelected) return -1;
+      if (!aSelected && bSelected) return 1;
 
-        // 都选中或都没选中时，按名称排序
-        return (a.title?.tx ?? "").localeCompare(b.title?.tx ?? "");
-      });
-      return sorted;
-    },
-    [tags, selectedTags]
-  );
+      // 都选中或都没选中时，按名称排序
+      return (a.title?.tx ?? "").localeCompare(b.title?.tx ?? "");
+    });
+    return sorted;
+  }, [tags, selectedTags]);
+
+  const availableAllTags = useMemo(() => {
+    const sorted = [...allTags].sort((a, b) => {
+      // 置顶标签排在前面
+      if (a.is_pinned && !b.is_pinned) return -1;
+      if (!a.is_pinned && b.is_pinned) return 1;
+      // 然后按名称排序
+      return (a.title?.tx ?? "").localeCompare(b.title?.tx ?? "");
+    });
+    return sorted;
+  }, [allTags]);
 
   return (
     <main className="size-full">
+      <div className="px-4 pt-4">
+        <DashBackButton />
+      </div>
       <form className="w-full flex flex-col items-center gap-6 px-4 pt-4 bg-base-100 z-10">
         <div className="flex flex-col sm:flex-row gap-4 w-full">
           <input
@@ -460,12 +409,14 @@ function RouteComponent() {
                   <button
                     type="button"
                     onClick={() => toggleFilterTag(tag.id)}
-                    className={`btn btn-ghost ${selected ? "btn-primary" : "btn-outline"
-                      } p-0 size-fit`}
+                    className={`btn btn-ghost ${
+                      selected ? "btn-primary" : "btn-outline"
+                    } p-0 size-fit`}
                   >
                     <div
-                      className={`badge shrink-0 text-nowrap badge-lg gap-1 ${selected ? "badge-neutral" : "badge-warning"
-                        }`}
+                      className={`badge shrink-0 text-nowrap badge-lg gap-1 ${
+                        selected ? "badge-neutral" : "badge-warning"
+                      }`}
                     >
                       <span>{title.emoji}</span>
                       {title.tx}
@@ -483,8 +434,9 @@ function RouteComponent() {
             <button
               key={tab.value}
               type="button"
-              className={`tab ${status === tab.value ? "tab-active" : ""} ${tab.value === "trash" ? "text-error" : ""
-                }`}
+              className={`tab ${status === tab.value ? "tab-active" : ""} ${
+                tab.value === "trash" ? "text-error" : ""
+              }`}
               onClick={() => {
                 setStatus(tab.value);
                 setPage(1);
@@ -528,137 +480,134 @@ function RouteComponent() {
           </thead>
 
           <tbody>
-            {loading
-              ? (
-                <tr>
-                  <td colSpan={8} className="py-12 text-center">
-                    <span className="loading loading-dots loading-md"></span>
-                  </td>
-                </tr>
-              )
-              : actives.length === 0
-                ? (
-                  <tr>
-                    <td colSpan={8} className="py-12 text-center text-base-content/60">
-                      暂无活动，尝试调整筛选条件。
+            {loading ? (
+              <tr>
+                <td colSpan={8} className="py-12 text-center">
+                  <span className="loading loading-dots loading-md"></span>
+                </td>
+              </tr>
+            ) : actives.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={8}
+                  className="py-12 text-center text-base-content/60"
+                >
+                  暂无活动，尝试调整筛选条件。
+                </td>
+              </tr>
+            ) : (
+              actives.map((active) => {
+                const tagsForRow = active.tags ?? [];
+                return (
+                  <tr key={active.id}>
+                    <th className="z-10">
+                      <label className="size-full hover:cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="checkbox"
+                          checked={selectedRows.includes(active.id)}
+                          onChange={() => toggleRow(active.id)}
+                        />
+                      </label>
+                    </th>
+                    <td className="p-0">
+                      <Link
+                        to="/dash/active/$id"
+                        params={{ id: active.id }}
+                        className="btn btn-ghost w-40 justify-start m-0 truncate line-clamp-1"
+                      >
+                        {active.name || "未命名活动"}
+                      </Link>
+                    </td>
+                    <td>
+                      <label
+                        className={`size-full flex items-center gap-2 text-nowrap ${active.is_deleted ? "opacity-50 cursor-not-allowed" : "hover:cursor-pointer"}`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="toggle"
+                          checked={Boolean(active.is_published)}
+                          disabled={Boolean(active.is_deleted)}
+                          onChange={() => {
+                            if (active.is_deleted) return;
+                            const nextPublished = !active.is_published;
+                            void patchActive(active.id, {
+                              is_published: nextPublished,
+                            });
+                          }}
+                        />
+                        {active.is_published ? "已发布" : "未发布"}
+                      </label>
+                    </td>
+                    <td className="p-0">
+                      <Link
+                        to="/dash/active/$id"
+                        params={{ id: active.id }}
+                        className="btn btn-ghost justify-start w-full"
+                      >
+                        <p className="w-full max-w-80 m-0 truncate line-clamp-1">
+                          {active.description || "暂无简介"}
+                        </p>
+                      </Link>
+                    </td>
+                    <td>
+                      {tagsForRow.length === 0 ? (
+                        <span className="text-xs text-base-content/50">
+                          暂无
+                        </span>
+                      ) : (
+                        <ActiveTags tags={tagsForRow} size="sm" />
+                      )}
+                    </td>
+                    <td>
+                      {active.publish_at
+                        ? dayjs(active.publish_at).format("YYYY/MM/DD HH:mm")
+                        : "—"}
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-4 py-2 h-full">
+                        <button
+                          type="button"
+                          className="btn btn-xs btn-ghost btn-primary"
+                          onClick={() => openEditDialog(active)}
+                        >
+                          编辑
+                          <PencilLineIcon />
+                        </button>
+
+                        <button
+                          type="button"
+                          className={`btn btn-xs btn-ghost ${
+                            active.is_deleted ? "btn-success" : "btn-error"
+                          }`}
+                          onClick={() => openDeleteDialog(active)}
+                        >
+                          {active.is_deleted ? "恢复/删除" : "删除"}
+                          <TrashIcon />
+                        </button>
+                      </div>
                     </td>
                   </tr>
-                )
-                : actives.map((active) => {
-                  const tagsForRow = active.tags ?? [];
-                  return (
-                    <tr key={active.id}>
-                      <th className="z-10">
-                        <label className="size-full hover:cursor-pointer">
-                          <input
-                            type="checkbox"
-                            className="checkbox"
-                            checked={selectedRows.includes(active.id)}
-                            onChange={() => toggleRow(active.id)}
-                          />
-                        </label>
-                      </th>
-                      <td className="p-0">
-                        <Link
-                          to="/dash/active/$id"
-                          params={{ id: active.id }}
-                          className="btn btn-ghost w-40 justify-start m-0 truncate line-clamp-1"
-                        >
-                          {active.name || "未命名活动"}
-                        </Link>
-                      </td>
-                      <td>
-                        <label className={`size-full flex items-center gap-2 text-nowrap ${active.is_deleted ? "opacity-50 cursor-not-allowed" : "hover:cursor-pointer"}`}>
-                          <input
-                            type="checkbox"
-                            className="toggle"
-                            checked={Boolean(active.is_published)}
-                            disabled={Boolean(active.is_deleted)}
-                            onChange={() => {
-                              if (active.is_deleted) return;
-                              const nextPublished = !Boolean(
-                                active.is_published
-                              );
-                              void patchActive(active.id, {
-                                is_published: nextPublished,
-                              });
-                            }}
-                          />
-                          {active.is_published ? "已发布" : "未发布"}
-                        </label>
-                      </td>
-                      <td className="p-0">
-                        <Link
-                          to="/dash/active/$id"
-                          params={{ id: active.id }}
-                          className="btn btn-ghost justify-start w-full"
-                        >
-                          <p className="w-full max-w-80 m-0 truncate line-clamp-1">
-                            {active.description || "暂无简介"}
-                          </p>
-                        </Link>
-                      </td>
-                      <td>
-                        <div className="flex flex-wrap gap-2">
-                          {tagsForRow.length === 0 && (
-                            <span className="text-xs text-base-content/50">
-                              暂无
-                            </span>
-                          )}
-                          {tagsForRow.map((tag) => {
-                            const title = tagTitle(tag.tag?.title);
-                            return (
-                              <div
-                                key={tag.tag_id}
-                                className="badge shrink-0 text-nowrap badge-sm gap-1 badge-neutral"
-                              >
-                                <span>{title.emoji}</span>
-                                {title.tx}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </td>
-                      <td>
-                        {active.publish_at
-                          ? dayjs(active.publish_at).format("YYYY/MM/DD HH:mm")
-                          : "—"}
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-4 py-2 h-full">
-                          <button
-                            type="button"
-                            className="btn btn-xs btn-ghost btn-primary"
-                            onClick={() => openEditDialog(active)}
-                          >
-                            编辑
-                            <PencilLineIcon />
-                          </button>
-
-
-                          <button
-                            type="button"
-                            className={`btn btn-xs btn-ghost ${active.is_deleted ? "btn-success" : "btn-error"
-                              }`}
-                            onClick={() => openDeleteDialog(active)}
-                          >
-                            {active.is_deleted ? "恢复/删除" : "删除"}
-                            <TrashIcon />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
 
       <dialog ref={createDialogRef} className="modal">
-        <form method="dialog" className="modal-box" onSubmit={handleCreateActive}>
+        <form
+          method="dialog"
+          className="modal-box"
+          onSubmit={handleCreateActive}
+        >
           <div className="modal-action flex items-center justify-between mb-4">
             <h3 className="font-bold text-lg">创建活动</h3>
-            <button type="button" className="btn btn-ghost btn-square" onClick={() => createDialogRef.current?.close()}>
+            <button
+              type="button"
+              className="btn btn-ghost btn-square"
+              onClick={() => createDialogRef.current?.close()}
+            >
               <XIcon />
             </button>
           </div>
@@ -686,15 +635,25 @@ function RouteComponent() {
             />
             <div className="flex flex-col gap-2">
               <p className="text-sm text-base-content/70">标签</p>
+              <div className="alert alert-info">
+                <span>
+                  活动可以使用所有标签（包括置顶标签和非约局标签）
+                  {createForm.tags.length > 0 && (
+                    <span className="ml-2">
+                      ({createForm.tags.length} 个已选择)
+                    </span>
+                  )}
+                </span>
+              </div>
               <div className="flex flex-wrap gap-2 mb-2">
                 {createForm.tags.map((tagId) => {
-                  const tag = availableTags.find((t) => t.id === tagId);
+                  const tag = availableAllTags.find((t) => t.id === tagId);
                   if (!tag) return null;
                   const title = tagTitle(tag.title);
                   return (
                     <div
                       key={tagId}
-                      className="badge badge-lg gap-2 badge-neutral"
+                      className="badge badge-lg gap-2 badge-primary"
                     >
                       <span>{title.emoji}</span>
                       {title.tx}
@@ -713,48 +672,48 @@ function RouteComponent() {
                     </div>
                   );
                 })}
-                {createForm.newTags.map((newTag, idx) => (
-                  <div
-                    key={`new-${idx}`}
-                    className="badge badge-lg gap-2 badge-primary"
-                  >
-                    <span>{newTag.emoji || "🏷️"}</span>
-                    {newTag.tx}
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-xs p-0"
-                      onClick={() =>
-                        setCreateForm((prev) => ({
-                          ...prev,
-                          newTags: prev.newTags.filter((_, i) => i !== idx),
-                        }))
-                      }
-                    >
-                      <XIcon className="size-3" />
-                    </button>
-                  </div>
-                ))}
               </div>
-              <TagAutocompleteInput
-                tags={availableTags}
-                selectedTagIds={createForm.tags}
-                onSelectTag={(tagId) => {
-                  setCreateForm((prev) => ({
-                    ...prev,
-                    tags: prev.tags.includes(tagId)
-                      ? prev.tags
-                      : [...prev.tags, tagId],
-                  }));
-                }}
-                onCreateTag={async (emoji, tx) => {
-                  // 在创建活动时，先存储新标签信息，在创建活动时一起处理
-                  setCreateForm((prev) => ({
-                    ...prev,
-                    newTags: [...prev.newTags, { emoji, tx }],
-                  }));
-                  msg.success("标签将在创建活动时一起创建");
+              <input
+                type="text"
+                className="input input-bordered w-full mb-2"
+                placeholder="搜索标签（留空则显示所有标签）..."
+                value={tagSearchQuery}
+                onChange={(e) => {
+                  setTagSearchQuery(e.target.value);
                 }}
               />
+              <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
+                {availableAllTags
+                  .filter((tag) => !createForm.tags.includes(tag.id))
+                  .map((tag) => {
+                    const title = tagTitle(tag.title);
+                    return (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        onClick={() => {
+                          setCreateForm((prev) => ({
+                            ...prev,
+                            tags: [...prev.tags, tag.id],
+                          }));
+                        }}
+                        className="badge badge-lg gap-2 badge-outline hover:badge-primary cursor-pointer"
+                      >
+                        <span>{title.emoji}</span>
+                        {title.tx}
+                      </button>
+                    );
+                  })}
+              </div>
+              {availableAllTags.length === 0 && (
+                <div className="alert alert-warning">
+                  <span>
+                    {tagSearchQuery
+                      ? "未找到匹配的标签"
+                      : "暂无标签，请先在标签管理页面创建标签"}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -771,10 +730,18 @@ function RouteComponent() {
       </dialog>
 
       <dialog ref={editDialogRef} className="modal">
-        <form method="dialog" className="modal-box max-w-3xl" onSubmit={handleEditSubmit}>
+        <form
+          method="dialog"
+          className="modal-box max-w-3xl"
+          onSubmit={handleEditSubmit}
+        >
           <div className="modal-action flex items-center justify-between mb-4">
             <h3 className="font-bold text-lg">编辑活动</h3>
-            <button type="button" className="btn btn-ghost btn-square" onClick={() => editDialogRef.current?.close()}>
+            <button
+              type="button"
+              className="btn btn-ghost btn-square"
+              onClick={() => editDialogRef.current?.close()}
+            >
               <XIcon />
             </button>
           </div>
@@ -787,7 +754,7 @@ function RouteComponent() {
                 value={editForm.name}
                 onChange={(evt) =>
                   setEditForm((prev) =>
-                    prev ? { ...prev, name: evt.target.value } : prev
+                    prev ? { ...prev, name: evt.target.value } : prev,
                   )
                 }
               />
@@ -797,74 +764,106 @@ function RouteComponent() {
                 value={editForm.description}
                 onChange={(evt) =>
                   setEditForm((prev) =>
-                    prev ? { ...prev, description: evt.target.value } : prev
+                    prev ? { ...prev, description: evt.target.value } : prev,
                   )
                 }
               />
 
               <div className="flex flex-col gap-2">
                 <p className="text-sm text-base-content/70">标签</p>
-                <div className="flex flex-wrap gap-2">
-                  {availableTags.map((tag) => {
+                <div className="alert alert-info">
+                  <span>
+                    活动可以使用所有标签（包括置顶标签和非约局标签）
+                    {editForm.tags.length > 0 && (
+                      <span className="ml-2">
+                        ({editForm.tags.length} 个已选择)
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {editForm.tags.map((tagId) => {
+                    const tag = availableAllTags.find((t) => t.id === tagId);
+                    if (!tag) return null;
                     const title = tagTitle(tag.title);
-                    const checked = editForm.tags.includes(tag.id);
                     return (
-                      <label
-                        key={tag.id}
-                        className="badge badge-lg gap-2 cursor-pointer"
+                      <div
+                        key={tagId}
+                        className="badge badge-lg gap-2 badge-primary"
                       >
-                        <input
-                          type="checkbox"
-                          className="checkbox checkbox-sm"
-                          checked={checked}
-                          onChange={() =>
+                        <span>{title.emoji}</span>
+                        {title.tx}
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-xs p-0"
+                          onClick={() =>
                             setEditForm((prev) =>
                               prev
                                 ? {
-                                  ...prev,
-                                  tags: checked
-                                    ? prev.tags.filter((id) => id !== tag.id)
-                                    : [...prev.tags, tag.id],
-                                }
-                                : prev
+                                    ...prev,
+                                    tags: prev.tags.filter((id) => id !== tagId),
+                                  }
+                                : prev,
                             )
                           }
-                        />
-                        <span>{title.emoji}</span>
-                        {title.tx}
-                      </label>
+                        >
+                          <XIcon className="size-3" />
+                        </button>
+                      </div>
                     );
                   })}
                 </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <EmojiPicker
-                  value={tagDraft.emoji}
-                  onChange={(emoji) =>
-                    setTagDraft((prev) => ({ ...prev, emoji }))
-                  }
-                />
                 <input
-                  className="input input-bordered input-sm flex-1 min-w-40"
-                  placeholder="标签名称"
-                  value={tagDraft.tx}
-                  onChange={(evt) =>
-                    setTagDraft((prev) => ({ ...prev, tx: evt.target.value }))
-                  }
+                  type="text"
+                  className="input input-bordered w-full mb-2"
+                  placeholder="搜索标签（留空则显示所有标签）..."
+                  value={tagSearchQuery}
+                  onChange={(e) => {
+                    setTagSearchQuery(e.target.value);
+                  }}
                 />
-                <button
-                  type="button"
-                  className="btn btn-sm btn-secondary"
-                  onClick={handleCreateTag}
-                >
-                  新建标签
-                  <PlusIcon className="size-4" />
-                </button>
+                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
+                  {availableAllTags
+                    .filter((tag) => !editForm.tags.includes(tag.id))
+                    .map((tag) => {
+                      const title = tagTitle(tag.title);
+                      return (
+                        <button
+                          key={tag.id}
+                          type="button"
+                          onClick={() =>
+                            setEditForm((prev) =>
+                              prev
+                                ? {
+                                    ...prev,
+                                    tags: [...prev.tags, tag.id],
+                                  }
+                                : prev,
+                            )
+                          }
+                          className="badge badge-lg gap-2 badge-outline hover:badge-primary cursor-pointer"
+                        >
+                          <span>{title.emoji}</span>
+                          {title.tx}
+                        </button>
+                      );
+                    })}
+                </div>
+                {availableAllTags.length === 0 && (
+                  <div className="alert alert-warning">
+                    <span>
+                      {tagSearchQuery
+                        ? "未找到匹配的标签"
+                        : "暂无标签，请先在标签管理页面创建标签"}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-4">
-                <label className={`label gap-2 ${editForm.is_deleted ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}>
+                <label
+                  className={`label gap-2 ${editForm.is_deleted ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                >
                   <span className="label-text">发布状态</span>
                   <input
                     type="checkbox"
@@ -874,7 +873,9 @@ function RouteComponent() {
                     onChange={(evt) => {
                       if (editForm.is_deleted) return;
                       setEditForm((prev) =>
-                        prev ? { ...prev, is_published: evt.target.checked } : prev
+                        prev
+                          ? { ...prev, is_published: evt.target.checked }
+                          : prev,
                       );
                     }}
                   />
@@ -888,7 +889,9 @@ function RouteComponent() {
                     checked={editForm.is_deleted}
                     onChange={(evt) =>
                       setEditForm((prev) =>
-                        prev ? { ...prev, is_deleted: evt.target.checked } : prev
+                        prev
+                          ? { ...prev, is_deleted: evt.target.checked }
+                          : prev,
                       )
                     }
                   />
@@ -898,7 +901,11 @@ function RouteComponent() {
           )}
 
           <div className="modal-action mt-6">
-            <button type="submit" className="btn btn-primary" disabled={editPending}>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={editPending}
+            >
               {editPending ? "保存中..." : "保存"}
             </button>
           </div>
@@ -975,234 +982,5 @@ function RouteComponent() {
         )}
       </dialog>
     </main>
-  );
-}
-
-type TagAutocompleteInputProps = {
-  tags: TagItem[];
-  selectedTagIds: string[];
-  onSelectTag: (tagId: string) => void;
-  onCreateTag: (emoji: string, tx: string) => Promise<void>;
-};
-
-function TagAutocompleteInput({
-  tags,
-  selectedTagIds,
-  onSelectTag,
-  onCreateTag,
-}: TagAutocompleteInputProps) {
-  const msg = useMsg();
-  const [inputValue, setInputValue] = useState("");
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [emoji, setEmoji] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-  const suggestionsRef = useRef<HTMLDivElement>(null);
-
-  const availableTags = useMemo(
-    () => tags.filter((tag) => !selectedTagIds.includes(tag.id)),
-    [tags, selectedTagIds]
-  );
-
-  const suggestions = useMemo(() => {
-    if (!inputValue.trim()) return [];
-    const lowerInput = inputValue.toLowerCase();
-    return availableTags
-      .filter((tag) => {
-        const title = tagTitle(tag.title);
-        return (
-          title.tx.toLowerCase().includes(lowerInput) ||
-          title.emoji.includes(lowerInput)
-        );
-      })
-      .slice(0, 5);
-  }, [inputValue, availableTags]);
-
-  const handleInputChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
-    const value = evt.target.value;
-    setInputValue(value);
-    setShowSuggestions(value.trim().length > 0);
-  };
-
-  const handleSelectTag = (tagId: string) => {
-    onSelectTag(tagId);
-    setInputValue("");
-    setEmoji("");
-    setShowSuggestions(false);
-    inputRef.current?.blur();
-  };
-
-  const handleCreateNewTag = async () => {
-    const parts = inputValue.trim().split(/\s+/);
-    let newEmoji = emoji.trim();
-    let newTx = inputValue.trim();
-
-    if (parts.length > 0 && /^[\p{Emoji}]$/u.test(parts[0])) {
-      newEmoji = parts[0];
-      newTx = parts.slice(1).join(" ");
-    } else if (!newEmoji) {
-      newEmoji = "🏷️";
-    }
-
-    if (!newTx) {
-      msg.warning("请输入标签名称");
-      return;
-    }
-
-    await onCreateTag(newEmoji, newTx);
-    setInputValue("");
-    setEmoji("");
-    setShowSuggestions(false);
-    inputRef.current?.blur();
-  };
-
-  const handleKeyDown = (evt: React.KeyboardEvent<HTMLInputElement>) => {
-    if (evt.key === "Enter" && !evt.shiftKey) {
-      evt.preventDefault();
-      if (suggestions.length > 0) {
-        handleSelectTag(suggestions[0].id);
-      } else if (inputValue.trim()) {
-        void handleCreateNewTag();
-      }
-    } else if (evt.key === "Escape") {
-      setShowSuggestions(false);
-      inputRef.current?.blur();
-    }
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (evt: MouseEvent) => {
-      if (
-        suggestionsRef.current &&
-        !suggestionsRef.current.contains(evt.target as Node) &&
-        inputRef.current &&
-        !inputRef.current.contains(evt.target as Node)
-      ) {
-        setShowSuggestions(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  return (
-    <div className="relative">
-      <div className="flex gap-2">
-        <input
-          ref={inputRef}
-          type="text"
-          className="input input-bordered input-sm flex-1"
-          placeholder="输入标签名称或选择已有标签..."
-          value={inputValue}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          onFocus={() => setShowSuggestions(inputValue.trim().length > 0)}
-        />
-        <EmojiPicker value={emoji} onChange={setEmoji} />
-        {inputValue.trim() && (
-          <button
-            type="button"
-            className="btn btn-sm btn-primary"
-            onClick={handleCreateNewTag}
-          >
-            <PlusIcon className="size-4" />
-            新建
-          </button>
-        )}
-      </div>
-
-      {showSuggestions && suggestions.length > 0 && (
-        <div
-          ref={suggestionsRef}
-          className="absolute z-50 mt-1 w-full bg-base-100 border border-base-300 rounded-lg shadow-lg max-h-60 overflow-y-auto"
-        >
-          {suggestions.map((tag) => {
-            const title = tagTitle(tag.title);
-            return (
-              <button
-                key={tag.id}
-                type="button"
-                className="w-full text-left px-4 py-2 hover:bg-base-200 flex items-center gap-2"
-                onClick={() => handleSelectTag(tag.id)}
-              >
-                <span>{title.emoji}</span>
-                <span>{title.tx}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-type EmojiPickerProps = {
-  value: string;
-  onChange: (value: string) => void;
-};
-
-function EmojiPicker({ value, onChange }: EmojiPickerProps) {
-  const [inputValue, setInputValue] = useState(value);
-  const selectRef = useRef<HTMLSelectElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const commonEmojis = [
-    "🏷️", "📝", "📌", "⭐", "🔥", "💡", "🎯", "✅", "❌", "⚠️",
-    "📅", "📊", "📈", "📉", "🎉", "🎊", "🎁", "🎈", "🎀", "🎪",
-    "🏠", "🏢", "🏫", "🏥", "🏪", "🏨", "🏰", "⛪", "🕌", "🕍",
-    "🚗", "🚕", "🚙", "🚌", "🚎", "🏎️", "🚓", "🚑", "🚒", "🚐",
-    "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃",
-    "😉", "😊", "😇", "🥰", "😍", "🤩", "😘", "😗", "😚", "😙",
-    "🥳", "🤗", "🤔", "🤨", "😐", "😑", "😶", "🙄", "😏", "😣",
-  ];
-
-  useEffect(() => {
-    setInputValue(value);
-  }, [value]);
-
-  const handleInputChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = evt.target.value;
-    setInputValue(newValue);
-    onChange(newValue);
-  };
-
-  const handleSelectChange = (evt: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedValue = evt.target.value;
-    if (selectedValue && selectedValue !== "") {
-      onChange(selectedValue);
-      setInputValue(selectedValue);
-      // 重置 select 为默认值
-      if (selectRef.current) {
-        selectRef.current.value = "";
-      }
-    }
-  };
-
-  return (
-    <div className="relative flex gap-1">
-      <input
-        ref={inputRef}
-        type="text"
-        className="input input-bordered input-sm w-20"
-        placeholder="Emoji"
-        value={inputValue}
-        onChange={handleInputChange}
-      />
-      <select
-        ref={selectRef}
-        defaultValue=""
-        className="select select-bordered select-sm w-20"
-        onChange={handleSelectChange}
-      >
-        <option value="" disabled>
-          😀
-        </option>
-        {commonEmojis.map((emoji, idx) => (
-          <option key={idx} value={emoji}>
-            {emoji}
-          </option>
-        ))}
-      </select>
-    </div>
   );
 }

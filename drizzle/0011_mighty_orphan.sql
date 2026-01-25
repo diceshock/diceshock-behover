@@ -1,0 +1,1 @@
+ALTER TABLE `actives_table` ADD `event_date` integer;

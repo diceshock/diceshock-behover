@@ -8,29 +8,29 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { createFileRoute } from '@tanstack/react-router'
-
 import { Route as rootRouteImport } from './routers/__root'
+import { Route as DashRouteImport } from './routers/dash'
 import { Route as WithHomeLoRouteImport } from './routers/_with-home-lo'
 import { Route as DashIndexRouteImport } from './routers/dash/index'
 import { Route as WithHomeLoIndexRouteImport } from './routers/_with-home-lo/index'
 import { Route as DashUsersRouteImport } from './routers/dash/users'
-import { Route as DashInventoryRouteImport } from './routers/dash/inventory'
+import { Route as DashGameTagsRouteImport } from './routers/dash/game-tags'
 import { Route as DashAcitveRouteImport } from './routers/dash/acitve'
+import { Route as WithHomeLoMeRouteImport } from './routers/_with-home-lo/me'
 import { Route as WithHomeLoInventoryRouteImport } from './routers/_with-home-lo/inventory'
 import { Route as WithHomeLoDiceshockAgentsRouteImport } from './routers/_with-home-lo/diceshock-agents'
 import { Route as WithHomeLoContactUsRouteImport } from './routers/_with-home-lo/contact-us'
 import { Route as WithHomeLoActivesRouteImport } from './routers/_with-home-lo/actives'
 import { Route as DashActiveIdRouteImport } from './routers/dash/active/$id'
 import { Route as WithHomeLoActiveIdRouteImport } from './routers/_with-home-lo/active/$id'
+import { Route as DashActivePreviewIdRouteImport } from './routers/dash/active/preview.$id'
+import { Route as DashActiveIdPreviewRouteImport } from './routers/dash/active/$id/preview'
 
-const DashLazyRouteImport = createFileRoute('/dash')()
-
-const DashLazyRoute = DashLazyRouteImport.update({
+const DashRoute = DashRouteImport.update({
   id: '/dash',
   path: '/dash',
   getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import('./routers/dash.lazy').then((d) => d.Route))
+} as any)
 const WithHomeLoRoute = WithHomeLoRouteImport.update({
   id: '/_with-home-lo',
   getParentRoute: () => rootRouteImport,
@@ -38,7 +38,7 @@ const WithHomeLoRoute = WithHomeLoRouteImport.update({
 const DashIndexRoute = DashIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => DashLazyRoute,
+  getParentRoute: () => DashRoute,
 } as any)
 const WithHomeLoIndexRoute = WithHomeLoIndexRouteImport.update({
   id: '/',
@@ -48,17 +48,22 @@ const WithHomeLoIndexRoute = WithHomeLoIndexRouteImport.update({
 const DashUsersRoute = DashUsersRouteImport.update({
   id: '/users',
   path: '/users',
-  getParentRoute: () => DashLazyRoute,
+  getParentRoute: () => DashRoute,
 } as any)
-const DashInventoryRoute = DashInventoryRouteImport.update({
-  id: '/inventory',
-  path: '/inventory',
-  getParentRoute: () => DashLazyRoute,
+const DashGameTagsRoute = DashGameTagsRouteImport.update({
+  id: '/game-tags',
+  path: '/game-tags',
+  getParentRoute: () => DashRoute,
 } as any)
 const DashAcitveRoute = DashAcitveRouteImport.update({
   id: '/acitve',
   path: '/acitve',
-  getParentRoute: () => DashLazyRoute,
+  getParentRoute: () => DashRoute,
+} as any)
+const WithHomeLoMeRoute = WithHomeLoMeRouteImport.update({
+  id: '/me',
+  path: '/me',
+  getParentRoute: () => WithHomeLoRoute,
 } as any)
 const WithHomeLoInventoryRoute = WithHomeLoInventoryRouteImport.update({
   id: '/inventory',
@@ -84,85 +89,110 @@ const WithHomeLoActivesRoute = WithHomeLoActivesRouteImport.update({
 const DashActiveIdRoute = DashActiveIdRouteImport.update({
   id: '/active/$id',
   path: '/active/$id',
-  getParentRoute: () => DashLazyRoute,
+  getParentRoute: () => DashRoute,
 } as any)
 const WithHomeLoActiveIdRoute = WithHomeLoActiveIdRouteImport.update({
   id: '/active/$id',
   path: '/active/$id',
   getParentRoute: () => WithHomeLoRoute,
 } as any)
+const DashActivePreviewIdRoute = DashActivePreviewIdRouteImport.update({
+  id: '/active/preview/$id',
+  path: '/active/preview/$id',
+  getParentRoute: () => DashRoute,
+} as any)
+const DashActiveIdPreviewRoute = DashActiveIdPreviewRouteImport.update({
+  id: '/preview',
+  path: '/preview',
+  getParentRoute: () => DashActiveIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
-  '/dash': typeof DashLazyRouteWithChildren
+  '/': typeof WithHomeLoIndexRoute
+  '/dash': typeof DashRouteWithChildren
   '/actives': typeof WithHomeLoActivesRoute
   '/contact-us': typeof WithHomeLoContactUsRoute
   '/diceshock-agents': typeof WithHomeLoDiceshockAgentsRoute
   '/inventory': typeof WithHomeLoInventoryRoute
+  '/me': typeof WithHomeLoMeRoute
   '/dash/acitve': typeof DashAcitveRoute
-  '/dash/inventory': typeof DashInventoryRoute
+  '/dash/game-tags': typeof DashGameTagsRoute
   '/dash/users': typeof DashUsersRoute
-  '/': typeof WithHomeLoIndexRoute
   '/dash/': typeof DashIndexRoute
   '/active/$id': typeof WithHomeLoActiveIdRoute
-  '/dash/active/$id': typeof DashActiveIdRoute
+  '/dash/active/$id': typeof DashActiveIdRouteWithChildren
+  '/dash/active/$id/preview': typeof DashActiveIdPreviewRoute
+  '/dash/active/preview/$id': typeof DashActivePreviewIdRoute
 }
 export interface FileRoutesByTo {
   '/actives': typeof WithHomeLoActivesRoute
   '/contact-us': typeof WithHomeLoContactUsRoute
   '/diceshock-agents': typeof WithHomeLoDiceshockAgentsRoute
   '/inventory': typeof WithHomeLoInventoryRoute
+  '/me': typeof WithHomeLoMeRoute
   '/dash/acitve': typeof DashAcitveRoute
-  '/dash/inventory': typeof DashInventoryRoute
+  '/dash/game-tags': typeof DashGameTagsRoute
   '/dash/users': typeof DashUsersRoute
   '/': typeof WithHomeLoIndexRoute
   '/dash': typeof DashIndexRoute
   '/active/$id': typeof WithHomeLoActiveIdRoute
-  '/dash/active/$id': typeof DashActiveIdRoute
+  '/dash/active/$id': typeof DashActiveIdRouteWithChildren
+  '/dash/active/$id/preview': typeof DashActiveIdPreviewRoute
+  '/dash/active/preview/$id': typeof DashActivePreviewIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_with-home-lo': typeof WithHomeLoRouteWithChildren
-  '/dash': typeof DashLazyRouteWithChildren
+  '/dash': typeof DashRouteWithChildren
   '/_with-home-lo/actives': typeof WithHomeLoActivesRoute
   '/_with-home-lo/contact-us': typeof WithHomeLoContactUsRoute
   '/_with-home-lo/diceshock-agents': typeof WithHomeLoDiceshockAgentsRoute
   '/_with-home-lo/inventory': typeof WithHomeLoInventoryRoute
+  '/_with-home-lo/me': typeof WithHomeLoMeRoute
   '/dash/acitve': typeof DashAcitveRoute
-  '/dash/inventory': typeof DashInventoryRoute
+  '/dash/game-tags': typeof DashGameTagsRoute
   '/dash/users': typeof DashUsersRoute
   '/_with-home-lo/': typeof WithHomeLoIndexRoute
   '/dash/': typeof DashIndexRoute
   '/_with-home-lo/active/$id': typeof WithHomeLoActiveIdRoute
-  '/dash/active/$id': typeof DashActiveIdRoute
+  '/dash/active/$id': typeof DashActiveIdRouteWithChildren
+  '/dash/active/$id/preview': typeof DashActiveIdPreviewRoute
+  '/dash/active/preview/$id': typeof DashActivePreviewIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
     | '/dash'
     | '/actives'
     | '/contact-us'
     | '/diceshock-agents'
     | '/inventory'
+    | '/me'
     | '/dash/acitve'
-    | '/dash/inventory'
+    | '/dash/game-tags'
     | '/dash/users'
-    | '/'
     | '/dash/'
     | '/active/$id'
     | '/dash/active/$id'
+    | '/dash/active/$id/preview'
+    | '/dash/active/preview/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/actives'
     | '/contact-us'
     | '/diceshock-agents'
     | '/inventory'
+    | '/me'
     | '/dash/acitve'
-    | '/dash/inventory'
+    | '/dash/game-tags'
     | '/dash/users'
     | '/'
     | '/dash'
     | '/active/$id'
     | '/dash/active/$id'
+    | '/dash/active/$id/preview'
+    | '/dash/active/preview/$id'
   id:
     | '__root__'
     | '/_with-home-lo'
@@ -171,18 +201,21 @@ export interface FileRouteTypes {
     | '/_with-home-lo/contact-us'
     | '/_with-home-lo/diceshock-agents'
     | '/_with-home-lo/inventory'
+    | '/_with-home-lo/me'
     | '/dash/acitve'
-    | '/dash/inventory'
+    | '/dash/game-tags'
     | '/dash/users'
     | '/_with-home-lo/'
     | '/dash/'
     | '/_with-home-lo/active/$id'
     | '/dash/active/$id'
+    | '/dash/active/$id/preview'
+    | '/dash/active/preview/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   WithHomeLoRoute: typeof WithHomeLoRouteWithChildren
-  DashLazyRoute: typeof DashLazyRouteWithChildren
+  DashRoute: typeof DashRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -191,13 +224,13 @@ declare module '@tanstack/react-router' {
       id: '/dash'
       path: '/dash'
       fullPath: '/dash'
-      preLoaderRoute: typeof DashLazyRouteImport
+      preLoaderRoute: typeof DashRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_with-home-lo': {
       id: '/_with-home-lo'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof WithHomeLoRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -206,7 +239,7 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/dash/'
       preLoaderRoute: typeof DashIndexRouteImport
-      parentRoute: typeof DashLazyRoute
+      parentRoute: typeof DashRoute
     }
     '/_with-home-lo/': {
       id: '/_with-home-lo/'
@@ -220,21 +253,28 @@ declare module '@tanstack/react-router' {
       path: '/users'
       fullPath: '/dash/users'
       preLoaderRoute: typeof DashUsersRouteImport
-      parentRoute: typeof DashLazyRoute
+      parentRoute: typeof DashRoute
     }
-    '/dash/inventory': {
-      id: '/dash/inventory'
-      path: '/inventory'
-      fullPath: '/dash/inventory'
-      preLoaderRoute: typeof DashInventoryRouteImport
-      parentRoute: typeof DashLazyRoute
+    '/dash/game-tags': {
+      id: '/dash/game-tags'
+      path: '/game-tags'
+      fullPath: '/dash/game-tags'
+      preLoaderRoute: typeof DashGameTagsRouteImport
+      parentRoute: typeof DashRoute
     }
     '/dash/acitve': {
       id: '/dash/acitve'
       path: '/acitve'
       fullPath: '/dash/acitve'
       preLoaderRoute: typeof DashAcitveRouteImport
-      parentRoute: typeof DashLazyRoute
+      parentRoute: typeof DashRoute
+    }
+    '/_with-home-lo/me': {
+      id: '/_with-home-lo/me'
+      path: '/me'
+      fullPath: '/me'
+      preLoaderRoute: typeof WithHomeLoMeRouteImport
+      parentRoute: typeof WithHomeLoRoute
     }
     '/_with-home-lo/inventory': {
       id: '/_with-home-lo/inventory'
@@ -269,7 +309,7 @@ declare module '@tanstack/react-router' {
       path: '/active/$id'
       fullPath: '/dash/active/$id'
       preLoaderRoute: typeof DashActiveIdRouteImport
-      parentRoute: typeof DashLazyRoute
+      parentRoute: typeof DashRoute
     }
     '/_with-home-lo/active/$id': {
       id: '/_with-home-lo/active/$id'
@@ -277,6 +317,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/active/$id'
       preLoaderRoute: typeof WithHomeLoActiveIdRouteImport
       parentRoute: typeof WithHomeLoRoute
+    }
+    '/dash/active/preview/$id': {
+      id: '/dash/active/preview/$id'
+      path: '/active/preview/$id'
+      fullPath: '/dash/active/preview/$id'
+      preLoaderRoute: typeof DashActivePreviewIdRouteImport
+      parentRoute: typeof DashRoute
+    }
+    '/dash/active/$id/preview': {
+      id: '/dash/active/$id/preview'
+      path: '/preview'
+      fullPath: '/dash/active/$id/preview'
+      preLoaderRoute: typeof DashActiveIdPreviewRouteImport
+      parentRoute: typeof DashActiveIdRoute
     }
   }
 }
@@ -286,6 +340,7 @@ interface WithHomeLoRouteChildren {
   WithHomeLoContactUsRoute: typeof WithHomeLoContactUsRoute
   WithHomeLoDiceshockAgentsRoute: typeof WithHomeLoDiceshockAgentsRoute
   WithHomeLoInventoryRoute: typeof WithHomeLoInventoryRoute
+  WithHomeLoMeRoute: typeof WithHomeLoMeRoute
   WithHomeLoIndexRoute: typeof WithHomeLoIndexRoute
   WithHomeLoActiveIdRoute: typeof WithHomeLoActiveIdRoute
 }
@@ -295,6 +350,7 @@ const WithHomeLoRouteChildren: WithHomeLoRouteChildren = {
   WithHomeLoContactUsRoute: WithHomeLoContactUsRoute,
   WithHomeLoDiceshockAgentsRoute: WithHomeLoDiceshockAgentsRoute,
   WithHomeLoInventoryRoute: WithHomeLoInventoryRoute,
+  WithHomeLoMeRoute: WithHomeLoMeRoute,
   WithHomeLoIndexRoute: WithHomeLoIndexRoute,
   WithHomeLoActiveIdRoute: WithHomeLoActiveIdRoute,
 }
@@ -303,29 +359,41 @@ const WithHomeLoRouteWithChildren = WithHomeLoRoute._addFileChildren(
   WithHomeLoRouteChildren,
 )
 
-interface DashLazyRouteChildren {
+interface DashActiveIdRouteChildren {
+  DashActiveIdPreviewRoute: typeof DashActiveIdPreviewRoute
+}
+
+const DashActiveIdRouteChildren: DashActiveIdRouteChildren = {
+  DashActiveIdPreviewRoute: DashActiveIdPreviewRoute,
+}
+
+const DashActiveIdRouteWithChildren = DashActiveIdRoute._addFileChildren(
+  DashActiveIdRouteChildren,
+)
+
+interface DashRouteChildren {
   DashAcitveRoute: typeof DashAcitveRoute
-  DashInventoryRoute: typeof DashInventoryRoute
+  DashGameTagsRoute: typeof DashGameTagsRoute
   DashUsersRoute: typeof DashUsersRoute
   DashIndexRoute: typeof DashIndexRoute
-  DashActiveIdRoute: typeof DashActiveIdRoute
+  DashActiveIdRoute: typeof DashActiveIdRouteWithChildren
+  DashActivePreviewIdRoute: typeof DashActivePreviewIdRoute
 }
 
-const DashLazyRouteChildren: DashLazyRouteChildren = {
+const DashRouteChildren: DashRouteChildren = {
   DashAcitveRoute: DashAcitveRoute,
-  DashInventoryRoute: DashInventoryRoute,
+  DashGameTagsRoute: DashGameTagsRoute,
   DashUsersRoute: DashUsersRoute,
   DashIndexRoute: DashIndexRoute,
-  DashActiveIdRoute: DashActiveIdRoute,
+  DashActiveIdRoute: DashActiveIdRouteWithChildren,
+  DashActivePreviewIdRoute: DashActivePreviewIdRoute,
 }
 
-const DashLazyRouteWithChildren = DashLazyRoute._addFileChildren(
-  DashLazyRouteChildren,
-)
+const DashRouteWithChildren = DashRoute._addFileChildren(DashRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   WithHomeLoRoute: WithHomeLoRouteWithChildren,
-  DashLazyRoute: DashLazyRouteWithChildren,
+  DashRoute: DashRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

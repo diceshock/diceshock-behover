@@ -22,6 +22,118 @@
       "when": 1763822619477,
       "tag": "0002_faulty_hedge_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1768720451994,
+      "tag": "0003_past_sleepwalker",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1769011106776,
+      "tag": "0004_married_krista_starr",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1769237403974,
+      "tag": "0005_material_speedball",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1769238416249,
+      "tag": "0006_jazzy_infant_terrible",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1769240501595,
+      "tag": "0007_third_scream",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1769240874331,
+      "tag": "0008_nifty_stryfe",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1769241530422,
+      "tag": "0009_flimsy_grey_gargoyle",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1769241633603,
+      "tag": "0010_majestic_roland_deschain",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1769243752211,
+      "tag": "0011_mighty_orphan",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1769247000833,
+      "tag": "0012_lonely_starhawk",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1769247835887,
+      "tag": "0013_huge_leader",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1769248851978,
+      "tag": "0014_blue_shriek",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "6",
+      "when": 1769251875855,
+      "tag": "0015_smart_thanos",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1769252038160,
+      "tag": "0016_redundant_thundra",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1769261635987,
+      "tag": "0017_gray_ben_grimm",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1769334645573,
+      "tag": "0018_keen_vin_gonzales",
+      "breakpoints": true
     }
   ]
 }

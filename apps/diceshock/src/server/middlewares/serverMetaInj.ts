@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 import { FACTORY } from "../factory";
 import { injectCrossDataToCtx } from "../utils";
 
@@ -114,7 +114,7 @@ export function safeParseUserAgentMeta(
     } else {
       return { success: false, error: result.error };
     }
-  } catch (error) {
+  } catch {
     return {
       success: false,
       error: new z.ZodError([

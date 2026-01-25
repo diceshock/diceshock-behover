@@ -1,3 +1,5 @@
+import { SessionProvider } from "@hono/auth-js/react";
+
 import { RouterClient } from "@tanstack/react-router/ssr/client";
 import { StrictMode } from "react";
 import { hydrateRoot } from "react-dom/client";
@@ -9,6 +11,8 @@ const router = createRouter();
 hydrateRoot(
   root,
   <StrictMode>
-    <RouterClient router={router} />
+    <SessionProvider>
+      <RouterClient router={router} />
+    </SessionProvider>
   </StrictMode>,
 );

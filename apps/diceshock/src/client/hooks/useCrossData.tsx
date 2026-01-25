@@ -21,7 +21,7 @@ export const CrossDataProvider: React.FC<{
   c: Context<HonoCtxEnv>;
   children: React.ReactNode;
 }> = ({ c, children }) => {
-  const data = c.get("InjectCrossData") ?? {};
+  const data = c.get("InjectCrossData") as InjectCrossData;
   const payload = LZString.compressToBase64(JSON.stringify(data));
 
   return (
@@ -37,7 +37,6 @@ export const CrossDataProvider: React.FC<{
 };
 
 export const useCrossDataRegister = () => {
-  // biome-ignore lint/suspicious/noExplicitAny: accessing dynamic property on globalThis
   const raw = (globalThis as any)[INJECTION_OBJ];
 
   let decoded: InjectCrossData | null = null;
