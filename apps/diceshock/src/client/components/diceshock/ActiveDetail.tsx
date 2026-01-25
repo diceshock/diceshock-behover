@@ -63,7 +63,7 @@ export default function ActiveDetail({
       }
     | undefined
   >(undefined);
-  
+
   // 检查是否是约局发起者 - 使用 useMemo 确保在 session 更新时重新计算
   const isCreator = useMemo(() => {
     const activeGame = active as any;
@@ -78,7 +78,7 @@ export default function ActiveDetail({
     (active as any)?.creator_id,
     session?.user?.id,
   ]);
-  
+
   // 使用 ref 保存弹窗是否应该显示，避免因为 active 更新而关闭弹窗
   // 一旦弹窗打开，就保持打开状态，直到用户主动关闭或编辑成功
   const shouldShowEditDialogRef = useRef(false);
@@ -157,7 +157,7 @@ export default function ActiveDetail({
     // 刷新页面数据
     window.location.reload();
   }, []);
-  
+
   // 处理弹窗关闭
   const handleEditGameDialogToggle = useCallback((e: { open: boolean }) => {
     if (!e.open) {
@@ -391,7 +391,8 @@ export default function ActiveDetail({
       {/* 编辑约局弹窗 */}
       {/* 使用 ref 来确保弹窗不会因为 active 更新而关闭 */}
       {/* 初始渲染时检查 isCreator，但一旦弹窗打开就保持打开状态 */}
-      {(shouldShowEditDialogRef.current || (isCreator && (active as any)?.is_game)) && (
+      {(shouldShowEditDialogRef.current ||
+        (isCreator && (active as any)?.is_game)) && (
         <GameDialog
           isOpen={editGameDialogOpen}
           onToggle={handleEditGameDialogToggle}
