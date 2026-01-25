@@ -49,37 +49,9 @@ const smsCode = publicProcedure
       }
     }
 
-    // 检查手机号是否已注册（被其他用户使用）
-    // 注意：如果是当前用户正在修改手机号，这里不需要检查是否已注册（除非我们限制一个手机号只能注册一次，通常是的）
-    // 但是这里是发送验证码，我们通常允许发送验证码，但在绑定时检查是否冲突
-    // 之前的逻辑是：如果是登录/注册流程，如果手机号已存在，返回错误（让用户直接登录）
-    // 但是这里复用了 smsCode 接口。如果用户在修改手机号，输入的手机号可能还没注册。
-    // 如果输入的手机号已经注册了，这里会返回错误，这对于修改手机号来说是合理的：不能修改为一个已注册的手机号。
-
-    // 但是，原来的逻辑是：
-    /*
-    if (existingAccount) {
-      return {
-        success: false,
-        message: "该手机号已注册，请直接登录",
-      };
-    }
-    */
-    // 这对于登录流程是好的。对于修改手机号流程，如果手机号已注册，确实不能修改为该手机号。
-    // 但是提示语 "请直接登录" 可能不太合适。不过暂时可以接受，或者前端处理错误信息。
-
-    const tdb = db(env.DB);
-    const existingAccount = await tdb.query.accounts.findFirst({
-      where: (acc: any, { eq, and }: any) =>
-        and(eq(acc.provider, "SMS"), eq(acc.providerAccountId, phone)),
-    });
-
-    if (existingAccount) {
-      return {
-        success: false,
-        message: "该手机号已注册",
-      };
-    }
+    // 不在这里检查手机号是否已注册，因为：
+    // 1. 登录/注册流程：已注册的手机号应该允许发送验证码用于登录
+    // 2. 修改手机号流程：在 updateUserInfo 中会检查新手机号是否已被其他用户使用
 
     const verificationCode = customAlphabet("0123456789", 6)();
 
