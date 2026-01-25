@@ -12,6 +12,7 @@ type TagMapping = {
     title?: TagTitle;
     keywords?: string | null;
     is_pinned?: boolean | null;
+    order?: number | null; // 标签顺序，用于排序
   } | null;
 };
 
@@ -38,7 +39,36 @@ export function ActiveTags({
     lg: "badge-lg",
   }[size];
 
-  const displayTags = maxTags ? tags.slice(0, maxTags) : tags;
+  // 对标签进行排序：置顶的在前，然后按 order 排序
+  const sortedTags = [...tags].sort((a, b) => {
+    const tagA = a.tag;
+    const tagB = b.tag;
+    
+    // 如果标签不存在，排到最后
+    if (!tagA && !tagB) return 0;
+    if (!tagA) return 1;
+    if (!tagB) return -1;
+    
+    // 置顶标签排在前面
+    if (tagA.is_pinned && !tagB.is_pinned) return -1;
+    if (!tagA.is_pinned && tagB.is_pinned) return 1;
+    
+    // 对于相同置顶状态的标签，按 order 排序
+    const orderA =
+      tagA.order !== null && tagA.order !== undefined
+        ? tagA.order
+        : Number.MAX_SAFE_INTEGER;
+    const orderB =
+      tagB.order !== null && tagB.order !== undefined
+        ? tagB.order
+        : Number.MAX_SAFE_INTEGER;
+    if (orderA !== orderB) return orderA - orderB;
+    
+    // 如果 order 相同，按 id 排序
+    return (tagA.id || "").localeCompare(tagB.id || "");
+  });
+
+  const displayTags = maxTags ? sortedTags.slice(0, maxTags) : sortedTags;
 
   return (
     <div className={`flex flex-wrap gap-2 ${className}`}>

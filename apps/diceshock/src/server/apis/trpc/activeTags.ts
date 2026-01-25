@@ -37,6 +37,23 @@ const get = publicProcedure.query(async ({ ctx }) => {
     where: (t, { inArray }) => inArray(t.id, usedTagIds),
   });
 
+  // 排序：置顶的在前，然后按 order 排序（如果 order 相同则按 id 排序）
+  tags.sort((a, b) => {
+    if (a.is_pinned && !b.is_pinned) return -1;
+    if (!a.is_pinned && b.is_pinned) return 1;
+    // 对于相同置顶状态的标签，按 order 排序
+    const orderA =
+      (a as any).order !== null && (a as any).order !== undefined
+        ? (a as any).order
+        : Number.MAX_SAFE_INTEGER;
+    const orderB =
+      (b as any).order !== null && (b as any).order !== undefined
+        ? (b as any).order
+        : Number.MAX_SAFE_INTEGER;
+    if (orderA !== orderB) return orderA - orderB;
+    return a.id.localeCompare(b.id);
+  });
+
   return tags.map((tag) => ({
     id: tag.id,
     title: tag.title,
@@ -192,19 +209,32 @@ const getGameTags = publicProcedure
       });
     }
 
-    // 排序：置顶的在前，然后按 id 排序
+    // 排序：置顶的在前，然后按 order 排序（如果 order 相同则按 id 排序）
+    // 对于没有 order 的旧标签，给它们一个很大的值，让它们排在最后
     filteredTags.sort((a, b) => {
       if (a.is_pinned && !b.is_pinned) return -1;
       if (!a.is_pinned && b.is_pinned) return 1;
+      // 对于相同置顶状态的标签，按 order 排序
+      const orderA =
+        (a as any).order !== null && (a as any).order !== undefined
+          ? (a as any).order
+          : Number.MAX_SAFE_INTEGER;
+      const orderB =
+        (b as any).order !== null && (b as any).order !== undefined
+          ? (b as any).order
+          : Number.MAX_SAFE_INTEGER;
+      if (orderA !== orderB) return orderA - orderB;
       return a.id.localeCompare(b.id);
     });
 
+    // 返回排序后的标签，包含 order 字段以便调试
     return filteredTags.map((tag) => ({
       id: tag.id,
       title: tag.title,
       keywords: tag.keywords,
       is_pinned: tag.is_pinned,
       is_game_enabled: tag.is_game_enabled,
+      order: (tag as any).order ?? null, // 包含 order 字段以便前端调试
     }));
   });
 
@@ -231,6 +261,17 @@ const createGameTag = publicProcedure
       throw new Error("标签已存在");
     }
 
+    // 获取当前最大的 order 值，新标签的 order 为最大值 + 1
+    // 只考虑有效的 order 值（不为 null/undefined）
+    const allTags = await tdb.query.activeTagsTable.findMany();
+    const maxOrder = allTags.reduce((max, tag) => {
+      const order = (tag as any).order;
+      if (order !== null && order !== undefined && typeof order === "number") {
+        return Math.max(max, order);
+      }
+      return max;
+    }, -1);
+
     const [newTag] = await tdb
       .insert(activeTagsTable)
       .values({
@@ -238,6 +279,7 @@ const createGameTag = publicProcedure
         keywords: keywords || null,
         is_pinned: is_pinned || false,
         is_game_enabled: is_game_enabled || false,
+        order: maxOrder + 1, // 新标签的 order 为当前最大值 + 1
       })
       .returning();
 
@@ -306,10 +348,13 @@ const importTags = publicProcedure
       errors: [] as string[],
     };
 
-    for (const tagData of tags) {
+    // 一次性获取所有标签，避免在循环中重复查询
+    const allTags = await tdb.query.activeTagsTable.findMany();
+
+    for (let index = 0; index < tags.length; index++) {
+      const tagData = tags[index];
       try {
-        // 获取所有标签，检查是否有相同名称的标签
-        const allTags = await tdb.query.activeTagsTable.findMany();
+        // 检查是否有相同名称的标签
         const existing = allTags.find(
           (tag) => tag.title?.tx === tagData.name.trim(),
         );
@@ -322,11 +367,13 @@ const importTags = publicProcedure
               keywords?: string | null;
               is_pinned?: boolean;
               is_game_enabled?: boolean;
+              order?: number;
             } = {
               title: {
                 tx: tagData.name.trim(),
                 emoji: tagData.emoji?.trim() || existing.title?.emoji || "🎲",
               },
+              order: index, // 按照 TOML 文件中的顺序设置 order
             };
 
             // 如果 TOML 中提供了 keywords，使用 TOML 的值；否则保持现有值
@@ -354,12 +401,26 @@ const importTags = publicProcedure
 
             results.updated++;
           } else {
+            // 即使不 rewrite，也应该更新 order 值，因为 order 只是排序信息，不影响标签内容
+            // 这样可以确保标签按照 TOML 文件中的顺序展示
+            const existingOrder = (existing as any).order;
+            if (
+              existingOrder === null ||
+              existingOrder === undefined ||
+              typeof existingOrder !== "number" ||
+              existingOrder !== index
+            ) {
+              await tdb
+                .update(activeTagsTable)
+                .set({ order: index })
+                .where(drizzle.eq(activeTagsTable.id, existing.id));
+            }
             results.skipped++;
           }
           continue;
         }
 
-        // 创建新标签（默认启用约局）
+        // 创建新标签（默认启用约局），按照 TOML 文件中的顺序设置 order
         await tdb.insert(activeTagsTable).values({
           title: {
             tx: tagData.name.trim(),
@@ -371,6 +432,7 @@ const importTags = publicProcedure
             tagData.is_game_enabled !== undefined
               ? tagData.is_game_enabled
               : true,
+          order: index, // 按照 TOML 文件中的顺序设置 order
         });
 
         results.created++;

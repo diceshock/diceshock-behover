@@ -16,6 +16,7 @@ type GameTag = {
   keywords: string | null;
   is_pinned: boolean | null;
   is_game_enabled: boolean | null;
+  order?: number | null; // 标签顺序，用于排序
 };
 
 type GameForm = {
@@ -99,6 +100,25 @@ export default function GameDialog({
     const pinnedTags = gameTags;
     const selectedTagIds = new Set(gameForm.selectedTags);
     
+    // 排序函数：置顶的在前，然后按 order 排序
+    const sortTags = (tags: typeof allGameTags) => {
+      return [...tags].sort((a, b) => {
+        if (a.is_pinned && !b.is_pinned) return -1;
+        if (!a.is_pinned && b.is_pinned) return 1;
+        // 对于相同置顶状态的标签，按 order 排序
+        const orderA =
+          a.order !== null && a.order !== undefined
+            ? a.order
+            : Number.MAX_SAFE_INTEGER;
+        const orderB =
+          b.order !== null && b.order !== undefined
+            ? b.order
+            : Number.MAX_SAFE_INTEGER;
+        if (orderA !== orderB) return orderA - orderB;
+        return a.id.localeCompare(b.id);
+      });
+    };
+    
     // 如果没有搜索查询，只显示置顶标签和已选标签
     if (!gameTagSearchQuery) {
       const tagMap = new Map<string, GameTag>();
@@ -115,7 +135,7 @@ export default function GameDialog({
         }
       });
       
-      return Array.from(tagMap.values());
+      return sortTags(Array.from(tagMap.values()));
     }
     
     // 如果有搜索查询，显示所有匹配的标签（包括置顶、已选和其他匹配的）
@@ -153,7 +173,7 @@ export default function GameDialog({
       }
     });
 
-    return Array.from(tagMap.values());
+    return sortTags(Array.from(tagMap.values()));
   }, [gameTags, allGameTags, gameForm.selectedTags, gameTagSearchQuery]);
 
   useEffect(() => {

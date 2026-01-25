@@ -368,11 +368,52 @@ function RouteComponent() {
       // 置顶标签排在前面
       if (a.is_pinned && !b.is_pinned) return -1;
       if (!a.is_pinned && b.is_pinned) return 1;
-      // 然后按名称排序
+      // 对于相同置顶状态的标签，按 order 排序
+      const orderA = (a as any).order ?? Number.MAX_SAFE_INTEGER;
+      const orderB = (b as any).order ?? Number.MAX_SAFE_INTEGER;
+      if (orderA !== orderB) return orderA - orderB;
+      // 如果 order 相同，按名称排序
       return (a.title?.tx ?? "").localeCompare(b.title?.tx ?? "");
     });
     return sorted;
   }, [allTags]);
+
+  // 对已选择的标签进行排序（用于创建表单）
+  const sortedCreateFormTags = useMemo(() => {
+    return [...createForm.tags].sort((tagIdA, tagIdB) => {
+      const tagA = availableAllTags.find((t) => t.id === tagIdA);
+      const tagB = availableAllTags.find((t) => t.id === tagIdB);
+      if (!tagA || !tagB) return 0;
+      // 置顶标签排在前面
+      if (tagA.is_pinned && !tagB.is_pinned) return -1;
+      if (!tagA.is_pinned && tagB.is_pinned) return 1;
+      // 对于相同置顶状态的标签，按 order 排序
+      const orderA = (tagA as any).order ?? Number.MAX_SAFE_INTEGER;
+      const orderB = (tagB as any).order ?? Number.MAX_SAFE_INTEGER;
+      if (orderA !== orderB) return orderA - orderB;
+      // 如果 order 相同，按名称排序
+      return (tagA.title?.tx ?? "").localeCompare(tagB.title?.tx ?? "");
+    });
+  }, [createForm.tags, availableAllTags]);
+
+  // 对已选择的标签进行排序（用于编辑表单）
+  const sortedEditFormTags = useMemo(() => {
+    if (!editForm) return [];
+    return [...editForm.tags].sort((tagIdA, tagIdB) => {
+      const tagA = availableAllTags.find((t) => t.id === tagIdA);
+      const tagB = availableAllTags.find((t) => t.id === tagIdB);
+      if (!tagA || !tagB) return 0;
+      // 置顶标签排在前面
+      if (tagA.is_pinned && !tagB.is_pinned) return -1;
+      if (!tagA.is_pinned && tagB.is_pinned) return 1;
+      // 对于相同置顶状态的标签，按 order 排序
+      const orderA = (tagA as any).order ?? Number.MAX_SAFE_INTEGER;
+      const orderB = (tagB as any).order ?? Number.MAX_SAFE_INTEGER;
+      if (orderA !== orderB) return orderA - orderB;
+      // 如果 order 相同，按名称排序
+      return (tagA.title?.tx ?? "").localeCompare(tagB.title?.tx ?? "");
+    });
+  }, [editForm?.tags, availableAllTags]);
 
   return (
     <main className="size-full">
@@ -646,7 +687,7 @@ function RouteComponent() {
                 </span>
               </div>
               <div className="flex flex-wrap gap-2 mb-2">
-                {createForm.tags.map((tagId) => {
+                {sortedCreateFormTags.map((tagId) => {
                   const tag = availableAllTags.find((t) => t.id === tagId);
                   if (!tag) return null;
                   const title = tagTitle(tag.title);
@@ -782,7 +823,7 @@ function RouteComponent() {
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2 mb-2">
-                  {editForm.tags.map((tagId) => {
+                  {sortedEditFormTags.map((tagId) => {
                     const tag = availableAllTags.find((t) => t.id === tagId);
                     if (!tag) return null;
                     const title = tagTitle(tag.title);

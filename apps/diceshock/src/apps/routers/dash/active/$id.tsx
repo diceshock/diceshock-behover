@@ -917,6 +917,17 @@ function RouteComponent() {
                             }
                           });
 
+                          // 对标签进行排序：置顶的在前，然后按 order 排序
+                          allDisplayTags.sort((a, b) => {
+                            if (a.is_pinned && !b.is_pinned) return -1;
+                            if (!a.is_pinned && b.is_pinned) return 1;
+                            // 对于相同置顶状态的标签，按 order 排序
+                            const orderA = (a as any).order ?? Number.MAX_SAFE_INTEGER;
+                            const orderB = (b as any).order ?? Number.MAX_SAFE_INTEGER;
+                            if (orderA !== orderB) return orderA - orderB;
+                            return a.id.localeCompare(b.id);
+                          });
+
                           if (allDisplayTags.length === 0) {
                             return (
                               <div className="alert alert-warning">
