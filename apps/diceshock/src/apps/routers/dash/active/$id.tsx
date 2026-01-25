@@ -13,8 +13,9 @@ import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import "@uiw/react-md-editor/markdown-editor.css";
 import type { BoardGame } from "@lib/utils";
-import { useMsg } from "@/client/components/diceshock/Msg";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
+import { useMsg } from "@/client/components/diceshock/Msg";
+import { useOnMount } from "@/client/hooks/useOnMount";
 import trpcClientPublic, { trpcClientDash } from "@/shared/utils/trpc";
 
 type TagList = Awaited<ReturnType<typeof trpcClientDash.activeTags.get.query>>;
@@ -37,6 +38,16 @@ function RouteComponent() {
   const [description, setDescription] = useState<string>("");
   const [coverImage, setCoverImage] = useState<string>("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  // 存储已选择标签的完整数据，用于渲染
+  const [selectedTagsData, setSelectedTagsData] = useState<
+    Array<{
+      id: string;
+      title: { emoji: string; tx: string } | null;
+      keywords: string | null;
+      is_pinned: boolean | null;
+      is_game_enabled: boolean | null;
+    }>
+  >([]);
   const [isPublished, setIsPublished] = useState<boolean>(false);
   const [isDeleted, setIsDeleted] = useState<boolean>(false);
   const [enableRegistration, setEnableRegistration] = useState<boolean>(false);
@@ -47,6 +58,16 @@ function RouteComponent() {
   > | null>(null);
   const [tags, setTags] = useState<TagItem[]>([]);
   const [allTags, setAllTags] = useState<
+    Array<{
+      id: string;
+      title: { emoji: string; tx: string } | null;
+      keywords: string | null;
+      is_pinned: boolean | null;
+      is_game_enabled: boolean | null;
+    }>
+  >([]);
+  // 存储所有标签的完整列表（不依赖搜索），用于获取已选择标签的详细信息
+  const [allTagsComplete, setAllTagsComplete] = useState<
     Array<{
       id: string;
       title: { emoji: string; tx: string } | null;
@@ -117,12 +138,18 @@ function RouteComponent() {
 
   const fetchAllTags = useCallback(async (searchQuery?: string) => {
     try {
-      // 获取所有标签（活动版本：支持置顶标签和非约局标签）
+      // 如果没有搜索查询，只获取置顶标签
+      // 如果有搜索查询，获取所有匹配的标签
       const data = await trpcClientDash.activeTags.getGameTags.query({
         search: searchQuery || undefined,
-        // 活动可以使用所有标签，包括置顶标签和非约局标签
+        onlyPinned: !searchQuery, // 没有搜索时只显示置顶标签
       });
       setAllTags(data);
+
+      // 如果没有搜索查询，同时更新完整标签列表
+      if (!searchQuery) {
+        setAllTagsComplete(data);
+      }
     } catch (error) {
       console.error("获取所有标签失败", error);
     }
@@ -145,53 +172,82 @@ function RouteComponent() {
     fetchGameTags();
   }, [fetchGameTags]);
 
-  const fetchActive = useCallback(async () => {
-    if (!id) {
-      msg.error("活动 ID 不存在");
-      setLoading(false);
-      return;
-    }
-    try {
-      setLoading(true);
-      const data = await trpcClientDash.active.getById.query({ id });
-      if (!data) {
-        msg.error("活动不存在");
-        setActive(null);
+  const fetchActive = useCallback(
+    async (allTagsCompleteData?: typeof allTagsComplete) => {
+      if (!id) {
+        msg.error("活动 ID 不存在");
         setLoading(false);
         return;
       }
-      setActive(data);
-      setContent(data.content || "");
-      setName(data.name || "");
-      setDescription(data.description || "");
-      setCoverImage(data.cover_image || "");
-      setSelectedTags(data.tags?.map((t) => t.tag_id) || []);
-      setIsPublished(Boolean(data.is_published));
-      setIsDeleted(Boolean(data.is_deleted));
-      setEnableRegistration(Boolean(data.enable_registration));
-      setAllowWatching(Boolean(data.allow_watching));
-      // 将 event_date 转换为 datetime-local 格式 (YYYY-MM-DDTHH:mm)
-      if (data.event_date) {
-        const date = new Date(data.event_date);
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        const day = String(date.getDate()).padStart(2, "0");
-        const hours = String(date.getHours()).padStart(2, "0");
-        const minutes = String(date.getMinutes()).padStart(2, "0");
-        setEventDate(`${year}-${month}-${day}T${hours}:${minutes}`);
-      } else {
-        setEventDate("");
+      try {
+        setLoading(true);
+        const data = await trpcClientDash.active.getById.query({ id });
+        if (!data) {
+          msg.error("活动不存在");
+          setActive(null);
+          setLoading(false);
+          return;
+        }
+        setActive(data);
+        setContent(data.content || "");
+        setName(data.name || "");
+        setDescription(data.description || "");
+        setCoverImage(data.cover_image || "");
+        const tagIds = data.tags?.map((t) => t.tag_id) || [];
+        console.log("加载活动，标签ID:", tagIds);
+        console.log("标签数据:", data.tags);
+        setSelectedTags(tagIds);
+
+        // 获取已选择标签的完整数据
+        if (tagIds.length > 0) {
+          // 使用传入的完整标签列表，如果没有则获取所有标签
+          let tagsToSearch = allTagsCompleteData || [];
+          if (tagsToSearch.length === 0) {
+            tagsToSearch = await trpcClientDash.activeTags.getGameTags.query(
+              {},
+            );
+            setAllTagsComplete(tagsToSearch);
+          }
+          const selectedTagsFullData = tagIds
+            .map((tagId) => {
+              // 从完整标签列表中查找
+              const found = tagsToSearch.find((t) => t.id === tagId);
+              return found || null;
+            })
+            .filter((tag): tag is NonNullable<typeof tag> => Boolean(tag));
+
+          setSelectedTagsData(selectedTagsFullData);
+        } else {
+          setSelectedTagsData([]);
+        }
+        setIsPublished(Boolean(data.is_published));
+        setIsDeleted(Boolean(data.is_deleted));
+        setEnableRegistration(Boolean(data.enable_registration));
+        setAllowWatching(Boolean(data.allow_watching));
+        // 将 event_date 转换为 datetime-local 格式 (YYYY-MM-DDTHH:mm)
+        if (data.event_date) {
+          const date = new Date(data.event_date);
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, "0");
+          const day = String(date.getDate()).padStart(2, "0");
+          const hours = String(date.getHours()).padStart(2, "0");
+          const minutes = String(date.getMinutes()).padStart(2, "0");
+          setEventDate(`${year}-${month}-${day}T${hours}:${minutes}`);
+        } else {
+          setEventDate("");
+        }
+      } catch (error) {
+        console.error("获取活动失败", error);
+        msg.error(
+          error instanceof Error ? error.message : "获取活动失败，请稍后重试",
+        );
+        setActive(null);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("获取活动失败", error);
-      msg.error(
-        error instanceof Error ? error.message : "获取活动失败，请稍后重试",
-      );
-      setActive(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [id, msg]);
+    },
+    [id, msg],
+  );
 
   const fetchTeams = useCallback(async () => {
     if (!id) return;
@@ -218,12 +274,19 @@ function RouteComponent() {
     }
   }, [id]);
 
-  // 初始化时获取数据
-  useEffect(() => {
-    fetchTags();
-    fetchAllTags(); // 初始加载，不传搜索查询
-    fetchActive();
-  }, [fetchTags, fetchAllTags, fetchActive]);
+  // 初始化时获取数据，只执行一次
+  useOnMount(async () => {
+    // 先获取完整标签列表
+    const completeTags = await trpcClientDash.activeTags.getGameTags.query({});
+    setAllTagsComplete(completeTags);
+
+    // 然后获取活动数据，传入完整标签列表
+    await fetchActive(completeTags);
+
+    // 最后获取其他数据
+    await fetchTags();
+    await fetchAllTags(); // 初始加载，不传搜索查询（只获取置顶标签）
+  });
 
   // 单独监听搜索查询的变化，使用防抖避免频繁请求
   useEffect(() => {
@@ -352,7 +415,6 @@ function RouteComponent() {
     [id, fetchBoardGames, msg],
   );
 
-
   // 立即保存状态字段（发布状态、垃圾桶、开启报名、允许观望）
   const handleSaveStatus = useCallback(
     async (updates: {
@@ -390,24 +452,38 @@ function RouteComponent() {
 
     try {
       setSaving(true);
-      await trpcClientDash.active.mutation.mutate({
+      // 确保传递 tags 参数，即使是空数组也要传递
+      const saveData = {
         id: active.id,
         name,
         description,
         content,
         cover_image: coverImage.trim() ? coverImage.trim() : null,
-        tags: selectedTags,
+        tags: selectedTags, // 明确传递标签数组
         is_published: isPublished,
         is_deleted: isDeleted,
         enable_registration: enableRegistration,
         allow_watching: allowWatching,
         event_date: eventDate || undefined,
-      });
+      };
+      
+      console.log("保存数据:", JSON.stringify(saveData, null, 2));
+      console.log("selectedTags:", selectedTags);
+      
+      await trpcClientDash.active.mutation.mutate(saveData);
       msg.success("保存成功");
-      await fetchActive();
+      // 保存后重新获取活动数据，传入完整标签列表以确保已选择标签的数据正确更新
+      const completeTags =
+        allTagsComplete.length > 0
+          ? allTagsComplete
+          : await trpcClientDash.activeTags.getGameTags.query({});
+      if (completeTags.length > 0 && allTagsComplete.length === 0) {
+        setAllTagsComplete(completeTags);
+      }
+      await fetchActive(completeTags);
     } catch (error) {
       msg.error("保存失败");
-      console.error(error);
+      console.error("保存错误:", error);
     } finally {
       setSaving(false);
     }
@@ -808,50 +884,99 @@ function RouteComponent() {
                         <input
                           type="text"
                           className="input input-bordered w-full mb-2"
-                          placeholder="搜索标签（留空则显示所有标签）..."
+                          placeholder="搜索标签（留空则只显示置顶标签）..."
                           value={tagSearchQuery}
                           onChange={(e) => {
                             setTagSearchQuery(e.target.value);
                           }}
                         />
-                        <div className="flex flex-wrap gap-2">
-                          {allTags.map((tag) => {
-                            const title = tagTitle(tag.title);
-                            const checked = selectedTags.includes(tag.id);
+                        {(() => {
+                          // 合并已选择的标签和未选择的标签，去重（使用 Set 确保不重复）
+                          const displayedTagIds = new Set<string>();
+                          const allDisplayTags: Array<{
+                            id: string;
+                            title: { emoji: string; tx: string } | null;
+                            keywords: string | null;
+                            is_pinned: boolean | null;
+                            is_game_enabled: boolean | null;
+                          }> = [];
+
+                          // 先添加已选择的标签（使用存储的完整数据，确保它们始终显示）
+                          selectedTagsData.forEach((tag) => {
+                            if (!displayedTagIds.has(tag.id)) {
+                              allDisplayTags.push(tag);
+                              displayedTagIds.add(tag.id);
+                            }
+                          });
+
+                          // 然后添加未选择的标签（搜索结果）
+                          allTags.forEach((tag) => {
+                            if (!displayedTagIds.has(tag.id)) {
+                              allDisplayTags.push(tag);
+                              displayedTagIds.add(tag.id);
+                            }
+                          });
+
+                          if (allDisplayTags.length === 0) {
                             return (
-                              <label
-                                key={tag.id}
-                                className={`badge badge-lg gap-2 cursor-pointer ${
-                                  checked ? "badge-primary" : "badge-outline"
-                                }`}
-                              >
-                                <input
-                                  type="checkbox"
-                                  className="checkbox checkbox-sm"
-                                  checked={checked}
-                                  onChange={() =>
-                                    setSelectedTags((prev) =>
-                                      checked
-                                        ? prev.filter((id) => id !== tag.id)
-                                        : [...prev, tag.id],
-                                    )
-                                  }
-                                />
-                                <span>{title.emoji}</span>
-                                {title.tx}
-                              </label>
+                              <div className="alert alert-warning">
+                                <span>
+                                  {tagSearchQuery
+                                    ? "未找到匹配的标签"
+                                    : "暂无置顶标签或所有标签已被选中"}
+                                </span>
+                              </div>
                             );
-                          })}
-                        </div>
-                        {allTags.length === 0 && (
-                          <div className="alert alert-warning">
-                            <span>
-                              {tagSearchQuery
-                                ? "未找到匹配的标签"
-                                : "暂无标签，请先在标签管理页面创建标签"}
-                            </span>
-                          </div>
-                        )}
+                          }
+
+                          return (
+                            <div className="flex flex-wrap gap-2">
+                              {allDisplayTags.map((tag) => {
+                                const title = tagTitle(tag.title);
+                                const checked = selectedTags.includes(tag.id);
+                                return (
+                                  <label
+                                    key={tag.id}
+                                    className={`badge badge-lg gap-2 cursor-pointer ${
+                                      checked
+                                        ? "badge-primary"
+                                        : "badge-outline"
+                                    }`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      className="checkbox checkbox-sm"
+                                      checked={checked}
+                                      onChange={() => {
+                                        if (checked) {
+                                          // 取消选择：从ID列表和完整数据中移除
+                                          setSelectedTags((prev) =>
+                                            prev.filter((id) => id !== tag.id),
+                                          );
+                                          setSelectedTagsData((prev) =>
+                                            prev.filter((t) => t.id !== tag.id),
+                                          );
+                                        } else {
+                                          // 选择：添加到ID列表和完整数据
+                                          setSelectedTags((prev) => [
+                                            ...prev,
+                                            tag.id,
+                                          ]);
+                                          setSelectedTagsData((prev) => [
+                                            ...prev,
+                                            tag,
+                                          ]);
+                                        }
+                                      }}
+                                    />
+                                    <span>{title.emoji}</span>
+                                    {title.tx}
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
                       </>
                     )}
                   </div>

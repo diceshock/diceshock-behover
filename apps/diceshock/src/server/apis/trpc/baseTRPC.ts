@@ -15,6 +15,9 @@ const t = initTRPC
 export const router = t.router;
 export const publicProcedure = t.procedure;
 
+// Dash procedure: 用于 dash 路由，由于路由已由 Cloudflare Zero Trust 保护，不需要检查认证
+export const dashProcedure = t.procedure;
+
 // Protected procedure that requires authentication
 export const protectedProcedure = publicProcedure.use(({ ctx, next }) => {
   if (!ctx.userInfo || !ctx.userId) {

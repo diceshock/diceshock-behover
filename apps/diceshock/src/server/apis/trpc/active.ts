@@ -8,7 +8,7 @@ import db, {
   pagedZ,
 } from "@lib/db";
 import z4, { z } from "zod/v4";
-import { protectedProcedure, publicProcedure } from "./baseTRPC";
+import { dashProcedure, protectedProcedure, publicProcedure } from "./baseTRPC";
 
 export const getFilterZ = z4.object({
   searchWords: z4.string().nonempty().optional(),
@@ -289,14 +289,15 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
     }
   }
 
-  // 如果没有要更新的字段，直接返回（或者只处理标签）
-  if (Object.keys(updateData).length === 0 && !tagIds) {
+  // 如果没有要更新的字段且没有标签要更新，直接返回
+  if (Object.keys(updateData).length === 0 && tagIds === undefined) {
     return await tdb.query.activesTable.findMany({
       where: (a: any, { eq }: any) => eq(a.id, id),
     });
   }
 
   console.log("updateData:", JSON.stringify(updateData, null, 2));
+  console.log("tagIds:", tagIds);
   const acitves =
     Object.keys(updateData).length > 0
       ? await tdb
@@ -309,37 +310,68 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
         });
   console.log("更新后的 acitves:", JSON.stringify(acitves, null, 2));
 
-  if (!acitves.length || !tagIds) return acitves;
+  // 如果指定了 tagIds（包括空数组），则更新标签
+  if (tagIds !== undefined) {
+    console.log("更新标签，tagIds:", tagIds);
+    // 删除现有标签映射
+    await tdb
+      .delete(activeTagMappingsTable)
+      .where((drizzle as any).eq(activeTagMappingsTable.active_id, id));
 
-  await tdb
-    .delete(activeTagMappingsTable)
-    .where((drizzle as any).eq(activeTagMappingsTable.active_id, id));
+    // 如果有标签，添加新标签映射
+    if (tagIds.length > 0) {
+      const tags = await tdb.query.activeTagsTable.findMany({
+        where: (t: any, { inArray }: any) => inArray(t.id, tagIds),
+      });
 
-  const tags = await tdb.query.activeTagsTable.findMany({
-    where: (t: any, { inArray }: any) => inArray(t.id, tagIds),
+      console.log("找到的标签:", tags.map((t: any) => t.id));
+
+      if (tags.length > 0) {
+        await tdb
+          .insert(activeTagMappingsTable)
+          .values(tags.map((t: any) => ({ active_id: id, tag_id: t.id })));
+        console.log("标签映射已插入");
+      } else {
+        console.log("警告：没有找到匹配的标签");
+      }
+    } else {
+      console.log("tagIds 为空数组，已删除所有标签映射");
+    }
+  } else {
+    console.log("tagIds 为 undefined，不更新标签");
+  }
+
+  // 重新查询活动，包含标签关系，确保返回的数据包含最新的标签
+  const updatedActive = await tdb.query.activesTable.findFirst({
+    where: (a: any, { eq }: any) => eq(a.id, id),
+    with: {
+      tags: {
+        with: { tag: true },
+      },
+    },
   });
+  
+  if (updatedActive) {
+    console.log("更新后的活动标签:", updatedActive.tags?.map((t: any) => t.tag_id));
+    // 删除未被任何活动使用的标签
+    const allMappings = await tdb.query.activeTagMappingsTable.findMany();
+    const usedTagIds = new Set(allMappings.map((m: any) => m.tag_id));
 
-  if (tags.length > 0) {
-    await tdb
-      .insert(activeTagMappingsTable)
-      .values(tags.map((t: any) => ({ active_id: id, tag_id: t.id })));
+    const allTags = await tdb.query.activeTagsTable.findMany();
+    const unusedTagIds = allTags
+      .filter((tag: any) => !usedTagIds.has(tag.id))
+      .map((tag: any) => tag.id);
+
+    if (unusedTagIds.length > 0) {
+      await tdb
+        .delete(activeTagsTable)
+        .where((drizzle as any).inArray(activeTagsTable.id, unusedTagIds));
+    }
+    
+    return [updatedActive];
   }
-
-  // 删除未被任何活动使用的标签
-  const allMappings = await tdb.query.activeTagMappingsTable.findMany();
-  const usedTagIds = new Set(allMappings.map((m: any) => m.tag_id));
-
-  const allTags = await tdb.query.activeTagsTable.findMany();
-  const unusedTagIds = allTags
-    .filter((tag: any) => !usedTagIds.has(tag.id))
-    .map((tag: any) => tag.id);
-
-  if (unusedTagIds.length > 0) {
-    await tdb
-      .delete(activeTagsTable)
-      .where((drizzle as any).inArray(activeTagsTable.id, unusedTagIds));
-  }
-
+  
+  // 如果更新失败，返回原始数据
   return acitves;
 };
 
@@ -426,7 +458,7 @@ const deleteActive = async (
   return { success: true };
 };
 
-const mutation = protectedProcedure
+const mutation = dashProcedure
   .input(postInputZ)
   .mutation(async ({ input, ctx }) => {
     console.log("mutation 输入:", { hasId: "id" in input, input });
@@ -438,7 +470,7 @@ const mutation = protectedProcedure
     return insert(ctx.env, input);
   });
 
-const deleteMutation = protectedProcedure
+const deleteMutation = dashProcedure
   .input(deleteZ)
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
@@ -580,7 +612,7 @@ const createGameZ = z.object({
   tag_ids: z.array(z.string()).optional(), // 约局标签 ID 列表（从已有的约局标签中选择）
 });
 
-const createGame = protectedProcedure
+const createGame = dashProcedure
   .input(createGameZ)
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
@@ -664,7 +696,7 @@ const updateGameZ = z.object({
   tag_ids: z.array(z.string()).optional(), // 约局标签 ID 列表
 });
 
-const updateGame = protectedProcedure
+const updateGame = dashProcedure
   .input(updateGameZ)
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
