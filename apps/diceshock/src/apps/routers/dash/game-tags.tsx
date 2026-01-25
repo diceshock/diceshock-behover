@@ -47,25 +47,33 @@ function RouteComponent() {
   const [filterOnlyPinned, setFilterOnlyPinned] = useState(false);
   const [filterOnlyGameEnabled, setFilterOnlyGameEnabled] = useState(false);
 
-  const fetchTags = useCallback(async () => {
-    try {
-      setLoading(true);
-      const gameTags = await trpcClientDash.activeTags.getGameTags.query({
-        search: searchQuery || undefined,
-        onlyPinned: filterOnlyPinned || undefined,
-        onlyGameEnabled: filterOnlyGameEnabled || undefined,
-      });
-      setTags(gameTags);
-    } catch (error) {
-      console.error("获取标签失败", error);
-      msg.error("获取标签失败");
-    } finally {
-      setLoading(false);
-    }
-  }, [msg, searchQuery, filterOnlyPinned, filterOnlyGameEnabled]);
+  const fetchTags = useCallback(
+    async (showLoading = false) => {
+      try {
+        if (showLoading) {
+          setLoading(true);
+        }
+        const gameTags = await trpcClientDash.activeTags.getGameTags.query({
+          search: searchQuery || undefined,
+          onlyPinned: filterOnlyPinned || undefined,
+          onlyGameEnabled: filterOnlyGameEnabled || undefined,
+        });
+        setTags(gameTags);
+      } catch (error) {
+        console.error("获取标签失败", error);
+        msg.error("获取标签失败");
+      } finally {
+        if (showLoading) {
+          setLoading(false);
+        }
+      }
+    },
+    [msg, searchQuery, filterOnlyPinned, filterOnlyGameEnabled],
+  );
 
+  // 初始加载和筛选条件变化时重新获取（显示加载状态）
   useEffect(() => {
-    fetchTags();
+    fetchTags(true);
   }, [fetchTags]);
 
   const handleStartEdit = (tag: TagItem) => {
@@ -100,7 +108,8 @@ function RouteComponent() {
       });
       msg.success("标签更新成功");
       setEditingTag(null);
-      await fetchTags();
+      // 强制重新获取标签列表（不显示加载状态，保持滚动位置）
+      await fetchTags(false);
     } catch (error) {
       console.error("更新标签失败", error);
       msg.error(error instanceof Error ? error.message : "更新标签失败");
@@ -136,7 +145,8 @@ function RouteComponent() {
         is_pinned: false,
         is_game_enabled: false,
       });
-      await fetchTags();
+      // 重新获取标签列表（不显示加载状态，保持滚动位置）
+      await fetchTags(false);
     } catch (error) {
       console.error("创建标签失败", error);
       msg.error(error instanceof Error ? error.message : "创建标签失败");
@@ -159,7 +169,8 @@ function RouteComponent() {
         setDeletingTagId(tagId);
         await trpcClientDash.activeTags.delete.mutate({ id: tagId });
         msg.success("标签删除成功");
-        await fetchTags();
+        // 重新获取标签列表（不显示加载状态，保持滚动位置）
+        await fetchTags(false);
       } catch (error) {
         console.error("删除标签失败", error);
         msg.error(error instanceof Error ? error.message : "删除标签失败");
@@ -188,10 +199,11 @@ function RouteComponent() {
           },
           keywords: tag.keywords || undefined,
           is_pinned: !currentPinned,
-          is_game_enabled: tag.is_game_enabled,
+          is_game_enabled: tag.is_game_enabled ?? false,
         });
         msg.success(currentPinned ? "已取消置顶" : "已置顶");
-        await fetchTags();
+        // 强制重新获取标签列表（不显示加载状态，保持滚动位置）
+        await fetchTags(false);
       } catch (error) {
         console.error("切换置顶状态失败", error);
         msg.error(error instanceof Error ? error.message : "切换置顶状态失败");
@@ -219,11 +231,12 @@ function RouteComponent() {
             tx: "约局",
           },
           keywords: tag.keywords || undefined,
-          is_pinned: tag.is_pinned,
+          is_pinned: (tag.is_pinned ?? false) as boolean,
           is_game_enabled: !currentEnabled,
         });
         msg.success(currentEnabled ? "已禁用约局" : "已启用约局");
-        await fetchTags();
+        // 强制重新获取标签列表（不显示加载状态，保持滚动位置）
+        await fetchTags(false);
       } catch (error) {
         console.error("切换约局状态失败", error);
         msg.error(error instanceof Error ? error.message : "切换约局状态失败");
@@ -352,7 +365,8 @@ function RouteComponent() {
         msg.success(message);
       }
 
-      await fetchTags();
+      // 重新获取标签列表（不显示加载状态，保持滚动位置）
+      await fetchTags(false);
     } catch (error) {
       console.error("导入标签失败", error);
       msg.error(
