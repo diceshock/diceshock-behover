@@ -1,5 +1,12 @@
 rewrite = false
 
+[[tags]]
+name = "置顶"
+emoji = "🔥"
+keywords = "置顶,pinned,置顶标签,pinned tag,pinned标签,pinned标签"
+is_pinned = true
+is_game_enabled = false
+
 # 游戏类型
 [[tags]]
 name = "策略游戏"

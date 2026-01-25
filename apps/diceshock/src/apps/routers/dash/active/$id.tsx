@@ -10,7 +10,7 @@ import {
 import { createFileRoute, Link } from "@tanstack/react-router";
 import MDEditor from "@uiw/react-md-editor";
 import clsx from "clsx";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import "@uiw/react-md-editor/markdown-editor.css";
 import type { BoardGame } from "@lib/utils";
 import { useMsg } from "@/client/components/diceshock/Msg";
@@ -115,18 +115,18 @@ function RouteComponent() {
     }
   }, []);
 
-  const fetchAllTags = useCallback(async () => {
+  const fetchAllTags = useCallback(async (searchQuery?: string) => {
     try {
       // 获取所有标签（活动版本：支持置顶标签和非约局标签）
       const data = await trpcClientDash.activeTags.getGameTags.query({
-        search: tagSearchQuery || undefined,
+        search: searchQuery || undefined,
         // 活动可以使用所有标签，包括置顶标签和非约局标签
       });
       setAllTags(data);
     } catch (error) {
       console.error("获取所有标签失败", error);
     }
-  }, [tagSearchQuery]);
+  }, []);
 
   const fetchGameTags = useCallback(async () => {
     try {
@@ -218,11 +218,23 @@ function RouteComponent() {
     }
   }, [id]);
 
+  // 初始化时获取数据
   useEffect(() => {
     fetchTags();
-    fetchAllTags();
+    fetchAllTags(); // 初始加载，不传搜索查询
     fetchActive();
   }, [fetchTags, fetchAllTags, fetchActive]);
+
+  // 单独监听搜索查询的变化，使用防抖避免频繁请求
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchAllTags(tagSearchQuery);
+    }, 300); // 300ms 防抖延迟
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [tagSearchQuery, fetchAllTags]);
 
   useEffect(() => {
     fetchGameTags();
