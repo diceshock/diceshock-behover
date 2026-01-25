@@ -2004,6 +2004,216 @@ keywords = "死是答案,si shi daan,ssda"
 is_pinned = false
 is_game_enabled = true
 
+[[tags]]
+name = "赞美太阳"
+emoji = "☀️"
+keywords = "赞美太阳,zanmei taiyang,zmty"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "绝景"
+emoji = "🏔️"
+keywords = "绝景,juejing,jj"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "成为王吧!"
+emoji = "👑"
+keywords = "成为王吧,chengwei wang ba,cwwb"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "可能"
+emoji = "🤷"
+keywords = "可能,keneng,kn"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "但绝不会"
+emoji = "🚫"
+keywords = "但绝不会,dan jue buhui,djbh"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "需要跳跃"
+emoji = "🦘"
+keywords = "需要跳跃,xuyao tiaoyue,xytx"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "需要攻击"
+emoji = "⚔️"
+keywords = "需要攻击,xuyao gongji,xygj"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "需要治疗"
+emoji = "💊"
+keywords = "需要治疗,xuyao zhiliao,xyzx"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "需要合作"
+emoji = "🤝"
+keywords = "需要合作,xuyao hezuo,xyhz"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "需要友情"
+emoji = "💚"
+keywords = "需要友情,xuyao youqing,xyyq"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "爱情"
+emoji = "💕"
+keywords = "爱情,xuyao aiqing"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "勇气"
+emoji = "🦁"
+keywords = "勇气,yongqi,yq"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "需要耐心"
+emoji = "🧘"
+keywords = "需要耐心,xuyao naixin,xynx"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "需要运气"
+emoji = "🍀"
+keywords = "需要运气,xuyao yunqi,xyyq"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "需要智力"
+emoji = "🧠"
+keywords = "需要智力,xuyao zhili,xyzl"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "需要力量"
+emoji = "💪"
+keywords = "需要力量,xuyao liliang,xyll"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "需要敏捷"
+emoji = "🏃"
+keywords = "需要敏捷,xuyao minjie,xymj"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "需要信仰"
+emoji = "🙏"
+keywords = "需要信仰,xuyao xinyang,xyxy"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "需要魔法"
+emoji = "🔮"
+keywords = "需要魔法,xuyao mofa,xymf"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "需要奇迹"
+emoji = "✨"
+keywords = "需要奇迹,xuyao qiji,xyqj"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "需要咒术"
+emoji = "🪄"
+keywords = "需要咒术,xuyao zhoushu,xyzx"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "需要暗术"
+emoji = "🌑"
+keywords = "需要暗术,xuyao anshu,xyas"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "龙"
+emoji = "🐉"
+keywords = "龙,long,l"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "需要龙鳞"
+emoji = "🪶"
+keywords = "需要龙鳞,xuyao longlin,xyll"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "需要龙石"
+emoji = "💎"
+keywords = "需要龙石,xuyao longshi,xyls"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "需要龙鳞石"
+emoji = "🪨"
+keywords = "需要龙鳞石,xuyao longlinshi,xylls"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "需要龙鳞石碎片"
+emoji = "🧩"
+keywords = "需要龙鳞石碎片,xuyao longlinshi suipian,xyllssp"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "需要龙鳞石大碎片"
+emoji = "🧩"
+keywords = "需要龙鳞石大碎片,xuyao longlinshi dasuipian,xyllsdsp"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "需要龙鳞石块"
+emoji = "🪨"
+keywords = "需要龙鳞石块,xuyao longlinshikuai,xyllsk"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "需要龙鳞石原盘"
+emoji = "💿"
+keywords = "需要龙鳞石原盘,xuyao longlinshi yuanpan,xyllsyp"
+is_pinned = false
+is_game_enabled = true
+
 # 品牌相关
 [[tags]]
 name = "DiceShock©"

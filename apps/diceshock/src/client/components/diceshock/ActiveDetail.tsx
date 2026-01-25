@@ -8,7 +8,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import type { createTRPCClient } from "@trpc/client";
 import MDEditor from "@uiw/react-md-editor";
 import { useAtomValue } from "jotai";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ActiveRegistration from "@/client/components/diceshock/ActiveRegistration";
 import { ActiveTags } from "@/client/components/diceshock/ActiveTags";
 import GameDialog from "@/client/components/diceshock/GameDialog";
@@ -63,7 +63,7 @@ export default function ActiveDetail({
       }
     | undefined
   >(undefined);
-
+  
   // 检查是否是约局发起者 - 使用 useMemo 确保在 session 更新时重新计算
   const isCreator = useMemo(() => {
     const activeGame = active as any;
@@ -78,6 +78,10 @@ export default function ActiveDetail({
     (active as any)?.creator_id,
     session?.user?.id,
   ]);
+  
+  // 使用 ref 保存弹窗是否应该显示，避免因为 active 更新而关闭弹窗
+  // 一旦弹窗打开，就保持打开状态，直到用户主动关闭或编辑成功
+  const shouldShowEditDialogRef = useRef(false);
 
   // 获取活动的桌游列表（展示页面，不包含失效的桌游）
   const fetchBoardGames = useCallback(async () => {
@@ -132,6 +136,8 @@ export default function ActiveDetail({
         selectedBoardGames: gstoneIds,
         selectedTags: tagIds,
       });
+      // 标记应该显示弹窗，避免因为 active 更新而关闭
+      shouldShowEditDialogRef.current = true;
       setEditGameDialogOpen(true);
     } catch (error) {
       console.error("加载约局数据失败", error);
@@ -145,8 +151,20 @@ export default function ActiveDetail({
 
   // 编辑成功后的回调
   const handleEditGameSuccess = useCallback(() => {
+    // 关闭弹窗
+    shouldShowEditDialogRef.current = false;
+    setEditGameDialogOpen(false);
     // 刷新页面数据
     window.location.reload();
+  }, []);
+  
+  // 处理弹窗关闭
+  const handleEditGameDialogToggle = useCallback((e: { open: boolean }) => {
+    if (!e.open) {
+      // 用户主动关闭弹窗
+      shouldShowEditDialogRef.current = false;
+    }
+    setEditGameDialogOpen(e.open);
   }, []);
 
   const handleDelete = useCallback(async () => {
@@ -371,10 +389,12 @@ export default function ActiveDetail({
       )}
 
       {/* 编辑约局弹窗 */}
-      {isCreator && (active as any)?.is_game && (
+      {/* 使用 ref 来确保弹窗不会因为 active 更新而关闭 */}
+      {/* 初始渲染时检查 isCreator，但一旦弹窗打开就保持打开状态 */}
+      {(shouldShowEditDialogRef.current || (isCreator && (active as any)?.is_game)) && (
         <GameDialog
           isOpen={editGameDialogOpen}
-          onToggle={(e) => setEditGameDialogOpen(e.open)}
+          onToggle={handleEditGameDialogToggle}
           gameId={activeId}
           initialData={editGameInitialData}
           onSuccess={handleEditGameSuccess}
