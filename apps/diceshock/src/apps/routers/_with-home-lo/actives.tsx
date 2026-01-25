@@ -45,6 +45,7 @@ function RouteComponent() {
   const { session } = useAuth();
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showExpired, setShowExpired] = useState(false);
+  const [showGames, setShowGames] = useState<boolean | null>(null); // null: 全部, true: 只显示约局, false: 只显示活动
   const [timeFilter, setTimeFilter] = useState<TimeFilter>(null);
   const [actives, setActives] = useState<ActiveItem[]>([]);
   const [tags, setTags] = useState<TagItem[]>([]);
@@ -57,7 +58,6 @@ function RouteComponent() {
       is_game_enabled: boolean | null;
     }>
   >([]);
-  const [tagSearchQuery, setTagSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   // 存储每个活动的报名统计信息
   const [registrationStats, setRegistrationStats] = useState<
@@ -109,17 +109,15 @@ function RouteComponent() {
       const publishedTags = await trpcClientPublic.activeTags.get.query();
       setTags(publishedTags);
 
-      // 如果没有搜索查询，只获取置顶标签
-      // 如果有搜索查询，获取所有匹配的标签
+      // 获取所有启用约局的标签（不局限于置顶标签）
       const data = await trpcClientPublic.activeTags.getGameTags.query({
-        search: tagSearchQuery || undefined,
-        onlyPinned: !tagSearchQuery, // 没有搜索时只显示置顶标签
+        onlyGameEnabled: true,
       });
       setAllTags(data);
     } catch (error) {
       console.error("获取标签失败", error);
     }
-  }, [tagSearchQuery]);
+  }, []);
 
   useEffect(() => {
     fetchTags();
@@ -267,6 +265,14 @@ function RouteComponent() {
       result = result.filter((active) => !active.isExpired);
     }
 
+    // 约局/活动筛选
+    if (showGames !== null) {
+      result = result.filter((active) => {
+        const isGame = (active as any).is_game === true;
+        return showGames ? isGame : !isGame;
+      });
+    }
+
     // 根据选中的标签筛选
     if (selectedTags.length > 0) {
       result = result.filter((active) =>
@@ -308,7 +314,7 @@ function RouteComponent() {
     }
 
     return result;
-  }, [actives, selectedTags, showExpired, timeFilter]);
+  }, [actives, selectedTags, showExpired, showGames, timeFilter]);
 
   // 将所有活动展平，添加日期信息用于分组和标识
   const flattenedActives = useMemo(() => {
@@ -504,54 +510,27 @@ function RouteComponent() {
         {/* 标签筛选 */}
         <div className="mb-6">
           <div className="flex flex-wrap gap-2 mb-4">
-            {/* 过期活动标签 */}
-            <button
-              onClick={() => setShowExpired(!showExpired)}
-              className={`badge badge-lg gap-2 cursor-pointer transition-all ${
-                showExpired
-                  ? "badge-secondary"
-                  : "badge-outline hover:badge-secondary"
-              }`}
-            >
-              <span>⏰</span>
-              过期活动
-            </button>
-
             {/* 已选中的标签 */}
-            {selectedTags.length > 0 && (
-              <>
-                {allTags
-                  .filter((tag) => selectedTags.includes(tag.id))
-                  .map((tag) => {
-                    const title = tagTitle(tag.title);
-                    return (
-                      <button
-                        key={tag.id}
-                        onClick={() => toggleTag(tag.id)}
-                        className="badge badge-lg gap-2 badge-primary cursor-pointer"
-                      >
-                        <span>{title.emoji}</span>
-                        {title.tx}
-                      </button>
-                    );
-                  })}
-              </>
-            )}
-          </div>
+            {selectedTags.length > 0 &&
+              allTags
+                .filter((tag) => selectedTags.includes(tag.id))
+                .map((tag) => {
+                  const title = tagTitle(tag.title);
+                  return (
+                    <button
+                      key={tag.id}
+                      onClick={() => toggleTag(tag.id)}
+                      className="badge badge-lg gap-2 badge-primary cursor-pointer"
+                    >
+                      <span>{title.emoji}</span>
+                      {title.tx}
+                    </button>
+                  );
+                })}
 
-          {/* 标签搜索和选择 */}
-          <div>
-            <input
-              type="text"
-              className="input input-bordered w-full mb-2"
-              placeholder="搜索标签（留空则只显示置顶标签）..."
-              value={tagSearchQuery}
-              onChange={(e) => {
-                setTagSearchQuery(e.target.value);
-              }}
-            />
+            {/* 标签搜索和选择 */}
             {(() => {
-              // 只显示已被活动使用的标签（在 tags 中存在的标签）
+              // 显示所有在活动上使用的标签（不局限于置顶标签）
               const availableTags = allTags.filter((tag) =>
                 tags.some((t) => t.id === tag.id),
               );
@@ -564,7 +543,7 @@ function RouteComponent() {
               }
 
               return (
-                <div className="flex flex-wrap gap-2">
+                <>
                   {unselectedTags.map((tag) => {
                     const title = tagTitle(tag.title);
                     return (
@@ -579,9 +558,52 @@ function RouteComponent() {
                       </button>
                     );
                   })}
-                </div>
+                </>
               );
             })()}
+
+            {/* 约局筛选 */}
+            <button
+              onClick={() => {
+                setShowGames(showGames === true ? null : true);
+              }}
+              className={`badge badge-lg gap-2 cursor-pointer transition-all ${
+                showGames === true
+                  ? "badge-accent"
+                  : "badge-outline hover:badge-accent"
+              }`}
+            >
+              <span>🎲</span>
+              约局
+            </button>
+
+            {/* 活动筛选 */}
+            <button
+              onClick={() => {
+                setShowGames(showGames === false ? null : false);
+              }}
+              className={`badge badge-lg gap-2 cursor-pointer transition-all ${
+                showGames === false
+                  ? "badge-accent"
+                  : "badge-outline hover:badge-accent"
+              }`}
+            >
+              <span>📅</span>
+              活动
+            </button>
+
+            {/* 过期活动筛选 */}
+            <button
+              onClick={() => setShowExpired(!showExpired)}
+              className={`badge badge-lg gap-2 cursor-pointer transition-all ${
+                showExpired
+                  ? "badge-secondary"
+                  : "badge-outline hover:badge-secondary"
+              }`}
+            >
+              <span>⏰</span>
+              过期活动
+            </button>
           </div>
         </div>
 
@@ -607,11 +629,15 @@ function RouteComponent() {
         </div>
 
         {/* 清除筛选 */}
-        {(selectedTags.length > 0 || showExpired || timeFilter) && (
+        {(selectedTags.length > 0 ||
+          showExpired ||
+          showGames !== null ||
+          timeFilter) && (
           <button
             onClick={() => {
               setSelectedTags([]);
               setShowExpired(false);
+              setShowGames(null);
               setTimeFilter(null);
             }}
             className="btn btn-sm btn-ghost mb-4"
