@@ -298,6 +298,9 @@ function RouteComponent() {
       );
       if (gameEnabledMatch) {
         tag.is_game_enabled = gameEnabledMatch[1] === "true";
+        console.log(
+          `[parseTomlTags] 解析标签 "${tag.name}" 的 is_game_enabled: ${tag.is_game_enabled}`,
+        );
       }
 
       if (tag.name) {
@@ -527,7 +530,7 @@ is_game_enabled = true`}
                     }))
                   }
                 />
-                <span className="label-text">置顶（仅活动）</span>
+                <span className="label-text">置顶</span>
               </label>
               <label className="label cursor-pointer gap-2">
                 <input
@@ -564,7 +567,7 @@ is_game_enabled = true`}
               <table className="table">
                 <thead>
                   <tr>
-                    <th>置顶（仅活动）</th>
+                    <th>置顶</th>
                     <th>启用约局</th>
                     <th>图标</th>
                     <th>标签名称</th>

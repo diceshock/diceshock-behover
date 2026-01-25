@@ -115,6 +115,7 @@ const update = publicProcedure
     } = {
       title,
     };
+
     if (keywords !== undefined) {
       updateData.keywords = keywords || null;
     }
@@ -366,7 +367,10 @@ const importTags = publicProcedure
           },
           keywords: tagData.keywords?.trim() || null,
           is_pinned: tagData.is_pinned || false,
-          is_game_enabled: tagData.is_game_enabled !== undefined ? tagData.is_game_enabled : true,
+          is_game_enabled:
+            tagData.is_game_enabled !== undefined
+              ? tagData.is_game_enabled
+              : true,
         });
 
         results.created++;

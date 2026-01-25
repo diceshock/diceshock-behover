@@ -111,7 +111,7 @@ export default function ActiveDetail({
   // 获取约局标签
   const fetchEditGameTags = useCallback(async () => {
     try {
-      // 约局标签：排除置顶标签（置顶只有活动有），只显示启用约局的标签
+      // 约局标签：排除置顶标签，只显示启用约局的标签
       const allTags = await trpcClientPublic.activeTags.getGameTags.query({
         search: editGameTagSearchQuery || undefined,
         excludePinned: true, // 约局不显示置顶标签

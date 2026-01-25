@@ -1,0 +1,1 @@
+ALTER TABLE `active_tags_table` ADD `is_game_enabled` integer;
