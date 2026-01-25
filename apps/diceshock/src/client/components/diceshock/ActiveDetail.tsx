@@ -1,24 +1,24 @@
+import type { BoardGame } from "@lib/utils";
 import {
   AddressBookIcon,
   PencilLineIcon,
   TrashIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { Link, useNavigate } from "@tanstack/react-router";
+import type { createTRPCClient } from "@trpc/client";
 import MDEditor from "@uiw/react-md-editor";
 import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useState } from "react";
-import { themeA } from "@/client/components/ThemeSwap";
-import { ActiveTags } from "@/client/components/diceshock/ActiveTags";
 import ActiveRegistration from "@/client/components/diceshock/ActiveRegistration";
+import { ActiveTags } from "@/client/components/diceshock/ActiveTags";
 import GameDialog from "@/client/components/diceshock/GameDialog";
 import ParticipantsBusinessCardsModal from "@/client/components/diceshock/ParticipantsBusinessCardsModal";
+import { themeA } from "@/client/components/ThemeSwap";
 import useAuth from "@/client/hooks/useAuth";
 import { useMessages } from "@/client/hooks/useMessages";
-import type { ApiRouterPublic, ApiRouterDash } from "@/shared/types";
-import type { createTRPCClient } from "@trpc/client";
+import type { ApiRouterDash, ApiRouterPublic } from "@/shared/types";
 import { formatEventDate } from "@/shared/utils/formatEventDate";
 import trpcClientPublic from "@/shared/utils/trpc";
-import type { BoardGame } from "@lib/utils";
 
 type TrpcClientPublic = ReturnType<typeof createTRPCClient<ApiRouterPublic>>;
 type TrpcClientDash = ReturnType<typeof createTRPCClient<ApiRouterDash>>;
