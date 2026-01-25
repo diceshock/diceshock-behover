@@ -2003,3 +2003,46 @@ emoji = "💀"
 keywords = "死是答案,si shi daan,ssda"
 is_pinned = false
 is_game_enabled = true
+
+# 品牌相关
+[[tags]]
+name = "DiceShock©"
+emoji = "🎲"
+keywords = "DiceShock,DiceShock©,diceshock,品牌,主品牌,zhupinpai,zpp"
+is_pinned = true
+is_game_enabled = true
+
+[[tags]]
+name = "桌游店"
+emoji = "🏪"
+keywords = "桌游店,店铺,商店,实体店,zhuoyoudian,zyd,dianpu,dp"
+is_pinned = true
+is_game_enabled = true
+
+[[tags]]
+name = "多元宇宙"
+emoji = "🌌"
+keywords = "多元宇宙,Multiverse,宇宙,平行世界,duoyuanyuzhou,dyyz,yuzhou,yz"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "The Shock"
+emoji = "⚡"
+keywords = "The Shock,shock,品牌,品牌名,theshock,ts"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "Runespark"
+emoji = "✨"
+keywords = "Runespark,runespark,品牌,产品,符文火花,runespark品牌,rs"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "TRPG Group"
+emoji = "👥"
+keywords = "TRPG Group,trpg group,TRPG群,跑团群,组织,trpggroup,trpgg"
+is_pinned = false
+is_game_enabled = true
