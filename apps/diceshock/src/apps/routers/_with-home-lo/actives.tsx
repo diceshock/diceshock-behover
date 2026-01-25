@@ -316,10 +316,33 @@ function RouteComponent() {
     return result;
   }, [actives, selectedTags, showExpired, showGames, timeFilter]);
 
+  // 判断活动是否有置顶标签
+  const hasPinnedTag = useCallback(
+    (active: ActiveItem) => {
+      const pinnedTag = tags.find(
+        (tag) => tagTitle(tag.title).tx === "置顶",
+      );
+      if (!pinnedTag) return false;
+      return active.tags?.some(
+        (t: { tag_id: string }) => t.tag_id === pinnedTag.id,
+      );
+    },
+    [tags],
+  );
+
+  // 判断活动是否应该放在最上面（没有时间或置顶）
+  const shouldBeOnTop = useCallback(
+    (active: ActiveItem) => {
+      return !active.event_date || hasPinnedTag(active);
+    },
+    [hasPinnedTag],
+  );
+
   // 将所有活动展平，添加日期信息用于分组和标识
+  // 排除没有时间或置顶的活动（这些活动会在 topActives 中处理）
   const flattenedActives = useMemo(() => {
     return filteredActives
-      .filter((active) => active.event_date)
+      .filter((active) => active.event_date && !shouldBeOnTop(active))
       .map((active) => {
         const eventDate = dayjs(active.event_date!);
         return {
@@ -330,12 +353,26 @@ function RouteComponent() {
         };
       })
       .sort((a, b) => a.eventDate.valueOf() - b.eventDate.valueOf());
-  }, [filteredActives]);
+  }, [filteredActives, shouldBeOnTop]);
+
+  // 获取没有时间或置顶的活动（放在最上面）
+  const topActives = useMemo(() => {
+    return filteredActives
+      .filter((active) => shouldBeOnTop(active))
+      .map((active) => ({
+        ...active,
+        eventDate: active.event_date ? dayjs(active.event_date) : null,
+        dateKey: active.event_date
+          ? dayjs(active.event_date).format("YYYY-MM-DD")
+          : "no-date",
+        weekKey: "top",
+      }));
+  }, [filteredActives, shouldBeOnTop]);
 
   // 按周分组，并进一步按日期分组，用于显示周标题和连接线条
   // 过期活动单独分组为"过期活动"
   const weekGroups = useMemo(() => {
-    // 分离过期和未过期活动
+    // 分离过期和未过期活动（排除已经在 topActives 中的活动）
     const expiredActives = flattenedActives.filter(
       (active) => active.isExpired,
     );
@@ -385,6 +422,7 @@ function RouteComponent() {
             weekStart: dayjs(0), // 用于排序，过期活动排在最后
             dates,
             isExpired: true,
+            isTop: false,
           };
         }
 
@@ -404,6 +442,7 @@ function RouteComponent() {
           weekStart,
           dates,
           isExpired: false,
+          isTop: false,
         };
       })
       .sort((a, b) => {
@@ -648,12 +687,218 @@ function RouteComponent() {
       </div>
 
       {/* 活动列表 - 使用网格布局，允许跨天显示 */}
-      {weekGroups.length === 0 ? (
+      {topActives.length === 0 && weekGroups.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-lg text-base-content/60">暂无活动</p>
         </div>
       ) : (
         <div className="space-y-8">
+          {/* 最上面的活动（没有时间或置顶） */}
+          {topActives.length > 0 && (
+            <div className="space-y-6">
+              {/* 网格布局的活动列表 - 不显示分割线 */}
+              <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-3 gap-x-4 gap-y-12 relative">
+                {topActives.map((active) => {
+                  const pinnedTag = tags.find(
+                    (tag) => tagTitle(tag.title).tx === "置顶",
+                  );
+                  const isPinned = pinnedTag
+                    ? active.tags?.some(
+                        (t: { tag_id: string }) => t.tag_id === pinnedTag.id,
+                      )
+                    : false;
+                  const isCardHighlighted = hoveredActiveId === active.id;
+
+                  return (
+                    <Link
+                      key={active.id}
+                      to="/active/$id"
+                      params={{ id: active.id }}
+                      onMouseEnter={() => setHoveredActiveId(active.id)}
+                      onMouseLeave={() => setHoveredActiveId(null)}
+                      className={`group card bg-base-100 shadow-md hover:shadow-lg transition-all relative overflow-visible w-full ${
+                        isCardHighlighted ? "bg-base-200/50" : ""
+                      }`}
+                    >
+                      {active.cover_image && (
+                        <figure className="h-48 overflow-hidden rounded-t-lg">
+                          <img
+                            src={active.cover_image}
+                            alt={active.name || "活动头图"}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display =
+                                "none";
+                            }}
+                          />
+                        </figure>
+                      )}
+                      <div className="card-body">
+                        <div className="flex items-start justify-between gap-2">
+                          {(active as any).is_game ? (
+                            // 约局：显示标题和标签
+                            <div className="flex-1">
+                              {/* 约局标题 */}
+                              <h2 className="card-title text-lg mb-2">
+                                {isPinned && (
+                                  <span className="text-primary" title="置顶">
+                                    📌
+                                  </span>
+                                )}
+                                {(() => {
+                                  const creatorName =
+                                    creatorInfo.get(active.id)?.nickname ||
+                                    "未知";
+                                  // 如果昵称超过10个字符，截断并加上...
+                                  const displayName =
+                                    creatorName.length > 10
+                                      ? creatorName.slice(0, 10) + "..."
+                                      : creatorName;
+                                  return `${displayName}的约局`;
+                                })()}
+                              </h2>
+                              {/* 标签 */}
+                              <div className="flex flex-wrap items-center gap-1">
+                                {/* 约局发起者标签（user图标） */}
+                                <span className="badge badge-sm gap-1 badge-accent inline-flex items-center whitespace-nowrap">
+                                  <span>👤</span>{" "}
+                                  {creatorInfo.get(active.id)?.nickname ||
+                                    "未知"}
+                                </span>
+                                {/* 标签 */}
+                                <ActiveTags tags={active.tags} size="sm" />
+                                {/* 报名和观望标签 */}
+                                {active.enable_registration && (
+                                  <span className="badge badge-sm badge-info gap-1 items-center inline-flex whitespace-nowrap">
+                                    <span>👥</span>
+                                    {(() => {
+                                      const stats = registrationStats.get(
+                                        active.id,
+                                      );
+                                      if (stats) {
+                                        // 如果有上限，显示 当前/上限；无上限显示 当前+
+                                        if (stats.total === -1) {
+                                          return `${stats.current}+`;
+                                        }
+                                        return `${stats.current}/${stats.total}`;
+                                      }
+                                      return "报名中";
+                                    })()}
+                                  </span>
+                                )}
+                                {active.allow_watching && (
+                                  <span className="badge badge-sm badge-warning gap-1 items-center inline-flex whitespace-nowrap">
+                                    <span>👀</span>
+                                    观望
+                                    {(() => {
+                                      const stats = registrationStats.get(
+                                        active.id,
+                                      );
+                                      if (stats && stats.watching > 0) {
+                                        return ` (${stats.watching})`;
+                                      }
+                                      return "";
+                                    })()}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            // 非约局活动：显示标题
+                            <h2 className="card-title text-lg">
+                              {isPinned && (
+                                <span className="text-primary" title="置顶">
+                                  📌
+                                </span>
+                              )}
+                              {active.name}
+                            </h2>
+                          )}
+                        </div>
+                        {active.description && !(active as any).is_game && (
+                          <p className="text-sm text-base-content/70 line-clamp-2">
+                            {active.description}
+                          </p>
+                        )}
+                        {/* 标签显示：仅对非约局活动显示 */}
+                        {!(active as any).is_game && (
+                          <div className="flex flex-wrap items-center gap-1 mt-2">
+                            {/* 活动标签（闪电图标） */}
+                            <span className="badge badge-sm gap-1 badge-primary inline-flex items-center whitespace-nowrap">
+                              <span>⚡</span>
+                              活动
+                            </span>
+                            {/* 标签 */}
+                            <ActiveTags tags={active.tags} size="sm" />
+                            {/* 报名和观望标签 */}
+                            {active.enable_registration && (
+                              <span className="badge badge-sm badge-info gap-1 items-center inline-flex whitespace-nowrap">
+                                <span>👥</span>
+                                {(() => {
+                                  const stats = registrationStats.get(
+                                    active.id,
+                                  );
+                                  if (stats) {
+                                    // 如果有上限，显示 当前/上限；无上限显示 当前+
+                                    if (stats.total === -1) {
+                                      return `${stats.current}+`;
+                                    }
+                                    return `${stats.current}/${stats.total}`;
+                                  }
+                                  return "报名中";
+                                })()}
+                              </span>
+                            )}
+                            {active.allow_watching && (
+                              <span className="badge badge-sm badge-warning gap-1 items-center inline-flex whitespace-nowrap">
+                                <span>👀</span>
+                                观望
+                                {(() => {
+                                  const stats = registrationStats.get(
+                                    active.id,
+                                  );
+                                  if (stats && stats.watching > 0) {
+                                    return ` (${stats.watching})`;
+                                  }
+                                  return "";
+                                })()}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {active.eventDate && (
+                          <div className="flex items-center justify-between mt-4 gap-4">
+                            <div className="text-sm font-medium text-primary">
+                              {active.eventDate.format("HH:mm")}
+                            </div>
+                            <div className="text-right">
+                              {(() => {
+                                const dateTitle = getDateTitle(active.eventDate);
+                                return (
+                                  <>
+                                    <div className="text-xs text-base-content/70">
+                                      {dateTitle.main}
+                                    </div>
+                                    {dateTitle.sub && (
+                                      <div className="text-xs text-base-content/40 mt-0.5">
+                                        {dateTitle.sub}
+                                      </div>
+                                    )}
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 有时间的活动 */}
           {weekGroups.map((weekGroup) => (
             <div key={weekGroup.weekKey} className="space-y-6">
               {/* 周标题 */}
@@ -685,14 +930,18 @@ function RouteComponent() {
 
               {/* 网格布局的活动列表 - 按日期分组以支持线条连接 */}
               <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-3 gap-x-4 gap-y-12 relative">
-                {weekGroup.dates.map((dateGroup) =>
-                  dateGroup.actives.map((active, index) => {
+                {weekGroup.dates.map((dateGroup) => {
+                  const filteredActives = dateGroup.actives.filter(
+                    (active) => !shouldBeOnTop(active),
+                  );
+                  return filteredActives.map((active, index) => {
                     const pinnedTag = tags.find(
                       (tag) => tagTitle(tag.title).tx === "置顶",
                     );
                     const isPinned = pinnedTag
                       ? active.tags?.some(
-                          (t: { tag_id: string }) => t.tag_id === pinnedTag.id,
+                          (t: { tag_id: string }) =>
+                            t.tag_id === pinnedTag.id,
                         )
                       : false;
                     const isLineHighlighted =
@@ -715,7 +964,7 @@ function RouteComponent() {
                     // 中间的活动都延伸，以便连接
                     const hasLeftSameDate = index > 0; // 同一天组内不是第一个
                     const hasRightSameDate =
-                      index < dateGroup.actives.length - 1; // 同一天组内不是最后一个
+                      index < filteredActives.length - 1; // 同一天组内不是最后一个
 
                     return (
                       <Link
@@ -966,8 +1215,8 @@ function RouteComponent() {
                         </div>
                       </Link>
                     );
-                  }),
-                )}
+                  });
+                })}
               </div>
             </div>
           ))}
