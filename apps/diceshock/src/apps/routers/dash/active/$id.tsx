@@ -466,10 +466,10 @@ function RouteComponent() {
         allow_watching: allowWatching,
         event_date: eventDate || undefined,
       };
-      
+
       console.log("保存数据:", JSON.stringify(saveData, null, 2));
       console.log("selectedTags:", selectedTags);
-      
+
       await trpcClientDash.active.mutation.mutate(saveData);
       msg.success("保存成功");
       // 保存后重新获取活动数据，传入完整标签列表以确保已选择标签的数据正确更新

@@ -324,7 +324,10 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
         where: (t: any, { inArray }: any) => inArray(t.id, tagIds),
       });
 
-      console.log("找到的标签:", tags.map((t: any) => t.id));
+      console.log(
+        "找到的标签:",
+        tags.map((t: any) => t.id),
+      );
 
       if (tags.length > 0) {
         await tdb
@@ -350,9 +353,12 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
       },
     },
   });
-  
+
   if (updatedActive) {
-    console.log("更新后的活动标签:", updatedActive.tags?.map((t: any) => t.tag_id));
+    console.log(
+      "更新后的活动标签:",
+      updatedActive.tags?.map((t: any) => t.tag_id),
+    );
     // 删除未被任何活动使用的标签
     const allMappings = await tdb.query.activeTagMappingsTable.findMany();
     const usedTagIds = new Set(allMappings.map((m: any) => m.tag_id));
@@ -367,10 +373,10 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
         .delete(activeTagsTable)
         .where((drizzle as any).inArray(activeTagsTable.id, unusedTagIds));
     }
-    
+
     return [updatedActive];
   }
-  
+
   // 如果更新失败，返回原始数据
   return acitves;
 };
