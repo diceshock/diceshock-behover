@@ -1666,3 +1666,340 @@ emoji = "🎲"
 keywords = "非商业团,非商业,免费团,公益团,feishangyetuan,fsyt,mianfeituan,mft,gongyituan,gyt"
 is_pinned = false
 is_game_enabled = true
+
+# 彩蛋标签
+[[tags]]
+name = "前有"
+emoji = "➡️"
+keywords = "前有,qianyou,qy"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "后有"
+emoji = "⬅️"
+keywords = "后有,houyou,hy"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "左有"
+emoji = "⬆️"
+keywords = "左有,zuoyou,zy"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "右有"
+emoji = "⬇️"
+keywords = "右有,youyou,yy"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "上方"
+emoji = "⬆️"
+keywords = "上方,shangfang,sf"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "下方"
+emoji = "⬇️"
+keywords = "下方,xiafang,xf"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "此处"
+emoji = "📍"
+keywords = "此处,cichu,cc"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "不远处"
+emoji = "👁️"
+keywords = "不远处,buyuanchu,byc"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "小心"
+emoji = "⚠️"
+keywords = "小心,xiaoxin,xx"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "注意"
+emoji = "👀"
+keywords = "注意,zhuyi,zy"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "敌人"
+emoji = "⚔️"
+keywords = "敌人,diren,dr"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "陷阱"
+emoji = "🕳️"
+keywords = "陷阱,xianjing,xj"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "巨大宝箱"
+emoji = "💎"
+keywords = "巨大宝箱,宝箱,baoxiang,bx"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "深渊"
+emoji = "🌑"
+keywords = "深渊,shenyuan,sy"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "绝路"
+emoji = "🚫"
+keywords = "绝路,juelu,jl"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "虚假之墙"
+emoji = "🧱"
+keywords = "虚假之墙,xujiazhigiang,xjzq"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "强敌"
+emoji = "💀"
+keywords = "强敌,qiangdi,qd"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "多人"
+emoji = "👥"
+keywords = "多人,duoren,dr"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "骗局"
+emoji = "🎭"
+keywords = "骗局,pianju,pj"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "幻影"
+emoji = "👻"
+keywords = "幻影,huanying,hy"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "希望"
+emoji = "✨"
+keywords = "希望,xiwang,xw"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "绝望"
+emoji = "😱"
+keywords = "绝望,juewang,jw"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "所以"
+emoji = "💭"
+keywords = "所以,suoyi,sy"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "但是"
+emoji = "🤔"
+keywords = "但是,danshi,ds"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "然而"
+emoji = "🤷"
+keywords = "然而,raner,re"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "果然"
+emoji = "🎯"
+keywords = "果然,guoran,gr"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "看起来"
+emoji = "👁️"
+keywords = "看起来,kanqilai,kql"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "大概"
+emoji = "🤷"
+keywords = "大概,dagai,dg"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "也许"
+emoji = "🤷"
+keywords = "也许,yexu,yx"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "似乎"
+emoji = "🤔"
+keywords = "似乎,sihu,sh"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "你没有资格啊"
+emoji = "🚫"
+keywords = "你没有资格啊,ni meiyou zige a,nmyzga"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "太天真了"
+emoji = "😅"
+keywords = "太天真了,tai tianzhen le,ttzl"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "回头吧"
+emoji = "↩️"
+keywords = "回头吧,huitou ba,htb"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "别相信"
+emoji = "🙅"
+keywords = "别相信,bie xiangxin,bxx"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "已经太迟"
+emoji = "⏰"
+keywords = "已经太迟,yijing taichi,yjtc"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "你会后悔的"
+emoji = "😰"
+keywords = "你会后悔的,ni hui houhui de,nhhhd"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "这是谎言"
+emoji = "🎭"
+keywords = "这是谎言,zhe shi huangyan,zshy"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "骗你的"
+emoji = "😏"
+keywords = "骗你的,pian ni de,pnd"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "哈哈哈"
+emoji = "😂"
+keywords = "哈哈哈,hahaha,hhh"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "呵"
+emoji = "😒"
+keywords = "呵,he,h"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "这是考验"
+emoji = "⚔️"
+keywords = "这是考验,zhe shi kaoyan,zsky"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "命运如此"
+emoji = "🔮"
+keywords = "命运如此,mingyun ruci,myrc"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "王的道路"
+emoji = "👑"
+keywords = "王的道路,wang de daolu,wddl"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "弱者止步"
+emoji = "🛑"
+keywords = "弱者止步,ruozhe zhibu,rzzb"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "贪婪的下场"
+emoji = "💀"
+keywords = "贪婪的下场,tanlan de xiachang,tldxc"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "勇者的坟墓"
+emoji = "⚰️"
+keywords = "勇者的坟墓,yongzhe de fenmu,yzdfm"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "失败乃常态"
+emoji = "😔"
+keywords = "失败乃常态,shibai nai changtai,sbnct"
+is_pinned = false
+is_game_enabled = true
+
+[[tags]]
+name = "死是答案"
+emoji = "💀"
+keywords = "死是答案,si shi daan,ssda"
+is_pinned = false
+is_game_enabled = true
