@@ -73,10 +73,7 @@ export default function ActiveDetail({
       session?.user?.id &&
       session.user.id === activeGame.creator_id
     );
-  }, [
-    active,
-    session?.user?.id,
-  ]);
+  }, [active, session?.user?.id]);
 
   // 使用 ref 保存弹窗是否应该显示，避免因为 active 更新而关闭弹窗
   // 一旦弹窗打开，就保持打开状态，直到用户主动关闭或编辑成功
