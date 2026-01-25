@@ -8,7 +8,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import type { createTRPCClient } from "@trpc/client";
 import MDEditor from "@uiw/react-md-editor";
 import { useAtomValue } from "jotai";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import ActiveRegistration from "@/client/components/diceshock/ActiveRegistration";
 import { ActiveTags } from "@/client/components/diceshock/ActiveTags";
 import GameDialog from "@/client/components/diceshock/GameDialog";
@@ -64,11 +64,20 @@ export default function ActiveDetail({
     | undefined
   >(undefined);
 
-  // 检查是否是约局发起者
-  const isCreator =
-    (active as any)?.is_game &&
-    (active as any)?.creator_id &&
-    session?.user?.id === (active as any).creator_id;
+  // 检查是否是约局发起者 - 使用 useMemo 确保在 session 更新时重新计算
+  const isCreator = useMemo(() => {
+    const activeGame = active as any;
+    return (
+      activeGame?.is_game &&
+      activeGame?.creator_id &&
+      session?.user?.id &&
+      session.user.id === activeGame.creator_id
+    );
+  }, [
+    (active as any)?.is_game,
+    (active as any)?.creator_id,
+    session?.user?.id,
+  ]);
 
   // 获取活动的桌游列表（展示页面，不包含失效的桌游）
   const fetchBoardGames = useCallback(async () => {
