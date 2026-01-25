@@ -560,15 +560,7 @@ function RouteComponent() {
               );
 
               if (unselectedTags.length === 0) {
-                return (
-                  <div className="alert alert-warning">
-                    <span>
-                      {tagSearchQuery
-                        ? "未找到匹配的标签"
-                        : "暂无置顶标签或所有标签已被选中"}
-                    </span>
-                  </div>
-                );
+                return null;
               }
 
               return (
