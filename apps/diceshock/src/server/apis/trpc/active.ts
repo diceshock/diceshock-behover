@@ -359,20 +359,6 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
       "更新后的活动标签:",
       updatedActive.tags?.map((t: any) => t.tag_id),
     );
-    // 删除未被任何活动使用的标签
-    const allMappings = await tdb.query.activeTagMappingsTable.findMany();
-    const usedTagIds = new Set(allMappings.map((m: any) => m.tag_id));
-
-    const allTags = await tdb.query.activeTagsTable.findMany();
-    const unusedTagIds = allTags
-      .filter((tag: any) => !usedTagIds.has(tag.id))
-      .map((tag: any) => tag.id);
-
-    if (unusedTagIds.length > 0) {
-      await tdb
-        .delete(activeTagsTable)
-        .where((drizzle as any).inArray(activeTagsTable.id, unusedTagIds));
-    }
 
     return [updatedActive];
   }
@@ -445,21 +431,6 @@ const deleteActive = async (
   await tdb
     .delete(activesTable)
     .where((drizzle as any).eq(activesTable.id, id));
-
-  // 清理未被任何活动使用的标签
-  const allMappings = await tdb.query.activeTagMappingsTable.findMany();
-  const usedTagIds = new Set(allMappings.map((m: any) => m.tag_id));
-
-  const allTags = await tdb.query.activeTagsTable.findMany();
-  const unusedTagIds = allTags
-    .filter((tag: any) => !usedTagIds.has(tag.id))
-    .map((tag: any) => tag.id);
-
-  if (unusedTagIds.length > 0) {
-    await tdb
-      .delete(activeTagsTable)
-      .where((drizzle as any).inArray(activeTagsTable.id, unusedTagIds));
-  }
 
   return { success: true };
 };
