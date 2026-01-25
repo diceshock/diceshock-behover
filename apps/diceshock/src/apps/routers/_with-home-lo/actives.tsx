@@ -592,7 +592,7 @@ function RouteComponent() {
               活动
             </button>
 
-            {/* 过期活动筛选 */}
+            {/* 过期筛选 */}
             <button
               onClick={() => setShowExpired(!showExpired)}
               className={`badge badge-lg gap-2 cursor-pointer transition-all ${
@@ -602,7 +602,7 @@ function RouteComponent() {
               }`}
             >
               <span>⏰</span>
-              过期活动
+              过期
             </button>
           </div>
         </div>
