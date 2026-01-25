@@ -665,9 +665,7 @@ const createGame = dashProcedure
       });
 
       // 过滤掉未启用约局的标签（允许使用置顶标签）
-      const validTags = tags.filter(
-        (tag: any) => tag.is_game_enabled === true,
-      );
+      const validTags = tags.filter((tag: any) => tag.is_game_enabled === true);
 
       // 添加所有符合条件的标签
       if (validTags.length > 0) {

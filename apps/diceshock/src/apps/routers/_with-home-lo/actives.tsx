@@ -30,7 +30,6 @@ type Registration = Awaited<
   >
 >[number];
 
-
 const tagTitle = (tag?: TagItem["title"] | null) => ({
   emoji: tag?.emoji ?? "🏷️",
   tx: tag?.tx ?? "未命名",
