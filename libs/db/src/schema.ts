@@ -95,9 +95,7 @@ export const activeBoardGamesTable = sqlite.sqliteTable(
       .notNull()
       .references(() => activesTable.id, { onDelete: "cascade" }),
     // 使用 gstone_id 而不是主键 id，因为迁移时主键会变
-    board_game_id: sqlite
-      .integer("board_game_id")
-      .notNull(),
+    board_game_id: sqlite.integer("board_game_id").notNull(),
     create_at: sqlite
       .integer("create_at", { mode: "timestamp_ms" })
       .$defaultFn(() => new Date(Date.now())),
@@ -221,25 +219,22 @@ export const userInfoTable = sqlite.sqliteTable("user_info", {
   phone: sqlite.text("phone"),
 });
 
-export const userBusinessCardTable = sqlite.sqliteTable(
-  "user_business_card",
-  {
-    id: sqlite
-      .text("id")
-      .primaryKey()
-      .references(() => users.id, { onDelete: "cascade" }),
-    share_phone: sqlite.int({ mode: "boolean" }).$default(() => false), // 是否分享手机号码
-    wechat: sqlite.text(), // 微信号码
-    qq: sqlite.text(), // QQ号码
-    custom_content: sqlite.text(), // 自定义内容
-    create_at: sqlite
-      .integer("create_at", { mode: "timestamp_ms" })
-      .$defaultFn(() => new Date(Date.now())),
-    update_at: sqlite
-      .integer("update_at", { mode: "timestamp_ms" })
-      .$defaultFn(() => new Date(Date.now())),
-  },
-);
+export const userBusinessCardTable = sqlite.sqliteTable("user_business_card", {
+  id: sqlite
+    .text("id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  share_phone: sqlite.int({ mode: "boolean" }).$default(() => false), // 是否分享手机号码
+  wechat: sqlite.text(), // 微信号码
+  qq: sqlite.text(), // QQ号码
+  custom_content: sqlite.text(), // 自定义内容
+  create_at: sqlite
+    .integer("create_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date(Date.now())),
+  update_at: sqlite
+    .integer("update_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date(Date.now())),
+});
 
 export const userInfoRelations = relations(userInfoTable, ({ one }) => ({
   user: one(users, {
