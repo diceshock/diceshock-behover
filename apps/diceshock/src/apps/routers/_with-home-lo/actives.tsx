@@ -142,16 +142,17 @@ function RouteComponent() {
 
   const fetchTags = useCallback(async () => {
     try {
-      // 获取所有标签（活动版本：支持置顶标签和非约局标签）
-      const data = await trpcClientPublic.activeTags.getGameTags.query({
-        search: tagSearchQuery || undefined,
-        // 活动可以使用所有标签，包括置顶标签和非约局标签
-      });
-      setAllTags(data);
-
-      // 同时获取已发布活动使用的标签（用于筛选）
+      // 先获取已发布活动使用的标签（用于筛选）
       const publishedTags = await trpcClientPublic.activeTags.get.query();
       setTags(publishedTags);
+
+      // 如果没有搜索查询，只获取置顶标签
+      // 如果有搜索查询，获取所有匹配的标签
+      const data = await trpcClientPublic.activeTags.getGameTags.query({
+        search: tagSearchQuery || undefined,
+        onlyPinned: !tagSearchQuery, // 没有搜索时只显示置顶标签
+      });
+      setAllTags(data);
     } catch (error) {
       console.error("获取标签失败", error);
     }
@@ -669,21 +670,36 @@ function RouteComponent() {
             <input
               type="text"
               className="input input-bordered w-full mb-2"
-              placeholder="搜索标签（留空则显示所有标签）..."
+              placeholder="搜索标签（留空则只显示置顶标签）..."
               value={tagSearchQuery}
               onChange={(e) => {
                 setTagSearchQuery(e.target.value);
               }}
             />
-            {allTags.length === 0 ? (
-              <div className="alert alert-warning">
-                <span>{tagSearchQuery ? "未找到匹配的标签" : "暂无标签"}</span>
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {allTags
-                  .filter((tag) => !selectedTags.includes(tag.id))
-                  .map((tag) => {
+            {(() => {
+              // 只显示已被活动使用的标签（在 tags 中存在的标签）
+              const availableTags = allTags.filter((tag) =>
+                tags.some((t) => t.id === tag.id),
+              );
+              const unselectedTags = availableTags.filter(
+                (tag) => !selectedTags.includes(tag.id),
+              );
+
+              if (unselectedTags.length === 0) {
+                return (
+                  <div className="alert alert-warning">
+                    <span>
+                      {tagSearchQuery
+                        ? "未找到匹配的标签"
+                        : "暂无置顶标签或所有标签已被选中"}
+                    </span>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="flex flex-wrap gap-2">
+                  {unselectedTags.map((tag) => {
                     const title = tagTitle(tag.title);
                     return (
                       <button
@@ -697,8 +713,9 @@ function RouteComponent() {
                       </button>
                     );
                   })}
-              </div>
-            )}
+                </div>
+              );
+            })()}
           </div>
         </div>
 
