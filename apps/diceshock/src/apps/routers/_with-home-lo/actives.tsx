@@ -319,9 +319,7 @@ function RouteComponent() {
   // 判断活动是否有置顶标签
   const hasPinnedTag = useCallback(
     (active: ActiveItem) => {
-      const pinnedTag = tags.find(
-        (tag) => tagTitle(tag.title).tx === "置顶",
-      );
+      const pinnedTag = tags.find((tag) => tagTitle(tag.title).tx === "置顶");
       if (!pinnedTag) return false;
       return active.tags?.some(
         (t: { tag_id: string }) => t.tag_id === pinnedTag.id,
@@ -873,7 +871,9 @@ function RouteComponent() {
                             </div>
                             <div className="text-right">
                               {(() => {
-                                const dateTitle = getDateTitle(active.eventDate);
+                                const dateTitle = getDateTitle(
+                                  active.eventDate,
+                                );
                                 return (
                                   <>
                                     <div className="text-xs text-base-content/70">
@@ -940,8 +940,7 @@ function RouteComponent() {
                     );
                     const isPinned = pinnedTag
                       ? active.tags?.some(
-                          (t: { tag_id: string }) =>
-                            t.tag_id === pinnedTag.id,
+                          (t: { tag_id: string }) => t.tag_id === pinnedTag.id,
                         )
                       : false;
                     const isLineHighlighted =
@@ -963,8 +962,7 @@ function RouteComponent() {
                     // 如果是第一个，左边不延伸；如果是最后一个，右边不延伸
                     // 中间的活动都延伸，以便连接
                     const hasLeftSameDate = index > 0; // 同一天组内不是第一个
-                    const hasRightSameDate =
-                      index < filteredActives.length - 1; // 同一天组内不是最后一个
+                    const hasRightSameDate = index < filteredActives.length - 1; // 同一天组内不是最后一个
 
                     return (
                       <Link
