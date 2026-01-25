@@ -101,7 +101,7 @@ const BoardGame = () => {
             </h3>
 
             <p className="w-56 text-base-content/70 text-xl">
-              DiceShock© 被多所大学包围, 主理人耕耘桌游行业多年.
+              DiceShock© 被多所大学包围, 主持人耕耘桌游行业多年.
               玩桌游的人开的桌游店,
               <span className="text-base-content"> 组局不等人!</span>
             </p>

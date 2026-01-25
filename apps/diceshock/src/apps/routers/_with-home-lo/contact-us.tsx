@@ -37,7 +37,7 @@ function RouteComponent() {
 
                 <br />
                 <p>
-                  <b>联系主理人辣条(ID: Gahon):</b>
+                  <b>联系主持人辣条(ID: Gahon):</b>
                 </p>
 
                 {<CopyItem tx="519576792" />}
@@ -58,7 +58,7 @@ function RouteComponent() {
               <div>
                 <br />
                 <p>
-                  <b>联系主理人辣条(ID: Hygge):</b>
+                  <b>联系主持人辣条(ID: Hygge):</b>
                 </p>
 
                 {<CopyItem tx="GahonTian" />}

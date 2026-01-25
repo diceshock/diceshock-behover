@@ -46,7 +46,7 @@ const Credits = () => {
 
       <div className="w-full py-20 flex flex-col items-center justify-center">
         <div className="my-5 flex [&]:text-xl">
-          <h5 className="font-bold mr-2">主理人</h5>
+          <h5 className="font-bold mr-2">主持人</h5>
           <div>
             <p>辣条</p>
             <p>薯条</p>
@@ -64,9 +64,12 @@ const Credits = () => {
 
       <div className="w-full py-20 flex flex-col items-center justify-center">
         <div className="my-5 flex [&]:text-xl">
-          <h5 className="font-bold">店长</h5>
+          <h5 className="font-bold mr-2">店长</h5>
+          <div>
+            <p>十二</p>
+            <p>大可</p>
+          </div>
         </div>
-        <p className="text-xl">小武</p>
       </div>
 
       <div ref={ref2} className="w-full h-[150vh]">
