@@ -288,6 +288,8 @@ function RouteComponent() {
       result = result.filter((active) => {
         if (!active.event_date) return false;
         const eventDate = dayjs(active.event_date);
+        // 检查日期是否有效
+        if (!eventDate.isValid()) return false;
 
         switch (timeFilter) {
           case "本周":
@@ -343,6 +345,10 @@ function RouteComponent() {
       .filter((active) => active.event_date && !shouldBeOnTop(active))
       .map((active) => {
         const eventDate = dayjs(active.event_date!);
+        // 检查日期是否有效，如果无效则跳过
+        if (!eventDate.isValid()) {
+          return null;
+        }
         return {
           ...active,
           eventDate,
@@ -350,6 +356,7 @@ function RouteComponent() {
           weekKey: `${eventDate.isoWeekYear()}-W${String(eventDate.isoWeek()).padStart(2, "0")}`,
         };
       })
+      .filter((item): item is NonNullable<typeof item> => item !== null)
       .sort((a, b) => a.eventDate.valueOf() - b.eventDate.valueOf());
   }, [filteredActives, shouldBeOnTop]);
 
@@ -357,14 +364,19 @@ function RouteComponent() {
   const topActives = useMemo(() => {
     return filteredActives
       .filter((active) => shouldBeOnTop(active))
-      .map((active) => ({
-        ...active,
-        eventDate: active.event_date ? dayjs(active.event_date) : null,
-        dateKey: active.event_date
-          ? dayjs(active.event_date).format("YYYY-MM-DD")
-          : "no-date",
-        weekKey: "top",
-      }));
+      .map((active) => {
+        const eventDate = active.event_date ? dayjs(active.event_date) : null;
+        // 检查日期是否有效
+        const isValidDate = eventDate?.isValid() ?? false;
+        return {
+          ...active,
+          eventDate: isValidDate ? eventDate : null,
+          dateKey: isValidDate
+            ? eventDate?.format("YYYY-MM-DD") ?? "no-date"
+            : "no-date",
+          weekKey: "top",
+        };
+      });
   }, [filteredActives, shouldBeOnTop]);
 
   // 按周分组，并进一步按日期分组，用于显示周标题和连接线条
@@ -477,6 +489,11 @@ function RouteComponent() {
 
   // 获取日期标题
   const getDateTitle = (date: dayjs.Dayjs) => {
+    // 检查日期是否有效
+    if (!date || !date.isValid()) {
+      return { main: "日期无效", sub: null };
+    }
+    
     const now = dayjs();
     const weekdays = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 
@@ -864,7 +881,7 @@ function RouteComponent() {
                             )}
                           </div>
                         )}
-                        {active.eventDate && (
+                        {active.eventDate?.isValid() && (
                           <div className="flex items-center justify-between mt-4 gap-4">
                             <div className="text-sm font-medium text-primary">
                               {active.eventDate.format("HH:mm")}
@@ -1186,30 +1203,32 @@ function RouteComponent() {
                               )}
                             </div>
                           )}
-                          <div className="flex items-center justify-between mt-4 gap-4">
-                            <div className="text-sm font-medium text-primary">
-                              {active.eventDate.format("HH:mm")}
-                            </div>
-                            <div className="text-right">
-                              {(() => {
-                                const dateTitle = getDateTitle(
-                                  active.eventDate,
-                                );
-                                return (
-                                  <>
-                                    <div className="text-xs text-base-content/70">
-                                      {dateTitle.main}
-                                    </div>
-                                    {dateTitle.sub && (
-                                      <div className="text-xs text-base-content/40 mt-0.5">
-                                        {dateTitle.sub}
+                          {active.eventDate?.isValid() && (
+                            <div className="flex items-center justify-between mt-4 gap-4">
+                              <div className="text-sm font-medium text-primary">
+                                {active.eventDate.format("HH:mm")}
+                              </div>
+                              <div className="text-right">
+                                {(() => {
+                                  const dateTitle = getDateTitle(
+                                    active.eventDate,
+                                  );
+                                  return (
+                                    <>
+                                      <div className="text-xs text-base-content/70">
+                                        {dateTitle.main}
                                       </div>
-                                    )}
-                                  </>
-                                );
-                              })()}
+                                      {dateTitle.sub && (
+                                        <div className="text-xs text-base-content/40 mt-0.5">
+                                          {dateTitle.sub}
+                                        </div>
+                                      )}
+                                    </>
+                                  );
+                                })()}
+                              </div>
                             </div>
-                          </div>
+                          )}
                         </div>
                       </Link>
                     );

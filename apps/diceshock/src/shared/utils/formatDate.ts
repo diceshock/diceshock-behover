@@ -27,14 +27,28 @@ export function formatDateToShanghai(date: Date | string | number | null | undef
 export function formatDateToLocaleString(date: Date | string | number | null | undefined): string {
   if (!date) return "—";
   
-  const d = dayjs.tz(date, "Asia/Shanghai").toDate();
-  
-  // 检查日期是否有效
-  if (Number.isNaN(d.getTime())) {
+  // 先检查原始日期是否有效（如果是 Date 对象）
+  if (date instanceof Date && Number.isNaN(date.getTime())) {
     return "—";
   }
   
-  return d.toLocaleString("zh-CN", {
+  // 使用 dayjs 处理日期，先检查有效性
+  const d = dayjs.tz(date, "Asia/Shanghai");
+  
+  // 检查 dayjs 对象是否有效
+  if (!d.isValid()) {
+    return "—";
+  }
+  
+  // 转换为 Date 对象用于 toLocaleString
+  const dateObj = d.toDate();
+  
+  // 再次检查转换后的 Date 对象是否有效
+  if (Number.isNaN(dateObj.getTime())) {
+    return "—";
+  }
+  
+  return dateObj.toLocaleString("zh-CN", {
     timeZone: "Asia/Shanghai",
     year: "numeric",
     month: "2-digit",
