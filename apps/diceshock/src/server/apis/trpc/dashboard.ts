@@ -5,9 +5,10 @@ import { publicProcedure } from "./baseTRPC";
 // 获取仪表盘统计数据
 const getStats = publicProcedure.query(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
-  const now = dayjs.tz("Asia/Shanghai").toDate();
-  const thirtyDaysAgo = dayjs.tz("Asia/Shanghai").subtract(30, "day").toDate();
-  const sevenDaysAgo = dayjs.tz("Asia/Shanghai").subtract(7, "day").toDate();
+  // 使用 UTC 时间进行数据库查询比较（与数据库存储方式一致）
+  const now = new Date();
+  const thirtyDaysAgo = dayjs(now).subtract(30, "day").toDate();
+  const sevenDaysAgo = dayjs(now).subtract(7, "day").toDate();
 
   // 用户统计
   const [totalUsers] = await tdb

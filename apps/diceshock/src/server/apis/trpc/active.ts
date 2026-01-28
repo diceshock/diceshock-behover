@@ -7,7 +7,6 @@ import db, {
   drizzle,
   pagedZ,
 } from "@lib/db";
-import dayjs from "@/shared/utils/dayjs-config";
 import z4, { z } from "zod/v4";
 import { dashProcedure, protectedProcedure, publicProcedure } from "./baseTRPC";
 
@@ -53,8 +52,8 @@ const get = publicProcedure
       },
     });
 
-    // 当前时间（上海时区）
-    const now = dayjs.tz("Asia/Shanghai").toDate();
+    // 当前时间（UTC，用于与数据库中的时间比较）
+    const now = new Date();
 
     // 为每个活动添加过期状态，并排序
     const activesWithExpired = allActives
@@ -74,8 +73,12 @@ const get = publicProcedure
           return a.isExpired ? 1 : -1;
         }
         // 如果过期状态相同，按 publish_at 降序排序
-        const publishAtA = a.publish_at?.getTime() || 0;
-        const publishAtB = b.publish_at?.getTime() || 0;
+        const publishAtA = a.publish_at instanceof Date && !Number.isNaN(a.publish_at.getTime()) 
+          ? a.publish_at.getTime() 
+          : 0;
+        const publishAtB = b.publish_at instanceof Date && !Number.isNaN(b.publish_at.getTime()) 
+          ? b.publish_at.getTime() 
+          : 0;
         return publishAtB - publishAtA;
       });
 
@@ -84,7 +87,25 @@ const get = publicProcedure
     const endIndex = startIndex + pageSize;
     const paginatedActives = activesWithExpired.slice(startIndex, endIndex);
 
-    return paginatedActives;
+    // 清理无效的日期字段，确保所有日期都是有效的 Date 对象或 null
+    const sanitizedActives = paginatedActives.map((active: any) => {
+      const sanitized: any = { ...active };
+      
+      // 清理日期字段：如果日期无效（NaN），则设为 null
+      const dateFields = ['publish_at', 'event_date', 'create_at'];
+      for (const field of dateFields) {
+        if (sanitized[field] instanceof Date) {
+          // 检查日期是否有效
+          if (Number.isNaN(sanitized[field].getTime())) {
+            sanitized[field] = null;
+          }
+        }
+      }
+      
+      return sanitized;
+    });
+
+    return sanitizedActives;
   });
 
 const getByIdZ = z.object({
@@ -266,7 +287,7 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
     !currentActive.is_published &&
     (!currentActive.publish_at || currentActive.publish_at.getTime() === 0)
   ) {
-    updateData.publish_at = dayjs.tz("Asia/Shanghai").toDate();
+    updateData.publish_at = new Date();
   }
 
   // 如果开启报名功能，且之前未开启，则创建默认队伍

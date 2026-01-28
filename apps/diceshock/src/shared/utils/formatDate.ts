@@ -8,8 +8,15 @@ import dayjs from "./dayjs-config";
 export function formatDateToShanghai(date: Date | string | number | null | undefined): string {
   if (!date) return "—";
   
+  const d = dayjs.tz(date, "Asia/Shanghai");
+  
+  // 检查日期是否有效
+  if (!d.isValid()) {
+    return "—";
+  }
+  
   // 使用 dayjs 将日期转换为上海时区，然后格式化为本地化字符串
-  return dayjs.tz(date, "Asia/Shanghai").format("YYYY-MM-DD HH:mm:ss");
+  return d.format("YYYY-MM-DD HH:mm:ss");
 }
 
 /**
@@ -21,6 +28,12 @@ export function formatDateToLocaleString(date: Date | string | number | null | u
   if (!date) return "—";
   
   const d = dayjs.tz(date, "Asia/Shanghai").toDate();
+  
+  // 检查日期是否有效
+  if (Number.isNaN(d.getTime())) {
+    return "—";
+  }
+  
   return d.toLocaleString("zh-CN", {
     timeZone: "Asia/Shanghai",
     year: "numeric",

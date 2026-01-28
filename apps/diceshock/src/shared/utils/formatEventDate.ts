@@ -12,6 +12,12 @@ export function formatEventDate(eventDate: Date | string | null | undefined): st
   if (!eventDate) return "";
 
   const date = dayjs.tz(eventDate, "Asia/Shanghai");
+  
+  // 检查日期是否有效
+  if (!date.isValid()) {
+    return "";
+  }
+  
   const now = dayjs.tz("Asia/Shanghai");
 
   // 如果活动已过期（在当前时间之前）
