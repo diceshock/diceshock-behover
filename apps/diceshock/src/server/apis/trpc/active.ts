@@ -7,6 +7,7 @@ import db, {
   drizzle,
   pagedZ,
 } from "@lib/db";
+import dayjs from "@/shared/utils/dayjs-config";
 import z4, { z } from "zod/v4";
 import { dashProcedure, protectedProcedure, publicProcedure } from "./baseTRPC";
 
@@ -52,8 +53,8 @@ const get = publicProcedure
       },
     });
 
-    // 当前时间
-    const now = new Date();
+    // 当前时间（上海时区）
+    const now = dayjs.tz("Asia/Shanghai").toDate();
 
     // 为每个活动添加过期状态，并排序
     const activesWithExpired = allActives
@@ -265,7 +266,7 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
     !currentActive.is_published &&
     (!currentActive.publish_at || currentActive.publish_at.getTime() === 0)
   ) {
-    updateData.publish_at = new Date();
+    updateData.publish_at = dayjs.tz("Asia/Shanghai").toDate();
   }
 
   // 如果开启报名功能，且之前未开启，则创建默认队伍

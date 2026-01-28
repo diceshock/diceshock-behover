@@ -3,6 +3,8 @@ import { Hono } from "hono";
 import apisRoot from "@/server/apis/apisRoot";
 import fileRoute from "@/server/apis/fileRoute";
 import type { HonoCtxEnv } from "@/shared/types";
+// 初始化 dayjs 时区配置为上海时间
+import "@/shared/utils/dayjs-config";
 import aliyunInj from "./server/middlewares/aliyunInj";
 import {
   authGuard,

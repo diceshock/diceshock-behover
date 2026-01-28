@@ -1,13 +1,13 @@
 import db, { activesTable, drizzle, users } from "@lib/db";
-import dayjs from "dayjs";
+import dayjs from "@/shared/utils/dayjs-config";
 import { publicProcedure } from "./baseTRPC";
 
 // 获取仪表盘统计数据
 const getStats = publicProcedure.query(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
-  const now = new Date();
-  const thirtyDaysAgo = dayjs(now).subtract(30, "day").toDate();
-  const sevenDaysAgo = dayjs(now).subtract(7, "day").toDate();
+  const now = dayjs.tz("Asia/Shanghai").toDate();
+  const thirtyDaysAgo = dayjs.tz("Asia/Shanghai").subtract(30, "day").toDate();
+  const sevenDaysAgo = dayjs.tz("Asia/Shanghai").subtract(7, "day").toDate();
 
   // 用户统计
   const [totalUsers] = await tdb

@@ -1,9 +1,7 @@
-import dayjs from "dayjs";
+import dayjs from "./dayjs-config";
 import relativeTime from "dayjs/plugin/relativeTime";
-import "dayjs/locale/zh-cn";
 
 dayjs.extend(relativeTime);
-dayjs.locale("zh-cn");
 
 /**
  * 格式化活动日期，显示人性化的时间表述
@@ -13,8 +11,8 @@ dayjs.locale("zh-cn");
 export function formatEventDate(eventDate: Date | string | null | undefined): string {
   if (!eventDate) return "";
 
-  const date = dayjs(eventDate);
-  const now = dayjs();
+  const date = dayjs.tz(eventDate, "Asia/Shanghai");
+  const now = dayjs.tz("Asia/Shanghai");
 
   // 如果活动已过期（在当前时间之前）
   if (date.isBefore(now, "minute")) {

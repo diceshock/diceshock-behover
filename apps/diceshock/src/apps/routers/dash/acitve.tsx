@@ -8,7 +8,7 @@ import {
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ActiveTags } from "@/client/components/diceshock/ActiveTags";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
-import dayjs from "dayjs";
+import dayjs from "@/shared/utils/dayjs-config";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import { trpcClientDash } from "@/shared/utils/trpc";

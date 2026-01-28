@@ -16,6 +16,7 @@ import type { BoardGame } from "@lib/utils";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import { useOnMount } from "@/client/hooks/useOnMount";
+import { formatDateToLocaleString } from "@/shared/utils/formatDate";
 import trpcClientPublic, { trpcClientDash } from "@/shared/utils/trpc";
 
 type TagList = Awaited<ReturnType<typeof trpcClientDash.activeTags.get.query>>;
@@ -1649,9 +1650,7 @@ function RegistrationsTab({
                         )}
                       </td>
                       <td>
-                        {reg.create_at
-                          ? new Date(reg.create_at).toLocaleString("zh-CN")
-                          : "—"}
+                        {formatDateToLocaleString(reg.create_at)}
                       </td>
                     </tr>
                   ))
@@ -1745,9 +1744,7 @@ function UserDetailsModal({ userId, onClose }: UserDetailsModalProps) {
                 <span className="label-text">注册时间</span>
               </label>
               <div>
-                {user.userInfo?.create_at
-                  ? new Date(user.userInfo.create_at).toLocaleString("zh-CN")
-                  : "—"}
+                {formatDateToLocaleString(user.userInfo?.create_at)}
               </div>
             </div>
           </div>

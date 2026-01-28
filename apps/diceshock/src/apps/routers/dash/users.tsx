@@ -5,7 +5,7 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute } from "@tanstack/react-router";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
-import dayjs from "dayjs";
+import dayjs from "@/shared/utils/dayjs-config";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import { trpcClientDash } from "@/shared/utils/trpc";

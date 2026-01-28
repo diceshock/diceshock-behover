@@ -1,6 +1,6 @@
 import { PlusIcon } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import dayjs from "dayjs";
+import dayjs from "@/shared/utils/dayjs-config";
 import isoWeek from "dayjs/plugin/isoWeek";
 import weekOfYear from "dayjs/plugin/weekOfYear";
 import { useCallback, useEffect, useMemo, useState } from "react";

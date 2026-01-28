@@ -1,6 +1,6 @@
 import { animated, useSpring, useInView } from "@react-spring/web";
 import { useEffect, useRef } from "react";
-import dayjs from "dayjs";
+import dayjs from "@/shared/utils/dayjs-config";
 
 interface GameCountAnimationProps {
   count: number;
