@@ -23,7 +23,11 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
 
   const config: AuthConfig = {
     adapter: DrizzleAdapter(db(c.env.DB)),
-    secret: c.env.AUTH_SECRET,
+    secret:
+      c.env.AUTH_SECRET ||
+      (import.meta.env.DEV
+        ? "diceshock-dev-secret-do-not-use-in-production"
+        : ""),
     providers: [],
     session: { strategy: "jwt" },
     trustHost: true,

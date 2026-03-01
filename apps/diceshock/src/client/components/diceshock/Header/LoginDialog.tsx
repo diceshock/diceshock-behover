@@ -29,7 +29,7 @@ export default function LoginDialog({
   } = useSmsCode({
     phone,
     containerId: "#turnstileIns-container",
-    enabled: isOpen && activeTab === "phonenumber",
+    enabled: isOpen && activeTab === "phonenumber" && import.meta.env.PROD,
   });
 
   // 当弹窗关闭时重置状态
@@ -158,9 +158,11 @@ export default function LoginDialog({
               </button>
             </label>
 
-            <div className="flex justify-center">
-              <div id="turnstileIns-container" />
-            </div>
+            {import.meta.env.PROD && (
+              <div className="flex justify-center">
+                <div id="turnstileIns-container" />
+              </div>
+            )}
 
             <button type="submit" className="btn btn-primary btn-sm">
               登录

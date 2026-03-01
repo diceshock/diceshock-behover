@@ -54,6 +54,24 @@ const smsCode = publicProcedure
     // 2. 修改手机号流程：在 updateUserInfo 中会检查新手机号是否已被其他用户使用
 
     const verificationCode = customAlphabet("0123456789", 6)();
+    const expirationTtl = 60 * 5;
+    const kvKey = getSmsTmpCodeKey(phone);
+
+    // 开发环境：不调用阿里云，仅写入 KV 并返回验证码，便于本地登录
+    if (import.meta.env.DEV) {
+      await KV.put(kvKey, verificationCode, { expirationTtl });
+      console.log({
+        type: "SMS_DEV_BYPASS",
+        phone,
+        code: verificationCode,
+        hint: "开发环境未发真实短信，请使用上方 code 登录",
+      });
+      return {
+        success: true,
+        code: verificationCode,
+        expiresInMs: expirationTtl * 1000,
+      };
+    }
 
     const sendSmsRequest = new $Dysmsapi20170525.SendSmsRequest({
       templateParam: JSON.stringify({ code: verificationCode }),
@@ -91,9 +109,6 @@ const smsCode = publicProcedure
 
         return { success: false, message: errorMessage };
       }
-
-      const expirationTtl = 60 * 5;
-      const kvKey = getSmsTmpCodeKey(phone);
 
       await KV.put(kvKey, verificationCode, { expirationTtl });
 

@@ -48,7 +48,7 @@ function RouteComponent() {
   } = useSmsCode({
     phone,
     containerId: "#phone-turnstile-container",
-    enabled: isEditingPhone,
+    enabled: isEditingPhone && import.meta.env.PROD,
   });
 
   const handleEditClick = useCallback(() => {
@@ -451,9 +451,11 @@ function RouteComponent() {
               </button>
             </label>
 
-            <div className="flex justify-center">
-              <div id="phone-turnstile-container" />
-            </div>
+            {import.meta.env.PROD && (
+              <div className="flex justify-center">
+                <div id="phone-turnstile-container" />
+              </div>
+            )}
 
             <div className="flex justify-end gap-2">
               <button
