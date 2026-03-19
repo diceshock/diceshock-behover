@@ -22,7 +22,6 @@
     "@tanstack/react-router-devtools": "^1.153.1",
     "@trpc/client": "^11.5.1",
     "@trpc/server": "^11.5.1",
-    "@uiw/react-md-editor": "^4.0.8",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
     "hono": "^4.9.6",
