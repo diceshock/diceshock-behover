@@ -1,8 +1,6 @@
 import {
   GaugeIcon,
   SignOutIcon,
-  SignpostIcon,
-  TagIcon,
   UsersIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import {
@@ -27,20 +25,6 @@ function RouteComponent() {
             <Link to="/dash" className="gap-12">
               <GaugeIcon className="size-6" />
               仪表盘
-            </Link>
-          </li>
-
-          <li>
-            <Link to="/dash/acitve" className="gap-12">
-              <SignpostIcon className="size-6" />
-              活动
-            </Link>
-          </li>
-
-          <li>
-            <Link to="/dash/game-tags" className="gap-12">
-              <TagIcon className="size-6" />
-              标签
             </Link>
           </li>
 

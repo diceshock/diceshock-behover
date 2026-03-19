@@ -267,7 +267,7 @@ function RouteComponent() {
                       登记/修改名片
                     </p>
                     <p className="text-xs sm:text-sm text-base-content/60 break-words">
-                      当你报名约局, 组织者可以查看你的名片
+                      管理你的联系方式名片
                     </p>
                   </div>
                 </div>
