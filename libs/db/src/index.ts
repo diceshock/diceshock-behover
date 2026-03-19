@@ -3,7 +3,6 @@ export * as drizzle from "drizzle-orm";
 export * from "./schema";
 export * as schema from "./schema";
 export * from "./types";
-export * from "./types/table";
 
 import type { D1Database } from "@cloudflare/workers-types";
 import { drizzle } from "drizzle-orm/d1";
