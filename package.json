@@ -3,9 +3,11 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "drizzle": "drizzle-kit",
-    "x": "nx run",
-    "lint": "biome check"
+    "dev": "tsx plugins/dev-log.ts",
+    "x": "tsx plugins/run-log.ts --nx",
+    "drizzle": "tsx plugins/run-log.ts drizzle drizzle-kit",
+    "lint": "tsx plugins/run-log.ts lint biome check",
+    "build": "tsx plugins/run-log.ts build nx run-many --target=build"
   },
   "workspaces": [
     "apps/*",
