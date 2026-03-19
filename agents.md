@@ -4,9 +4,11 @@
 
 所有根目录 scripts 的输出自动写入 `.agents/output-<name>-<起始行>-<结束行>.log`。
 
+- 终端输出完全不受影响（颜色、格式保留），日志文件自动去除 ANSI 码
 - 每行带 ISO 时间戳，连续重复行合并为 `[xN]`
-- 单文件最多 20000 行，写满自动轮转，同一 name 保留最新 3 个文件
+- 单文件最多 20000 行，写满自动轮转
 - 日志文件第一行记录原始命令
+- 重跑时旧 log 移入 `.agents/trash/`，trash 保留最新 15 个文件
 
 `.agents/` 目录已 gitignore。
 
@@ -14,9 +16,8 @@
 
 | 文件 | 用途 |
 |---|---|
-| `plugins/log.ts` | `RotatingLog` 核心 — 轮转、去重、时间戳 |
-| `plugins/dev-log.ts` | `pnpm dev` 专用 — 同时启动 diceshock + runespark |
-| `plugins/run-log.ts` | 通用 runner — 包装任意单命令，`--nx` 模式包装 nx target |
+| `plugins/x.ts` | 统一入口 — `--dev` 多 app 启动 / 默认 nx target / `--run` 任意命令 |
+| `plugins/log.ts` | `RotatingLog` 核心 — 轮转、去重、时间戳、trash 归档 |
 
 ### 命令
 
