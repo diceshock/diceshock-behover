@@ -1,5 +1,4 @@
 import {
-  CalendarBlankIcon,
   ClockIcon,
   FunnelIcon,
   PlusIcon,
@@ -20,6 +19,90 @@ type ActiveItem = Awaited<
   ReturnType<typeof trpcClientPublic.actives.list.query>
 >["items"][number];
 
+type WeekGroup = {
+  weekKey: string;
+  weekLabel: string;
+  days: DayGroup[];
+};
+
+type DayGroup = {
+  dateKey: string;
+  dayLabel: string;
+  items: ActiveItem[];
+};
+
+type FlatCard = {
+  type: "card";
+  item: ActiveItem;
+  dateKey: string;
+  isFirstOfDay: boolean;
+  dayLabel: string;
+  sameDayCount: number;
+};
+
+function createMockActive(
+  id: string,
+  title: string,
+  date: string,
+  time?: string,
+  maxPlayers = 4,
+  joinedCount = 0,
+  watchingCount = 0,
+): ActiveItem {
+  const registrations: ActiveItem["registrations"] = [];
+  for (let i = 0; i < joinedCount; i++) {
+    registrations.push({
+      id: `reg-${id}-j${i}`,
+      user_id: `user-${i}`,
+      is_watching: false,
+    } as ActiveItem["registrations"][number]);
+  }
+  for (let i = 0; i < watchingCount; i++) {
+    registrations.push({
+      id: `reg-${id}-w${i}`,
+      user_id: `user-w${i}`,
+      is_watching: true,
+    } as ActiveItem["registrations"][number]);
+  }
+  return {
+    id,
+    title,
+    date,
+    time: time ?? null,
+    max_players: maxPlayers,
+    content: null,
+    is_game: true,
+    creator_id: "creator-1",
+    board_game_id: null,
+    board_game_ids: null,
+    create_at: date,
+    update_at: null,
+    created_at: date,
+    creator: { id: "creator-1", name: "Mock User", image: null },
+    registrations,
+    boardGame: null,
+    boardGames: [],
+  } as unknown as ActiveItem;
+}
+
+function getMockActives(): ActiveItem[] {
+  return [
+    createMockActive("m1", "卡坦岛之夜", "2026-03-21", "19:00", 6, 3, 1),
+    createMockActive("m2", "Wingspan 翼展", "2026-03-21", "14:00", 4, 2, 0),
+    createMockActive("m3", "璀璨宝石锦标赛", "2026-03-21", "20:00", 4, 4, 2),
+    createMockActive("m4", "农场主周末局", "2026-03-22", "10:00", 5, 1, 0),
+    createMockActive("m5", "阿瓦隆狼人夜", "2026-03-22", "19:30", 8, 5, 3),
+    createMockActive("m6", "星期天轻策略", "2026-03-23", "15:00", 4, 0, 0),
+    createMockActive("m7", "周一工作日拼桌", "2026-03-24", "18:30", 4, 2, 0),
+    createMockActive("m8", "Terraforming Mars", "2026-03-24", "19:00", 5, 3, 1),
+    createMockActive("m9", "密室逃脱桌游版", "2026-03-24", "20:00", 6, 1, 0),
+    createMockActive("m10", "下周五电影之夜", "2026-03-28", "20:00", 10, 4, 2),
+    createMockActive("m11", "下周五桌游马拉松", "2026-03-28", "14:00", 8, 6, 1),
+  ];
+}
+
+const USE_MOCK = true;
+
 function ActivesPage() {
   const [actives, setActives] = useState<ActiveItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,11 +112,15 @@ function ActivesPage() {
   const fetchActives = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await trpcClientPublic.actives.list.query({
-        limit: 50,
-        showExpired,
-      });
-      setActives(result.items);
+      if (USE_MOCK) {
+        setActives(getMockActives());
+      } else {
+        const result = await trpcClientPublic.actives.list.query({
+          limit: 50,
+          showExpired,
+        });
+        setActives(result.items);
+      }
     } catch (error) {
       console.error("Failed to fetch actives:", error);
     } finally {
@@ -45,11 +132,11 @@ function ActivesPage() {
     fetchActives();
   }, [fetchActives]);
 
-  const grouped = groupByDate(actives);
+  const weeks = groupByWeekAndDay(actives);
 
   return (
     <main className="min-h-[calc(100vh-32rem)] w-full mt-20 sm:mt-32 md:mt-40 px-4 pb-20">
-      <div className="mx-auto w-full max-w-3xl">
+      <div className="mx-auto w-full max-w-5xl">
         <div className="flex items-center justify-between mb-8 sm:mb-12">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold">
             活动&约局
@@ -98,24 +185,9 @@ function ActivesPage() {
             </p>
           </div>
         ) : (
-          <div className="relative">
-            <div className="absolute left-4 sm:left-6 top-0 bottom-0 w-px bg-base-300" />
-
-            {grouped.map(([dateKey, items]) => (
-              <div key={dateKey} className="mb-8">
-                <div className="flex items-center gap-3 mb-4 relative">
-                  <div className="size-3 rounded-full bg-primary shrink-0 relative z-10 ml-[10px] sm:ml-[18px]" />
-                  <h2 className="text-lg sm:text-xl font-bold text-primary">
-                    {formatDateLabel(dateKey)}
-                  </h2>
-                </div>
-
-                <div className="pl-10 sm:pl-14 flex flex-col gap-3">
-                  {items.map((active) => (
-                    <ActiveCard key={active.id} active={active} />
-                  ))}
-                </div>
-              </div>
+          <div className="flex flex-col gap-10">
+            {weeks.map((week) => (
+              <WeekSection key={week.weekKey} week={week} />
             ))}
           </div>
         )}
@@ -124,7 +196,98 @@ function ActivesPage() {
   );
 }
 
-function ActiveCard({ active }: { active: ActiveItem }) {
+const COLS = 3;
+
+function WeekSection({ week }: { week: WeekGroup }) {
+  const flatCards = flattenWeek(week);
+
+  return (
+    <section>
+      <div className="flex items-center gap-3 my-6">
+        <div className="flex-1 h-px bg-base-300" />
+        <span className="text-sm font-semibold text-base-content/40 tracking-wider">
+          {week.weekLabel}
+        </span>
+        <span className="text-xs text-base-content/30">
+          {week.weekKey.slice(0, 4)}
+        </span>
+        <div className="flex-1 h-px bg-base-300" />
+      </div>
+
+      <div className="flex flex-col gap-y-4 md:hidden">
+        {week.days.map((day) => (
+          <div key={day.dateKey} className="flex flex-col">
+            {day.items.map((item, idx) => (
+              <SmActiveCard
+                key={item.id}
+                active={item}
+                isFirstOfDay={idx === 0}
+                isLastOfDay={idx === day.items.length - 1}
+                dayLabel={day.dayLabel}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden md:grid md:grid-cols-3 gap-y-8">
+        {flatCards.map((card, gridIdx) => {
+          if (card === null) {
+            return <EmptyCell key={`empty-${gridIdx}`} />;
+          }
+
+          const col = gridIdx % COLS;
+          const prevInRow = col > 0 ? flatCards[gridIdx - 1] : null;
+          const nextInRow = col < COLS - 1 ? flatCards[gridIdx + 1] : null;
+
+          const borderExtendBefore =
+            prevInRow !== null &&
+            prevInRow !== undefined &&
+            prevInRow.dateKey === card.dateKey;
+          const borderExtendAfter =
+            nextInRow !== null &&
+            nextInRow !== undefined &&
+            nextInRow.dateKey === card.dateKey;
+
+          const borderLeft = col === 0;
+          const borderRight =
+            col === COLS - 1 ||
+            flatCards[gridIdx + 1] === null ||
+            flatCards[gridIdx + 1] === undefined;
+
+          return (
+            <ActiveCard
+              key={card.item.id}
+              active={card.item}
+              isFirstOfDay={card.isFirstOfDay}
+              dayLabel={card.dayLabel}
+              borderLeft={borderLeft}
+              borderRight={borderRight}
+              borderExtendBefore={borderExtendBefore}
+              borderExtendAfter={borderExtendAfter}
+            />
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function EmptyCell() {
+  return <div className="h-44" />;
+}
+
+function SmActiveCard({
+  active,
+  isFirstOfDay,
+  isLastOfDay,
+  dayLabel,
+}: {
+  active: ActiveItem;
+  isFirstOfDay: boolean;
+  isLastOfDay: boolean;
+  dayLabel: string;
+}) {
   const joinedCount = active.registrations.filter((r) => !r.is_watching).length;
   const watchingCount = active.registrations.filter(
     (r) => r.is_watching,
@@ -133,83 +296,279 @@ function ActiveCard({ active }: { active: ActiveItem }) {
     active.date < dayjs().tz("Asia/Shanghai").format("YYYY-MM-DD");
 
   return (
-    <Link
-      to="/actives/$id"
-      params={{ id: active.id }}
-      className={clsx(
-        "card bg-base-200 border border-base-content/10 hover:border-primary/30 transition-all hover:shadow-md cursor-pointer",
-        isExpired && "opacity-60",
+    <div>
+      {isFirstOfDay && (
+        <span className="text-xs font-bold text-primary-content bg-primary border border-primary rounded px-2 py-0.5 mb-1 ml-5 inline-block">
+          {dayLabel}
+        </span>
       )}
-    >
-      <div className="card-body p-4 sm:p-5">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-base sm:text-lg truncate">
-              {active.title}
-            </h3>
-            {active.boardGame && (
-              <span className="badge badge-primary badge-sm mt-1">
-                🎲 {active.boardGame.sch_name || active.boardGame.eng_name}
+
+      <div className={clsx("relative flex", isExpired && "opacity-60")}>
+        <div
+          className={clsx(
+            "absolute left-0 w-0.5 bg-primary",
+            isFirstOfDay ? "-top-7" : "top-0",
+            isLastOfDay ? "bottom-2" : "bottom-0",
+          )}
+        />
+
+        <Link
+          to="/actives/$id"
+          params={{ id: active.id }}
+          className="block flex-1 card bg-base-200 border border-base-content/10 rounded-lg ml-5 my-1 hover:border-primary/30 transition-all hover:shadow-md cursor-pointer"
+        >
+          <div className="card-body p-4">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-base truncate">{active.title}</h3>
+                {active.boardGames?.[0] && (
+                  <span className="badge badge-primary badge-sm mt-1">
+                    🎲{" "}
+                    {active.boardGames?.[0].sch_name ||
+                      active.boardGames?.[0].eng_name}
+                  </span>
+                )}
+              </div>
+              {isExpired && (
+                <span className="badge badge-ghost badge-sm shrink-0">
+                  已过期
+                </span>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-base-content/60">
+              {active.time && (
+                <span className="flex items-center gap-1">
+                  <ClockIcon className="size-3.5" />
+                  {active.time}
+                </span>
+              )}
+              <span className="flex items-center gap-1">
+                <UsersIcon className="size-3.5" />
+                {joinedCount}/{active.max_players}
+                {watchingCount > 0 && (
+                  <span className="text-base-content/40">
+                    ({watchingCount}观望)
+                  </span>
+                )}
               </span>
-            )}
+            </div>
+
+            <div className="flex items-center gap-2 mt-2 text-xs text-base-content/40">
+              <span>发起人: {active.creator.name ?? "Anonymous"}</span>
+            </div>
           </div>
-          {isExpired && (
-            <span className="badge badge-ghost badge-sm shrink-0">已过期</span>
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs sm:text-sm text-base-content/60">
-          <span className="flex items-center gap-1">
-            <CalendarBlankIcon className="size-3.5" />
-            {active.date}
-          </span>
-          {active.time && (
-            <span className="flex items-center gap-1">
-              <ClockIcon className="size-3.5" />
-              {active.time}
-            </span>
-          )}
-          <span className="flex items-center gap-1">
-            <UsersIcon className="size-3.5" />
-            {joinedCount}/{active.max_players}
-            {watchingCount > 0 && (
-              <span className="text-base-content/40">
-                ({watchingCount}观望)
-              </span>
-            )}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2 mt-2 text-xs text-base-content/40">
-          <span>发起人: {active.creator.name ?? "Anonymous"}</span>
-        </div>
+        </Link>
       </div>
-    </Link>
+    </div>
   );
 }
 
-function groupByDate(items: ActiveItem[]): [string, ActiveItem[]][] {
-  const map = new Map<string, ActiveItem[]>();
-  for (const item of items) {
-    const key = item.date;
-    const arr = map.get(key) ?? [];
-    arr.push(item);
-    map.set(key, arr);
-  }
-  return Array.from(map.entries());
+function ActiveCard({
+  active,
+  isFirstOfDay,
+  dayLabel,
+  borderLeft,
+  borderRight,
+  borderExtendBefore,
+  borderExtendAfter,
+}: {
+  active: ActiveItem;
+  isFirstOfDay: boolean;
+  dayLabel: string;
+  borderLeft: boolean;
+  borderRight: boolean;
+  borderExtendBefore: boolean;
+  borderExtendAfter: boolean;
+}) {
+  const joinedCount = active.registrations.filter((r) => !r.is_watching).length;
+  const watchingCount = active.registrations.filter(
+    (r) => r.is_watching,
+  ).length;
+  const isExpired =
+    active.date < dayjs().tz("Asia/Shanghai").format("YYYY-MM-DD");
+
+  return (
+    <div className={clsx("relative h-44", isExpired && "opacity-60")}>
+      <div
+        className={clsx(
+          "absolute top-0 h-0.5 bg-primary",
+          borderExtendBefore ? "left-0" : "left-2",
+          borderExtendAfter ? "right-0" : "right-2",
+        )}
+      />
+
+      {isFirstOfDay && (
+        <span className="absolute top-0 left-3 -translate-y-1/2 z-10 text-xs font-bold text-primary-content bg-primary border border-primary rounded px-2 py-0.5">
+          {dayLabel}
+        </span>
+      )}
+
+      <Link
+        to="/actives/$id"
+        params={{ id: active.id }}
+        className={clsx(
+          "block h-full pt-4 card bg-base-200 border border-base-content/10 rounded-lg mx-2 mt-2 hover:border-primary/30 transition-all hover:shadow-md cursor-pointer",
+        )}
+      >
+        <div className="card-body p-4 pt-2">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-base truncate">{active.title}</h3>
+              {active.boardGames?.[0] && (
+                <span className="badge badge-primary badge-sm mt-1">
+                  🎲{" "}
+                  {active.boardGames?.[0].sch_name ||
+                    active.boardGames?.[0].eng_name}
+                </span>
+              )}
+            </div>
+            {isExpired && (
+              <span className="badge badge-ghost badge-sm shrink-0">
+                已过期
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-base-content/60">
+            {active.time && (
+              <span className="flex items-center gap-1">
+                <ClockIcon className="size-3.5" />
+                {active.time}
+              </span>
+            )}
+            <span className="flex items-center gap-1">
+              <UsersIcon className="size-3.5" />
+              {joinedCount}/{active.max_players}
+              {watchingCount > 0 && (
+                <span className="text-base-content/40">
+                  ({watchingCount}观望)
+                </span>
+              )}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 mt-2 text-xs text-base-content/40">
+            <span>发起人: {active.creator.name ?? "Anonymous"}</span>
+          </div>
+        </div>
+      </Link>
+    </div>
+  );
 }
 
-function formatDateLabel(dateStr: string): string {
+function flattenWeek(week: WeekGroup): (FlatCard | null)[] {
+  const result: (FlatCard | null)[] = [];
+
+  for (const day of week.days) {
+    const startCol = result.length % COLS;
+    if (startCol !== 0 && startCol + day.items.length > COLS) {
+      const padding = COLS - startCol;
+      for (let i = 0; i < padding; i++) {
+        result.push(null);
+      }
+    }
+
+    for (let i = 0; i < day.items.length; i++) {
+      const col = result.length % COLS;
+      result.push({
+        type: "card",
+        item: day.items[i],
+        dateKey: day.dateKey,
+        isFirstOfDay: i === 0,
+        dayLabel: day.dayLabel,
+        sameDayCount: day.items.length,
+      });
+    }
+  }
+
+  return result;
+}
+
+function groupByWeekAndDay(items: ActiveItem[]): WeekGroup[] {
+  const weekMap = new Map<string, Map<string, ActiveItem[]>>();
+  const today = dayjs().tz("Asia/Shanghai");
+
+  for (const item of items) {
+    const d = dayjs(item.date);
+    const weekStart = d.startOf("week");
+    const weekKey = weekStart.format("YYYY-MM-DD");
+    const dateKey = item.date;
+
+    if (!weekMap.has(weekKey)) {
+      weekMap.set(weekKey, new Map());
+    }
+    const dayMap = weekMap.get(weekKey)!;
+    if (!dayMap.has(dateKey)) {
+      dayMap.set(dateKey, []);
+    }
+    dayMap.get(dateKey)!.push(item);
+  }
+
+  const weeks: WeekGroup[] = [];
+
+  for (const [weekKey, dayMap] of weekMap) {
+    const weekStart = dayjs(weekKey);
+    const weekEnd = weekStart.add(6, "day");
+
+    const days: DayGroup[] = [];
+    for (const [dateKey, dayItems] of dayMap) {
+      days.push({
+        dateKey,
+        dayLabel: formatDayLabel(dateKey, today),
+        items: dayItems,
+      });
+    }
+
+    weeks.push({
+      weekKey,
+      weekLabel: formatWeekLabel(weekStart, weekEnd, today),
+      days,
+    });
+  }
+
+  return weeks;
+}
+
+function formatWeekLabel(
+  weekStart: dayjs.Dayjs,
+  weekEnd: dayjs.Dayjs,
+  today: dayjs.Dayjs,
+): string {
+  const thisWeekStart = today.startOf("week");
+  const nextWeekStart = thisWeekStart.add(1, "week");
+  const lastWeekStart = thisWeekStart.subtract(1, "week");
+
+  const rangeStr = weekStart.isSame(weekEnd, "month")
+    ? `${weekStart.format("M/D")} - ${weekEnd.format("D")}`
+    : `${weekStart.format("M/D")} - ${weekEnd.format("M/D")}`;
+
+  if (weekStart.isSame(thisWeekStart, "day")) {
+    return `本周 · ${rangeStr}`;
+  }
+  if (weekStart.isSame(nextWeekStart, "day")) {
+    return `下周 · ${rangeStr}`;
+  }
+  if (weekStart.isSame(lastWeekStart, "day")) {
+    return `上周 · ${rangeStr}`;
+  }
+
+  if (!weekStart.isSame(today, "year")) {
+    return `${weekStart.format("YYYY/")}${rangeStr}`;
+  }
+
+  return rangeStr;
+}
+
+const WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+
+function formatDayLabel(dateStr: string, today: dayjs.Dayjs): string {
   const d = dayjs(dateStr);
-  const today = dayjs();
   const tomorrow = today.add(1, "day");
 
-  if (d.isSame(today, "day")) return `今天 · ${d.format("MM/DD")}`;
-  if (d.isSame(tomorrow, "day")) return `明天 · ${d.format("MM/DD")}`;
+  if (d.isSame(today, "day")) return `今天 · ${d.format("M/D")}`;
+  if (d.isSame(tomorrow, "day")) return `明天 · ${d.format("M/D")}`;
 
-  const weekdays = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
-  const weekday = weekdays[d.day()];
-
-  if (d.isSame(today, "year")) return `${d.format("MM/DD")} ${weekday}`;
-  return `${d.format("YYYY/MM/DD")} ${weekday}`;
+  const weekday = WEEKDAYS[d.day()];
+  return `${weekday} · ${d.format("M/D")}`;
 }

@@ -1,5 +1,5 @@
 import { BoardGame } from "@lib/utils";
-import z from "zod";
+import { z } from "zod/v4";
 import { publicProcedure } from "./baseTRPC";
 
 const syncInpuZ = z.object({

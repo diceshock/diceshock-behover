@@ -96,7 +96,7 @@ export const activesTable = sqlite.sqliteTable("actives", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   title: sqlite.text().notNull(),
-  board_game_id: sqlite.text().references(() => boardGamesTable.id),
+  board_game_ids: sqlite.text(),
   date: sqlite.text().notNull(), // "YYYY-MM-DD"
   time: sqlite.text(), // "HH:mm"
   max_players: sqlite.int().notNull(),
@@ -133,10 +133,6 @@ export const activesRelations = relations(activesTable, ({ one, many }) => ({
   creator: one(users, {
     fields: [activesTable.creator_id],
     references: [users.id],
-  }),
-  boardGame: one(boardGamesTable, {
-    fields: [activesTable.board_game_id],
-    references: [boardGamesTable.id],
   }),
   registrations: many(activeRegistrationsTable),
 }));

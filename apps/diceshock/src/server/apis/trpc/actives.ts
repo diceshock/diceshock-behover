@@ -1,16 +1,37 @@
 import db, {
   activeRegistrationsTable,
   activesTable,
+  boardGamesTable,
   drizzle,
-  userInfoTable,
 } from "@lib/db";
 import { z } from "zod/v4";
 import dayjs from "@/shared/utils/dayjs-config";
 import { protectedProcedure, publicProcedure } from "./baseTRPC";
 
+function parseBoardGameIds(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+
+async function resolveBoardGames(
+  tdb: ReturnType<typeof db>,
+  ids: string[],
+): Promise<{ id: string; sch_name: string | null; eng_name: string | null }[]> {
+  if (ids.length === 0) return [];
+  return tdb.query.boardGamesTable.findMany({
+    where: (g, { inArray }) => inArray(g.id, ids),
+    columns: { id: true, sch_name: true, eng_name: true },
+  });
+}
+
 const createActiveZ = z.object({
   title: z.string().min(1).max(100),
-  board_game_id: z.string().optional(),
+  board_game_ids: z.array(z.string()).default([]),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   time: z
     .string()
@@ -30,7 +51,10 @@ const create = protectedProcedure
       .values({
         creator_id: ctx.userId,
         title: input.title,
-        board_game_id: input.board_game_id,
+        board_game_ids:
+          input.board_game_ids.length > 0
+            ? JSON.stringify(input.board_game_ids)
+            : null,
         date: input.date,
         time: input.time,
         max_players: input.max_players,
@@ -65,11 +89,14 @@ const list = publicProcedure
         registrations: {
           columns: { id: true, user_id: true, is_watching: true },
         },
-        boardGame: {
-          columns: { id: true, sch_name: true, eng_name: true },
-        },
       },
     });
+
+    const allGameIds = [
+      ...new Set(actives.flatMap((a) => parseBoardGameIds(a.board_game_ids))),
+    ];
+    const games = await resolveBoardGames(tdb, allGameIds);
+    const gameMap = new Map(games.map((g) => [g.id, g]));
 
     let nextCursor: string | undefined;
     if (actives.length > limit) {
@@ -77,7 +104,14 @@ const list = publicProcedure
       nextCursor = last?.id;
     }
 
-    return { items: actives, nextCursor };
+    const items = actives.map((a) => ({
+      ...a,
+      boardGames: parseBoardGameIds(a.board_game_ids)
+        .map((id) => gameMap.get(id))
+        .filter(Boolean),
+    }));
+
+    return { items, nextCursor };
   });
 
 const getById = publicProcedure
@@ -91,21 +125,17 @@ const getById = publicProcedure
           columns: { id: true, name: true, image: true },
         },
         registrations: true,
-        boardGame: {
-          columns: {
-            id: true,
-            sch_name: true,
-            eng_name: true,
-            gstone_rating: true,
-            player_num: true,
-          },
-        },
       },
     });
 
     if (!active) {
       throw new Error("活动不存在");
     }
+
+    const boardGames = await resolveBoardGames(
+      tdb,
+      parseBoardGameIds(active.board_game_ids),
+    );
 
     const registrationsWithUserInfo = await Promise.all(
       active.registrations.map(async (reg) => {
@@ -121,7 +151,7 @@ const getById = publicProcedure
       }),
     );
 
-    return { ...active, registrations: registrationsWithUserInfo };
+    return { ...active, boardGames, registrations: registrationsWithUserInfo };
   });
 
 const join = protectedProcedure
