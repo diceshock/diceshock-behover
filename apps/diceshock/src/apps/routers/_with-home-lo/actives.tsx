@@ -19,6 +19,44 @@ type ActiveItem = Awaited<
   ReturnType<typeof trpcClientPublic.actives.list.query>
 >["items"][number];
 
+function ActiveTags({
+  active,
+  userId,
+}: {
+  active: ActiveItem;
+  userId?: string;
+}) {
+  const isCreator = userId && active.creator_id === userId;
+  const myReg = userId
+    ? active.registrations.find((r) => r.user_id === userId)
+    : undefined;
+
+  const hasAny =
+    isCreator || myReg || (active.boardGames && active.boardGames.length > 0);
+
+  if (!hasAny) return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-1 mt-1">
+      {isCreator && <span className="badge badge-accent badge-xs">发起者</span>}
+      {!isCreator && myReg && !myReg.is_watching && (
+        <span className="badge badge-primary badge-xs">已加入</span>
+      )}
+      {!isCreator && myReg?.is_watching && (
+        <span className="badge badge-ghost badge-xs">已观望</span>
+      )}
+      {active.boardGames?.map(
+        (g) =>
+          g && (
+            <span key={g.id} className="badge badge-primary badge-xs">
+              🎲 {g.sch_name || g.eng_name}
+            </span>
+          ),
+      )}
+    </div>
+  );
+}
+
 type WeekGroup = {
   weekKey: string;
   weekLabel: string;
@@ -40,86 +78,21 @@ type FlatCard = {
   sameDayCount: number;
 };
 
-function createMockActive(
-  id: string,
-  title: string,
-  date: string,
-  time?: string,
-  maxPlayers = 4,
-  joinedCount = 0,
-  watchingCount = 0,
-): ActiveItem {
-  const registrations: ActiveItem["registrations"] = [];
-  for (let i = 0; i < joinedCount; i++) {
-    registrations.push({
-      id: `reg-${id}-j${i}`,
-      user_id: `user-${i}`,
-      is_watching: false,
-    } as ActiveItem["registrations"][number]);
-  }
-  for (let i = 0; i < watchingCount; i++) {
-    registrations.push({
-      id: `reg-${id}-w${i}`,
-      user_id: `user-w${i}`,
-      is_watching: true,
-    } as ActiveItem["registrations"][number]);
-  }
-  return {
-    id,
-    title,
-    date,
-    time: time ?? null,
-    max_players: maxPlayers,
-    content: null,
-    is_game: true,
-    creator_id: "creator-1",
-    board_game_id: null,
-    create_at: date,
-    update_at: null,
-    created_at: date,
-    creator: { id: "creator-1", name: "Mock User", image: null },
-    registrations,
-    boardGame: null,
-    boardGames: [],
-  } as unknown as ActiveItem;
-}
-
-function getMockActives(): ActiveItem[] {
-  return [
-    createMockActive("m1", "卡坦岛之夜", "2026-03-21", "19:00", 6, 3, 1),
-    createMockActive("m2", "Wingspan 翼展", "2026-03-21", "14:00", 4, 2, 0),
-    createMockActive("m3", "璀璨宝石锦标赛", "2026-03-21", "20:00", 4, 4, 2),
-    createMockActive("m4", "农场主周末局", "2026-03-22", "10:00", 5, 1, 0),
-    createMockActive("m5", "阿瓦隆狼人夜", "2026-03-22", "19:30", 8, 5, 3),
-    createMockActive("m6", "星期天轻策略", "2026-03-23", "15:00", 4, 0, 0),
-    createMockActive("m7", "周一工作日拼桌", "2026-03-24", "18:30", 4, 2, 0),
-    createMockActive("m8", "Terraforming Mars", "2026-03-24", "19:00", 5, 3, 1),
-    createMockActive("m9", "密室逃脱桌游版", "2026-03-24", "20:00", 6, 1, 0),
-    createMockActive("m10", "下周五电影之夜", "2026-03-28", "20:00", 10, 4, 2),
-    createMockActive("m11", "下周五桌游马拉松", "2026-03-28", "14:00", 8, 6, 1),
-  ];
-}
-
-const USE_MOCK = true;
-
 function ActivesPage() {
   const [actives, setActives] = useState<ActiveItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showExpired, setShowExpired] = useState(false);
-  const { userInfo } = useAuth();
+  const { userInfo, session } = useAuth();
+  const userId = session?.user?.id;
 
   const fetchActives = useCallback(async () => {
     setLoading(true);
     try {
-      if (USE_MOCK) {
-        setActives(getMockActives());
-      } else {
-        const result = await trpcClientPublic.actives.list.query({
-          limit: 50,
-          showExpired,
-        });
-        setActives(result.items);
-      }
+      const result = await trpcClientPublic.actives.list.query({
+        limit: 50,
+        showExpired,
+      });
+      setActives(result.items);
     } catch (error) {
       console.error("Failed to fetch actives:", error);
     } finally {
@@ -186,7 +159,7 @@ function ActivesPage() {
         ) : (
           <div className="flex flex-col gap-10">
             {weeks.map((week) => (
-              <WeekSection key={week.weekKey} week={week} />
+              <WeekSection key={week.weekKey} week={week} userId={userId} />
             ))}
           </div>
         )}
@@ -197,7 +170,7 @@ function ActivesPage() {
 
 const COLS = 3;
 
-function WeekSection({ week }: { week: WeekGroup }) {
+function WeekSection({ week, userId }: { week: WeekGroup; userId?: string }) {
   const flatCards = flattenWeek(week);
 
   return (
@@ -220,6 +193,7 @@ function WeekSection({ week }: { week: WeekGroup }) {
               <SmActiveCard
                 key={item.id}
                 active={item}
+                userId={userId}
                 isFirstOfDay={idx === 0}
                 isLastOfDay={idx === day.items.length - 1}
                 dayLabel={day.dayLabel}
@@ -258,6 +232,7 @@ function WeekSection({ week }: { week: WeekGroup }) {
             <ActiveCard
               key={card.item.id}
               active={card.item}
+              userId={userId}
               isFirstOfDay={card.isFirstOfDay}
               dayLabel={card.dayLabel}
               borderLeft={borderLeft}
@@ -278,11 +253,13 @@ function EmptyCell() {
 
 function SmActiveCard({
   active,
+  userId,
   isFirstOfDay,
   isLastOfDay,
   dayLabel,
 }: {
   active: ActiveItem;
+  userId?: string;
   isFirstOfDay: boolean;
   isLastOfDay: boolean;
   dayLabel: string;
@@ -320,13 +297,7 @@ function SmActiveCard({
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <h3 className="font-bold text-base truncate">{active.title}</h3>
-                {active.boardGames?.[0] && (
-                  <span className="badge badge-primary badge-sm mt-1">
-                    🎲{" "}
-                    {active.boardGames?.[0].sch_name ||
-                      active.boardGames?.[0].eng_name}
-                  </span>
-                )}
+                <ActiveTags active={active} userId={userId} />
               </div>
               {isExpired && (
                 <span className="badge badge-ghost badge-sm shrink-0">
@@ -365,6 +336,7 @@ function SmActiveCard({
 
 function ActiveCard({
   active,
+  userId,
   isFirstOfDay,
   dayLabel,
   borderLeft,
@@ -373,6 +345,7 @@ function ActiveCard({
   borderExtendAfter,
 }: {
   active: ActiveItem;
+  userId?: string;
   isFirstOfDay: boolean;
   dayLabel: string;
   borderLeft: boolean;
@@ -414,13 +387,7 @@ function ActiveCard({
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
               <h3 className="font-bold text-base truncate">{active.title}</h3>
-              {active.boardGames?.[0] && (
-                <span className="badge badge-primary badge-sm mt-1">
-                  🎲{" "}
-                  {active.boardGames?.[0].sch_name ||
-                    active.boardGames?.[0].eng_name}
-                </span>
-              )}
+              <ActiveTags active={active} userId={userId} />
             </div>
             {isExpired && (
               <span className="badge badge-ghost badge-sm shrink-0">

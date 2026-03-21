@@ -147,8 +147,7 @@ const getParticipantsBusinessCards = protectedProcedure
 
     // 获取所有报名者（不包括观望）
     const registrations = await tdb.query.activeRegistrationsTable.findMany({
-      where: (reg, { eq, and }) =>
-        and(eq(reg.active_id, active_id), eq(reg.is_watching, false)),
+      where: (reg, { eq }) => eq(reg.active_id, active_id),
     });
 
     // 获取所有参与者的名片信息
@@ -174,6 +173,7 @@ const getParticipantsBusinessCards = protectedProcedure
           user_id: userId,
           nickname: userInfo.nickname,
           uid: userInfo.uid,
+          is_watching: reg.is_watching,
           share_phone: businessCard?.share_phone ?? false,
           phone: businessCard?.share_phone ? userInfo.phone : null,
           wechat: businessCard?.wechat ?? null,

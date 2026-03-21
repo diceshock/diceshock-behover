@@ -202,13 +202,27 @@ function ActiveDetailPage() {
                 )}
               </div>
 
-              {active.boardGames?.[0] && (
-                <span className="badge badge-primary mt-3">
-                  🎲{" "}
-                  {active.boardGames[0].sch_name ||
-                    active.boardGames[0].eng_name}
-                </span>
-              )}
+              <div className="flex flex-wrap items-center gap-1 mt-2">
+                {isCreator && (
+                  <span className="badge badge-accent badge-xs">发起者</span>
+                )}
+                {!isCreator &&
+                  myRegistration &&
+                  !myRegistration.is_watching && (
+                    <span className="badge badge-primary badge-xs">已加入</span>
+                  )}
+                {!isCreator && myRegistration?.is_watching && (
+                  <span className="badge badge-ghost badge-xs">已观望</span>
+                )}
+                {active.boardGames?.map(
+                  (g) =>
+                    g && (
+                      <span key={g.id} className="badge badge-primary badge-xs">
+                        🎲 {g.sch_name || g.eng_name}
+                      </span>
+                    ),
+                )}
+              </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-base-content/70">
@@ -286,16 +300,6 @@ function ActiveDetailPage() {
                     >
                       退出
                     </button>
-                    <span
-                      className={clsx(
-                        "badge badge-lg",
-                        myRegistration.is_watching
-                          ? "badge-ghost"
-                          : "badge-primary",
-                      )}
-                    >
-                      {myRegistration.is_watching ? "观望中" : "已加入"}
-                    </span>
                   </>
                 ) : (
                   <>
