@@ -89,7 +89,11 @@ type FlatCard = {
 
 function EventCard({ event }: { event: EventItem }) {
   return (
-    <div className="card bg-base-200 border border-base-content/10 hover:border-primary/30 transition-all hover:shadow-md overflow-hidden">
+    <Link
+      to="/events/$id"
+      params={{ id: event.id }}
+      className="card bg-base-200 border border-base-content/10 hover:border-primary/30 transition-all hover:shadow-md overflow-hidden cursor-pointer"
+    >
       {event.cover_image_url && (
         <figure className="h-40 overflow-hidden">
           <img
@@ -107,7 +111,7 @@ function EventCard({ event }: { event: EventItem }) {
           </p>
         )}
       </div>
-    </div>
+    </Link>
   );
 }
 

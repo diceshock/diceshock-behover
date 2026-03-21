@@ -23,6 +23,7 @@ import { Route as WithHomeLoDiceshockAgentsRouteImport } from './routers/_with-h
 import { Route as WithHomeLoContactUsRouteImport } from './routers/_with-home-lo/contact-us'
 import { Route as WithHomeLoActivesRouteImport } from './routers/_with-home-lo/actives'
 import { Route as DashEventsIdRouteImport } from './routers/dash/events_.$id'
+import { Route as WithHomeLoEventsIdRouteImport } from './routers/_with-home-lo/events_.$id'
 import { Route as WithHomeLoActivesNewRouteImport } from './routers/_with-home-lo/actives_.new'
 import { Route as WithHomeLoActivesIdRouteImport } from './routers/_with-home-lo/actives_.$id'
 
@@ -97,6 +98,11 @@ const DashEventsIdRoute = DashEventsIdRouteImport.update({
   path: '/events/$id',
   getParentRoute: () => DashRoute,
 } as any)
+const WithHomeLoEventsIdRoute = WithHomeLoEventsIdRouteImport.update({
+  id: '/events_/$id',
+  path: '/events/$id',
+  getParentRoute: () => WithHomeLoRoute,
+} as any)
 const WithHomeLoActivesNewRoute = WithHomeLoActivesNewRouteImport.update({
   id: '/actives_/new',
   path: '/actives/new',
@@ -123,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/dash/': typeof DashIndexRoute
   '/actives/$id': typeof WithHomeLoActivesIdRoute
   '/actives/new': typeof WithHomeLoActivesNewRoute
+  '/events/$id': typeof WithHomeLoEventsIdRoute
   '/dash/events/$id': typeof DashEventsIdRoute
 }
 export interface FileRoutesByTo {
@@ -139,6 +146,7 @@ export interface FileRoutesByTo {
   '/dash': typeof DashIndexRoute
   '/actives/$id': typeof WithHomeLoActivesIdRoute
   '/actives/new': typeof WithHomeLoActivesNewRoute
+  '/events/$id': typeof WithHomeLoEventsIdRoute
   '/dash/events/$id': typeof DashEventsIdRoute
 }
 export interface FileRoutesById {
@@ -158,6 +166,7 @@ export interface FileRoutesById {
   '/dash/': typeof DashIndexRoute
   '/_with-home-lo/actives_/$id': typeof WithHomeLoActivesIdRoute
   '/_with-home-lo/actives_/new': typeof WithHomeLoActivesNewRoute
+  '/_with-home-lo/events_/$id': typeof WithHomeLoEventsIdRoute
   '/dash/events_/$id': typeof DashEventsIdRoute
 }
 export interface FileRouteTypes {
@@ -177,6 +186,7 @@ export interface FileRouteTypes {
     | '/dash/'
     | '/actives/$id'
     | '/actives/new'
+    | '/events/$id'
     | '/dash/events/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -193,6 +203,7 @@ export interface FileRouteTypes {
     | '/dash'
     | '/actives/$id'
     | '/actives/new'
+    | '/events/$id'
     | '/dash/events/$id'
   id:
     | '__root__'
@@ -211,6 +222,7 @@ export interface FileRouteTypes {
     | '/dash/'
     | '/_with-home-lo/actives_/$id'
     | '/_with-home-lo/actives_/new'
+    | '/_with-home-lo/events_/$id'
     | '/dash/events_/$id'
   fileRoutesById: FileRoutesById
 }
@@ -319,6 +331,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashEventsIdRouteImport
       parentRoute: typeof DashRoute
     }
+    '/_with-home-lo/events_/$id': {
+      id: '/_with-home-lo/events_/$id'
+      path: '/events/$id'
+      fullPath: '/events/$id'
+      preLoaderRoute: typeof WithHomeLoEventsIdRouteImport
+      parentRoute: typeof WithHomeLoRoute
+    }
     '/_with-home-lo/actives_/new': {
       id: '/_with-home-lo/actives_/new'
       path: '/actives/new'
@@ -346,6 +365,7 @@ interface WithHomeLoRouteChildren {
   WithHomeLoIndexRoute: typeof WithHomeLoIndexRoute
   WithHomeLoActivesIdRoute: typeof WithHomeLoActivesIdRoute
   WithHomeLoActivesNewRoute: typeof WithHomeLoActivesNewRoute
+  WithHomeLoEventsIdRoute: typeof WithHomeLoEventsIdRoute
 }
 
 const WithHomeLoRouteChildren: WithHomeLoRouteChildren = {
@@ -358,6 +378,7 @@ const WithHomeLoRouteChildren: WithHomeLoRouteChildren = {
   WithHomeLoIndexRoute: WithHomeLoIndexRoute,
   WithHomeLoActivesIdRoute: WithHomeLoActivesIdRoute,
   WithHomeLoActivesNewRoute: WithHomeLoActivesNewRoute,
+  WithHomeLoEventsIdRoute: WithHomeLoEventsIdRoute,
 }
 
 const WithHomeLoRouteWithChildren = WithHomeLoRoute._addFileChildren(

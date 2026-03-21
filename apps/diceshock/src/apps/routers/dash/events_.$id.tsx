@@ -35,11 +35,7 @@ function EventEditorPage() {
       setCoverImageUrl(event.cover_image_url ?? "");
       setContent(event.content ?? "");
     } catch (err) {
-      msg.error(
-        err instanceof Error
-          ? err.message
-          : "\u52A0\u8F7D\u6D3B\u52A8\u5931\u8D25",
-      );
+      msg.error(err instanceof Error ? err.message : "加载活动失败");
     } finally {
       setLoading(false);
     }
@@ -53,7 +49,7 @@ function EventEditorPage() {
     async (e: React.FormEvent) => {
       e.preventDefault();
       if (!title.trim()) {
-        msg.error("\u8BF7\u8F93\u5165\u6807\u9898");
+        msg.error("请输入标题");
         return;
       }
 
@@ -66,12 +62,10 @@ function EventEditorPage() {
           cover_image_url: coverImageUrl.trim() || undefined,
           content: content || undefined,
         });
-        msg.success("\u6D3B\u52A8\u5DF2\u4FDD\u5B58");
+        msg.success("活动已保存");
         navigate({ to: "/dash/events" });
       } catch (err) {
-        msg.error(
-          err instanceof Error ? err.message : "\u4FDD\u5B58\u5931\u8D25",
-        );
+        msg.error(err instanceof Error ? err.message : "保存失败");
       } finally {
         setSubmitting(false);
       }
@@ -95,18 +89,14 @@ function EventEditorPage() {
         </div>
 
         <div className="mx-auto w-full max-w-2xl px-4 pb-20">
-          <h1 className="text-2xl font-bold mb-8">
-            {"\u7F16\u8F91\u6D3B\u52A8"}
-          </h1>
+          <h1 className="text-2xl font-bold mb-8">编辑活动</h1>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
             <label className="flex flex-col gap-2">
-              <span className="label text-sm font-semibold">
-                {"\u6807\u9898"}
-              </span>
+              <span className="label text-sm font-semibold">标题</span>
               <input
                 type="text"
-                placeholder="\u6D3B\u52A8\u6807\u9898"
+                placeholder="活动标题"
                 className="input input-bordered w-full"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -116,11 +106,9 @@ function EventEditorPage() {
             </label>
 
             <label className="flex flex-col gap-2">
-              <span className="label text-sm font-semibold">
-                {"\u63CF\u8FF0\uFF08\u53EF\u9009\uFF09"}
-              </span>
+              <span className="label text-sm font-semibold">描述（可选）</span>
               <textarea
-                placeholder="\u6D3B\u52A8\u63CF\u8FF0\uFF0C\u4F1A\u663E\u793A\u5728\u5217\u8868\u9875\u5361\u7247\u4E0A"
+                placeholder="活动描述，会显示在列表页卡片上"
                 className="textarea textarea-bordered w-full"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -130,7 +118,7 @@ function EventEditorPage() {
 
             <label className="flex flex-col gap-2">
               <span className="label text-sm font-semibold">
-                {"\u5934\u56FEURL\uFF08\u53EF\u9009\uFF09"}
+                头图URL（可选）
               </span>
               <input
                 type="url"
@@ -149,13 +137,11 @@ function EventEditorPage() {
             </label>
 
             <div className="flex flex-col gap-2">
-              <span className="label text-sm font-semibold">
-                {"\u6B63\u6587"}
-              </span>
+              <span className="label text-sm font-semibold">正文</span>
               <TiptapEditor
                 content={content}
                 onChange={setContent}
-                placeholder="\u6D3B\u52A8\u8BE6\u60C5..."
+                placeholder="活动详情..."
               />
             </div>
 
@@ -166,14 +152,14 @@ function EventEditorPage() {
                 onClick={() => navigate({ to: "/dash/events" })}
                 disabled={submitting}
               >
-                {"\u53D6\u6D88"}
+                取消
               </button>
               <button
                 type="submit"
                 className={clsx("btn btn-primary", submitting && "loading")}
                 disabled={submitting}
               >
-                {submitting ? "\u4FDD\u5B58\u4E2D..." : "\u4FDD\u5B58"}
+                {submitting ? "保存中..." : "保存"}
               </button>
             </div>
           </form>
