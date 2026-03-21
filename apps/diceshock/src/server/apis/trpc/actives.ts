@@ -8,14 +8,9 @@ import { z } from "zod/v4";
 import dayjs from "@/shared/utils/dayjs-config";
 import { protectedProcedure, publicProcedure } from "./baseTRPC";
 
-function parseBoardGameIds(raw: string | null): string[] {
+function parseBoardGameId(raw: string | null): string[] {
   if (!raw) return [];
-  try {
-    const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? arr : [];
-  } catch {
-    return [];
-  }
+  return [raw];
 }
 
 async function resolveBoardGames(
@@ -31,7 +26,7 @@ async function resolveBoardGames(
 
 const createActiveZ = z.object({
   title: z.string().min(1).max(100),
-  board_game_ids: z.array(z.string()).default([]),
+  board_game_id: z.string().optional(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   time: z
     .string()
@@ -51,10 +46,7 @@ const create = protectedProcedure
       .values({
         creator_id: ctx.userId,
         title: input.title,
-        board_game_ids:
-          input.board_game_ids.length > 0
-            ? JSON.stringify(input.board_game_ids)
-            : null,
+        board_game_id: input.board_game_id ?? null,
         date: input.date,
         time: input.time,
         max_players: input.max_players,
@@ -93,7 +85,7 @@ const list = publicProcedure
     });
 
     const allGameIds = [
-      ...new Set(actives.flatMap((a) => parseBoardGameIds(a.board_game_ids))),
+      ...new Set(actives.flatMap((a) => parseBoardGameId(a.board_game_id))),
     ];
     const games = await resolveBoardGames(tdb, allGameIds);
     const gameMap = new Map(games.map((g) => [g.id, g]));
@@ -106,7 +98,7 @@ const list = publicProcedure
 
     const items = actives.map((a) => ({
       ...a,
-      boardGames: parseBoardGameIds(a.board_game_ids)
+      boardGames: parseBoardGameId(a.board_game_id)
         .map((id) => gameMap.get(id))
         .filter(Boolean),
     }));
@@ -134,7 +126,7 @@ const getById = publicProcedure
 
     const boardGames = await resolveBoardGames(
       tdb,
-      parseBoardGameIds(active.board_game_ids),
+      parseBoardGameId(active.board_game_id),
     );
 
     const registrationsWithUserInfo = await Promise.all(

@@ -74,7 +74,6 @@ function createMockActive(
     is_game: true,
     creator_id: "creator-1",
     board_game_id: null,
-    board_game_ids: null,
     create_at: date,
     update_at: null,
     created_at: date,
