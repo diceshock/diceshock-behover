@@ -84,11 +84,24 @@ function ActiveDetailPage() {
       }
 
       if (!isWatching && !myRegistration) {
-        setShowBusinessCard(true);
-        return;
+        try {
+          setActionLoading(true);
+          const card =
+            await trpcClientPublic.businessCard.getMyBusinessCard.query({});
+          if (!card) {
+            setActionLoading(false);
+            setShowBusinessCard(true);
+            return;
+          }
+        } catch {
+          setActionLoading(false);
+          setShowBusinessCard(true);
+          return;
+        }
+      } else {
+        setActionLoading(true);
       }
 
-      setActionLoading(true);
       try {
         await trpcClientPublic.actives.join.mutate({
           active_id: id,
@@ -189,9 +202,11 @@ function ActiveDetailPage() {
                 )}
               </div>
 
-              {active.boardGame && (
+              {active.boardGames?.[0] && (
                 <span className="badge badge-primary mt-3">
-                  🎲 {active.boardGame.sch_name || active.boardGame.eng_name}
+                  🎲{" "}
+                  {active.boardGames[0].sch_name ||
+                    active.boardGames[0].eng_name}
                 </span>
               )}
             </div>
