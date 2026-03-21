@@ -1,6 +1,7 @@
 import {
   CalendarDotsIcon,
   GaugeIcon,
+  MegaphoneIcon,
   SignOutIcon,
   UsersIcon,
 } from "@phosphor-icons/react/dist/ssr";
@@ -40,6 +41,13 @@ function RouteComponent() {
             <Link to="/dash/actives" className="gap-12">
               <CalendarDotsIcon className="size-6" />
               约局管理
+            </Link>
+          </li>
+
+          <li>
+            <Link to="/dash/events" className="gap-12">
+              <MegaphoneIcon className="size-6" />
+              活动管理
             </Link>
           </li>
 

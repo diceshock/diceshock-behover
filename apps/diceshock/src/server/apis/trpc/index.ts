@@ -3,6 +3,8 @@ import activesManagement from "./activesManagement";
 import auth from "./auth";
 import { router } from "./baseTRPC";
 import businessCard from "./businessCard";
+import events from "./events";
+import eventsManagement from "./eventsManagement";
 import owned from "./owned";
 import ownedManagement from "./ownedManagement";
 import users from "./users";
@@ -10,12 +12,14 @@ import users from "./users";
 export const appRouterDash = router({
   ownedManagement,
   activesManagement,
+  eventsManagement,
   users,
 });
 
 export const appRouterPublic = router({
   owned,
   actives,
+  events,
   auth: { smsCode: auth.smsCode, updateUserInfo: auth.updateUserInfo },
   businessCard: {
     getMyBusinessCard: businessCard.getMyBusinessCard,

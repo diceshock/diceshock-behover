@@ -57,21 +57,59 @@ const create = protectedProcedure
     return active;
   });
 
+const dateRangeZ = z.enum(["today", "week", "month", "year"]).optional();
+
 const list = publicProcedure
   .input(
     z.object({
       cursor: z.string().optional(),
       limit: z.number().int().min(1).max(50).default(20),
       showExpired: z.boolean().default(false),
+      dateRange: dateRangeZ,
     }),
   )
   .query(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
-    const { limit, showExpired } = input;
-    const today = dayjs().tz("Asia/Shanghai").format("YYYY-MM-DD");
+    const { limit, showExpired, dateRange } = input;
+    const now = dayjs().tz("Asia/Shanghai");
+    const today = now.format("YYYY-MM-DD");
+
+    let dateStart: string | undefined;
+    let dateEnd: string | undefined;
+
+    if (dateRange) {
+      switch (dateRange) {
+        case "today":
+          dateStart = today;
+          dateEnd = today;
+          break;
+        case "week":
+          dateStart = now.startOf("week").format("YYYY-MM-DD");
+          dateEnd = now.endOf("week").format("YYYY-MM-DD");
+          break;
+        case "month":
+          dateStart = now.startOf("month").format("YYYY-MM-DD");
+          dateEnd = now.endOf("month").format("YYYY-MM-DD");
+          break;
+        case "year":
+          dateStart = now.startOf("year").format("YYYY-MM-DD");
+          dateEnd = now.endOf("year").format("YYYY-MM-DD");
+          break;
+      }
+    }
 
     const actives = await tdb.query.activesTable.findMany({
-      where: showExpired ? undefined : (a, { gte }) => gte(a.date, today),
+      where: (a, { gte, lte, lt, and }) => {
+        const conditions = [];
+        if (showExpired) {
+          conditions.push(lt(a.date, today));
+        } else if (!dateRange) {
+          conditions.push(gte(a.date, today));
+        }
+        if (dateStart) conditions.push(gte(a.date, dateStart));
+        if (dateEnd) conditions.push(lte(a.date, dateEnd));
+        return conditions.length > 0 ? and(...conditions) : undefined;
+      },
       orderBy: (a, { asc, desc }) => (showExpired ? desc(a.date) : asc(a.date)),
       limit: limit + 1,
       with: {
@@ -162,6 +200,10 @@ const join = protectedProcedure
     });
 
     if (!active) throw new Error("活动不存在");
+
+    if (active.creator_id === ctx.userId) {
+      throw new Error("发起者不能加入或观望自己发起的活动");
+    }
 
     const existing = active.registrations.find((r) => r.user_id === ctx.userId);
 

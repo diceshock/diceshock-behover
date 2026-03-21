@@ -136,6 +136,10 @@ export const activesRelations = relations(activesTable, ({ one, many }) => ({
     fields: [activesTable.creator_id],
     references: [users.id],
   }),
+  boardGame: one(boardGamesTable, {
+    fields: [activesTable.board_game_id],
+    references: [boardGamesTable.id],
+  }),
   registrations: many(activeRegistrationsTable),
 }));
 
@@ -152,6 +156,23 @@ export const activeRegistrationsRelations = relations(
     }),
   }),
 );
+
+export const eventsTable = sqlite.sqliteTable("events", {
+  id: sqlite.text().$defaultFn(createId).primaryKey(),
+  title: sqlite.text().notNull(),
+  description: sqlite.text(),
+  cover_image_url: sqlite.text(),
+  content: sqlite.text(),
+  is_published: sqlite.int({ mode: "boolean" }).$default(() => false),
+  create_at: sqlite
+    .integer("create_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date(Date.now())),
+  update_at: sqlite
+    .integer("update_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date(Date.now())),
+});
+
+export const eventsRelations = relations(eventsTable, () => ({}));
 
 export const accounts = sqlite.sqliteTable(
   "account",

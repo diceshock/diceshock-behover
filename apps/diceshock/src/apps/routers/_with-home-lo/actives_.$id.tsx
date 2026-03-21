@@ -15,6 +15,7 @@ import {
 import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import BusinessCardModal from "@/client/components/diceshock/BusinessCardModal";
+import ParticipantsCardModal from "@/client/components/diceshock/ParticipantsCardModal";
 import TiptapViewer from "@/client/components/diceshock/TiptapEditor/TiptapViewer";
 import useAuth from "@/client/hooks/useAuth";
 import { useMessages } from "@/client/hooks/useMessages";
@@ -39,10 +40,7 @@ function ActiveDetailPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [showBusinessCard, setShowBusinessCard] = useState(false);
-  const [showParticipants, setShowParticipants] = useState(false);
-  const [participants, setParticipants] = useState<
-    Awaited<ReturnType<typeof trpcClientPublic.actives.getParticipants.query>>
-  >([]);
+  const [showParticipantsModal, setShowParticipantsModal] = useState(false);
 
   const userId = session?.user?.id;
   const isCreator = active && userId && active.creator_id === userId;
@@ -148,17 +146,9 @@ function ActiveDetailPage() {
     }
   }, [id, messages, fetchActive]);
 
-  const fetchParticipants = useCallback(async () => {
-    try {
-      const result = await trpcClientPublic.actives.getParticipants.query({
-        active_id: id,
-      });
-      setParticipants(result);
-      setShowParticipants(true);
-    } catch (error) {
-      messages.error("获取参与者信息失败");
-    }
-  }, [id, messages]);
+  const openParticipantsModal = useCallback(() => {
+    setShowParticipantsModal(true);
+  }, []);
 
   if (loading) {
     return (
@@ -258,7 +248,7 @@ function ActiveDetailPage() {
               </div>
             )}
 
-            {!isExpired && (
+            {!isExpired && !isCreator && (
               <div className="flex flex-wrap gap-3">
                 {!userId ? (
                   <button
@@ -334,7 +324,7 @@ function ActiveDetailPage() {
                     <button
                       type="button"
                       className="btn btn-ghost btn-xs"
-                      onClick={fetchParticipants}
+                      onClick={openParticipantsModal}
                     >
                       查看名片
                     </button>
@@ -374,48 +364,6 @@ function ActiveDetailPage() {
                 )}
               </div>
             </div>
-
-            {showParticipants && participants.length > 0 && isCreator && (
-              <div className="card bg-base-200 border border-primary/20">
-                <div className="card-body p-4 sm:p-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-bold text-sm text-primary">
-                      参与者名片
-                    </h3>
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-xs"
-                      onClick={() => setShowParticipants(false)}
-                    >
-                      收起
-                    </button>
-                  </div>
-                  <div className="flex flex-col gap-3">
-                    {participants.map((p) => (
-                      <div
-                        key={p.id}
-                        className="flex items-center justify-between p-3 bg-base-100 rounded-lg border border-base-300"
-                      >
-                        <div>
-                          <p className="font-semibold text-sm">{p.nickname}</p>
-                          <p className="text-xs text-base-content/50">
-                            uid: {p.uid}
-                          </p>
-                        </div>
-                        <span
-                          className={clsx(
-                            "badge badge-sm",
-                            p.is_watching ? "badge-ghost" : "badge-primary",
-                          )}
-                        >
-                          {p.is_watching ? "观望" : "已加入"}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </main>
@@ -425,6 +373,12 @@ function ActiveDetailPage() {
         onClose={() => setShowBusinessCard(false)}
         onSuccess={handleJoinAfterBusinessCard}
         required
+      />
+
+      <ParticipantsCardModal
+        isOpen={showParticipantsModal}
+        onClose={() => setShowParticipantsModal(false)}
+        activeId={id}
       />
     </ClientOnly>
   );

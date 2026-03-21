@@ -2,6 +2,7 @@ import {
   CalendarDotsIcon,
   EnvelopeIcon,
   HouseIcon,
+  MegaphoneIcon,
   PackageIcon,
   RobotIcon,
   UserIcon,
@@ -99,6 +100,25 @@ function RouteComponent() {
                   <h3 className="card-title text-lg">约局管理</h3>
                   <p className="text-sm text-base-content/60">
                     管理活动和约局信息
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            to="/dash/events"
+            className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+          >
+            <div className="card-body">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-warning/10 rounded-lg">
+                  <MegaphoneIcon className="size-8 text-warning" />
+                </div>
+                <div>
+                  <h3 className="card-title text-lg">活动管理</h3>
+                  <p className="text-sm text-base-content/60">
+                    管理活动发布和编辑
                   </p>
                 </div>
               </div>

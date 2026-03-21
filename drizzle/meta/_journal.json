@@ -148,6 +148,13 @@
       "when": 1773930273559,
       "tag": "0020_cultured_shockwave",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1774111690771,
+      "tag": "0021_bizarre_klaw",
+      "breakpoints": true
     }
   ]
 }
