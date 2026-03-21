@@ -1,8 +1,10 @@
 import {
+  CalendarBlankIcon,
   ClockIcon,
   FunnelIcon,
   PlusIcon,
   UsersIcon,
+  XIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { ClientOnly, createFileRoute, Link } from "@tanstack/react-router";
 import clsx from "clsx";
@@ -18,6 +20,13 @@ export const Route = createFileRoute("/_with-home-lo/actives")({
 type ActiveItem = Awaited<
   ReturnType<typeof trpcClientPublic.actives.list.query>
 >["items"][number];
+
+type EventItem = Awaited<
+  ReturnType<typeof trpcClientPublic.events.list.query>
+>[number];
+
+type FilterType = "all" | "events" | "actives" | "expired";
+type DateRange = "today" | "week" | "month" | "year" | undefined;
 
 function ActiveTags({
   active,
@@ -78,33 +87,116 @@ type FlatCard = {
   sameDayCount: number;
 };
 
+function EventCard({ event }: { event: EventItem }) {
+  return (
+    <div className="card bg-base-200 border border-base-content/10 hover:border-primary/30 transition-all hover:shadow-md overflow-hidden">
+      {event.cover_image_url && (
+        <figure className="h-40 overflow-hidden">
+          <img
+            src={event.cover_image_url}
+            alt={event.title}
+            className="w-full h-full object-cover"
+          />
+        </figure>
+      )}
+      <div className="card-body p-4">
+        <h3 className="card-title text-base">{event.title}</h3>
+        {event.description && (
+          <p className="text-sm text-base-content/60 line-clamp-2">
+            {event.description}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ActivesPage() {
   const [actives, setActives] = useState<ActiveItem[]>([]);
+  const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showExpired, setShowExpired] = useState(false);
+  const [filterType, setFilterType] = useState<FilterType>("all");
+  const [dateRange, setDateRange] = useState<DateRange>(undefined);
+  const [nextCursor, setNextCursor] = useState<string | undefined>();
+  const [loadingMore, setLoadingMore] = useState(false);
   const { userInfo, session } = useAuth();
   const userId = session?.user?.id;
 
-  const fetchActives = useCallback(async () => {
-    setLoading(true);
+  const hasFilters = filterType !== "all" || dateRange !== undefined;
+
+  const fetchEvents = useCallback(async () => {
     try {
-      const result = await trpcClientPublic.actives.list.query({
-        limit: 50,
-        showExpired,
-      });
-      setActives(result.items);
+      const result = await trpcClientPublic.events.list.query();
+      setEvents(result);
     } catch (error) {
-      console.error("Failed to fetch actives:", error);
-    } finally {
-      setLoading(false);
+      console.error("Failed to fetch events:", error);
     }
-  }, [showExpired]);
+  }, []);
+
+  const fetchActives = useCallback(
+    async (cursor?: string) => {
+      if (!cursor) setLoading(true);
+      else setLoadingMore(true);
+
+      try {
+        const result = await trpcClientPublic.actives.list.query({
+          limit: 20,
+          showExpired: filterType === "expired",
+          dateRange: dateRange,
+          cursor,
+        });
+        if (cursor) {
+          setActives((prev) => [...prev, ...result.items]);
+        } else {
+          setActives(result.items);
+        }
+        setNextCursor(result.nextCursor);
+      } catch (error) {
+        console.error("Failed to fetch actives:", error);
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
+    [filterType, dateRange],
+  );
+
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
 
   useEffect(() => {
     fetchActives();
   }, [fetchActives]);
 
+  const showEvents = filterType === "all" || filterType === "events";
+  const showActives =
+    filterType === "all" ||
+    filterType === "actives" ||
+    filterType === "expired";
+
   const weeks = groupByWeekAndDay(actives);
+
+  const handleFilterType = (type: FilterType) => {
+    if (type === "expired") {
+      setFilterType("expired");
+      setDateRange(undefined);
+    } else {
+      setFilterType(type === filterType ? "all" : type);
+    }
+  };
+
+  const handleDateRange = (range: DateRange) => {
+    setDateRange(range === dateRange ? undefined : range);
+    if (filterType === "expired") {
+      setFilterType("all");
+    }
+  };
+
+  const clearFilters = () => {
+    setFilterType("all");
+    setDateRange(undefined);
+  };
 
   return (
     <main className="min-h-[calc(100vh-32rem)] w-full mt-20 sm:mt-32 md:mt-40 px-4 pb-20">
@@ -116,18 +208,6 @@ function ActivesPage() {
 
           <ClientOnly>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className={clsx(
-                  "btn btn-sm btn-ghost gap-1",
-                  showExpired && "btn-active",
-                )}
-                onClick={() => setShowExpired((v) => !v)}
-              >
-                <FunnelIcon className="size-4" />
-                {showExpired ? "隐藏过期" : "显示过期"}
-              </button>
-
               {userInfo && (
                 <Link
                   to="/actives/new"
@@ -141,27 +221,163 @@ function ActivesPage() {
           </ClientOnly>
         </div>
 
+        <ClientOnly>
+          <div className="flex flex-wrap items-center gap-2 mb-6">
+            <FunnelIcon className="size-4 text-base-content/40" />
+            <button
+              type="button"
+              className={clsx(
+                "btn btn-xs",
+                filterType === "events" ? "btn-primary" : "btn-ghost",
+              )}
+              onClick={() => handleFilterType("events")}
+            >
+              活动
+            </button>
+            <button
+              type="button"
+              className={clsx(
+                "btn btn-xs",
+                filterType === "actives" ? "btn-primary" : "btn-ghost",
+              )}
+              onClick={() => handleFilterType("actives")}
+            >
+              约局
+            </button>
+            <button
+              type="button"
+              className={clsx(
+                "btn btn-xs",
+                filterType === "expired" ? "btn-primary" : "btn-ghost",
+              )}
+              onClick={() => handleFilterType("expired")}
+            >
+              过期的约局
+            </button>
+            <div className="w-px h-4 bg-base-300" />
+            <button
+              type="button"
+              className={clsx(
+                "btn btn-xs",
+                dateRange === "today" ? "btn-primary" : "btn-ghost",
+              )}
+              onClick={() => handleDateRange("today")}
+            >
+              今天
+            </button>
+            <button
+              type="button"
+              className={clsx(
+                "btn btn-xs",
+                dateRange === "week" ? "btn-primary" : "btn-ghost",
+              )}
+              onClick={() => handleDateRange("week")}
+            >
+              本周
+            </button>
+            <button
+              type="button"
+              className={clsx(
+                "btn btn-xs",
+                dateRange === "month" ? "btn-primary" : "btn-ghost",
+              )}
+              onClick={() => handleDateRange("month")}
+            >
+              本月
+            </button>
+            <button
+              type="button"
+              className={clsx(
+                "btn btn-xs",
+                dateRange === "year" ? "btn-primary" : "btn-ghost",
+              )}
+              onClick={() => handleDateRange("year")}
+            >
+              年内
+            </button>
+            {hasFilters && (
+              <button
+                type="button"
+                className="btn btn-xs btn-ghost text-error gap-1"
+                onClick={clearFilters}
+              >
+                <XIcon className="size-3" />
+                清除筛选
+              </button>
+            )}
+          </div>
+        </ClientOnly>
+
         {loading ? (
           <div className="flex justify-center py-20">
             <span className="loading loading-spinner loading-lg" />
           </div>
-        ) : actives.length === 0 ? (
-          <div className="text-center py-20 text-base-content/50">
-            <p className="text-lg mb-2">
-              {showExpired ? "没有过期的约局" : "暂时没有约局"}
-            </p>
-            <p className="text-sm">
-              {userInfo
-                ? "点击右上角发起一个新的约局吧！"
-                : "登录后可以发起约局"}
-            </p>
-          </div>
         ) : (
-          <div className="flex flex-col gap-10">
-            {weeks.map((week) => (
-              <WeekSection key={week.weekKey} week={week} userId={userId} />
-            ))}
-          </div>
+          <>
+            {showEvents && events.length > 0 && (
+              <div className="mb-10">
+                <h2 className="text-lg font-bold mb-4 text-base-content/70">
+                  活动
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {events.map((event) => (
+                    <EventCard key={event.id} event={event} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {showActives && (
+              <>
+                {actives.length === 0 ? (
+                  <div className="text-center py-20 text-base-content/50">
+                    <p className="text-lg mb-2">
+                      {filterType === "expired"
+                        ? "没有过期的约局"
+                        : "暂时没有约局"}
+                    </p>
+                    <p className="text-sm">
+                      {userInfo
+                        ? "点击右上角发起一个新的约局吧！"
+                        : "登录后可以发起约局"}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-10">
+                    {weeks.map((week) => (
+                      <WeekSection
+                        key={week.weekKey}
+                        week={week}
+                        userId={userId}
+                      />
+                    ))}
+
+                    {nextCursor && (
+                      <div className="flex justify-center mt-4">
+                        <button
+                          type="button"
+                          className={clsx(
+                            "btn btn-ghost",
+                            loadingMore && "loading",
+                          )}
+                          onClick={() => fetchActives(nextCursor)}
+                          disabled={loadingMore}
+                        >
+                          {loadingMore ? "加载中..." : "加载更多"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+
+            {!showEvents && !showActives && (
+              <div className="text-center py-20 text-base-content/50">
+                <p className="text-lg">没有匹配的内容</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </main>

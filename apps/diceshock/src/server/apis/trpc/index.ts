@@ -20,7 +20,11 @@ export const appRouterPublic = router({
   owned,
   actives,
   events,
-  auth: { smsCode: auth.smsCode, updateUserInfo: auth.updateUserInfo },
+  auth: {
+    smsCode: auth.smsCode,
+    updateUserInfo: auth.updateUserInfo,
+    getTotpSecret: auth.getTotpSecret,
+  },
   businessCard: {
     getMyBusinessCard: businessCard.getMyBusinessCard,
     upsertBusinessCard: businessCard.upsertBusinessCard,

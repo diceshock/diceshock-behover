@@ -9,11 +9,13 @@ import { useState } from "react";
 import useAuth from "@/client/hooks/useAuth";
 import ThemeSwap from "../../ThemeSwap";
 import LoginDialog from "./LoginDialog";
+import QRScannerDialog from "./QRScannerDialog";
 
 function AvatarMenuContent() {
   const { userInfo, signOut } = useAuth();
 
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
+  const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
 
   const name = userInfo?.nickname ?? "Anonymous Shock";
 
@@ -78,10 +80,13 @@ function AvatarMenuContent() {
         </ul>
 
         <div className="w-full flex items-center justify-around gap-2 border-t border-base-content/40 pt-2">
-          <button disabled className="btn btn-ghost rounded-full">
+          <button
+            onClick={() => setIsQRScannerOpen(true)}
+            className="btn btn-ghost rounded-full"
+          >
             <ScanIcon weight="fill" className="size-5" />
 
-            <span>二维码</span>
+            <span>扫码</span>
           </button>
 
           <ThemeSwap
@@ -93,6 +98,11 @@ function AvatarMenuContent() {
       <LoginDialog
         isOpen={isLoginDialogOpen}
         onClose={() => setIsLoginDialogOpen(false)}
+      />
+
+      <QRScannerDialog
+        isOpen={isQRScannerOpen}
+        onClose={() => setIsQRScannerOpen(false)}
       />
     </div>
   );

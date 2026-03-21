@@ -11,6 +11,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useState } from "react";
 import BusinessCardModal from "@/client/components/diceshock/BusinessCardModal";
+import TOTPCard from "@/client/components/diceshock/TOTPCard";
 import Modal from "@/client/components/modal";
 import useAuth from "@/client/hooks/useAuth";
 import { useMessages } from "@/client/hooks/useMessages";
@@ -232,6 +233,8 @@ function RouteComponent() {
           </div>
 
           <div className="w-full flex flex-col items-center justify-center gap-3 sm:gap-4">
+            <TOTPCard />
+
             <button
               onClick={handleEditPhoneClick}
               className="card bg-base-200 hover:bg-base-300 transition-colors w-full cursor-pointer border border-base-content/10 hover:border-base-content/20 shadow-sm hover:shadow-md"

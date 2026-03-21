@@ -290,4 +290,27 @@ const updateUserInfo = protectedProcedure
     }
   });
 
-export default { smsCode, updateUserInfo };
+const getTotpSecret = protectedProcedure.query(async ({ ctx }) => {
+  const { userId, env } = ctx;
+  const { KV } = env;
+
+  if (!userId) {
+    return { success: false as const, message: "用户未登录" };
+  }
+
+  const kvKey = `totp_secret:${userId}`;
+  const existing = await KV.get(kvKey);
+
+  if (existing) {
+    return { success: true as const, secret: existing };
+  }
+
+  const { generateTotpSecret } = await import("@/shared/utils/totp");
+  const secret = generateTotpSecret();
+
+  await KV.put(kvKey, secret);
+
+  return { success: true as const, secret };
+});
+
+export default { smsCode, updateUserInfo, getTotpSecret };

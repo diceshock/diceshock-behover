@@ -18,6 +18,7 @@ import { Route as DashEventsRouteImport } from './routers/dash/events'
 import { Route as DashActivesRouteImport } from './routers/dash/actives'
 import { Route as WithHomeLoMeRouteImport } from './routers/_with-home-lo/me'
 import { Route as WithHomeLoInventoryRouteImport } from './routers/_with-home-lo/inventory'
+import { Route as WithHomeLoExternalRedirectRouteImport } from './routers/_with-home-lo/external-redirect'
 import { Route as WithHomeLoDiceshockAgentsRouteImport } from './routers/_with-home-lo/diceshock-agents'
 import { Route as WithHomeLoContactUsRouteImport } from './routers/_with-home-lo/contact-us'
 import { Route as WithHomeLoActivesRouteImport } from './routers/_with-home-lo/actives'
@@ -69,6 +70,12 @@ const WithHomeLoInventoryRoute = WithHomeLoInventoryRouteImport.update({
   path: '/inventory',
   getParentRoute: () => WithHomeLoRoute,
 } as any)
+const WithHomeLoExternalRedirectRoute =
+  WithHomeLoExternalRedirectRouteImport.update({
+    id: '/external-redirect',
+    path: '/external-redirect',
+    getParentRoute: () => WithHomeLoRoute,
+  } as any)
 const WithHomeLoDiceshockAgentsRoute =
   WithHomeLoDiceshockAgentsRouteImport.update({
     id: '/diceshock-agents',
@@ -107,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/actives': typeof WithHomeLoActivesRoute
   '/contact-us': typeof WithHomeLoContactUsRoute
   '/diceshock-agents': typeof WithHomeLoDiceshockAgentsRoute
+  '/external-redirect': typeof WithHomeLoExternalRedirectRoute
   '/inventory': typeof WithHomeLoInventoryRoute
   '/me': typeof WithHomeLoMeRoute
   '/dash/actives': typeof DashActivesRoute
@@ -121,6 +129,7 @@ export interface FileRoutesByTo {
   '/actives': typeof WithHomeLoActivesRoute
   '/contact-us': typeof WithHomeLoContactUsRoute
   '/diceshock-agents': typeof WithHomeLoDiceshockAgentsRoute
+  '/external-redirect': typeof WithHomeLoExternalRedirectRoute
   '/inventory': typeof WithHomeLoInventoryRoute
   '/me': typeof WithHomeLoMeRoute
   '/dash/actives': typeof DashActivesRoute
@@ -139,6 +148,7 @@ export interface FileRoutesById {
   '/_with-home-lo/actives': typeof WithHomeLoActivesRoute
   '/_with-home-lo/contact-us': typeof WithHomeLoContactUsRoute
   '/_with-home-lo/diceshock-agents': typeof WithHomeLoDiceshockAgentsRoute
+  '/_with-home-lo/external-redirect': typeof WithHomeLoExternalRedirectRoute
   '/_with-home-lo/inventory': typeof WithHomeLoInventoryRoute
   '/_with-home-lo/me': typeof WithHomeLoMeRoute
   '/dash/actives': typeof DashActivesRoute
@@ -158,6 +168,7 @@ export interface FileRouteTypes {
     | '/actives'
     | '/contact-us'
     | '/diceshock-agents'
+    | '/external-redirect'
     | '/inventory'
     | '/me'
     | '/dash/actives'
@@ -172,6 +183,7 @@ export interface FileRouteTypes {
     | '/actives'
     | '/contact-us'
     | '/diceshock-agents'
+    | '/external-redirect'
     | '/inventory'
     | '/me'
     | '/dash/actives'
@@ -189,6 +201,7 @@ export interface FileRouteTypes {
     | '/_with-home-lo/actives'
     | '/_with-home-lo/contact-us'
     | '/_with-home-lo/diceshock-agents'
+    | '/_with-home-lo/external-redirect'
     | '/_with-home-lo/inventory'
     | '/_with-home-lo/me'
     | '/dash/actives'
@@ -271,6 +284,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WithHomeLoInventoryRouteImport
       parentRoute: typeof WithHomeLoRoute
     }
+    '/_with-home-lo/external-redirect': {
+      id: '/_with-home-lo/external-redirect'
+      path: '/external-redirect'
+      fullPath: '/external-redirect'
+      preLoaderRoute: typeof WithHomeLoExternalRedirectRouteImport
+      parentRoute: typeof WithHomeLoRoute
+    }
     '/_with-home-lo/diceshock-agents': {
       id: '/_with-home-lo/diceshock-agents'
       path: '/diceshock-agents'
@@ -320,6 +340,7 @@ interface WithHomeLoRouteChildren {
   WithHomeLoActivesRoute: typeof WithHomeLoActivesRoute
   WithHomeLoContactUsRoute: typeof WithHomeLoContactUsRoute
   WithHomeLoDiceshockAgentsRoute: typeof WithHomeLoDiceshockAgentsRoute
+  WithHomeLoExternalRedirectRoute: typeof WithHomeLoExternalRedirectRoute
   WithHomeLoInventoryRoute: typeof WithHomeLoInventoryRoute
   WithHomeLoMeRoute: typeof WithHomeLoMeRoute
   WithHomeLoIndexRoute: typeof WithHomeLoIndexRoute
@@ -331,6 +352,7 @@ const WithHomeLoRouteChildren: WithHomeLoRouteChildren = {
   WithHomeLoActivesRoute: WithHomeLoActivesRoute,
   WithHomeLoContactUsRoute: WithHomeLoContactUsRoute,
   WithHomeLoDiceshockAgentsRoute: WithHomeLoDiceshockAgentsRoute,
+  WithHomeLoExternalRedirectRoute: WithHomeLoExternalRedirectRoute,
   WithHomeLoInventoryRoute: WithHomeLoInventoryRoute,
   WithHomeLoMeRoute: WithHomeLoMeRoute,
   WithHomeLoIndexRoute: WithHomeLoIndexRoute,
