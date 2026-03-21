@@ -3,15 +3,16 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx plugins/x.ts --dev",
-    "x": "tsx plugins/x.ts",
-    "drizzle": "tsx plugins/x.ts --run drizzle drizzle-kit",
-    "lint": "tsx plugins/x.ts --run lint biome check",
-    "build": "tsx plugins/x.ts --run build nx run-many --target=build"
+    "dev": "./target/release/ty-jk --dev",
+    "x": "./target/release/ty-jk",
+    "drizzle": "./target/release/ty-jk --run drizzle drizzle-kit",
+    "lint": "./target/release/ty-jk --run lint biome check",
+    "build": "./target/release/ty-jk --run build nx run-many --target=build"
   },
   "workspaces": [
     "apps/*",
-    "libs/*"
+    "libs/*",
+    "packages/*"
   ],
   "dependencies": {
     "@alicloud/dysmsapi20170525": "^4.5.0",

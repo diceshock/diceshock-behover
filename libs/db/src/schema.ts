@@ -80,12 +80,80 @@ export const userBusinessCardRelations = relations(
   }),
 );
 
-export const usersRelations = relations(users, ({ one }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   userInfo: one(userInfoTable, {
     fields: [users.id],
     references: [userInfoTable.id],
   }),
+  createdActives: many(activesTable),
+  activeRegistrations: many(activeRegistrationsTable),
 }));
+
+export const activesTable = sqlite.sqliteTable("actives", {
+  id: sqlite.text().$defaultFn(createId).primaryKey(),
+  creator_id: sqlite
+    .text()
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  title: sqlite.text().notNull(),
+  board_game_id: sqlite.text().references(() => boardGamesTable.id),
+  date: sqlite.text().notNull(), // "YYYY-MM-DD"
+  time: sqlite.text(), // "HH:mm"
+  max_players: sqlite.int().notNull(),
+  content: sqlite.text(), // tiptap JSON
+  is_game: sqlite.int({ mode: "boolean" }).$default(() => true),
+  create_at: sqlite
+    .integer("create_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date(Date.now())),
+  update_at: sqlite
+    .integer("update_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date(Date.now())),
+});
+
+export const activeRegistrationsTable = sqlite.sqliteTable(
+  "active_registrations",
+  {
+    id: sqlite.text().$defaultFn(createId).primaryKey(),
+    active_id: sqlite
+      .text()
+      .notNull()
+      .references(() => activesTable.id, { onDelete: "cascade" }),
+    user_id: sqlite
+      .text()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    is_watching: sqlite.int({ mode: "boolean" }).$default(() => false),
+    create_at: sqlite
+      .integer("create_at", { mode: "timestamp_ms" })
+      .$defaultFn(() => new Date(Date.now())),
+  },
+);
+
+export const activesRelations = relations(activesTable, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [activesTable.creator_id],
+    references: [users.id],
+  }),
+  boardGame: one(boardGamesTable, {
+    fields: [activesTable.board_game_id],
+    references: [boardGamesTable.id],
+  }),
+  registrations: many(activeRegistrationsTable),
+}));
+
+export const activeRegistrationsRelations = relations(
+  activeRegistrationsTable,
+  ({ one }) => ({
+    active: one(activesTable, {
+      fields: [activeRegistrationsTable.active_id],
+      references: [activesTable.id],
+    }),
+    user: one(users, {
+      fields: [activeRegistrationsTable.user_id],
+      references: [users.id],
+    }),
+  }),
+);
 
 export const accounts = sqlite.sqliteTable(
   "account",

@@ -17,6 +17,10 @@ const PAGES: PageType[] = [
     href: `/inventory`,
   },
   {
+    title: "活动&约局",
+    href: `/actives`,
+  },
+  {
     title: "DiceShock Agents©",
     href: `/diceshock-agents`,
   },

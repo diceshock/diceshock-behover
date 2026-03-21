@@ -1,4 +1,5 @@
 import {
+  CalendarDotsIcon,
   GaugeIcon,
   SignOutIcon,
   UsersIcon,
@@ -32,6 +33,13 @@ function RouteComponent() {
             <Link to="/dash/users" className="gap-12">
               <UsersIcon className="size-6" />
               用户
+            </Link>
+          </li>
+
+          <li>
+            <Link to="/dash/actives" className="gap-12">
+              <CalendarDotsIcon className="size-6" />
+              约局管理
             </Link>
           </li>
 

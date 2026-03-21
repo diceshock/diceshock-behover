@@ -1,0 +1,15 @@
+{
+  "name": "ty-jk",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cargo build --release -p ty-jk",
+        "cwd": "{workspaceRoot}"
+      },
+      "outputs": ["{workspaceRoot}/target/release/ty-jk"]
+    }
+  }
+}

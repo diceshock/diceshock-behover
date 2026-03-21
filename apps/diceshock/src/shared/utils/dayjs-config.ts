@@ -18,7 +18,7 @@ dayjs.locale("zh-cn");
  * @returns dayjs 对象（上海时区）
  */
 export function now() {
-  return dayjs.tz("Asia/Shanghai");
+  return dayjs().tz("Asia/Shanghai");
 }
 
 /**

@@ -1,3 +1,5 @@
+import actives from "./actives";
+import activesManagement from "./activesManagement";
 import auth from "./auth";
 import { router } from "./baseTRPC";
 import businessCard from "./businessCard";
@@ -7,11 +9,13 @@ import users from "./users";
 
 export const appRouterDash = router({
   ownedManagement,
+  activesManagement,
   users,
 });
 
 export const appRouterPublic = router({
   owned,
+  actives,
   auth: { smsCode: auth.smsCode, updateUserInfo: auth.updateUserInfo },
   businessCard: {
     getMyBusinessCard: businessCard.getMyBusinessCard,

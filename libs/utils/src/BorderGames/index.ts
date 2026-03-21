@@ -16,7 +16,9 @@ export async function fetchToDb(
   pageTo: number,
   date: number
 ) {
+  console.log("[fetchToDb] START", { pageFrom, pageTo, date });
   const pages = _.range(pageFrom, pageTo);
+  console.log("[fetchToDb] pages to fetch:", pages);
 
   const chunkPromises: Promise<{ data: { game_list: BoardGameCol[] } }>[] =
     pages.map((page) =>
@@ -27,40 +29,74 @@ export async function fetchToDb(
           headers,
           body: JSON.stringify({ user_id: "124991", page }),
         }
-      ).then((r) => r.json())
+      ).then(async (r) => {
+        console.log("[fetchToDb] fetch page", page, "status:", r.status);
+        if (!r.ok) {
+          const text = await r.text();
+          console.error("[fetchToDb] fetch page", page, "failed:", text.slice(0, 200));
+          throw new Error(`Fetch page ${page} failed: ${r.status}`);
+        }
+        return r.json();
+      })
     );
 
-  const chunkResults = await Promise.all(chunkPromises);
-  const fetched = chunkResults.flatMap((c) => c.data.game_list);
-
-  if (!fetched.length) return null;
-
-  const q = await db(d1);
-
-  for (const chunk of _.chunk(fetched, 5)) {
-    await q.insert(boardGamesTable).values(
-      chunk.map((g) => ({
-        sch_name: g.sch_name,
-        eng_name: g.eng_name,
-        gstone_id: g.id,
-        gstone_rating: g.gstone_rating,
-        category: g.category,
-        mode: g.mode,
-        player_num: g.player_num
-          .map((n, i) => ({ n, i }))
-          .filter(({ n }) => n > 0)
-          .map(({ i }) => i),
-        best_player_num: g.player_num
-          .map((n, i) => ({ n, i }))
-          .filter(({ n }) => n > 1)
-          .map(({ i }) => i),
-        content: g,
-        removeDate: new Date(date),
-      }))
-    );
+  let chunkResults: { data: { game_list: BoardGameCol[] } }[];
+  try {
+    chunkResults = await Promise.all(chunkPromises);
+  } catch (e) {
+    console.error("[fetchToDb] Promise.all failed:", e);
+    throw e;
   }
 
-  console.log(fetched.length, " fetched items add");
+  console.log("[fetchToDb] chunkResults count:", chunkResults.length);
+  for (let i = 0; i < chunkResults.length; i++) {
+    console.log("[fetchToDb] page", pages[i], "game_list length:", chunkResults[i]?.data?.game_list?.length ?? "NO DATA");
+  }
+
+  const fetched = chunkResults.flatMap((c) => c.data.game_list);
+  console.log("[fetchToDb] total fetched:", fetched.length);
+
+  if (!fetched.length) {
+    console.log("[fetchToDb] no items fetched, returning null");
+    return null;
+  }
+
+  const q = await db(d1);
+  console.log("[fetchToDb] db connection ready, inserting in chunks of 5");
+
+  const chunks = _.chunk(fetched, 5);
+  for (let ci = 0; ci < chunks.length; ci++) {
+    const chunk = chunks[ci];
+    console.log("[fetchToDb] inserting chunk", ci, "size:", chunk.length, "gstone_ids:", chunk.map(g => g.id));
+    try {
+      await q.insert(boardGamesTable).values(
+        chunk.map((g) => ({
+          sch_name: g.sch_name,
+          eng_name: g.eng_name,
+          gstone_id: g.id,
+          gstone_rating: g.gstone_rating,
+          category: g.category,
+          mode: g.mode,
+          player_num: g.player_num
+            .map((n, i) => ({ n, i }))
+            .filter(({ n }) => n > 0)
+            .map(({ i }) => i),
+          best_player_num: g.player_num
+            .map((n, i) => ({ n, i }))
+            .filter(({ n }) => n > 1)
+            .map(({ i }) => i),
+          content: g,
+          removeDate: new Date(date),
+        }))
+      );
+      console.log("[fetchToDb] chunk", ci, "inserted OK");
+    } catch (e) {
+      console.error("[fetchToDb] chunk", ci, "insert FAILED:", e);
+      throw e;
+    }
+  }
+
+  console.log("[fetchToDb]", fetched.length, "fetched items add - DONE");
 
   return { fetched };
 }

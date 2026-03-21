@@ -1,0 +1,15 @@
+[package]
+name = "ty-jk"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "ty-jk"
+path = "src/main.rs"
+
+[dependencies]
+portable-pty = "0.9"
+signal-hook = "0.3"
+chrono = "0.4"
+anyhow = "1"
+libc = "0.2"

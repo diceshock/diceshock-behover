@@ -1,4 +1,5 @@
 import {
+  CalendarDotsIcon,
   EnvelopeIcon,
   HouseIcon,
   PackageIcon,
@@ -55,6 +56,13 @@ function RouteComponent() {
               <EnvelopeIcon className="size-6 text-success" />
               <span className="text-sm">联系我们</span>
             </Link>
+            <Link
+              to="/actives"
+              className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-base-200 transition-colors"
+            >
+              <CalendarDotsIcon className="size-6 text-error" />
+              <span className="text-sm">活动&约局</span>
+            </Link>
           </div>
         </div>
 
@@ -72,6 +80,25 @@ function RouteComponent() {
                   <h3 className="card-title text-lg">用户管理</h3>
                   <p className="text-sm text-base-content/60">
                     查看和管理用户信息
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            to="/dash/actives"
+            className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+          >
+            <div className="card-body">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-error/10 rounded-lg">
+                  <CalendarDotsIcon className="size-8 text-error" />
+                </div>
+                <div>
+                  <h3 className="card-title text-lg">约局管理</h3>
+                  <p className="text-sm text-base-content/60">
+                    管理活动和约局信息
                   </p>
                 </div>
               </div>

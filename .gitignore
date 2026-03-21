@@ -20,6 +20,9 @@ apps/*/drizzle
 node_modules/
 .wrangler
 
+# rust
+/target
+
 # env
 .env
 .env.production

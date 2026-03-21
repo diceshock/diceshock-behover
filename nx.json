@@ -15,5 +15,6 @@
         "watchDepsTargetName": "watch-deps"
       }
     }
-  ]
+  ],
+  "analytics": true
 }
