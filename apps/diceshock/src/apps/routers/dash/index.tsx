@@ -1,5 +1,6 @@
 import {
   CalendarDotsIcon,
+  CurrencyDollarIcon,
   EnvelopeIcon,
   HouseIcon,
   MegaphoneIcon,
@@ -119,6 +120,25 @@ function RouteComponent() {
                   <h3 className="card-title text-lg">活动管理</h3>
                   <p className="text-sm text-base-content/60">
                     管理活动发布和编辑
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            to="/dash/pricing"
+            className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+          >
+            <div className="card-body">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-success/10 rounded-lg">
+                  <CurrencyDollarIcon className="size-8 text-success" />
+                </div>
+                <div>
+                  <h3 className="card-title text-lg">价格计划</h3>
+                  <p className="text-sm text-base-content/60">
+                    管理定价和收费规则
                   </p>
                 </div>
               </div>
