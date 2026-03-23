@@ -22,6 +22,7 @@
     "@auth/drizzle-adapter": "^1.10.0",
     "@paralleldrive/cuid2": "^2.3.1",
     "@types/cloudflare-turnstile": "^0.2.2",
+    "@types/qrcode": "^1.5.6",
     "better-sqlite3": "^12.8.0",
     "dayjs": "^1.11.20",
     "dotenv": "^17.3.1",
@@ -29,6 +30,7 @@
     "drizzle-zod": "^0.8.3",
     "immer": "^11.1.4",
     "lodash": "^4.17.23",
+    "qrcode": "^1.5.4",
     "wrangler": "^4.75.0",
     "zod": "^4.3.6"
   },
