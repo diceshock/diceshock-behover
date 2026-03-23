@@ -39,6 +39,14 @@ binding = "R2"
 bucket_name = "diceshock"
 preview_bucket_name = "diceshock-preview"
 
+[[durable_objects.bindings]]
+name = "SEAT_TIMER"
+class_name = "SeatTimerDO"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["SeatTimerDO"]
+
 [[routes]]
 pattern = "www.diceshock.com"
 custom_domain = true

@@ -14,9 +14,11 @@ declare namespace Cloudflare {
 		AUTH_SECRET: string;
 		ALIBABA_CLOUD_ACCESS_KEY_ID: string;
 		ALIBABA_CLOUD_ACCESS_KEY_SECRET: string;
+		DEV_SMS_CODE?: string;
 		R2: R2Bucket;
 		DB: D1Database;
 		CF_VERSION_METADATA: WorkerVersionMetadata;
+		SEAT_TIMER: DurableObjectNamespace<import("./src/server/durableObjects/SeatTimerDO").SeatTimerDO>;
 	}
 }
 interface CloudflareBindings extends Cloudflare.Env {}
