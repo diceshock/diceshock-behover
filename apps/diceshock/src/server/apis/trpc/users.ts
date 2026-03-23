@@ -63,6 +63,7 @@ const get = publicProcedure
     const queryOptions: any = {
       with: {
         userInfo: true,
+        membershipPlans: true,
       },
       limit: pageSize,
       offset: (page - 1) * pageSize,
@@ -114,6 +115,7 @@ const getById = publicProcedure
       where: (u, { eq }) => eq(u.id, input.id),
       with: {
         userInfo: true,
+        membershipPlans: true,
       },
     });
 
@@ -190,6 +192,7 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
     where: (u, { eq }) => eq(u.id, id),
     with: {
       userInfo: true,
+      membershipPlans: true,
     },
   });
 

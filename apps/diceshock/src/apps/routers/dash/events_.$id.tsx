@@ -85,11 +85,11 @@ function EventEditorPage() {
     <ClientOnly>
       <main className="size-full overflow-y-auto">
         <div className="px-4 pt-4">
-          <DashBackButton />
+          <DashBackButton to="/dash/events" label="返回活动列表" />
         </div>
 
         <div className="mx-auto w-full max-w-2xl px-4 pb-20">
-          <h1 className="text-2xl font-bold mb-8">编辑活动</h1>
+          <h1 className="text-2xl font-bold mb-8">活动详情</h1>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
             <label className="flex flex-col gap-2">

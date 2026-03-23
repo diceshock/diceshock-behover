@@ -1,13 +1,15 @@
-import {
-  PencilLineIcon,
-  UserMinusIcon,
-  XIcon,
-} from "@phosphor-icons/react/dist/ssr";
-import { createFileRoute } from "@tanstack/react-router";
-import DashBackButton from "@/client/components/diceshock/DashBackButton";
-import dayjs from "@/shared/utils/dayjs-config";
+import { PencilLineIcon, UserMinusIcon } from "@phosphor-icons/react/dist/ssr";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+import DashBackButton from "@/client/components/diceshock/DashBackButton";
+import {
+  getPlanConfig,
+  getStoredValueBalance,
+  isActivePlan,
+  type MembershipPlan,
+} from "@/client/components/diceshock/MembershipBadge";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import dayjs from "@/shared/utils/dayjs-config";
 import { trpcClientDash } from "@/shared/utils/trpc";
 
 type UserList = Awaited<ReturnType<typeof trpcClientDash.users.get.query>>;
@@ -26,7 +28,6 @@ function RouteComponent() {
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const editDialogRef = useRef<HTMLDialogElement>(null);
   const disableDialogRef = useRef<HTMLDialogElement>(null);
 
   const searchWordsRef = useRef(searchWords);
@@ -34,14 +35,6 @@ function RouteComponent() {
   useEffect(() => {
     searchWordsRef.current = searchWords;
   }, [searchWords]);
-
-  const [editForm, setEditForm] = useState<{
-    id: string;
-    name: string;
-    nickname: string;
-    phone: string;
-  } | null>(null);
-  const [editPending, setEditPending] = useState(false);
 
   const [pendingDisable, setPendingDisable] = useState<UserItem | null>(null);
   const [disablePending, setDisablePending] = useState(false);
@@ -76,38 +69,6 @@ function RouteComponent() {
   useEffect(() => {
     void refreshUsers();
   }, [refreshUsers]);
-
-  const openEditDialog = (user: UserItem) => {
-    setEditForm({
-      id: user.id,
-      name: user.name ?? "",
-      nickname: user.userInfo?.nickname ?? "",
-      phone: user.phone ?? "",
-    });
-    editDialogRef.current?.showModal();
-  };
-
-  const handleEditSubmit = async (evt: React.FormEvent) => {
-    evt.preventDefault();
-    if (!editForm) return;
-    setEditPending(true);
-    try {
-      await trpcClientDash.users.mutation.mutate({
-        id: editForm.id,
-        name: editForm.name.trim() || undefined,
-        nickname: editForm.nickname.trim() || undefined,
-        phone: editForm.phone.trim() || undefined,
-      });
-      msg.success("用户信息已更新");
-      editDialogRef.current?.close();
-      setEditForm(null);
-      await refreshUsers();
-    } catch (err) {
-      msg.error(err instanceof Error ? err.message : "保存失败");
-    } finally {
-      setEditPending(false);
-    }
-  };
 
   const openDisableDialog = (user: UserItem) => {
     setPendingDisable(user);
@@ -160,7 +121,8 @@ function RouteComponent() {
               <td>ID</td>
               <td>昵称</td>
               <td>姓名</td>
-              <td>邮箱</td>
+              <td>会员计划</td>
+              <td>储值余额</td>
               <td>手机号</td>
               <td>UID</td>
               <td>创建时间</td>
@@ -172,158 +134,122 @@ function RouteComponent() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={10} className="py-12 text-center">
+                <td colSpan={12} className="py-12 text-center">
                   <span className="loading loading-dots loading-md"></span>
                 </td>
               </tr>
             ) : users.length === 0 ? (
               <tr>
                 <td
-                  colSpan={10}
+                  colSpan={12}
                   className="py-12 text-center text-base-content/60"
                 >
                   暂无用户，尝试调整搜索条件。
                 </td>
               </tr>
             ) : (
-              users.map((user) => (
-                <tr key={user.id}>
-                  <th className="z-10"></th>
-                  <td className="font-mono text-xs">{user.id}</td>
-                  <td>{user.userInfo?.nickname || "—"}</td>
-                  <td>{user.name || "—"}</td>
-                  <td>{user.email || "—"}</td>
-                  <td>{user.phone || "—"}</td>
-                  <td className="font-mono text-xs">
-                    {user.userInfo?.uid || "—"}
-                  </td>
-                  <td>
-                    {user.userInfo?.create_at
-                      ? dayjs(user.userInfo.create_at).format(
-                          "YYYY/MM/DD HH:mm",
-                        )
-                      : "—"}
-                  </td>
-                  <td>
-                    <div className="flex items-center gap-4 py-2 h-full">
-                      <button
-                        type="button"
-                        className="btn btn-xs btn-ghost btn-primary"
-                        onClick={() => openEditDialog(user)}
-                      >
-                        编辑
-                        <PencilLineIcon />
-                      </button>
+              users.map((user) => {
+                const plans = ((user as any).membershipPlans ??
+                  []) as MembershipPlan[];
+                const storedBalance = getStoredValueBalance(plans);
+                return (
+                  <tr key={user.id}>
+                    <th className="z-10"></th>
+                    <td className="font-mono text-xs">{user.id}</td>
+                    <td>{user.userInfo?.nickname || "—"}</td>
+                    <td>{user.name || "—"}</td>
+                    <td className="relative group">
+                      {(() => {
+                        const activePlans = plans.filter(isActivePlan);
+                        const uniqueTypes = [
+                          ...new Set(activePlans.map((p) => p.plan_type)),
+                        ].sort(
+                          (a, b) =>
+                            getPlanConfig(a).priority -
+                            getPlanConfig(b).priority,
+                        );
+                        if (uniqueTypes.length === 0) return "—";
+                        return (
+                          <>
+                            <div className="flex items-center gap-1.5">
+                              {uniqueTypes.map((t) => {
+                                const cfg = getPlanConfig(t);
+                                return <cfg.icon key={t} className="size-5" />;
+                              })}
+                            </div>
+                            <div className="absolute left-0 top-full z-30 hidden group-hover:block pt-1">
+                              <div className="card card-sm shadow-lg bg-base-200 w-56">
+                                <div className="card-body p-3 flex flex-col gap-1.5">
+                                  {uniqueTypes.map((t) => {
+                                    const cfg = getPlanConfig(t);
+                                    return (
+                                      <div
+                                        key={t}
+                                        className="flex items-center gap-2"
+                                      >
+                                        <cfg.icon className="size-5 shrink-0" />
+                                        <span className="text-sm">
+                                          {cfg.label}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </td>
+                    <td>
+                      {storedBalance > 0 ? (
+                        <span className="font-mono text-sm">
+                          ¥{(storedBalance / 100).toFixed(0)}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td>{user.phone || "—"}</td>
+                    <td className="font-mono text-xs">
+                      {user.userInfo?.uid || "—"}
+                    </td>
+                    <td>
+                      {user.userInfo?.create_at
+                        ? dayjs(user.userInfo.create_at).format(
+                            "YYYY/MM/DD HH:mm",
+                          )
+                        : "—"}
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-4 py-2 h-full">
+                        <Link
+                          to="/dash/users/$id"
+                          params={{ id: user.id }}
+                          className="btn btn-xs btn-ghost btn-primary"
+                        >
+                          编辑
+                          <PencilLineIcon />
+                        </Link>
 
-                      <button
-                        type="button"
-                        className="btn btn-xs btn-ghost btn-error"
-                        onClick={() => openDisableDialog(user)}
-                      >
-                        关停
-                        <UserMinusIcon />
-                      </button>
-                    </div>
-                  </td>
-                  <th></th>
-                </tr>
-              ))
+                        <button
+                          type="button"
+                          className="btn btn-xs btn-ghost btn-error"
+                          onClick={() => openDisableDialog(user)}
+                        >
+                          关停
+                          <UserMinusIcon />
+                        </button>
+                      </div>
+                    </td>
+                    <th></th>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
       </div>
-
-      <dialog ref={editDialogRef} className="modal">
-        <form method="dialog" className="modal-box" onSubmit={handleEditSubmit}>
-          <div className="modal-action flex items-center justify-between mb-4">
-            <h3 className="font-bold text-lg">编辑用户</h3>
-            <button
-              type="button"
-              className="btn btn-ghost btn-square"
-              onClick={() => editDialogRef.current?.close()}
-            >
-              <XIcon />
-            </button>
-          </div>
-
-          {editForm && (
-            <div className="flex flex-col gap-4">
-              <div>
-                <label className="label">
-                  <span className="label-text">用户 ID</span>
-                </label>
-                <input
-                  type="text"
-                  className="input input-bordered"
-                  value={editForm.id}
-                  disabled
-                />
-              </div>
-
-              <div>
-                <label className="label">
-                  <span className="label-text">姓名</span>
-                </label>
-                <input
-                  type="text"
-                  className="input input-bordered"
-                  value={editForm.name}
-                  onChange={(evt) =>
-                    setEditForm((prev) =>
-                      prev ? { ...prev, name: evt.target.value } : prev,
-                    )
-                  }
-                  placeholder="用户姓名"
-                />
-              </div>
-
-              <div>
-                <label className="label">
-                  <span className="label-text">昵称</span>
-                </label>
-                <input
-                  type="text"
-                  className="input input-bordered"
-                  value={editForm.nickname}
-                  onChange={(evt) =>
-                    setEditForm((prev) =>
-                      prev ? { ...prev, nickname: evt.target.value } : prev,
-                    )
-                  }
-                  placeholder="用户昵称"
-                />
-              </div>
-
-              <div>
-                <label className="label">
-                  <span className="label-text">手机号</span>
-                </label>
-                <input
-                  type="tel"
-                  className="input input-bordered"
-                  value={editForm.phone}
-                  onChange={(evt) =>
-                    setEditForm((prev) =>
-                      prev ? { ...prev, phone: evt.target.value } : prev,
-                    )
-                  }
-                  placeholder="手机号"
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="modal-action mt-6">
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={editPending}
-            >
-              {editPending ? "保存中..." : "保存"}
-            </button>
-          </div>
-        </form>
-      </dialog>
 
       <dialog ref={disableDialogRef} className="modal">
         {pendingDisable && (

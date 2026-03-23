@@ -1,4 +1,5 @@
 import db, { boardGamesTable, drizzle, pagedZ } from "@lib/db";
+import z4 from "zod/v4";
 
 import { filterCfgZ } from "@/client/components/diceshock/GameList/Filter";
 import { publicProcedure } from "./baseTRPC";
@@ -94,4 +95,13 @@ const getCount = publicProcedure.query(async ({ ctx }) => {
   }
 });
 
-export default { get, getCount };
+const getById = publicProcedure
+  .input(z4.object({ id: z4.string() }))
+  .query(async ({ input, ctx }) => {
+    const game = await db(ctx.env.DB).query.boardGamesTable.findFirst({
+      where: (g, { eq }) => eq(g.id, input.id),
+    });
+    return game ?? null;
+  });
+
+export default { get, getCount, getById };
