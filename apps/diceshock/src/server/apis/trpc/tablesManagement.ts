@@ -1,0 +1,304 @@
+import db, { drizzle, tableOccupancyTable, tablesTable } from "@lib/db";
+import { createId } from "@paralleldrive/cuid2";
+import {
+  fetchTableStateForDO,
+  notifySeatTimerDO,
+} from "@/server/utils/seatTimer";
+import { dashProcedure } from "./baseTRPC";
+
+const SHORT_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+function generateShortCode(len = 6): string {
+  const arr = new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  return Array.from(
+    arr,
+    (b) => SHORT_CODE_CHARS[b % SHORT_CODE_CHARS.length],
+  ).join("");
+}
+
+async function generateUniqueCode(
+  tdb: ReturnType<typeof db>,
+  len = 6,
+  maxAttempts = 10,
+): Promise<string> {
+  for (let i = 0; i < maxAttempts; i++) {
+    const code = generateShortCode(len);
+    const existing = await tdb.query.tablesTable.findFirst({
+      where: (t, { eq }) => eq(t.code, code),
+      columns: { id: true },
+    });
+    if (!existing) return code;
+  }
+  throw new Error("编号生成失败，请重试");
+}
+
+const list = dashProcedure.query(async ({ ctx }) => {
+  const tdb = db(ctx.env.DB);
+  const tables = await tdb.query.tablesTable.findMany({
+    orderBy: (t, { desc }) => desc(t.create_at),
+    with: {
+      occupancies: {
+        columns: { id: true, user_id: true, seats: true, start_at: true },
+      },
+    },
+  });
+  return tables;
+});
+
+const create = dashProcedure
+  .input((v: unknown) => {
+    const data = v as {
+      name: string;
+      type: "mahjong" | "boardgame";
+      capacity: number;
+      description?: string;
+    };
+    if (!data.name?.trim()) throw new Error("name is required");
+    if (!data.type) throw new Error("type is required");
+    if (!data.capacity || data.capacity < 1)
+      throw new Error("capacity must be >= 1");
+    return data;
+  })
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const now = new Date();
+    const id = createId();
+    const code = await generateUniqueCode(tdb);
+    await tdb.insert(tablesTable).values({
+      id,
+      name: input.name.trim(),
+      type: input.type,
+      status: "active",
+      capacity: input.capacity,
+      description: input.description?.trim() || null,
+      code,
+      create_at: now,
+      update_at: now,
+    });
+    return { id, code };
+  });
+
+const getById = dashProcedure
+  .input((v: unknown) => {
+    const { id } = v as { id: string };
+    if (!id) throw new Error("id is required");
+    return { id };
+  })
+  .query(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const table = await tdb.query.tablesTable.findFirst({
+      where: (t, { eq }) => eq(t.id, input.id),
+      with: {
+        occupancies: {
+          with: {
+            user: {
+              columns: { id: true, name: true },
+            },
+          },
+        },
+      },
+    });
+    if (!table) throw new Error("桌台不存在");
+
+    const occupanciesWithUserInfo = await Promise.all(
+      table.occupancies.map(async (occ) => {
+        const userInfo = await tdb.query.userInfoTable.findFirst({
+          where: (info, { eq }) => eq(info.id, occ.user_id),
+          columns: { nickname: true, uid: true, phone: true },
+        });
+        return {
+          ...occ,
+          nickname: userInfo?.nickname ?? "Anonymous",
+          uid: userInfo?.uid ?? null,
+          phone: userInfo?.phone ?? null,
+        };
+      }),
+    );
+
+    return { ...table, occupancies: occupanciesWithUserInfo };
+  });
+
+const update = dashProcedure
+  .input((v: unknown) => {
+    const data = v as {
+      id: string;
+      name?: string;
+      capacity?: number;
+      description?: string | null;
+    };
+    if (!data.id) throw new Error("id is required");
+    return data;
+  })
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const { id, ...fields } = input;
+    const updateData: Record<string, unknown> = { update_at: new Date() };
+    if (fields.name !== undefined) updateData.name = fields.name.trim();
+    if (fields.capacity !== undefined) updateData.capacity = fields.capacity;
+    if (fields.description !== undefined)
+      updateData.description = fields.description;
+    await tdb
+      .update(tablesTable)
+      .set(updateData)
+      .where(drizzle.eq(tablesTable.id, id));
+    return { success: true };
+  });
+
+const toggleStatus = dashProcedure
+  .input((v: unknown) => {
+    const { id } = v as { id: string };
+    if (!id) throw new Error("id is required");
+    return { id };
+  })
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const table = await tdb.query.tablesTable.findFirst({
+      where: (t, { eq }) => eq(t.id, input.id),
+      columns: { status: true },
+    });
+    if (!table) throw new Error("桌台不存在");
+    const newStatus = table.status === "active" ? "inactive" : "active";
+    await tdb
+      .update(tablesTable)
+      .set({ status: newStatus, update_at: new Date() })
+      .where(drizzle.eq(tablesTable.id, input.id));
+    return { status: newStatus };
+  });
+
+const remove = dashProcedure
+  .input((v: unknown) => {
+    const { id } = v as { id: string };
+    if (!id) throw new Error("id is required");
+    return { id };
+  })
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    await tdb
+      .delete(tableOccupancyTable)
+      .where(drizzle.eq(tableOccupancyTable.table_id, input.id));
+    await tdb.delete(tablesTable).where(drizzle.eq(tablesTable.id, input.id));
+    return { success: true };
+  });
+
+const regenerateCode = dashProcedure
+  .input((v: unknown) => {
+    const { id } = v as { id: string };
+    if (!id) throw new Error("id is required");
+    return { id };
+  })
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const newCode = await generateUniqueCode(tdb);
+    await tdb
+      .update(tablesTable)
+      .set({ code: newCode, update_at: new Date() })
+      .where(drizzle.eq(tablesTable.id, input.id));
+    return { code: newCode };
+  });
+
+const addOccupancy = dashProcedure
+  .input((v: unknown) => {
+    const data = v as { table_id: string; user_id: string; seats?: number };
+    if (!data.table_id) throw new Error("table_id is required");
+    if (!data.user_id) throw new Error("user_id is required");
+    return data;
+  })
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const table = await tdb.query.tablesTable.findFirst({
+      where: (t, { eq }) => eq(t.id, input.table_id),
+      columns: { id: true, status: true, code: true },
+    });
+    if (!table) throw new Error("桌台不存在");
+    if (table.status === "inactive") throw new Error("桌台已下架，无法使用");
+    const id = createId();
+    await tdb.insert(tableOccupancyTable).values({
+      id,
+      table_id: input.table_id,
+      user_id: input.user_id,
+      seats: input.seats ?? 1,
+      start_at: new Date(),
+    });
+
+    const fresh = await fetchTableStateForDO(tdb, table.id);
+    if (fresh) {
+      await notifySeatTimerDO(
+        ctx.env,
+        table.code,
+        fresh.table,
+        fresh.occupancies,
+      );
+    }
+
+    return { id };
+  });
+
+const removeOccupancy = dashProcedure
+  .input((v: unknown) => {
+    const { id } = v as { id: string };
+    if (!id) throw new Error("id is required");
+    return { id };
+  })
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+
+    const occ = await tdb.query.tableOccupancyTable.findFirst({
+      where: (o, { eq }) => eq(o.id, input.id),
+      columns: { table_id: true },
+    });
+
+    await tdb
+      .delete(tableOccupancyTable)
+      .where(drizzle.eq(tableOccupancyTable.id, input.id));
+
+    if (occ) {
+      const table = await tdb.query.tablesTable.findFirst({
+        where: (t, { eq }) => eq(t.id, occ.table_id),
+        columns: { id: true, code: true },
+      });
+      if (table) {
+        const fresh = await fetchTableStateForDO(tdb, table.id);
+        if (fresh) {
+          await notifySeatTimerDO(
+            ctx.env,
+            table.code,
+            fresh.table,
+            fresh.occupancies,
+          );
+        }
+      }
+    }
+
+    return { success: true };
+  });
+
+const getOccupancyByUserId = dashProcedure
+  .input((v: unknown) => {
+    const { userId } = v as { userId: string };
+    if (!userId) throw new Error("userId is required");
+    return { userId };
+  })
+  .query(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const occupancies = await tdb.query.tableOccupancyTable.findMany({
+      where: (o, { eq }) => eq(o.user_id, input.userId),
+      with: {
+        table: { columns: { id: true, name: true, type: true, status: true } },
+      },
+    });
+    return occupancies;
+  });
+
+export default {
+  list,
+  create,
+  getById,
+  update,
+  toggleStatus,
+  remove,
+  regenerateCode,
+  addOccupancy,
+  removeOccupancy,
+  getOccupancyByUserId,
+};
