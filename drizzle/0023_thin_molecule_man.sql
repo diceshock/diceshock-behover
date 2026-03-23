@@ -1,0 +1,1 @@
+ALTER TABLE `user_membership_plans` ADD `note` text;

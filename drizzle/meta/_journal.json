@@ -155,6 +155,34 @@
       "when": 1774111690771,
       "tag": "0021_bizarre_klaw",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "6",
+      "when": 1774133463407,
+      "tag": "0022_whole_mathemanic",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1774141813521,
+      "tag": "0023_thin_molecule_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1774145075771,
+      "tag": "0024_brainy_matthew_murdock",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1774200556932,
+      "tag": "0025_true_lorna_dane",
+      "breakpoints": true
     }
   ]
 }
