@@ -25,6 +25,21 @@ const smsCode = publicProcedure
     const { aliyunClient, env } = ctx;
     const { KV, TURNSTILE_KEY } = env;
 
+    const devSmsCode = env.DEV_SMS_CODE;
+
+    // DEV_SMS_CODE 模式：使用固定验证码，跳过 Turnstile 和阿里云 SMS
+    if (devSmsCode) {
+      const expirationTtl = 60 * 5;
+      const kvKey = getSmsTmpCodeKey(phone);
+      await KV.put(kvKey, devSmsCode, { expirationTtl });
+      console.log({
+        type: "SMS_DEV_CODE",
+        phone,
+        hint: "DEV_SMS_CODE is set — using fixed test code, no real SMS sent",
+      });
+      return { success: true, expiresInMs: expirationTtl * 1000 };
+    }
+
     const formData = new FormData();
     formData.append("secret", TURNSTILE_KEY);
     formData.append("response", botcheck ?? "");
@@ -56,22 +71,6 @@ const smsCode = publicProcedure
     const verificationCode = customAlphabet("0123456789", 6)();
     const expirationTtl = 60 * 5;
     const kvKey = getSmsTmpCodeKey(phone);
-
-    // 开发环境：不调用阿里云，仅写入 KV 并返回验证码，便于本地登录
-    if (import.meta.env.DEV) {
-      await KV.put(kvKey, verificationCode, { expirationTtl });
-      console.log({
-        type: "SMS_DEV_BYPASS",
-        phone,
-        code: verificationCode,
-        hint: "开发环境未发真实短信，请使用上方 code 登录",
-      });
-      return {
-        success: true,
-        code: verificationCode,
-        expiresInMs: expirationTtl * 1000,
-      };
-    }
 
     const sendSmsRequest = new $Dysmsapi20170525.SendSmsRequest({
       templateParam: JSON.stringify({ code: verificationCode }),
@@ -121,7 +120,6 @@ const smsCode = publicProcedure
 
       return {
         success: true,
-        code: verificationCode,
         expiresInMs: expirationTtl * 1000,
       };
     } catch (e) {

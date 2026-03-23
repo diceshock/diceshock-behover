@@ -163,7 +163,7 @@ export default function useSmsCode({
         phone,
       });
 
-      if (result.success && "code" in result) return setCountdown(20);
+      if (result.success) return setCountdown(20);
 
       // 发送失败，重置人机验证
       dispatchSmsForm({ type: "RESET" });
