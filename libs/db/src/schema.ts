@@ -87,6 +87,8 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   }),
   createdActives: many(activesTable),
   activeRegistrations: many(activeRegistrationsTable),
+  membershipPlans: many(userMembershipPlansTable),
+  tableOccupancies: many(tableOccupancyTable),
 }));
 
 export const activesTable = sqlite.sqliteTable("actives", {
@@ -221,6 +223,207 @@ export const verificationTokens = sqlite.sqliteTable(
     }),
   ],
 );
+
+export const userMembershipPlansTable = sqlite.sqliteTable(
+  "user_membership_plans",
+  {
+    id: sqlite.text().$defaultFn(createId).primaryKey(),
+    user_id: sqlite
+      .text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    plan_type: sqlite
+      .text("plan_type", {
+        enum: ["monthly", "monthly_cc", "yearly", "stored_value"],
+      })
+      .notNull(),
+    amount: sqlite.int("amount"),
+    note: sqlite.text("note"),
+    start_date: sqlite
+      .integer("start_date", { mode: "timestamp_ms" })
+      .notNull(),
+    end_date: sqlite.integer("end_date", { mode: "timestamp_ms" }), // 储值卡无到期时间
+    create_at: sqlite
+      .integer("create_at", { mode: "timestamp_ms" })
+      .$defaultFn(() => new Date(Date.now())),
+    update_at: sqlite
+      .integer("update_at", { mode: "timestamp_ms" })
+      .$defaultFn(() => new Date(Date.now())),
+  },
+);
+
+export const userMembershipPlansRelations = relations(
+  userMembershipPlansTable,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [userMembershipPlansTable.user_id],
+      references: [users.id],
+    }),
+  }),
+);
+
+export const tablesTable = sqlite.sqliteTable("tables", {
+  id: sqlite.text().$defaultFn(createId).primaryKey(),
+  name: sqlite.text().notNull(),
+  type: sqlite.text("type", { enum: ["mahjong", "boardgame"] }).notNull(),
+  status: sqlite
+    .text("status", { enum: ["active", "inactive"] })
+    .notNull()
+    .$default(() => "active"),
+  capacity: sqlite.int().notNull(),
+  description: sqlite.text(),
+  code: sqlite.text().notNull(),
+  create_at: sqlite
+    .integer("create_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date(Date.now())),
+  update_at: sqlite
+    .integer("update_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date(Date.now())),
+});
+
+export const tableOccupancyTable = sqlite.sqliteTable("table_occupancy", {
+  id: sqlite.text().$defaultFn(createId).primaryKey(),
+  table_id: sqlite
+    .text("table_id")
+    .notNull()
+    .references(() => tablesTable.id, { onDelete: "cascade" }),
+  user_id: sqlite
+    .text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  seats: sqlite
+    .int()
+    .notNull()
+    .$default(() => 1),
+  start_at: sqlite
+    .integer("start_at", { mode: "timestamp_ms" })
+    .notNull()
+    .$defaultFn(() => new Date(Date.now())),
+});
+
+export const tablesRelations = relations(tablesTable, ({ many }) => ({
+  occupancies: many(tableOccupancyTable),
+}));
+
+export const tableOccupancyRelations = relations(
+  tableOccupancyTable,
+  ({ one }) => ({
+    table: one(tablesTable, {
+      fields: [tableOccupancyTable.table_id],
+      references: [tablesTable.id],
+    }),
+    user: one(users, {
+      fields: [tableOccupancyTable.user_id],
+      references: [users.id],
+    }),
+  }),
+);
+
+// ─── Pricing Plans ──────────────────────────────────────────────
+
+export const pricingGlobalConfigTable = sqlite.sqliteTable(
+  "pricing_global_config",
+  {
+    id: sqlite.text().$defaultFn(createId).primaryKey(),
+    daytime_start: sqlite
+      .text("daytime_start")
+      .notNull()
+      .$default(() => "10:00"),
+    daytime_end: sqlite
+      .text("daytime_end")
+      .notNull()
+      .$default(() => "18:00"),
+    update_at: sqlite
+      .integer("update_at", { mode: "timestamp_ms" })
+      .$defaultFn(() => new Date(Date.now())),
+  },
+);
+
+/**
+ * conditions JSON shape (null for fallback):
+ * {
+ *   date: { type: "fixed", start: "MM-DD", end: "MM-DD" }
+ *       | { type: "workdays" }
+ *       | { type: "holidays" }
+ *       | { type: "weekly", days: number[] }          // 0=Sun..6=Sat
+ *       | { type: "monthly", nth: number, unit: "natural" | "workday" | "holiday" }
+ *   time: { type: "all_day" }
+ *       | { type: "daytime" }
+ *       | { type: "nighttime" }
+ *       | { type: "custom", start: "HH:mm", end: "HH:mm" }
+ *   member: { type: "irrelevant" }
+ *         | { type: "non_member" }
+ *         | { type: "any_member" }
+ *         | { type: "specific", planTypes: PlanType[] }
+ *   scope: string[]   // empty = irrelevant; e.g. ["boardgame","mahjong","trpg","console"]
+ * }
+ */
+export const pricingPlansTable = sqlite.sqliteTable("pricing_plans", {
+  id: sqlite.text().$defaultFn(createId).primaryKey(),
+  plan_type: sqlite
+    .text("plan_type", { enum: ["fallback", "conditional"] })
+    .notNull(),
+  name: sqlite.text("name").notNull(),
+  sort_order: sqlite
+    .int("sort_order")
+    .notNull()
+    .$default(() => 0),
+  enabled: sqlite
+    .int("enabled", { mode: "boolean" })
+    .notNull()
+    .$default(() => true),
+
+  conditions: sqlite.text("conditions", { mode: "json" }).$type<{
+    date:
+      | { type: "fixed"; start: string; end: string }
+      | { type: "workdays" }
+      | { type: "holidays" }
+      | { type: "weekly"; days: number[] }
+      | {
+          type: "monthly";
+          nth: number;
+          unit: "natural" | "workday" | "holiday";
+        };
+    time:
+      | { type: "all_day" }
+      | { type: "daytime" }
+      | { type: "nighttime" }
+      | { type: "custom"; start: string; end: string };
+    member:
+      | { type: "irrelevant" }
+      | { type: "non_member" }
+      | { type: "any_member" }
+      | { type: "specific"; planTypes: string[] };
+    scope: string[];
+  } | null>(),
+
+  // Billing
+  billing_type: sqlite
+    .text("billing_type", { enum: ["hourly", "fixed"] })
+    .notNull(),
+  price: sqlite.int("price").notNull(),
+  cap_enabled: sqlite
+    .int("cap_enabled", { mode: "boolean" })
+    .notNull()
+    .$default(() => false),
+  cap_unit: sqlite.text("cap_unit", {
+    enum: ["per_day", "split_day_night"],
+  }),
+  cap_price: sqlite.int("cap_price"),
+  cap_price_day: sqlite.int("cap_price_day"),
+  cap_price_night: sqlite.int("cap_price_night"),
+
+  create_at: sqlite
+    .integer("create_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date(Date.now())),
+  update_at: sqlite
+    .integer("update_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date(Date.now())),
+});
+
+export const pricingPlansRelations = relations(pricingPlansTable, () => ({}));
+
+// ─── Authenticators ─────────────────────────────────────────────
 
 export const authenticators = sqlite.sqliteTable(
   "authenticator",
