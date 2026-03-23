@@ -7,16 +7,23 @@ import {
   WarningIcon,
   XIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import clsx from "clsx";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import BusinessCardModal from "@/client/components/diceshock/BusinessCardModal";
+import {
+  getPlanConfig,
+  getStoredValueBalance,
+  isActivePlan,
+  type MembershipPlan,
+} from "@/client/components/diceshock/MembershipBadge";
 import TOTPCard from "@/client/components/diceshock/TOTPCard";
 import Modal from "@/client/components/modal";
 import useAuth from "@/client/hooks/useAuth";
 import { useMessages } from "@/client/hooks/useMessages";
 import useSmsCode from "@/client/hooks/useSmsCode";
 import { copyToClipboard } from "@/server/utils";
+import dayjs from "@/shared/utils/dayjs-config";
 import trpcClientPublic from "@/shared/utils/trpc";
 
 export const Route = createFileRoute("/_with-home-lo/me")({
@@ -29,6 +36,15 @@ function RouteComponent() {
   const [nickname, setNickname] = useState(userInfo?.nickname ?? "");
   const [isLoading, setIsLoading] = useState(false);
   const messages = useMessages();
+
+  const [myPlans, setMyPlans] = useState<MembershipPlan[]>([]);
+
+  useEffect(() => {
+    trpcClientPublic.membershipPlans.getMyPlans
+      .query()
+      .then((data) => setMyPlans(data as MembershipPlan[]))
+      .catch(() => {});
+  }, []);
 
   // 修改手机号相关状态
   const [isEditingPhone, setIsEditingPhone] = useState(false);
@@ -233,6 +249,78 @@ function RouteComponent() {
           </div>
 
           <div className="w-full flex flex-col items-center justify-center gap-3 sm:gap-4">
+            {myPlans.filter(isActivePlan).length > 0 && (
+              <div className="w-full flex flex-wrap justify-center gap-4 mb-2">
+                {myPlans
+                  .filter(isActivePlan)
+                  .sort(
+                    (a, b) =>
+                      getPlanConfig(a.plan_type).priority -
+                      getPlanConfig(b.plan_type).priority,
+                  )
+                  .map((plan) => {
+                    const config = getPlanConfig(plan.plan_type);
+                    const Icon = config.icon;
+                    return (
+                      <div key={plan.id} className="hover-3d">
+                        <div className="card bg-base-200 w-44 sm:w-52 shadow-xl border border-base-content/10">
+                          <figure className="pt-4 px-4">
+                            <Icon className="w-full h-20 sm:h-24" />
+                          </figure>
+                          <div className="card-body p-3 sm:p-4 items-center text-center">
+                            <h3 className="card-title text-xs sm:text-sm">
+                              {config.label}
+                            </h3>
+                            <p className="text-[10px] sm:text-xs text-base-content/60">
+                              {plan.end_date
+                                ? `到期: ${dayjs(plan.end_date).format("YYYY/MM/DD")}`
+                                : plan.plan_type === "stored_value"
+                                  ? `余额: ¥${((plan.amount ?? 0) / 100).toFixed(0)}`
+                                  : "永久有效"}
+                            </p>
+                          </div>
+                        </div>
+                        <div />
+                        <div />
+                        <div />
+                        <div />
+                        <div />
+                        <div />
+                        <div />
+                        <div />
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+
+            {myPlans.filter(isActivePlan).length > 0 &&
+              getStoredValueBalance(myPlans) > 0 && (
+                <p className="text-sm text-base-content/70 mb-2">
+                  储值总余额:{" "}
+                  <span className="font-mono font-bold text-accent">
+                    ¥{(getStoredValueBalance(myPlans) / 100).toFixed(0)}
+                  </span>
+                </p>
+              )}
+
+            {myPlans.filter(isActivePlan).length === 0 &&
+              myPlans.length === 0 && (
+                <Link
+                  to="/diceshock-agents"
+                  className="card bg-base-200 hover:bg-base-300 transition-colors w-full cursor-pointer border border-base-content/10 hover:border-base-content/20 shadow-sm hover:shadow-md"
+                >
+                  <div className="card-body p-4 sm:p-6 md:p-8 items-center text-center">
+                    <p className="text-base sm:text-lg font-bold mb-1">
+                      加入 DiceShock Agents©
+                    </p>
+                    <p className="text-xs sm:text-sm text-base-content/60">
+                      了解会员计划权益
+                    </p>
+                  </div>
+                </Link>
+              )}
+
             <TOTPCard />
 
             <button
