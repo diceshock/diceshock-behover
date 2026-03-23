@@ -5,7 +5,7 @@ import { reRange } from "@/shared/utils/math";
 import ZdogShapes from "./ZdogShapes";
 
 const texts = [
-  "好桌子, 大桌子, 再大桌游也好开!",
+  "好桌台, 大桌台, 再大桌游也好开!",
   "椅子牢固又舒服, 老板家同款",
   "带桌游来玩? 免费! 带团的 GM/DM/KP 统统都免费!",
   "来我家跑团啥都不用带. 骰子, tokens, 地图板, 白板, 还有棋子都给你包圆了",

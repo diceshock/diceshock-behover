@@ -148,6 +148,10 @@ export default function BusinessCardModal({
           {required ? "填写名片（必填）" : "登记/修改名片"}
         </h3>
 
+        <p className="text-xs text-base-content/50 px-7 pb-2">
+          参与或围观约局时，你的名片会展示给活动组织者
+        </p>
+
         <form
           onSubmit={handleSubmit}
           className="flex flex-col gap-4 py-4 px-12 overflow-y-auto flex-1"

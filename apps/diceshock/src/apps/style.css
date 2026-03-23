@@ -599,6 +599,7 @@ body {
     border-radius: 0.5rem;
     margin: 0.5rem auto;
     display: block;
+    cursor: pointer;
 }
 
 .tiptap-content img.ProseMirror-selectednode {

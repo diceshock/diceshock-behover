@@ -584,14 +584,14 @@ function ActiveCard({
     <div className={clsx("relative h-44", isExpired && "opacity-60")}>
       <div
         className={clsx(
-          "absolute top-0 h-0.5 bg-primary",
+          "absolute top-0 z-10 h-0.5 bg-primary translate-y-[8px]",
           borderExtendBefore ? "left-0" : "left-2",
           borderExtendAfter ? "right-0" : "right-2",
         )}
       />
 
       {isFirstOfDay && (
-        <span className="absolute top-0 left-3 -translate-y-1/2 z-10 text-xs font-bold text-primary-content bg-primary border border-primary rounded px-2 py-0.5">
+        <span className="absolute top-0 left-3 -translate-y-[calc(50%+2px)] z-10 text-xs font-bold text-primary-content bg-primary border border-primary rounded rounded-b-none px-2 py-0.5">
           {dayLabel}
         </span>
       )}
@@ -600,7 +600,7 @@ function ActiveCard({
         to="/actives/$id"
         params={{ id: active.id }}
         className={clsx(
-          "block h-full pt-4 card bg-base-200 border border-base-content/10 rounded-lg mx-2 mt-2 hover:border-primary/30 transition-all hover:shadow-md cursor-pointer",
+          "block h-full pt-4 card bg-base-200 border border-base-content/10 border-t-0 rounded-lg rounded-t-none mx-2 mt-2 hover:border-primary/30 transition-all hover:shadow-md cursor-pointer",
         )}
       >
         <div className="card-body p-4 pt-2">

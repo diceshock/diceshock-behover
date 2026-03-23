@@ -6,14 +6,14 @@ import uniqBy from "lodash/uniqBy";
 import React, { useEffect, useState } from "react";
 import trpcClientPublic from "@/shared/utils/trpc";
 import Filter, { filterCfgA } from "./Filter";
-import RawList from "./RawList";
+import RawList, { type GameWithDbId } from "./RawList";
 
 const GameList: React.FC<{
   className?: { outer?: string; filter?: string };
 }> = ({ className }) => {
   const filter = useAtomValue(filterCfgA);
 
-  const [games, setGames] = useState<BoardGame.BoardGameCol[] | null>(null);
+  const [games, setGames] = useState<GameWithDbId[] | null>(null);
   const [isLoadEnd, setIsLoadEnd] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [ref, inView] = useInView();
@@ -38,7 +38,9 @@ const GameList: React.FC<{
         .then((res) => {
           if (res.length < 20) setIsLoadEnd(true);
 
-          const gameArr = res.map((game) => game.content!).filter(Boolean);
+          const gameArr = res
+            .filter((game) => game.content)
+            .map((game) => ({ ...game.content!, dbId: game.id }));
 
           if (!isSameFilter) setGames(gameArr);
 
