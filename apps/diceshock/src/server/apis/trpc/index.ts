@@ -6,6 +6,7 @@ import businessCard from "./businessCard";
 import events from "./events";
 import eventsManagement from "./eventsManagement";
 import membershipPlans from "./membershipPlans";
+import ordersManagement from "./ordersManagement";
 import owned from "./owned";
 import ownedManagement from "./ownedManagement";
 import pricingPlansManagement from "./pricingPlansManagement";
@@ -18,6 +19,7 @@ export const appRouterDash = router({
   activesManagement,
   eventsManagement,
   tablesManagement,
+  ordersManagement,
   users,
   membershipPlans,
   pricingPlansManagement,
@@ -44,6 +46,5 @@ export const appRouterPublic = router({
   tables: {
     getByCode: tables.getByCode,
     occupy: tables.occupy,
-    leave: tables.leave,
   },
 });

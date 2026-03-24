@@ -295,10 +295,15 @@ export const tableOccupancyTable = sqlite.sqliteTable("table_occupancy", {
     .int()
     .notNull()
     .$default(() => 1),
+  status: sqlite
+    .text("status", { enum: ["active", "ended"] })
+    .notNull()
+    .$default(() => "active"),
   start_at: sqlite
     .integer("start_at", { mode: "timestamp_ms" })
     .notNull()
     .$defaultFn(() => new Date(Date.now())),
+  end_at: sqlite.integer("end_at", { mode: "timestamp_ms" }),
 });
 
 export const tablesRelations = relations(tablesTable, ({ many }) => ({

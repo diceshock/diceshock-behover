@@ -18,6 +18,7 @@ import { Route as TCodeRouteImport } from './routers/t/$code'
 import { Route as DashUsersRouteImport } from './routers/dash/users'
 import { Route as DashTablesRouteImport } from './routers/dash/tables'
 import { Route as DashPricingRouteImport } from './routers/dash/pricing'
+import { Route as DashOrdersRouteImport } from './routers/dash/orders'
 import { Route as DashEventsRouteImport } from './routers/dash/events'
 import { Route as DashActivesRouteImport } from './routers/dash/actives'
 import { Route as WithHomeLoMeRouteImport } from './routers/_with-home-lo/me'
@@ -78,6 +79,11 @@ const DashTablesRoute = DashTablesRouteImport.update({
 const DashPricingRoute = DashPricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
+  getParentRoute: () => DashRoute,
+} as any)
+const DashOrdersRoute = DashOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
   getParentRoute: () => DashRoute,
 } as any)
 const DashEventsRoute = DashEventsRouteImport.update({
@@ -180,6 +186,7 @@ export interface FileRoutesByFullPath {
   '/me': typeof WithHomeLoMeRoute
   '/dash/actives': typeof DashActivesRoute
   '/dash/events': typeof DashEventsRoute
+  '/dash/orders': typeof DashOrdersRoute
   '/dash/pricing': typeof DashPricingRoute
   '/dash/tables': typeof DashTablesRoute
   '/dash/users': typeof DashUsersRoute
@@ -205,6 +212,7 @@ export interface FileRoutesByTo {
   '/me': typeof WithHomeLoMeRoute
   '/dash/actives': typeof DashActivesRoute
   '/dash/events': typeof DashEventsRoute
+  '/dash/orders': typeof DashOrdersRoute
   '/dash/pricing': typeof DashPricingRoute
   '/dash/tables': typeof DashTablesRoute
   '/dash/users': typeof DashUsersRoute
@@ -234,6 +242,7 @@ export interface FileRoutesById {
   '/_with-home-lo/me': typeof WithHomeLoMeRoute
   '/dash/actives': typeof DashActivesRoute
   '/dash/events': typeof DashEventsRoute
+  '/dash/orders': typeof DashOrdersRoute
   '/dash/pricing': typeof DashPricingRoute
   '/dash/tables': typeof DashTablesRoute
   '/dash/users': typeof DashUsersRoute
@@ -264,6 +273,7 @@ export interface FileRouteTypes {
     | '/me'
     | '/dash/actives'
     | '/dash/events'
+    | '/dash/orders'
     | '/dash/pricing'
     | '/dash/tables'
     | '/dash/users'
@@ -289,6 +299,7 @@ export interface FileRouteTypes {
     | '/me'
     | '/dash/actives'
     | '/dash/events'
+    | '/dash/orders'
     | '/dash/pricing'
     | '/dash/tables'
     | '/dash/users'
@@ -317,6 +328,7 @@ export interface FileRouteTypes {
     | '/_with-home-lo/me'
     | '/dash/actives'
     | '/dash/events'
+    | '/dash/orders'
     | '/dash/pricing'
     | '/dash/tables'
     | '/dash/users'
@@ -403,6 +415,13 @@ declare module '@tanstack/react-router' {
       path: '/pricing'
       fullPath: '/dash/pricing'
       preLoaderRoute: typeof DashPricingRouteImport
+      parentRoute: typeof DashRoute
+    }
+    '/dash/orders': {
+      id: '/dash/orders'
+      path: '/orders'
+      fullPath: '/dash/orders'
+      preLoaderRoute: typeof DashOrdersRouteImport
       parentRoute: typeof DashRoute
     }
     '/dash/events': {
@@ -562,6 +581,7 @@ const WithHomeLoRouteWithChildren = WithHomeLoRoute._addFileChildren(
 interface DashRouteChildren {
   DashActivesRoute: typeof DashActivesRoute
   DashEventsRoute: typeof DashEventsRoute
+  DashOrdersRoute: typeof DashOrdersRoute
   DashPricingRoute: typeof DashPricingRoute
   DashTablesRoute: typeof DashTablesRoute
   DashUsersRoute: typeof DashUsersRoute
@@ -576,6 +596,7 @@ interface DashRouteChildren {
 const DashRouteChildren: DashRouteChildren = {
   DashActivesRoute: DashActivesRoute,
   DashEventsRoute: DashEventsRoute,
+  DashOrdersRoute: DashOrdersRoute,
   DashPricingRoute: DashPricingRoute,
   DashTablesRoute: DashTablesRoute,
   DashUsersRoute: DashUsersRoute,

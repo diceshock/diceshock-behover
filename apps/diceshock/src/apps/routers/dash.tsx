@@ -1,5 +1,6 @@
 import {
   CalendarDotsIcon,
+  ClipboardTextIcon,
   CurrencyDollarIcon,
   GaugeIcon,
   MegaphoneIcon,
@@ -59,6 +60,13 @@ function RouteComponent() {
             <Link to="/dash/tables" className="gap-12">
               <TableIcon className="size-6" />
               桌台管理
+            </Link>
+          </li>
+
+          <li>
+            <Link to="/dash/orders" className="gap-12">
+              <ClipboardTextIcon className="size-6" />
+              订单管理
             </Link>
           </li>
 

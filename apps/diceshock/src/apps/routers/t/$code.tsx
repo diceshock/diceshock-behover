@@ -1,7 +1,6 @@
 import {
   ClockIcon,
   HashIcon,
-  SignOutIcon,
   UserIcon,
   UsersIcon,
 } from "@phosphor-icons/react/dist/ssr";
@@ -51,7 +50,6 @@ function SeatTimerPage() {
   const [error, setError] = useState<string | null>(null);
   const [seats, setSeats] = useState(1);
   const [occupying, setOccupying] = useState(false);
-  const [leaving, setLeaving] = useState(false);
 
   const { state: wsState, connected } = useSeatTimer({
     code,
@@ -104,21 +102,6 @@ function SeatTimerPage() {
         : null,
     [occupancies, userInfo],
   );
-
-  const handleLeave = async () => {
-    if (!myOccupancy || leaving) return;
-    setLeaving(true);
-    try {
-      await trpcClientPublic.tables.leave.mutate({
-        occupancyId: myOccupancy.id,
-        code,
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "离座失败");
-    } finally {
-      setLeaving(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -270,23 +253,6 @@ function SeatTimerPage() {
         occupancies={occupancies}
         myUid={userInfo?.uid ?? null}
       />
-
-      {myOccupancy && (
-        <button
-          className={clsx("btn btn-error w-full", leaving && "btn-disabled")}
-          onClick={handleLeave}
-          disabled={leaving}
-        >
-          {leaving ? (
-            <span className="loading loading-spinner loading-sm" />
-          ) : (
-            <>
-              <SignOutIcon className="size-5" />
-              结束使用
-            </>
-          )}
-        </button>
-      )}
     </div>
   );
 }

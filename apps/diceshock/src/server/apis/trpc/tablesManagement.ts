@@ -39,6 +39,7 @@ const list = dashProcedure.query(async ({ ctx }) => {
     orderBy: (t, { desc }) => desc(t.create_at),
     with: {
       occupancies: {
+        where: (o, { eq }) => eq(o.status, "active"),
         columns: { id: true, user_id: true, seats: true, start_at: true },
       },
     },
@@ -91,6 +92,7 @@ const getById = dashProcedure
       where: (t, { eq }) => eq(t.id, input.id),
       with: {
         occupancies: {
+          where: (o, { eq }) => eq(o.status, "active"),
           with: {
             user: {
               columns: { id: true, name: true },
@@ -249,7 +251,8 @@ const removeOccupancy = dashProcedure
     });
 
     await tdb
-      .delete(tableOccupancyTable)
+      .update(tableOccupancyTable)
+      .set({ status: "ended", end_at: new Date() })
       .where(drizzle.eq(tableOccupancyTable.id, input.id));
 
     if (occ) {

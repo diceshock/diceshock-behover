@@ -398,17 +398,25 @@ function TableDetailPage() {
                 <h3 className="text-lg font-semibold">
                   使用情况 ({totalOccupiedSeats}/{table.capacity})
                 </h3>
-                <button
-                  type="button"
-                  className="btn btn-primary btn-sm"
-                  onClick={() => {
-                    setAddOccForm({ userId: "", seats: 1 });
-                    addOccDialogRef.current?.showModal();
-                  }}
-                >
-                  <PlusIcon className="size-4" />
-                  添加使用
-                </button>
+                <div className="flex items-center gap-2">
+                  <Link
+                    to="/dash/orders"
+                    className="btn btn-xs btn-ghost btn-primary"
+                  >
+                    查看全部订单
+                  </Link>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => {
+                      setAddOccForm({ userId: "", seats: 1 });
+                      addOccDialogRef.current?.showModal();
+                    }}
+                  >
+                    <PlusIcon className="size-4" />
+                    添加使用
+                  </button>
+                </div>
               </div>
 
               {table.occupancies.length === 0 ? (

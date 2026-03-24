@@ -957,6 +957,12 @@ function UserDetailPage() {
           {activeTab === "occupancy" && (
             <div className="flex flex-col gap-4">
               <h3 className="text-lg font-semibold">当前使用</h3>
+              <Link
+                to="/dash/orders"
+                className="btn btn-xs btn-ghost btn-primary"
+              >
+                查看全部订单
+              </Link>
 
               {occupanciesLoading ? (
                 <div className="py-12 text-center">

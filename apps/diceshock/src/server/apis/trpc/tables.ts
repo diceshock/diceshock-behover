@@ -18,6 +18,7 @@ const getByCode = publicProcedure
       where: (t, { eq }) => eq(t.code, input.code),
       with: {
         occupancies: {
+          where: (o, { eq }) => eq(o.status, "active"),
           with: {
             user: { columns: { id: true, name: true } },
           },
@@ -126,7 +127,8 @@ const leave = protectedProcedure
     if (occ.user_id !== ctx.userId) throw new Error("只能取消自己的使用");
 
     await tdb
-      .delete(tableOccupancyTable)
+      .update(tableOccupancyTable)
+      .set({ status: "ended", end_at: new Date() })
       .where(drizzle.eq(tableOccupancyTable.id, input.occupancyId));
 
     const table = await tdb.query.tablesTable.findFirst({
