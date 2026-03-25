@@ -841,7 +841,7 @@ function PricingPage() {
       </dialog>
 
       <dialog ref={detailDialogRef} className="modal">
-        <div className="modal-box max-w-2xl">
+        <div className="modal-box max-w-2xl max-h-[80vh]">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-lg">
               {detailSnapshot?.name ?? "快照详情"}
@@ -856,7 +856,7 @@ function PricingPage() {
           </div>
           {detailSnapshot && (
             <div className="flex flex-col gap-4 text-sm">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <span
                   className={`badge badge-sm ${detailSnapshot.status === "published" ? "badge-success" : "badge-ghost"}`}
                 >
@@ -871,49 +871,112 @@ function PricingPage() {
                   </span>
                 )}
               </div>
+
               <div className="bg-base-200 rounded-lg p-3">
-                <span className="font-semibold">时段设置</span>
-                <p className="text-base-content/60 mt-1">
-                  白天 {detailSnapshot.data.config.daytime_start} ~{" "}
-                  {detailSnapshot.data.config.daytime_end}
-                </p>
-              </div>
-              {detailSnapshot.data.plans.map((plan, i) => (
-                <div key={i} className="bg-base-200 rounded-lg p-3">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">{plan.name}</span>
-                    <span
-                      className={`badge badge-xs ${plan.plan_type === "fallback" ? "badge-success" : "badge-info"}`}
-                    >
-                      {plan.plan_type === "fallback" ? "兜底" : "条件"}
-                    </span>
-                    {!plan.enabled && (
-                      <span className="badge badge-xs badge-ghost">未启用</span>
-                    )}
-                  </div>
-                  <div className="mt-2 text-base-content/60 space-y-1">
-                    <p>
-                      计费:{" "}
-                      {plan.billing_type === "fixed"
-                        ? `固定 ¥${(plan.price / 100).toFixed(2)}`
-                        : `¥${(plan.price / 100).toFixed(2)}/时`}
-                    </p>
-                    {plan.cap_enabled && plan.cap_unit === "per_day" && (
-                      <p>
-                        封顶: ¥{((plan.cap_price ?? 0) / 100).toFixed(2)}/天
-                      </p>
-                    )}
-                    {plan.cap_enabled &&
-                      plan.cap_unit === "split_day_night" && (
-                        <p>
-                          封顶: 白天 ¥
-                          {((plan.cap_price_day ?? 0) / 100).toFixed(2)} / 晚上
-                          ¥{((plan.cap_price_night ?? 0) / 100).toFixed(2)}
-                        </p>
-                      )}
-                  </div>
+                <span className="font-semibold">⏰ 时段设置</span>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-base-content/60">
+                  <p>
+                    白天: {detailSnapshot.data.config.daytime_start} ~{" "}
+                    {detailSnapshot.data.config.daytime_end}
+                  </p>
+                  <p>
+                    晚上: {detailSnapshot.data.config.daytime_end} ~ 次日
+                    {detailSnapshot.data.config.daytime_start}
+                  </p>
                 </div>
-              ))}
+              </div>
+
+              {detailSnapshot.data.plans.map((plan, i) => {
+                const cond = plan.conditions as Conditions | null;
+                return (
+                  <div
+                    key={i}
+                    className={`rounded-lg p-3 ${plan.enabled ? "bg-base-200" : "bg-base-200/50 opacity-60"}`}
+                  >
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold">{plan.name}</span>
+                      <span
+                        className={`badge badge-xs ${plan.plan_type === "fallback" ? "badge-success" : "badge-info"}`}
+                      >
+                        {plan.plan_type === "fallback" ? "兜底" : "条件"}
+                      </span>
+                      {!plan.enabled && (
+                        <span className="badge badge-xs badge-ghost">
+                          未启用
+                        </span>
+                      )}
+                      <span className="badge badge-xs badge-outline">
+                        #{plan.sort_order}
+                      </span>
+                    </div>
+
+                    {cond && plan.plan_type === "conditional" && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        <span className="badge badge-outline badge-xs">
+                          📅 {getDateLabel(cond.date)}
+                        </span>
+                        <span className="badge badge-outline badge-xs">
+                          🕐 {getTimeLabel(cond.time)}
+                        </span>
+                        {cond.member.type !== "irrelevant" && (
+                          <span className="badge badge-outline badge-xs">
+                            👤 {getMemberLabel(cond.member)}
+                          </span>
+                        )}
+                        {cond.scope.length > 0 && (
+                          <span className="badge badge-outline badge-xs">
+                            🎮{" "}
+                            {cond.scope
+                              .map(
+                                (s: string) =>
+                                  SCOPE_OPTIONS.find((o) => o.value === s)
+                                    ?.label ?? s,
+                              )
+                              .join("/")}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="mt-2 text-base-content/60 space-y-1">
+                      <p>
+                        💰 计费:{" "}
+                        {plan.billing_type === "fixed"
+                          ? `固定 ¥${(plan.price / 100).toFixed(2)}`
+                          : `¥${(plan.price / 100).toFixed(2)}/时 (¥${(plan.price / 200).toFixed(2)}/30分钟)`}
+                      </p>
+                      {plan.billing_type === "hourly" && (
+                        <p className="text-xs">⏳ 前30分钟免费</p>
+                      )}
+                      {plan.cap_enabled &&
+                        plan.cap_unit === "per_day" &&
+                        plan.cap_price != null && (
+                          <p>
+                            🔒 封顶: ¥{(plan.cap_price / 100).toFixed(2)}/天
+                          </p>
+                        )}
+                      {plan.cap_enabled &&
+                        plan.cap_unit === "split_day_night" && (
+                          <p>
+                            🔒 封顶: 白天 ¥
+                            {((plan.cap_price_day ?? 0) / 100).toFixed(2)} /
+                            晚上 ¥
+                            {((plan.cap_price_night ?? 0) / 100).toFixed(2)}
+                          </p>
+                        )}
+                      {!plan.cap_enabled && plan.billing_type === "hourly" && (
+                        <p className="text-xs">无封顶</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {detailSnapshot.data.plans.length === 0 && (
+                <div className="py-6 text-center text-base-content/50">
+                  此快照无任何计划
+                </div>
+              )}
             </div>
           )}
         </div>
