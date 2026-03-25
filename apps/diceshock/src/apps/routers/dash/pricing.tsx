@@ -653,7 +653,7 @@ function PricingPage() {
       </div>
 
       {/* Sticky bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-base-100 border-t border-base-200 px-4 py-3 flex items-center justify-end gap-3 z-50">
+      <div className="fixed bottom-0 right-0 left-0 lg:left-20 bg-base-100 border-t border-base-200 px-4 py-2 flex items-center justify-end gap-2 z-40">
         {hasChanges && (
           <span className="text-xs text-warning mr-auto">有未保存的改动</span>
         )}
