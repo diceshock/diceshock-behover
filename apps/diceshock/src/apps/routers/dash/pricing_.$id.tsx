@@ -143,7 +143,7 @@ function PricingDetailPage() {
             ? yuanToCents(capPriceNight)
             : null,
       });
-      msg.success("计划已保存");
+      msg.success("已保存到工作区");
       void navigate({ to: "/dash/pricing" });
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "保存失败");
@@ -225,7 +225,7 @@ function PricingDetailPage() {
                 onClick={() => void handleSave()}
                 disabled={saving}
               >
-                {saving ? "保存中..." : "保存"}
+                {saving ? "保存中..." : "保存并返回"}
               </button>
             </div>
           </div>

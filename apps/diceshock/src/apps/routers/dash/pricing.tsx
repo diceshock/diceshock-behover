@@ -1,6 +1,10 @@
 import {
+  ArrowCounterClockwiseIcon,
+  CaretDownIcon,
   ClockIcon,
+  CloudArrowUpIcon,
   DotsSixVerticalIcon,
+  FloppyDiskIcon,
   PencilSimpleIcon,
   PlusIcon,
   TrashIcon,
@@ -25,6 +29,10 @@ type Conditions = NonNullable<PricingPlan["conditions"]>;
 type GlobalConfig = Awaited<
   ReturnType<typeof trpcClientDash.pricingPlansManagement.getConfig.query>
 >;
+
+type Snapshot = Awaited<
+  ReturnType<typeof trpcClientDash.pricingPlansManagement.listSnapshots.query>
+>[number];
 
 const PLAN_TYPE_OPTIONS = [
   { value: "yearly", label: "桌面通行证 LTS" },
@@ -110,22 +118,37 @@ function getMemberLabel(member: Conditions["member"]): string {
   }
 }
 
+function formatTime(val: Date | number | null | undefined): string {
+  if (val == null) return "";
+  const d = val instanceof Date ? val : new Date(Number(val));
+  return d.toLocaleString("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function PricingPage() {
   const msg = useMsg();
   const navigate = useNavigate();
   const [plans, setPlans] = useState<PricingPlan[]>([]);
   const [config, setConfig] = useState<GlobalConfig | null>(null);
+  const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const refreshData = useCallback(async () => {
     setLoading(true);
     try {
-      const [planData, configData] = await Promise.all([
+      const [planData, configData, snapshotData] = await Promise.all([
         trpcClientDash.pricingPlansManagement.list.query(),
         trpcClientDash.pricingPlansManagement.getConfig.query(),
+        trpcClientDash.pricingPlansManagement.listSnapshots.query(),
       ]);
       setPlans(planData);
       setConfig(configData);
+      setSnapshots(snapshotData);
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "加载失败");
     } finally {
@@ -284,6 +307,54 @@ function PricingPage() {
     }
   };
 
+  const [savePending, setSavePending] = useState(false);
+  const [publishPending, setPublishPending] = useState(false);
+  const [restorePending, setRestorePending] = useState<string | null>(null);
+
+  const handleSaveDraft = async () => {
+    setSavePending(true);
+    try {
+      await trpcClientDash.pricingPlansManagement.saveSnapshot.mutate();
+      msg.success("草稿已保存");
+      await refreshData();
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "保存草稿失败");
+    } finally {
+      setSavePending(false);
+    }
+  };
+
+  const handlePublish = async () => {
+    setPublishPending(true);
+    try {
+      await trpcClientDash.pricingPlansManagement.publish.mutate();
+      msg.success("已发布");
+      await refreshData();
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "发布失败");
+    } finally {
+      setPublishPending(false);
+    }
+  };
+
+  const handleRestore = async (snapshotId: string) => {
+    setRestorePending(snapshotId);
+    try {
+      await trpcClientDash.pricingPlansManagement.restoreSnapshot.mutate({
+        id: snapshotId,
+      });
+      msg.success("已回退到此版本");
+      await refreshData();
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "回退失败");
+    } finally {
+      setRestorePending(null);
+    }
+  };
+
+  const latestPublished = snapshots.find((s) => s.status === "published");
+  const hasDraft = snapshots.some((s) => s.status === "draft");
+
   if (loading) {
     return (
       <main className="size-full flex items-center justify-center">
@@ -296,25 +367,32 @@ function PricingPage() {
     <main className="size-full overflow-y-auto">
       <div className="px-4 pt-4 flex items-center justify-between">
         <DashBackButton />
-        <button
-          type="button"
-          className="btn btn-sm btn-ghost gap-2"
-          onClick={() => {
-            if (config) {
-              setConfigForm({
-                daytime_start: config.daytime_start,
-                daytime_end: config.daytime_end,
-              });
-            }
-            configDialogRef.current?.showModal();
-          }}
-        >
-          <ClockIcon className="size-4" />
-          时段设置
-        </button>
+        <div className="flex items-center gap-2">
+          {latestPublished && (
+            <span className="text-xs text-base-content/50">
+              最近发布: {formatTime(latestPublished.published_at)}
+            </span>
+          )}
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost gap-2"
+            onClick={() => {
+              if (config) {
+                setConfigForm({
+                  daytime_start: config.daytime_start,
+                  daytime_end: config.daytime_end,
+                });
+              }
+              configDialogRef.current?.showModal();
+            }}
+          >
+            <ClockIcon className="size-4" />
+            时段设置
+          </button>
+        </div>
       </div>
 
-      <div className="mx-auto w-full max-w-4xl px-4 pb-20 space-y-6">
+      <div className="mx-auto w-full max-w-4xl px-4 pb-28 space-y-6">
         {config && (
           <div className="text-sm text-base-content/60">
             白天 {config.daytime_start} ~ {config.daytime_end} / 晚上{" "}
@@ -445,6 +523,87 @@ function PricingPage() {
             })}
           </div>
         )}
+
+        <div className="mt-8">
+          <button
+            type="button"
+            className="flex items-center gap-2 text-sm font-semibold text-base-content/70 hover:text-base-content transition-colors"
+            onClick={() => setHistoryOpen(!historyOpen)}
+          >
+            <CaretDownIcon
+              className={`size-4 transition-transform ${historyOpen ? "rotate-0" : "-rotate-90"}`}
+            />
+            历史记录 ({snapshots.length})
+          </button>
+
+          {historyOpen && (
+            <div className="mt-3 flex flex-col gap-2">
+              {snapshots.length === 0 ? (
+                <div className="py-6 text-center text-base-content/50 text-sm">
+                  暂无保存记录
+                </div>
+              ) : (
+                snapshots.map((s) => (
+                  <div
+                    key={s.id}
+                    className="flex items-center justify-between bg-base-200 rounded-lg px-4 py-3"
+                  >
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`badge badge-sm ${s.status === "published" ? "badge-success" : "badge-ghost"}`}
+                        >
+                          {s.status === "published" ? "已发布" : "草稿"}
+                        </span>
+                        <span className="text-sm">
+                          {formatTime(s.created_at)}
+                        </span>
+                        {s.published_at && (
+                          <span className="text-xs text-base-content/50">
+                            · 发布于 {formatTime(s.published_at)}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-base-content/50">
+                        {s.summary}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-xs btn-ghost gap-1"
+                      onClick={() => void handleRestore(s.id)}
+                      disabled={restorePending === s.id}
+                    >
+                      <ArrowCounterClockwiseIcon className="size-3.5" />
+                      {restorePending === s.id ? "回退中..." : "回退"}
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 bg-base-100 border-t border-base-200 px-4 py-3 flex items-center justify-end gap-3 z-50">
+        <button
+          type="button"
+          className="btn btn-sm gap-2"
+          onClick={() => void handleSaveDraft()}
+          disabled={savePending}
+        >
+          <FloppyDiskIcon className="size-4" />
+          {savePending ? "保存中..." : "保存草稿"}
+        </button>
+        <button
+          type="button"
+          className="btn btn-sm btn-primary gap-2"
+          onClick={() => void handlePublish()}
+          disabled={publishPending}
+        >
+          <CloudArrowUpIcon className="size-4" />
+          {publishPending ? "发布中..." : "发布"}
+        </button>
       </div>
 
       <dialog ref={configDialogRef} className="modal">
@@ -556,6 +715,7 @@ function FallbackSection({
   const [capPriceDay, setCapPriceDay] = useState("");
   const [capPriceNight, setCapPriceNight] = useState("");
   const [saving, setSaving] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (plan) {
@@ -588,29 +748,52 @@ function FallbackSection({
     }
   };
 
-  const handleSave = async () => {
-    if (!plan) return;
-    setSaving(true);
-    try {
-      await trpcClientDash.pricingPlansManagement.update.mutate({
-        id: plan.id,
-        billing_type: "hourly",
-        price: yuanToCents(price),
-        cap_enabled: true,
-        cap_unit: capUnit,
-        cap_price: capUnit === "per_day" ? yuanToCents(capPrice) : null,
-        cap_price_day:
-          capUnit === "split_day_night" ? yuanToCents(capPriceDay) : null,
-        cap_price_night:
-          capUnit === "split_day_night" ? yuanToCents(capPriceNight) : null,
-      });
-      msg.success("兜底计划已保存");
-      await onRefresh();
-    } catch (err) {
-      msg.error(err instanceof Error ? err.message : "保存失败");
-    } finally {
-      setSaving(false);
-    }
+  const autoSave = useCallback(
+    (updates: Record<string, unknown>) => {
+      if (!plan) return;
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(async () => {
+        try {
+          await trpcClientDash.pricingPlansManagement.update.mutate({
+            id: plan.id,
+            ...updates,
+          });
+        } catch {}
+      }, 800);
+    },
+    [plan],
+  );
+
+  const handlePriceChange = (val: string) => {
+    setPrice(val);
+    autoSave({ price: yuanToCents(val) });
+  };
+
+  const handleCapUnitChange = (unit: "per_day" | "split_day_night") => {
+    setCapUnit(unit);
+    autoSave({
+      cap_unit: unit,
+      cap_price: unit === "per_day" ? yuanToCents(capPrice) : null,
+      cap_price_day:
+        unit === "split_day_night" ? yuanToCents(capPriceDay) : null,
+      cap_price_night:
+        unit === "split_day_night" ? yuanToCents(capPriceNight) : null,
+    });
+  };
+
+  const handleCapPriceChange = (val: string) => {
+    setCapPrice(val);
+    autoSave({ cap_price: yuanToCents(val) });
+  };
+
+  const handleCapPriceDayChange = (val: string) => {
+    setCapPriceDay(val);
+    autoSave({ cap_price_day: yuanToCents(val) });
+  };
+
+  const handleCapPriceNightChange = (val: string) => {
+    setCapPriceNight(val);
+    autoSave({ cap_price_night: yuanToCents(val) });
   };
 
   return (
@@ -643,7 +826,7 @@ function FallbackSection({
                 type="number"
                 className="input input-bordered w-full max-w-xs"
                 value={price}
-                onChange={(e) => setPrice(e.target.value)}
+                onChange={(e) => handlePriceChange(e.target.value)}
                 min={0}
                 step={0.01}
               />
@@ -658,7 +841,7 @@ function FallbackSection({
                     name="fallback-cap-unit"
                     className="radio radio-sm"
                     checked={capUnit === "per_day"}
-                    onChange={() => setCapUnit("per_day")}
+                    onChange={() => handleCapUnitChange("per_day")}
                   />
                   <span className="text-sm">按天封顶</span>
                 </label>
@@ -668,7 +851,7 @@ function FallbackSection({
                     name="fallback-cap-unit"
                     className="radio radio-sm"
                     checked={capUnit === "split_day_night"}
-                    onChange={() => setCapUnit("split_day_night")}
+                    onChange={() => handleCapUnitChange("split_day_night")}
                   />
                   <span className="text-sm">白天/晚上分别封顶</span>
                 </label>
@@ -683,7 +866,7 @@ function FallbackSection({
                     type="number"
                     className="input input-bordered input-sm w-full max-w-xs"
                     value={capPrice}
-                    onChange={(e) => setCapPrice(e.target.value)}
+                    onChange={(e) => handleCapPriceChange(e.target.value)}
                     min={0}
                     step={0.01}
                   />
@@ -698,7 +881,7 @@ function FallbackSection({
                       type="number"
                       className="input input-bordered input-sm w-full"
                       value={capPriceDay}
-                      onChange={(e) => setCapPriceDay(e.target.value)}
+                      onChange={(e) => handleCapPriceDayChange(e.target.value)}
                       min={0}
                       step={0.01}
                     />
@@ -711,24 +894,15 @@ function FallbackSection({
                       type="number"
                       className="input input-bordered input-sm w-full"
                       value={capPriceNight}
-                      onChange={(e) => setCapPriceNight(e.target.value)}
+                      onChange={(e) =>
+                        handleCapPriceNightChange(e.target.value)
+                      }
                       min={0}
                       step={0.01}
                     />
                   </label>
                 </div>
               )}
-            </div>
-
-            <div className="flex justify-end">
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                onClick={() => void handleSave()}
-                disabled={saving}
-              >
-                {saving ? "保存中..." : "保存"}
-              </button>
             </div>
           </div>
         )}

@@ -440,6 +440,38 @@ export const pricingPlansTable = sqlite.sqliteTable("pricing_plans", {
 
 export const pricingPlansRelations = relations(pricingPlansTable, () => ({}));
 
+export const pricingSnapshotsTable = sqlite.sqliteTable("pricing_snapshots", {
+  id: sqlite.text().$defaultFn(createId).primaryKey(),
+  data: sqlite.text("data", { mode: "json" }).$type<{
+    config: {
+      daytime_start: string;
+      daytime_end: string;
+    };
+    plans: Array<{
+      plan_type: "fallback" | "conditional";
+      name: string;
+      sort_order: number;
+      enabled: boolean;
+      conditions: unknown;
+      billing_type: "hourly" | "fixed";
+      price: number;
+      cap_enabled: boolean;
+      cap_unit: "per_day" | "split_day_night" | null;
+      cap_price: number | null;
+      cap_price_day: number | null;
+      cap_price_night: number | null;
+    }>;
+  }>(),
+  status: sqlite
+    .text("status", { enum: ["draft", "published"] })
+    .notNull()
+    .$default(() => "draft"),
+  created_at: sqlite
+    .integer("created_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date(Date.now())),
+  published_at: sqlite.integer("published_at", { mode: "timestamp_ms" }),
+});
+
 // ─── Authenticators ─────────────────────────────────────────────
 
 export const authenticators = sqlite.sqliteTable(
