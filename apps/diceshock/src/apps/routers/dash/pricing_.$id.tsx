@@ -39,7 +39,12 @@ type Conditions = {
   scope: string[];
 };
 
-export const pricingDataAtom = atom<SnapshotData | null>(null);
+export const pricingDataAtom = atom<SnapshotData>(EMPTY_DATA);
+
+const EMPTY_DATA: SnapshotData = {
+  config: { daytime_start: "10:00", daytime_end: "18:00" },
+  plans: [],
+};
 
 const PLAN_TYPE_OPTIONS = [
   { value: "yearly", label: "桌面通行证 LTS" },

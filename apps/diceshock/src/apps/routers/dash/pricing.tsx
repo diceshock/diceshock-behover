@@ -162,25 +162,16 @@ function PricingPage() {
   const msg = useMsg();
   const navigate = useNavigate();
 
-  const [data, setData] = useState<SnapshotData>(EMPTY_DATA);
+  const [data, setData] = useAtom(pricingDataAtom);
   const [savedData, setSavedData] = useState<SnapshotData>(EMPTY_DATA);
   const [snapshots, setSnapshots] = useState<SnapshotRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [pricingAtom, setPricingAtom] = useAtom(pricingDataAtom);
+  const [snapshotName, setSnapshotName] = useState("未命名");
 
-  const hasChanges = !isEqual(data, savedData);
+  const effectiveData = data ?? EMPTY_DATA;
+  const hasChanges = !isEqual(effectiveData, savedData);
   const hasDraft = snapshots.some((s) => s.status === "draft");
-
-  useEffect(() => {
-    setPricingAtom(data);
-  }, [data, setPricingAtom]);
-
-  useEffect(() => {
-    if (pricingAtom && !isEqual(pricingAtom, data)) {
-      setData(pricingAtom);
-    }
-  }, [pricingAtom]);
 
   const refreshData = useCallback(async () => {
     setLoading(true);
@@ -193,6 +184,7 @@ function PricingPage() {
       setData(d);
       setSavedData(d);
       setSnapshots(snapshotList);
+      setSnapshotName(loaded.snapshotName ?? "未命名");
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "加载失败");
     } finally {
@@ -205,23 +197,29 @@ function PricingPage() {
   }, [refreshData]);
 
   const fallbackPlan =
-    data.plans.find((p) => p.plan_type === "fallback") ?? null;
-  const conditionalPlans = data.plans.filter(
+    effectiveData.plans.find((p) => p.plan_type === "fallback") ?? null;
+  const conditionalPlans = effectiveData.plans.filter(
     (p) => p.plan_type === "conditional",
   );
 
   const updatePlan = (index: number, updates: Partial<PlanEntry>) => {
-    setData((prev) => ({
-      ...prev,
-      plans: prev.plans.map((p, i) => (i === index ? { ...p, ...updates } : p)),
-    }));
+    setData((prev) => {
+      const d = prev ?? EMPTY_DATA;
+      return {
+        ...d,
+        plans: d.plans.map((p, i) => (i === index ? { ...p, ...updates } : p)),
+      };
+    });
   };
 
   const removePlan = (index: number) => {
-    setData((prev) => ({
-      ...prev,
-      plans: prev.plans.filter((_, i) => i !== index),
-    }));
+    setData((prev) => {
+      const d = prev ?? EMPTY_DATA;
+      return {
+        ...d,
+        plans: d.plans.filter((_, i) => i !== index),
+      };
+    });
   };
 
   const addConditionalPlan = () => {
@@ -275,10 +273,10 @@ function PricingPage() {
 
   useEffect(() => {
     setConfigForm({
-      daytime_start: data.config.daytime_start,
-      daytime_end: data.config.daytime_end,
+      daytime_start: effectiveData.config.daytime_start,
+      daytime_end: effectiveData.config.daytime_end,
     });
-  }, [data.config]);
+  }, [effectiveData.config]);
 
   const handleSaveConfig = () => {
     setData((prev) => ({ ...prev, config: { ...configForm } }));
@@ -326,14 +324,13 @@ function PricingPage() {
 
   const handleToggle = (globalIdx: number) => {
     updatePlan(globalIdx, {
-      enabled: !data.plans[globalIdx].enabled,
+      enabled: !effectiveData.plans[globalIdx].enabled,
     });
   };
 
   const [savePending, setSavePending] = useState(false);
   const [publishPending, setPublishPending] = useState(false);
   const [restorePending, setRestorePending] = useState<string | null>(null);
-  const [snapshotName, setSnapshotName] = useState("未命名");
   const saveDialogRef = useRef<HTMLDialogElement>(null);
 
   const handleSaveDraft = async () => {
@@ -344,10 +341,10 @@ function PricingPage() {
     setSavePending(true);
     try {
       const result = await trpcClientDash.pricingPlansManagement.save.mutate({
-        data,
+        data: effectiveData,
         name: snapshotName.trim(),
       });
-      setSavedData(data);
+      setSavedData(effectiveData);
       setSnapshotName(result.name);
       const snapshotList =
         await trpcClientDash.pricingPlansManagement.listSnapshots.query();
@@ -406,7 +403,7 @@ function PricingPage() {
   }
 
   const pendingDeletePlan =
-    pendingDeleteIdx != null ? data.plans[pendingDeleteIdx] : null;
+    pendingDeleteIdx != null ? effectiveData.plans[pendingDeleteIdx] : null;
 
   return (
     <main className="size-full overflow-y-auto">
@@ -421,8 +418,8 @@ function PricingPage() {
             className="btn btn-sm btn-ghost gap-2"
             onClick={() => {
               setConfigForm({
-                daytime_start: data.config.daytime_start,
-                daytime_end: data.config.daytime_end,
+                daytime_start: effectiveData.config.daytime_start,
+                daytime_end: effectiveData.config.daytime_end,
               });
               configDialogRef.current?.showModal();
             }}
@@ -434,9 +431,19 @@ function PricingPage() {
       </div>
 
       <div className="mx-auto w-full max-w-4xl px-4 pb-28 space-y-6">
+        <input
+          type="text"
+          className="input input-ghost text-2xl font-bold w-full px-0 focus:outline-none"
+          value={snapshotName}
+          onChange={(e) => setSnapshotName(e.target.value)}
+          placeholder="输入计划名称"
+          maxLength={50}
+        />
         <div className="text-sm text-base-content/60">
-          白天 {data.config.daytime_start} ~ {data.config.daytime_end} / 晚上{" "}
-          {data.config.daytime_end} ~ 次日{data.config.daytime_start}
+          白天 {effectiveData.config.daytime_start} ~{" "}
+          {effectiveData.config.daytime_end} / 晚上{" "}
+          {effectiveData.config.daytime_end} ~ 次日
+          {effectiveData.config.daytime_start}
         </div>
 
         {/* Fallback */}
@@ -457,7 +464,7 @@ function PricingPage() {
           <FallbackSection
             plan={fallbackPlan}
             onChange={(updates) => {
-              const idx = data.plans.findIndex(
+              const idx = effectiveData.plans.findIndex(
                 (p) => p.plan_type === "fallback",
               );
               if (idx !== -1) updatePlan(idx, updates);
@@ -484,7 +491,7 @@ function PricingPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {data.plans.map((plan, globalIdx) => {
+            {effectiveData.plans.map((plan, globalIdx) => {
               if (plan.plan_type !== "conditional") return null;
               const cond = (plan.conditions ?? {
                 date: { type: "workdays" },
