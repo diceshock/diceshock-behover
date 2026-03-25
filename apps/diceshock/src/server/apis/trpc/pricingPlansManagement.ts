@@ -258,17 +258,7 @@ const publish = dashProcedure.mutation(async ({ ctx }) => {
   });
 
   if (!latestDraft) {
-    const data = await buildSnapshotData(tdb);
-    const [snapshot] = await tdb
-      .insert(pricingSnapshotsTable)
-      .values({
-        data,
-        status: "published",
-        created_at: new Date(),
-        published_at: new Date(),
-      })
-      .returning();
-    return snapshot;
+    throw new Error("没有可发布的草稿，请先保存草稿");
   }
 
   const [updated] = await tdb
@@ -398,6 +388,13 @@ const restoreSnapshot = dashProcedure
         update_at: now,
       });
     }
+
+    // Create a new draft snapshot from the restored data (like git revert)
+    await tdb.insert(pricingSnapshotsTable).values({
+      data: snapshotData,
+      status: "draft",
+      created_at: now,
+    });
 
     return { success: true };
   });

@@ -599,7 +599,8 @@ function PricingPage() {
           type="button"
           className="btn btn-sm btn-primary gap-2"
           onClick={() => void handlePublish()}
-          disabled={publishPending}
+          disabled={publishPending || !hasDraft}
+          title={!hasDraft ? "没有可发布的草稿，请先保存" : undefined}
         >
           <CloudArrowUpIcon className="size-4" />
           {publishPending ? "发布中..." : "发布"}
