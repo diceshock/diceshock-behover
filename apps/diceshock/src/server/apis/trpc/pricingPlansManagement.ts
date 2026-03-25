@@ -135,16 +135,6 @@ const restoreSnapshot = dashProcedure
     return { id: row.id, name: finalName, data: snapshot.data as SnapshotData };
   });
 
-export default {
-  load,
-  save,
-  publish,
-  listSnapshots,
-  restoreSnapshot,
-  getPublished,
-  getSnapshotDetail,
-};
-
 const getPublished = publicProcedure.query(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
   const published = await tdb.query.pricingSnapshotsTable.findFirst({
@@ -179,3 +169,13 @@ const getSnapshotDetail = dashProcedure
       data: snapshot.data as SnapshotData,
     };
   });
+
+export default {
+  load,
+  save,
+  publish,
+  listSnapshots,
+  restoreSnapshot,
+  getPublished,
+  getSnapshotDetail,
+};
