@@ -5,9 +5,13 @@ import db, {
   userInfoTable,
   users,
 } from "@lib/db";
+import {
+  fetchTableStateForDO,
+  notifySeatTimerDO,
+} from "@/server/utils/seatTimer";
 import { dashProcedure } from "./baseTRPC";
 
-type StatusFilter = "all" | "active" | "ended";
+type StatusFilter = "all" | "active" | "paused" | "ended";
 type SortBy = "start_at" | "end_at" | "seats";
 type SortOrder = "asc" | "desc";
 type GroupBy = "table" | "user" | "date" | "none";
@@ -60,10 +64,27 @@ const list = dashProcedure
 
     const enriched = await Promise.all(
       allOccupancies.map(async (occ) => {
-        const info = await tdb.query.userInfoTable.findFirst({
-          where: (i, { eq }) => eq(i.id, occ.user_id),
-          columns: { nickname: true, uid: true },
-        });
+        let nickname = "Anonymous";
+        let uid: string | null = null;
+
+        if (occ.user_id) {
+          const info = await tdb.query.userInfoTable.findFirst({
+            where: (i, { eq }) => eq(i.id, occ.user_id!),
+            columns: { nickname: true, uid: true },
+          });
+          nickname = info?.nickname ?? nickname;
+          uid = info?.uid ?? null;
+        } else if (occ.temp_id) {
+          try {
+            const tempInfo = await tdb.query.tempIdentitiesTable.findFirst({
+              where: (t, { eq }) => eq(t.id, occ.temp_id!),
+              columns: { nickname: true },
+            });
+            nickname = tempInfo?.nickname ?? nickname;
+          } catch {}
+          uid = `temp:${occ.temp_id}`;
+        }
+
         return {
           id: occ.id,
           table_id: occ.table_id,
@@ -81,8 +102,8 @@ const list = dashProcedure
             : null,
           table: occ.table,
           user: occ.user,
-          nickname: info?.nickname ?? "Anonymous",
-          uid: info?.uid ?? null,
+          nickname,
+          uid,
         };
       }),
     );
@@ -142,10 +163,26 @@ const getById = dashProcedure
 
     if (!occ) throw new Error("订单不存在");
 
-    const info = await tdb.query.userInfoTable.findFirst({
-      where: (i, { eq }) => eq(i.id, occ.user_id),
-      columns: { nickname: true, uid: true },
-    });
+    let nickname = "Anonymous";
+    let uid: string | null = null;
+
+    if (occ.user_id) {
+      const info = await tdb.query.userInfoTable.findFirst({
+        where: (i, { eq }) => eq(i.id, occ.user_id!),
+        columns: { nickname: true, uid: true },
+      });
+      nickname = info?.nickname ?? nickname;
+      uid = info?.uid ?? null;
+    } else if (occ.temp_id) {
+      try {
+        const tempInfo = await tdb.query.tempIdentitiesTable.findFirst({
+          where: (t, { eq }) => eq(t.id, occ.temp_id!),
+          columns: { nickname: true },
+        });
+        nickname = tempInfo?.nickname ?? nickname;
+      } catch {}
+      uid = `temp:${occ.temp_id}`;
+    }
 
     return {
       id: occ.id,
@@ -164,12 +201,84 @@ const getById = dashProcedure
         : null,
       table: occ.table,
       user: occ.user,
-      nickname: info?.nickname ?? "Anonymous",
-      uid: info?.uid ?? null,
+      nickname,
+      uid,
     };
+  });
+
+async function notifyDOForOrder(
+  tdb: ReturnType<typeof db>,
+  env: Parameters<typeof notifySeatTimerDO>[0],
+  occupancyId: string,
+) {
+  const occ = await tdb.query.tableOccupancyTable.findFirst({
+    where: (o, { eq }) => eq(o.id, occupancyId),
+    columns: { table_id: true },
+  });
+  if (!occ) return;
+  const table = await tdb.query.tablesTable.findFirst({
+    where: (t, { eq }) => eq(t.id, occ.table_id),
+    columns: { id: true, code: true },
+  });
+  if (!table) return;
+  const fresh = await fetchTableStateForDO(tdb, table.id);
+  if (fresh) {
+    await notifySeatTimerDO(env, table.code, fresh.table, fresh.occupancies);
+  }
+}
+
+const endOrder = dashProcedure
+  .input((v: unknown) => {
+    const { id } = v as { id: string };
+    if (!id) throw new Error("id is required");
+    return { id };
+  })
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    await tdb
+      .update(tableOccupancyTable)
+      .set({ status: "ended", end_at: new Date() })
+      .where(drizzle.eq(tableOccupancyTable.id, input.id));
+    await notifyDOForOrder(tdb, ctx.env, input.id);
+    return { success: true };
+  });
+
+const pauseOrder = dashProcedure
+  .input((v: unknown) => {
+    const { id } = v as { id: string };
+    if (!id) throw new Error("id is required");
+    return { id };
+  })
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    await tdb
+      .update(tableOccupancyTable)
+      .set({ status: "paused" })
+      .where(drizzle.eq(tableOccupancyTable.id, input.id));
+    await notifyDOForOrder(tdb, ctx.env, input.id);
+    return { success: true };
+  });
+
+const resumeOrder = dashProcedure
+  .input((v: unknown) => {
+    const { id } = v as { id: string };
+    if (!id) throw new Error("id is required");
+    return { id };
+  })
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    await tdb
+      .update(tableOccupancyTable)
+      .set({ status: "active" })
+      .where(drizzle.eq(tableOccupancyTable.id, input.id));
+    await notifyDOForOrder(tdb, ctx.env, input.id);
+    return { success: true };
   });
 
 export default {
   list,
   getById,
+  endOrder,
+  pauseOrder,
+  resumeOrder,
 };

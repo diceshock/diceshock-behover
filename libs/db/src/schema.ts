@@ -289,14 +289,14 @@ export const tableOccupancyTable = sqlite.sqliteTable("table_occupancy", {
     .references(() => tablesTable.id, { onDelete: "cascade" }),
   user_id: sqlite
     .text("user_id")
-    .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
+  temp_id: sqlite.text("temp_id"),
   seats: sqlite
     .int()
     .notNull()
     .$default(() => 1),
   status: sqlite
-    .text("status", { enum: ["active", "ended"] })
+    .text("status", { enum: ["active", "paused", "ended"] })
     .notNull()
     .$default(() => "active"),
   start_at: sqlite
@@ -323,6 +323,18 @@ export const tableOccupancyRelations = relations(
     }),
   }),
 );
+
+// ─── Temp Identities ────────────────────────────────────────────
+
+export const tempIdentitiesTable = sqlite.sqliteTable("temp_identities", {
+  id: sqlite.text().$defaultFn(createId).primaryKey(),
+  nickname: sqlite.text(),
+  totp_secret: sqlite.text(),
+  created_at: sqlite
+    .integer("created_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date(Date.now())),
+  expires_at: sqlite.integer("expires_at", { mode: "timestamp_ms" }),
+});
 
 // ─── Pricing Plans ──────────────────────────────────────────────
 

@@ -39,7 +39,7 @@ const list = dashProcedure.query(async ({ ctx }) => {
     orderBy: (t, { desc }) => desc(t.create_at),
     with: {
       occupancies: {
-        where: (o, { eq }) => eq(o.status, "active"),
+        where: (o, { ne }) => ne(o.status, "ended"),
         columns: { id: true, user_id: true, seats: true, start_at: true },
       },
     },
@@ -92,7 +92,7 @@ const getById = dashProcedure
       where: (t, { eq }) => eq(t.id, input.id),
       with: {
         occupancies: {
-          where: (o, { eq }) => eq(o.status, "active"),
+          where: (o, { ne }) => ne(o.status, "ended"),
           with: {
             user: {
               columns: { id: true, name: true },
@@ -105,15 +105,34 @@ const getById = dashProcedure
 
     const occupanciesWithUserInfo = await Promise.all(
       table.occupancies.map(async (occ) => {
-        const userInfo = await tdb.query.userInfoTable.findFirst({
-          where: (info, { eq }) => eq(info.id, occ.user_id),
-          columns: { nickname: true, uid: true, phone: true },
-        });
+        let nickname = "Anonymous";
+        let uid: string | null = null;
+        let phone: string | null = null;
+
+        if (occ.user_id) {
+          const userInfo = await tdb.query.userInfoTable.findFirst({
+            where: (info, { eq }) => eq(info.id, occ.user_id!),
+            columns: { nickname: true, uid: true, phone: true },
+          });
+          nickname = userInfo?.nickname ?? nickname;
+          uid = userInfo?.uid ?? null;
+          phone = userInfo?.phone ?? null;
+        } else if (occ.temp_id) {
+          try {
+            const tempInfo = await tdb.query.tempIdentitiesTable.findFirst({
+              where: (t, { eq }) => eq(t.id, occ.temp_id!),
+              columns: { nickname: true },
+            });
+            nickname = tempInfo?.nickname ?? "Anonymous";
+          } catch {}
+          uid = `temp:${occ.temp_id}`;
+        }
+
         return {
           ...occ,
-          nickname: userInfo?.nickname ?? "Anonymous",
-          uid: userInfo?.uid ?? null,
-          phone: userInfo?.phone ?? null,
+          nickname,
+          uid,
+          phone,
         };
       }),
     );
@@ -285,7 +304,8 @@ const getOccupancyByUserId = dashProcedure
   .query(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
     const occupancies = await tdb.query.tableOccupancyTable.findMany({
-      where: (o, { eq }) => eq(o.user_id, input.userId),
+      where: (o, { eq, ne, and }) =>
+        and(eq(o.user_id, input.userId), ne(o.status, "ended")),
       with: {
         table: { columns: { id: true, name: true, type: true, status: true } },
       },

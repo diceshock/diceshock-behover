@@ -2,21 +2,27 @@ import { signIn } from "@hono/auth-js/react";
 import { WarningIcon, XIcon } from "@phosphor-icons/react/dist/ssr";
 import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
-import Modal from "../../modal";
+import trpcClientPublic from "../../../../shared/utils/trpc";
 import useSmsCode from "../../../hooks/useSmsCode";
+import useTempIdentity from "../../../hooks/useTempIdentity";
+import Modal from "../../modal";
 
 export default function LoginDialog({
   isOpen,
   onClose,
+  isSeatPage = false,
 }: {
   isOpen: boolean;
   onClose: () => void;
+  isSeatPage?: boolean;
 }) {
   const [activeTab, setActiveTab] = useState<"phonenumber" | "thirdparty">(
     "phonenumber",
   );
 
   const [phone, setPhone] = useState("");
+  const [creatingTemp, setCreatingTemp] = useState(false);
+  const { create: createTempIdentity } = useTempIdentity();
 
   const {
     smsForm,
@@ -32,7 +38,6 @@ export default function LoginDialog({
     enabled: isOpen && activeTab === "phonenumber" && import.meta.env.PROD,
   });
 
-  // 当弹窗关闭时重置状态
   useEffect(() => {
     if (!isOpen) {
       setPhone("");
@@ -50,13 +55,47 @@ export default function LoginDialog({
         redirect: false,
       });
 
-      if (result?.ok) return window.location.reload();
+      if (result?.ok) {
+        if (isSeatPage) {
+          try {
+            const stored = localStorage.getItem("diceshock_temp_identity");
+            if (stored) {
+              const parsed = JSON.parse(stored);
+              if (parsed?.tempId) {
+                const session = await fetch("/api/auth/session");
+                const sessionData: any = await session.json();
+                const userId = sessionData?.user?.id;
+                if (userId) {
+                  await trpcClientPublic.tempIdentity.transfer.mutate({
+                    tempId: parsed.tempId,
+                    userId,
+                  });
+                }
+                localStorage.removeItem("diceshock_temp_identity");
+              }
+            }
+          } catch {}
+        }
+        return window.location.reload();
+      }
 
       setError(`登录失败，请稍后重试: ${result?.error ?? "未知错误"}`);
       console.error(`登录失败，请稍后重试: ${result?.error ?? "未知错误"}`);
     },
-    [phone, smsForm.code, setError],
+    [phone, smsForm.code, setError, isSeatPage],
   );
+
+  const handleTempIdentity = useCallback(async () => {
+    setCreatingTemp(true);
+    try {
+      await createTempIdentity();
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "创建临时身份失败");
+    } finally {
+      setCreatingTemp(false);
+    }
+  }, [createTempIdentity, onClose, setError]);
 
   return (
     <Modal
@@ -83,23 +122,6 @@ export default function LoginDialog({
         <h3 className="text-base font-bold px-7 pb-4 flex items-center gap-1">
           登录/注册
         </h3>
-
-        {/* <div role="tablist" className="tabs tabs-border ml-4">
-          <button
-            role="tab"
-            className={clsx("tab", activeTab === "phonenumber" && "tab-active")}
-            onClick={() => setActiveTab("phonenumber")}
-          >
-            手机登录
-          </button>
-          <button
-            role="tab"
-            className={clsx("tab", activeTab === "thirdparty" && "tab-active")}
-            onClick={() => setActiveTab("thirdparty")}
-          >
-            第三方登录
-          </button>
-        </div> */}
 
         {activeTab === "phonenumber" && (
           <form
@@ -167,6 +189,21 @@ export default function LoginDialog({
             <button type="submit" className="btn btn-primary btn-sm">
               登录
             </button>
+
+            {isSeatPage && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={handleTempIdentity}
+                disabled={creatingTemp}
+              >
+                {creatingTemp ? (
+                  <span className="loading loading-spinner loading-xs" />
+                ) : (
+                  "临时使用（无需登录）"
+                )}
+              </button>
+            )}
           </form>
         )}
       </div>

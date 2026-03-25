@@ -24,3 +24,20 @@ export interface HonoCtxEnv extends Env {
 
 export type ApiRouterPublic = typeof trpcServer.appRouterPublic;
 export type ApiRouterDash = typeof trpcServer.appRouterDash;
+
+export interface TempIdentityData {
+  kind: "temp";
+  tempId: string;
+  nickname: string;
+  totpSecret: string;
+  expiresAt: number;
+}
+
+export interface RealIdentityData {
+  kind: "real";
+  uid: string;
+  nickname: string;
+  phone: string | null;
+}
+
+export type SeatIdentity = TempIdentityData | RealIdentityData;

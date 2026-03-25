@@ -8,6 +8,7 @@ interface SessionMeta {
 interface OccupancyInfo {
   id: string;
   user_id: string;
+  temp_id: string | null;
   nickname: string;
   uid: string | null;
   seats: number;

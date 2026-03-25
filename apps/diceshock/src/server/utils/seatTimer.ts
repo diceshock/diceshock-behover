@@ -3,6 +3,7 @@ import type db from "@lib/db";
 interface OccupancyInfo {
   id: string;
   user_id: string;
+  temp_id: string | null;
   nickname: string;
   uid: string | null;
   seats: number;
@@ -30,15 +31,33 @@ export async function fetchTableStateForDO(
 
   const occupancies = await Promise.all(
     table.occupancies.map(async (occ) => {
-      const info = await tdb.query.userInfoTable.findFirst({
-        where: (i, { eq }) => eq(i.id, occ.user_id),
-        columns: { nickname: true, uid: true },
-      });
+      let nickname = "Anonymous";
+      let uid: string | null = null;
+
+      if (occ.user_id) {
+        const info = await tdb.query.userInfoTable.findFirst({
+          where: (i, { eq }) => eq(i.id, occ.user_id!),
+          columns: { nickname: true, uid: true },
+        });
+        nickname = info?.nickname ?? nickname;
+        uid = info?.uid ?? null;
+      } else if (occ.temp_id) {
+        try {
+          const tempInfo = await tdb.query.tempIdentitiesTable.findFirst({
+            where: (t, { eq }) => eq(t.id, occ.temp_id!),
+            columns: { nickname: true },
+          });
+          nickname = tempInfo?.nickname ?? nickname;
+        } catch {}
+        uid = `temp:${occ.temp_id}`;
+      }
+
       return {
         id: occ.id,
-        user_id: occ.user_id,
-        nickname: info?.nickname ?? "Anonymous",
-        uid: info?.uid ?? null,
+        user_id: occ.user_id ?? occ.temp_id ?? "",
+        temp_id: occ.temp_id ?? null,
+        nickname,
+        uid,
         seats: occ.seats ?? 1,
         start_at:
           occ.start_at instanceof Date

@@ -5,8 +5,10 @@ import {
   DownloadSimpleIcon,
   MagnifyingGlassMinus,
   MagnifyingGlassPlus,
+  PauseIcon,
+  PlayIcon,
   PlusIcon,
-  TrashIcon,
+  StopIcon,
   XIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import {
@@ -77,11 +79,9 @@ function TableDetailPage() {
   const [addOccForm, setAddOccForm] = useState({ userId: "", seats: 1 });
   const [addOccPending, setAddOccPending] = useState(false);
 
-  const removeOccDialogRef = useRef<HTMLDialogElement>(null);
-  const [pendingRemoveOcc, setPendingRemoveOcc] = useState<Occupancy | null>(
-    null,
-  );
-  const [removeOccPending, setRemoveOccPending] = useState(false);
+  const endOccDialogRef = useRef<HTMLDialogElement>(null);
+  const [pendingEndOcc, setPendingEndOcc] = useState<Occupancy | null>(null);
+  const [orderActionPending, setOrderActionPending] = useState(false);
 
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -197,26 +197,52 @@ function TableDetailPage() {
     }
   };
 
-  const openRemoveOccDialog = (occ: Occupancy) => {
-    setPendingRemoveOcc(occ);
-    setTimeout(() => removeOccDialogRef.current?.showModal(), 0);
+  const openEndOccDialog = (occ: Occupancy) => {
+    setPendingEndOcc(occ);
+    setTimeout(() => endOccDialogRef.current?.showModal(), 0);
   };
 
-  const confirmRemoveOcc = async () => {
-    if (!pendingRemoveOcc) return;
-    setRemoveOccPending(true);
+  const confirmEndOcc = async () => {
+    if (!pendingEndOcc) return;
+    setOrderActionPending(true);
     try {
-      await trpcClientDash.tablesManagement.removeOccupancy.mutate({
-        id: pendingRemoveOcc.id,
+      await trpcClientDash.ordersManagement.endOrder.mutate({
+        id: pendingEndOcc.id,
       });
-      msg.success("已移除");
-      removeOccDialogRef.current?.close();
-      setPendingRemoveOcc(null);
+      msg.success("已终止");
+      endOccDialogRef.current?.close();
+      setPendingEndOcc(null);
       await fetchTable();
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "移除失败");
+      msg.error(err instanceof Error ? err.message : "终止失败");
     } finally {
-      setRemoveOccPending(false);
+      setOrderActionPending(false);
+    }
+  };
+
+  const handlePauseOrder = async (occId: string) => {
+    setOrderActionPending(true);
+    try {
+      await trpcClientDash.ordersManagement.pauseOrder.mutate({ id: occId });
+      msg.success("已暂停");
+      await fetchTable();
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "暂停失败");
+    } finally {
+      setOrderActionPending(false);
+    }
+  };
+
+  const handleResumeOrder = async (occId: string) => {
+    setOrderActionPending(true);
+    try {
+      await trpcClientDash.ordersManagement.resumeOrder.mutate({ id: occId });
+      msg.success("已继续");
+      await fetchTable();
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "继续失败");
+    } finally {
+      setOrderActionPending(false);
     }
   };
 
@@ -260,7 +286,7 @@ function TableDetailPage() {
               </p>
             </div>
             <span
-              className={`badge ${table.type === "mahjong" ? "badge-warning" : "badge-info"}`}
+              className={`badge ${table.type === "mahjong" ? "badge-accent" : "badge-info"}`}
             >
               {TYPE_LABELS[table.type] ?? table.type}
             </span>
@@ -434,7 +460,7 @@ function TableDetailPage() {
                         <div className="flex items-center gap-2">
                           <Link
                             to="/dash/users/$id"
-                            params={{ id: occ.user_id }}
+                            params={{ id: occ.user_id ?? "" }}
                             className="font-medium link link-hover"
                           >
                             {occ.nickname}
@@ -450,14 +476,26 @@ function TableDetailPage() {
                           <span>{formatDuration(occ.start_at)}</span>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        className="btn btn-xs btn-ghost btn-error"
-                        onClick={() => openRemoveOccDialog(occ)}
-                      >
-                        <TrashIcon className="size-3.5" />
-                        移除
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          className="btn btn-xs btn-ghost"
+                          onClick={() => void handlePauseOrder(occ.id)}
+                          disabled={orderActionPending}
+                        >
+                          <PauseIcon className="size-3.5" />
+                          暂停
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-xs btn-ghost btn-error"
+                          onClick={() => openEndOccDialog(occ)}
+                          disabled={orderActionPending}
+                        >
+                          <StopIcon className="size-3.5" />
+                          终止
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -480,7 +518,7 @@ function TableDetailPage() {
               </button>
               <button
                 type="button"
-                className="btn btn-warning"
+                className="btn btn-neutral"
                 onClick={() => void handleRegenerateCode()}
                 disabled={regeneratePending}
               >
@@ -551,21 +589,20 @@ function TableDetailPage() {
           </form>
         </dialog>
 
-        <dialog ref={removeOccDialogRef} className="modal">
-          {pendingRemoveOcc && (
+        <dialog ref={endOccDialogRef} className="modal">
+          {pendingEndOcc && (
             <div className="modal-box">
-              <h3 className="font-bold text-lg mb-4">确认移除</h3>
+              <h3 className="font-bold text-lg mb-4">确认终止</h3>
               <p>
-                确定要移除 <strong>{pendingRemoveOcc.nickname}</strong>{" "}
-                的使用吗？
+                确定要终止 <strong>{pendingEndOcc.nickname}</strong> 的订单吗？
               </p>
               <div className="modal-action mt-6">
                 <button
                   type="button"
                   className="btn"
                   onClick={() => {
-                    removeOccDialogRef.current?.close();
-                    setPendingRemoveOcc(null);
+                    endOccDialogRef.current?.close();
+                    setPendingEndOcc(null);
                   }}
                 >
                   取消
@@ -573,10 +610,10 @@ function TableDetailPage() {
                 <button
                   type="button"
                   className="btn btn-error"
-                  onClick={() => void confirmRemoveOcc()}
-                  disabled={removeOccPending}
+                  onClick={() => void confirmEndOcc()}
+                  disabled={orderActionPending}
                 >
-                  {removeOccPending ? "移除中..." : "确认移除"}
+                  {orderActionPending ? "终止中..." : "确认终止"}
                 </button>
               </div>
             </div>
@@ -1033,7 +1070,7 @@ function QrCodeTab({
       <div className="flex items-center gap-3 justify-center">
         <button
           type="button"
-          className="btn btn-sm btn-warning"
+          className="btn btn-sm btn-neutral"
           onClick={onRegenerate}
         >
           <ArrowCounterClockwiseIcon className="size-4" />

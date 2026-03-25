@@ -4,12 +4,14 @@ import {
   UserIcon,
   UsersIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import useAuth from "@/client/hooks/useAuth";
 import useSeatTimer from "@/client/hooks/useSeatTimer";
-import useTOTP from "@/client/hooks/useTOTP";
+import useTempIdentity from "@/client/hooks/useTempIdentity";
+import type { SeatIdentity } from "@/shared/types";
+import { generateTOTP, getRemainingSeconds } from "@/shared/utils/totp";
 import trpcClientPublic from "@/shared/utils/trpc";
 
 export const Route = createFileRoute("/t/$code")({
@@ -39,9 +41,29 @@ function formatDurationShort(startAt: number): string {
   return `${minutes}m`;
 }
 
+function useSeatIdentity(): SeatIdentity | null {
+  const { userInfo } = useAuth();
+  const { tempIdentity } = useTempIdentity();
+
+  return useMemo(() => {
+    if (userInfo) {
+      return {
+        kind: "real" as const,
+        uid: userInfo.uid,
+        nickname: userInfo.nickname,
+        phone: userInfo.phone ?? null,
+      };
+    }
+    if (tempIdentity) return tempIdentity;
+    return null;
+  }, [userInfo, tempIdentity]);
+}
+
 function SeatTimerPage() {
   const { code } = Route.useParams();
-  const { userInfo } = useAuth();
+  const identity = useSeatIdentity();
+  const { tempIdentity } = useTempIdentity();
+  const navigate = useNavigate();
 
   const [tableData, setTableData] = useState<Awaited<
     ReturnType<typeof trpcClientPublic.tables.getByCode.query>
@@ -51,11 +73,18 @@ function SeatTimerPage() {
   const [seats, setSeats] = useState(1);
   const [occupying, setOccupying] = useState(false);
 
+  const identityId =
+    identity?.kind === "real"
+      ? identity.uid
+      : identity?.kind === "temp"
+        ? identity.tempId
+        : undefined;
+
   const { state: wsState, connected } = useSeatTimer({
     code,
-    userId: userInfo?.uid ?? undefined,
+    userId: identityId,
     role: "user",
-    enabled: !!userInfo,
+    enabled: !!identity,
   });
 
   const fetchTable = useCallback(async () => {
@@ -93,15 +122,23 @@ function SeatTimerPage() {
   const totalOccupied = occupancies.reduce((sum, o) => sum + o.seats, 0);
   const remainingCapacity = (table?.capacity ?? 0) - totalOccupied;
 
-  const myOccupancy = useMemo(
-    () =>
-      userInfo
-        ? occupancies.find(
-            (o) => o.uid === userInfo.uid || o.user_id === userInfo.uid,
-          )
-        : null,
-    [occupancies, userInfo],
-  );
+  const myOccupancy = useMemo(() => {
+    if (!identity) return null;
+    if (identity.kind === "real") {
+      return occupancies.find(
+        (o) => o.uid === identity.uid || o.user_id === identity.uid,
+      );
+    }
+    return occupancies.find(
+      (o) =>
+        o.temp_id === identity.tempId ||
+        o.user_id === identity.tempId ||
+        o.uid === `temp:${identity.tempId}`,
+    );
+  }, [occupancies, identity]);
+
+  const isExpired =
+    identity?.kind === "temp" && Date.now() > identity.expiresAt;
 
   if (loading) {
     return (
@@ -140,20 +177,53 @@ function SeatTimerPage() {
     );
   }
 
+  if (isExpired) {
+    return (
+      <div className="mx-auto w-full max-w-lg px-4 py-6 flex flex-col gap-5">
+        <TableInfoSection
+          table={table}
+          totalOccupied={totalOccupied}
+          connected={connected}
+        />
+        <div className="alert alert-warning text-sm">
+          <span>
+            临时身份已过期（24小时），计时已停止。请刷新页面重新开始。
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   const handleOccupyWithSeats = async (count: number) => {
-    if (!userInfo || occupying) return;
+    if (!identity || occupying) return;
     setSeats(count);
     setOccupying(true);
     try {
-      await trpcClientPublic.tables.occupy.mutate({ code, seats: count });
+      if (identity.kind === "temp") {
+        await trpcClientPublic.tempIdentity.occupy.mutate({
+          tempId: identity.tempId,
+          code,
+        });
+      } else {
+        await trpcClientPublic.tables.occupy.mutate({ code, seats: count });
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "使用失败");
+      const message = err instanceof Error ? err.message : "使用失败";
+      if (message.startsWith("ALREADY_OCCUPIED:")) {
+        const [, existingCode, existingName] = message.split(":");
+        setError(`你正在使用 ${existingName}，跳转中...`);
+        setTimeout(() => {
+          void navigate({ to: "/t/$code", params: { code: existingCode } });
+        }, 1500);
+      } else {
+        setError(message);
+      }
     } finally {
       setOccupying(false);
     }
   };
 
-  if (!myOccupancy && remainingCapacity > 0) {
+  if (!myOccupancy && remainingCapacity > 0 && identity) {
     return (
       <div className="mx-auto w-full max-w-lg px-4 py-6 flex flex-col gap-5">
         {error && (
@@ -174,30 +244,61 @@ function SeatTimerPage() {
           connected={connected}
         />
 
-        <div className="flex flex-col gap-4 bg-base-200 rounded-xl p-5">
-          <h3 className="font-semibold text-base text-center">选择人数</h3>
-          <div className="flex flex-wrap justify-center gap-3">
-            {Array.from({ length: remainingCapacity }, (_, i) => i + 1).map(
-              (n) => (
-                <button
-                  key={n}
-                  className={clsx(
-                    "btn btn-circle btn-lg text-xl font-bold",
-                    occupying ? "btn-disabled" : "btn-primary btn-outline",
-                  )}
-                  onClick={() => handleOccupyWithSeats(n)}
-                  disabled={occupying}
-                >
-                  {occupying && seats === n ? (
-                    <span className="loading loading-spinner loading-sm" />
-                  ) : (
-                    n
-                  )}
-                </button>
-              ),
-            )}
+        {identity.kind === "temp" && (
+          <div className="alert alert-info alert-soft text-xs">
+            <span>
+              临时身份: {identity.nickname} · 有效期至{" "}
+              {new Date(identity.expiresAt).toLocaleTimeString("zh-CN", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
           </div>
-        </div>
+        )}
+
+        {identity.kind === "temp" ? (
+          <div className="flex flex-col gap-4 bg-base-200 rounded-xl p-5">
+            <button
+              className={clsx(
+                "btn btn-lg btn-primary font-bold",
+                occupying && "btn-disabled",
+              )}
+              onClick={() => handleOccupyWithSeats(1)}
+              disabled={occupying}
+            >
+              {occupying ? (
+                <span className="loading loading-spinner loading-sm" />
+              ) : (
+                "开始记时"
+              )}
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4 bg-base-200 rounded-xl p-5">
+            <h3 className="font-semibold text-base text-center">选择人数</h3>
+            <div className="flex flex-wrap justify-center gap-3">
+              {Array.from({ length: remainingCapacity }, (_, i) => i + 1).map(
+                (n) => (
+                  <button
+                    key={n}
+                    className={clsx(
+                      "btn btn-circle btn-lg text-xl font-bold",
+                      occupying ? "btn-disabled" : "btn-primary btn-outline",
+                    )}
+                    onClick={() => handleOccupyWithSeats(n)}
+                    disabled={occupying}
+                  >
+                    {occupying && seats === n ? (
+                      <span className="loading loading-spinner loading-sm" />
+                    ) : (
+                      n
+                    )}
+                  </button>
+                ),
+              )}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -217,10 +318,7 @@ function SeatTimerPage() {
           </span>
         </div>
 
-        <OccupancyListSection
-          occupancies={occupancies}
-          myUid={userInfo?.uid ?? null}
-        />
+        <OccupancyListSection occupancies={occupancies} identity={identity} />
       </div>
     );
   }
@@ -245,14 +343,23 @@ function SeatTimerPage() {
         connected={connected}
       />
 
+      {identity?.kind === "temp" && (
+        <div className="alert alert-info alert-soft text-xs">
+          <span>
+            临时身份: {identity.nickname} · 有效期至{" "}
+            {new Date(identity.expiresAt).toLocaleTimeString("zh-CN", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+        </div>
+      )}
+
       {myOccupancy && <TimerSection startAt={myOccupancy.start_at} />}
 
-      <TOTPSection />
+      <TOTPSection identity={identity} />
 
-      <OccupancyListSection
-        occupancies={occupancies}
-        myUid={userInfo?.uid ?? null}
-      />
+      <OccupancyListSection occupancies={occupancies} identity={identity} />
     </div>
   );
 }
@@ -321,8 +428,15 @@ function TimerSection({ startAt }: { startAt: number }) {
   );
 }
 
-function TOTPSection() {
-  const { code, remainingSeconds, isLoading, error } = useTOTP(true);
+function TOTPSection({ identity }: { identity: SeatIdentity | null }) {
+  if (identity?.kind === "temp") {
+    return <TempTOTPSection secret={identity.totpSecret} />;
+  }
+  return <RealTOTPSection />;
+}
+
+function RealTOTPSection() {
+  const { code, remainingSeconds, isLoading, error } = __useTOTPImport(true);
 
   if (error) {
     return (
@@ -332,6 +446,53 @@ function TOTPSection() {
     );
   }
 
+  return (
+    <TOTPDisplay
+      code={code}
+      remainingSeconds={remainingSeconds}
+      isLoading={isLoading}
+    />
+  );
+}
+
+function TempTOTPSection({ secret }: { secret: string }) {
+  const [code, setCode] = useState("");
+  const [remainingSeconds, setRemainingSeconds] = useState(
+    getRemainingSeconds(),
+  );
+
+  useEffect(() => {
+    if (!secret) return;
+
+    const tick = async () => {
+      const newCode = await generateTOTP(secret);
+      setCode(newCode);
+      setRemainingSeconds(getRemainingSeconds());
+    };
+
+    void tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [secret]);
+
+  return (
+    <TOTPDisplay
+      code={code}
+      remainingSeconds={remainingSeconds}
+      isLoading={!code}
+    />
+  );
+}
+
+function TOTPDisplay({
+  code,
+  remainingSeconds,
+  isLoading,
+}: {
+  code: string;
+  remainingSeconds: number;
+  isLoading: boolean;
+}) {
   const progress = remainingSeconds / TOTP_TIME_STEP;
   const circumference = 2 * Math.PI * 14;
   const dashOffset = circumference * (1 - progress);
@@ -388,19 +549,24 @@ function TOTPSection() {
   );
 }
 
+import useTOTP from "@/client/hooks/useTOTP";
+
+const __useTOTPImport = useTOTP;
+
 function OccupancyListSection({
   occupancies,
-  myUid,
+  identity,
 }: {
   occupancies: Array<{
     id: string;
     user_id: string;
+    temp_id?: string | null;
     nickname: string;
     uid: string | null;
     seats: number;
     start_at: number;
   }>;
-  myUid: string | null;
+  identity: SeatIdentity | null;
 }) {
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -416,6 +582,18 @@ function OccupancyListSection({
     );
   }
 
+  const isMe = (occ: (typeof occupancies)[number]) => {
+    if (!identity) return false;
+    if (identity.kind === "real") {
+      return occ.uid === identity.uid || occ.user_id === identity.uid;
+    }
+    return (
+      occ.temp_id === identity.tempId ||
+      occ.user_id === identity.tempId ||
+      occ.uid === `temp:${identity.tempId}`
+    );
+  };
+
   return (
     <div className="bg-base-200 rounded-xl p-4 flex flex-col gap-2">
       <h3 className="font-semibold text-sm flex items-center gap-1.5">
@@ -424,23 +602,23 @@ function OccupancyListSection({
       </h3>
       <div className="flex flex-col gap-1.5">
         {occupancies.map((occ) => {
-          const isMe = myUid && (occ.uid === myUid || occ.user_id === myUid);
+          const mine = isMe(occ);
           return (
             <div
               key={occ.id}
               className={clsx(
                 "flex items-center justify-between rounded-lg px-3 py-2 text-sm",
-                isMe ? "bg-primary/10" : "bg-base-100",
+                mine ? "bg-primary/10" : "bg-base-100",
               )}
             >
               <div className="flex items-center gap-2">
                 <span className="font-medium">
                   {occ.nickname}
-                  {isMe && (
+                  {mine && (
                     <span className="text-xs text-primary ml-1">(你)</span>
                   )}
                 </span>
-                {occ.uid && (
+                {occ.uid && !occ.uid.startsWith("temp:") && (
                   <span className="text-xs text-base-content/40">
                     {occ.uid}
                   </span>

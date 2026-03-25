@@ -12,6 +12,7 @@ import ownedManagement from "./ownedManagement";
 import pricingPlansManagement from "./pricingPlansManagement";
 import tables from "./tables";
 import tablesManagement from "./tablesManagement";
+import tempIdentity from "./tempIdentity";
 import users from "./users";
 
 export const appRouterDash = router({
@@ -46,5 +47,14 @@ export const appRouterPublic = router({
   tables: {
     getByCode: tables.getByCode,
     occupy: tables.occupy,
+    leave: tables.leave,
+    pause: tables.pause,
+  },
+  tempIdentity: {
+    create: tempIdentity.create,
+    validate: tempIdentity.validate,
+    occupy: tempIdentity.occupy,
+    leave: tempIdentity.leave,
+    transfer: tempIdentity.transfer,
   },
 });

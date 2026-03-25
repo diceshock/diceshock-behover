@@ -18,7 +18,7 @@ const getByCode = publicProcedure
       where: (t, { eq }) => eq(t.code, input.code),
       with: {
         occupancies: {
-          where: (o, { eq }) => eq(o.status, "active"),
+          where: (o, { ne }) => ne(o.status, "ended"),
           with: {
             user: { columns: { id: true, name: true } },
           },
@@ -31,15 +31,33 @@ const getByCode = publicProcedure
 
     const occupanciesWithUserInfo = await Promise.all(
       table.occupancies.map(async (occ) => {
-        const info = await tdb.query.userInfoTable.findFirst({
-          where: (i, { eq }) => eq(i.id, occ.user_id),
-          columns: { nickname: true, uid: true },
-        });
+        let nickname = "Anonymous";
+        let uid: string | null = null;
+
+        if (occ.user_id) {
+          const info = await tdb.query.userInfoTable.findFirst({
+            where: (i, { eq }) => eq(i.id, occ.user_id!),
+            columns: { nickname: true, uid: true },
+          });
+          nickname = info?.nickname ?? nickname;
+          uid = info?.uid ?? null;
+        } else if (occ.temp_id) {
+          try {
+            const tempInfo = await tdb.query.tempIdentitiesTable.findFirst({
+              where: (t, { eq }) => eq(t.id, occ.temp_id!),
+              columns: { nickname: true },
+            });
+            nickname = tempInfo?.nickname ?? nickname;
+          } catch {}
+          uid = `temp:${occ.temp_id}`;
+        }
+
         return {
           id: occ.id,
-          user_id: occ.user_id,
-          nickname: info?.nickname ?? "Anonymous",
-          uid: info?.uid ?? null,
+          user_id: occ.user_id ?? occ.temp_id ?? "",
+          temp_id: occ.temp_id ?? null,
+          nickname,
+          uid,
           seats: occ.seats ?? 1,
           start_at:
             occ.start_at instanceof Date
@@ -70,6 +88,19 @@ const occupy = protectedProcedure
   })
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
+
+    const existingOccupancy = await tdb.query.tableOccupancyTable.findFirst({
+      where: (o, { eq, ne, and }) =>
+        and(eq(o.user_id, ctx.userId), ne(o.status, "ended")),
+      with: {
+        table: { columns: { code: true, name: true } },
+      },
+    });
+    if (existingOccupancy) {
+      throw new Error(
+        `ALREADY_OCCUPIED:${existingOccupancy.table.code}:${existingOccupancy.table.name}`,
+      );
+    }
 
     const table = await tdb.query.tablesTable.findFirst({
       where: (t, { eq }) => eq(t.code, input.code),
@@ -149,8 +180,49 @@ const leave = protectedProcedure
     return { success: true };
   });
 
+const pause = protectedProcedure
+  .input((v: unknown) => {
+    const data = v as { occupancyId: string; code: string };
+    if (!data.occupancyId) throw new Error("occupancyId is required");
+    if (!data.code) throw new Error("code is required");
+    return data;
+  })
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+
+    const occ = await tdb.query.tableOccupancyTable.findFirst({
+      where: (o, { eq }) => eq(o.id, input.occupancyId),
+    });
+    if (!occ) throw new Error("使用记录不存在");
+    if (occ.user_id !== ctx.userId) throw new Error("只能暂停自己的使用");
+    if (occ.status !== "active") throw new Error("只能暂停进行中的使用");
+
+    await tdb
+      .update(tableOccupancyTable)
+      .set({ status: "paused" })
+      .where(drizzle.eq(tableOccupancyTable.id, input.occupancyId));
+
+    const table = await tdb.query.tablesTable.findFirst({
+      where: (t, { eq }) => eq(t.code, input.code),
+    });
+    if (table) {
+      const fresh = await fetchTableStateForDO(tdb, table.id);
+      if (fresh) {
+        await notifySeatTimerDO(
+          ctx.env,
+          input.code,
+          fresh.table,
+          fresh.occupancies,
+        );
+      }
+    }
+
+    return { success: true };
+  });
+
 export default {
   getByCode,
   occupy,
   leave,
+  pause,
 };

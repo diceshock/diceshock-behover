@@ -3,15 +3,19 @@ import {
   ArrowUpIcon,
   CopyIcon,
   MagnifyingGlassIcon,
+  PauseIcon,
+  PlayIcon,
+  StopIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import dayjs from "@/shared/utils/dayjs-config";
 import { trpcClientDash } from "@/shared/utils/trpc";
 
-type StatusFilter = "all" | "active" | "ended";
+type StatusFilter = "all" | "active" | "paused" | "ended";
 type SortBy = "start_at" | "end_at" | "seats";
 type SortOrder = "asc" | "desc";
 type GroupBy = "table" | "user" | "date" | "none";
@@ -91,6 +95,47 @@ function RouteComponent() {
     }
   };
 
+  const [actionPending, setActionPending] = useState<string | null>(null);
+
+  const handleEndOrder = async (id: string) => {
+    setActionPending(id);
+    try {
+      await trpcClientDash.ordersManagement.endOrder.mutate({ id });
+      msg.success("已终止");
+      await fetchOrders();
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "终止失败");
+    } finally {
+      setActionPending(null);
+    }
+  };
+
+  const handlePauseOrder = async (id: string) => {
+    setActionPending(id);
+    try {
+      await trpcClientDash.ordersManagement.pauseOrder.mutate({ id });
+      msg.success("已暂停");
+      await fetchOrders();
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "暂停失败");
+    } finally {
+      setActionPending(null);
+    }
+  };
+
+  const handleResumeOrder = async (id: string) => {
+    setActionPending(id);
+    try {
+      await trpcClientDash.ordersManagement.resumeOrder.mutate({ id });
+      msg.success("已继续");
+      await fetchOrders();
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "继续失败");
+    } finally {
+      setActionPending(null);
+    }
+  };
+
   const toggleSortOrder = () => {
     setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
     setPage(1);
@@ -162,6 +207,7 @@ function RouteComponent() {
             [
               ["all", "全部"],
               ["active", "进行中"],
+              ["paused", "已暂停"],
               ["ended", "已结束"],
             ] as const
           ).map(([key, label]) => (
@@ -231,20 +277,21 @@ function RouteComponent() {
               <td>桌台</td>
               <td>用户</td>
               <td>人数</td>
+              <td>操作</td>
             </tr>
           </thead>
 
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="py-12 text-center">
+                <td colSpan={8} className="py-12 text-center">
                   <span className="loading loading-dots loading-md" />
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="py-12 text-center text-base-content/60"
                 >
                   {searchText.trim() || statusFilter !== "all"
@@ -258,7 +305,7 @@ function RouteComponent() {
                   {group.key && (
                     <tr key={`group-${group.key}`}>
                       <td
-                        colSpan={7}
+                        colSpan={8}
                         className="bg-base-200 font-semibold text-sm py-2"
                       >
                         {groupLabel(group.key)}
@@ -285,6 +332,10 @@ function RouteComponent() {
                           <span className="badge badge-success badge-sm">
                             进行中
                           </span>
+                        ) : order.status === "paused" ? (
+                          <span className="badge badge-neutral badge-sm">
+                            已暂停
+                          </span>
                         ) : (
                           <span className="badge badge-ghost badge-sm">
                             已结束
@@ -309,13 +360,73 @@ function RouteComponent() {
                       <td className="text-sm">
                         <Link
                           to="/dash/users/$id"
-                          params={{ id: order.user_id }}
+                          params={{ id: order.user_id ?? "" }}
                           className="link link-hover"
                         >
                           {order.nickname}
                         </Link>
                       </td>
                       <td className="text-sm">{order.seats}</td>
+                      <td>
+                        <div className="flex items-center gap-1">
+                          {order.status === "active" && (
+                            <>
+                              <button
+                                type="button"
+                                className={clsx(
+                                  "btn btn-xs btn-ghost",
+                                  actionPending === order.id && "btn-disabled",
+                                )}
+                                onClick={() => void handlePauseOrder(order.id)}
+                                disabled={actionPending === order.id}
+                              >
+                                <PauseIcon className="size-3" />
+                                暂停
+                              </button>
+                              <button
+                                type="button"
+                                className={clsx(
+                                  "btn btn-xs btn-ghost btn-error",
+                                  actionPending === order.id && "btn-disabled",
+                                )}
+                                onClick={() => void handleEndOrder(order.id)}
+                                disabled={actionPending === order.id}
+                              >
+                                <StopIcon className="size-3" />
+                                终止
+                              </button>
+                            </>
+                          )}
+                          {order.status === "paused" && (
+                            <>
+                              <button
+                                type="button"
+                                className={clsx(
+                                  "btn btn-xs btn-ghost btn-success",
+                                  actionPending === order.id && "btn-disabled",
+                                )}
+                                onClick={() => void handleResumeOrder(order.id)}
+                                disabled={actionPending === order.id}
+                              >
+                                <PlayIcon className="size-3" />
+                                继续
+                              </button>
+                              <button
+                                type="button"
+                                className={clsx(
+                                  "btn btn-xs btn-ghost btn-error",
+                                  actionPending === order.id && "btn-disabled",
+                                )}
+                                onClick={() => void handleEndOrder(order.id)}
+                                disabled={actionPending === order.id}
+                              >
+                                <StopIcon className="size-3" />
+                                终止
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </>

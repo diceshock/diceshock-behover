@@ -6,6 +6,7 @@ import { useHydrateAtoms } from "jotai/utils";
 import { useCallback, useMemo } from "react";
 import type { UserInfo } from "@/server/middlewares/auth";
 import type { Recipe } from "@/shared/types/kits";
+import trpcClientPublic from "@/shared/utils/trpc";
 import useCrossData from "./useCrossData";
 
 const userInfoAtom = atom<UserInfo | null>(null);
@@ -30,9 +31,29 @@ export default function useAuth() {
   );
 
   const signOut = useCallback(async () => {
+    try {
+      const tableCode = window.location.pathname.match(/^\/t\/(.+)/)?.[1];
+      if (tableCode) {
+        const data = await trpcClientPublic.tables.getByCode.query({
+          code: tableCode,
+        });
+        if (data?.occupancies && session?.user?.id) {
+          const myOcc = data.occupancies.find(
+            (o) => o.user_id === session.user!.id,
+          );
+          if (myOcc) {
+            await trpcClientPublic.tables.pause.mutate({
+              occupancyId: myOcc.id,
+              code: tableCode,
+            });
+          }
+        }
+      }
+    } catch {}
+
     await signOutAuthJs({ redirect: false });
     window.location.href = "/";
-  }, []);
+  }, [session]);
 
   return useMemo(
     () => ({
