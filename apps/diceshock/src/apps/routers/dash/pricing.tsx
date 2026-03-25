@@ -431,14 +431,7 @@ function PricingPage() {
       </div>
 
       <div className="mx-auto w-full max-w-4xl px-4 pb-28 space-y-6">
-        <input
-          type="text"
-          className="input input-ghost text-2xl font-bold w-full px-0 focus:outline-none"
-          value={snapshotName}
-          onChange={(e) => setSnapshotName(e.target.value)}
-          placeholder="输入计划名称"
-          maxLength={50}
-        />
+        <EditableTitle value={snapshotName} onChange={setSnapshotName} />
         <div className="text-sm text-base-content/60">
           白天 {effectiveData.config.daytime_start} ~{" "}
           {effectiveData.config.daytime_end} / 晚上{" "}
@@ -943,6 +936,51 @@ function FallbackSection({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function EditableTitle({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) inputRef.current?.focus();
+  }, [editing]);
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        type="text"
+        className="input input-bordered text-2xl font-bold w-full"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={() => setEditing(false)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") setEditing(false);
+        }}
+        maxLength={50}
+      />
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <h1 className="text-2xl font-bold">{value || "未命名"}</h1>
+      <button
+        type="button"
+        className="btn btn-ghost btn-xs btn-square"
+        onClick={() => setEditing(true)}
+      >
+        <PencilSimpleIcon className="size-4" />
+      </button>
     </div>
   );
 }
