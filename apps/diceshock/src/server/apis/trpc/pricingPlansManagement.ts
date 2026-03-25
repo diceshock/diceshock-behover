@@ -1,6 +1,6 @@
 import db, { drizzle, pricingSnapshotsTable } from "@lib/db";
 import { customAlphabet } from "nanoid/non-secure";
-import { dashProcedure } from "./baseTRPC";
+import { dashProcedure, publicProcedure } from "./baseTRPC";
 
 type SnapshotData = NonNullable<typeof pricingSnapshotsTable.$inferSelect.data>;
 
@@ -135,4 +135,47 @@ const restoreSnapshot = dashProcedure
     return { id: row.id, name: finalName, data: snapshot.data as SnapshotData };
   });
 
-export default { load, save, publish, listSnapshots, restoreSnapshot };
+export default {
+  load,
+  save,
+  publish,
+  listSnapshots,
+  restoreSnapshot,
+  getPublished,
+  getSnapshotDetail,
+};
+
+const getPublished = publicProcedure.query(async ({ ctx }) => {
+  const tdb = db(ctx.env.DB);
+  const published = await tdb.query.pricingSnapshotsTable.findFirst({
+    where: (s, { eq }) => eq(s.status, "published"),
+    orderBy: (s, { desc }) => desc(s.created_at),
+  });
+  if (!published) return null;
+  return {
+    id: published.id,
+    data: published.data as SnapshotData,
+  };
+});
+
+const getSnapshotDetail = dashProcedure
+  .input((v: unknown) => {
+    const { id } = v as { id: string };
+    if (!id) throw new Error("id is required");
+    return { id };
+  })
+  .query(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const snapshot = await tdb.query.pricingSnapshotsTable.findFirst({
+      where: (s, { eq }) => eq(s.id, input.id),
+    });
+    if (!snapshot) throw new Error("快照不存在");
+    return {
+      id: snapshot.id,
+      name: snapshot.name,
+      status: snapshot.status,
+      created_at: snapshot.created_at,
+      published_at: snapshot.published_at,
+      data: snapshot.data as SnapshotData,
+    };
+  });

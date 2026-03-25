@@ -277,6 +277,7 @@ function RouteComponent() {
               <td>桌台</td>
               <td>用户</td>
               <td>人数</td>
+              <td>费用</td>
               <td>操作</td>
             </tr>
           </thead>
@@ -305,7 +306,7 @@ function RouteComponent() {
                   {group.key && (
                     <tr key={`group-${group.key}`}>
                       <td
-                        colSpan={8}
+                        colSpan={9}
                         className="bg-base-200 font-semibold text-sm py-2"
                       >
                         {groupLabel(group.key)}
@@ -367,6 +368,13 @@ function RouteComponent() {
                         </Link>
                       </td>
                       <td className="text-sm">{order.seats}</td>
+                      <td className="text-sm font-mono">
+                        {order.final_price != null
+                          ? `¥${(order.final_price / 100).toFixed(2)}`
+                          : order.status !== "ended"
+                            ? "计时中"
+                            : "—"}
+                      </td>
                       <td>
                         <div className="flex items-center gap-1">
                           {order.status === "active" && (

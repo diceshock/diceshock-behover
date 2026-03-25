@@ -1,5 +1,6 @@
 import {
   ClockIcon,
+  CurrencyDollarIcon,
   HashIcon,
   UserIcon,
   UsersIcon,
@@ -11,6 +12,11 @@ import useAuth from "@/client/hooks/useAuth";
 import useSeatTimer from "@/client/hooks/useSeatTimer";
 import useTempIdentity from "@/client/hooks/useTempIdentity";
 import type { SeatIdentity } from "@/shared/types";
+import {
+  calculatePrice,
+  formatPrice,
+  type SnapshotData,
+} from "@/shared/utils/pricing";
 import { generateTOTP, getRemainingSeconds } from "@/shared/utils/totp";
 import trpcClientPublic from "@/shared/utils/trpc";
 
@@ -72,6 +78,9 @@ function SeatTimerPage() {
   const [error, setError] = useState<string | null>(null);
   const [seats, setSeats] = useState(1);
   const [occupying, setOccupying] = useState(false);
+  const [pricingSnapshot, setPricingSnapshot] = useState<SnapshotData | null>(
+    null,
+  );
 
   const identityId =
     identity?.kind === "real"
@@ -91,8 +100,12 @@ function SeatTimerPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await trpcClientPublic.tables.getByCode.query({ code });
+      const [data, published] = await Promise.all([
+        trpcClientPublic.tables.getByCode.query({ code }),
+        trpcClientPublic.pricing.getPublished.query(),
+      ]);
       setTableData(data);
+      setPricingSnapshot(published?.data ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载失败");
     } finally {
@@ -318,7 +331,12 @@ function SeatTimerPage() {
           </span>
         </div>
 
-        <OccupancyListSection occupancies={occupancies} identity={identity} />
+        <OccupancyListSection
+          occupancies={occupancies}
+          identity={identity}
+          tableType={table.type}
+          snapshot={pricingSnapshot}
+        />
       </div>
     );
   }
@@ -357,9 +375,22 @@ function SeatTimerPage() {
 
       {myOccupancy && <TimerSection startAt={myOccupancy.start_at} />}
 
+      {myOccupancy && (
+        <PricePreviewSection
+          startAt={myOccupancy.start_at}
+          tableType={table.type}
+          snapshot={pricingSnapshot}
+        />
+      )}
+
       <TOTPSection identity={identity} />
 
-      <OccupancyListSection occupancies={occupancies} identity={identity} />
+      <OccupancyListSection
+        occupancies={occupancies}
+        identity={identity}
+        tableType={table.type}
+        snapshot={pricingSnapshot}
+      />
     </div>
   );
 }
@@ -553,9 +584,45 @@ import useTOTP from "@/client/hooks/useTOTP";
 
 const __useTOTPImport = useTOTP;
 
+function PricePreviewSection({
+  startAt,
+  tableType,
+  snapshot,
+}: {
+  startAt: number;
+  tableType: string;
+  snapshot: SnapshotData | null;
+}) {
+  const [price, setPrice] = useState<string | null>(null);
+
+  useEffect(() => {
+    const tick = () => {
+      const result = calculatePrice(startAt, Date.now(), tableType, snapshot);
+      setPrice(result ? formatPrice(result.finalPrice) : null);
+    };
+    tick();
+    const timer = setInterval(tick, 30000);
+    return () => clearInterval(timer);
+  }, [startAt, tableType, snapshot]);
+
+  if (!price) return null;
+
+  return (
+    <div className="bg-base-200 rounded-xl p-4 flex items-center justify-between">
+      <div className="flex items-center gap-2 text-base-content/60 text-sm">
+        <CurrencyDollarIcon className="size-4" />
+        <span>预估费用</span>
+      </div>
+      <span className="font-mono text-xl font-bold">{price}</span>
+    </div>
+  );
+}
+
 function OccupancyListSection({
   occupancies,
   identity,
+  tableType,
+  snapshot,
 }: {
   occupancies: Array<{
     id: string;
@@ -567,6 +634,8 @@ function OccupancyListSection({
     start_at: number;
   }>;
   identity: SeatIdentity | null;
+  tableType: string;
+  snapshot: SnapshotData | null;
 }) {
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -627,6 +696,20 @@ function OccupancyListSection({
               <div className="flex items-center gap-3 text-base-content/60 text-xs">
                 <span>{occ.seats}人</span>
                 <span>{formatDurationShort(occ.start_at)}</span>
+                {snapshot &&
+                  (() => {
+                    const p = calculatePrice(
+                      occ.start_at,
+                      Date.now(),
+                      tableType,
+                      snapshot,
+                    );
+                    return p ? (
+                      <span className="font-mono">
+                        {formatPrice(p.finalPrice)}
+                      </span>
+                    ) : null;
+                  })()}
               </div>
             </div>
           );

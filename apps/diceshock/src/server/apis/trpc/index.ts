@@ -57,4 +57,7 @@ export const appRouterPublic = router({
     leave: tempIdentity.leave,
     transfer: tempIdentity.transfer,
   },
+  pricing: {
+    getPublished: pricingPlansManagement.getPublished,
+  },
 });

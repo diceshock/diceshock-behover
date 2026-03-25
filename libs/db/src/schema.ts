@@ -304,6 +304,20 @@ export const tableOccupancyTable = sqlite.sqliteTable("table_occupancy", {
     .notNull()
     .$defaultFn(() => new Date(Date.now())),
   end_at: sqlite.integer("end_at", { mode: "timestamp_ms" }),
+  final_price: sqlite.int("final_price"),
+  pricing_snapshot_id: sqlite.text("pricing_snapshot_id"),
+  price_breakdown: sqlite.text("price_breakdown", { mode: "json" }).$type<{
+    planName: string;
+    planType: "fallback" | "conditional";
+    billingType: "hourly" | "fixed";
+    unitPrice: number;
+    totalMinutes: number;
+    billableHalfHours: number;
+    rawPrice: number;
+    capApplied: boolean;
+    capType: string | null;
+    finalPrice: number;
+  }>(),
 });
 
 export const tablesRelations = relations(tablesTable, ({ many }) => ({

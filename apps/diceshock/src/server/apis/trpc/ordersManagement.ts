@@ -1,5 +1,6 @@
 import db, {
   drizzle,
+  pricingSnapshotsTable,
   tableOccupancyTable,
   tablesTable,
   userInfoTable,
@@ -9,6 +10,7 @@ import {
   fetchTableStateForDO,
   notifySeatTimerDO,
 } from "@/server/utils/seatTimer";
+import { calculatePrice, type SnapshotData } from "@/shared/utils/pricing";
 import { dashProcedure } from "./baseTRPC";
 
 type StatusFilter = "all" | "active" | "paused" | "ended";
@@ -100,6 +102,9 @@ const list = dashProcedure
               ? occ.end_at.getTime()
               : Number(occ.end_at)
             : null,
+          final_price: occ.final_price ?? null,
+          pricing_snapshot_id: occ.pricing_snapshot_id ?? null,
+          price_breakdown: occ.price_breakdown ?? null,
           table: occ.table,
           user: occ.user,
           nickname,
@@ -199,6 +204,9 @@ const getById = dashProcedure
           ? occ.end_at.getTime()
           : Number(occ.end_at)
         : null,
+      final_price: occ.final_price ?? null,
+      pricing_snapshot_id: occ.pricing_snapshot_id ?? null,
+      price_breakdown: occ.price_breakdown ?? null,
       table: occ.table,
       user: occ.user,
       nickname,
@@ -235,12 +243,42 @@ const endOrder = dashProcedure
   })
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
+    const now = new Date();
+
+    const occ = await tdb.query.tableOccupancyTable.findFirst({
+      where: (o, { eq }) => eq(o.id, input.id),
+      with: { table: { columns: { type: true } } },
+    });
+    if (!occ) throw new Error("订单不存在");
+
+    const publishedSnapshot = await tdb.query.pricingSnapshotsTable.findFirst({
+      where: (s, { eq }) => eq(s.status, "published"),
+      orderBy: (s, { desc }) => desc(s.created_at),
+    });
+
+    const startAt =
+      occ.start_at instanceof Date
+        ? occ.start_at.getTime()
+        : Number(occ.start_at);
+    const endAt = now.getTime();
+    const snapshotData = publishedSnapshot?.data as SnapshotData | null;
+    const tableType = occ.table?.type ?? "boardgame";
+
+    const breakdown = calculatePrice(startAt, endAt, tableType, snapshotData);
+
     await tdb
       .update(tableOccupancyTable)
-      .set({ status: "ended", end_at: new Date() })
+      .set({
+        status: "ended",
+        end_at: now,
+        final_price: breakdown?.finalPrice ?? null,
+        pricing_snapshot_id: publishedSnapshot?.id ?? null,
+        price_breakdown: breakdown,
+      })
       .where(drizzle.eq(tableOccupancyTable.id, input.id));
+
     await notifyDOForOrder(tdb, ctx.env, input.id);
-    return { success: true };
+    return { success: true, price: breakdown?.finalPrice ?? null };
   });
 
 const pauseOrder = dashProcedure

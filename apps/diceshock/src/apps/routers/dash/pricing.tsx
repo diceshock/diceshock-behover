@@ -4,6 +4,7 @@ import {
   ClockIcon,
   CloudArrowUpIcon,
   DotsSixVerticalIcon,
+  EyeIcon,
   FloppyDiskIcon,
   PencilSimpleIcon,
   PlusIcon,
@@ -394,6 +395,30 @@ function PricingPage() {
     }
   };
 
+  const detailDialogRef = useRef<HTMLDialogElement>(null);
+  const [detailSnapshot, setDetailSnapshot] = useState<Awaited<
+    ReturnType<
+      typeof trpcClientDash.pricingPlansManagement.getSnapshotDetail.query
+    >
+  > | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  const handleViewDetail = async (snapshotId: string) => {
+    setDetailLoading(true);
+    try {
+      const detail =
+        await trpcClientDash.pricingPlansManagement.getSnapshotDetail.query({
+          id: snapshotId,
+        });
+      setDetailSnapshot(detail);
+      detailDialogRef.current?.showModal();
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "加载失败");
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <main className="size-full flex items-center justify-center">
@@ -635,15 +660,26 @@ function PricingPage() {
                         {s.summary}
                       </span>
                     </div>
-                    <button
-                      type="button"
-                      className="btn btn-xs btn-ghost gap-1"
-                      onClick={() => void handleRestore(s.id)}
-                      disabled={restorePending === s.id}
-                    >
-                      <ArrowCounterClockwiseIcon className="size-3.5" />
-                      {restorePending === s.id ? "回退中..." : "回退"}
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        className="btn btn-xs btn-ghost gap-1"
+                        onClick={() => void handleViewDetail(s.id)}
+                        disabled={detailLoading}
+                      >
+                        <EyeIcon className="size-3.5" />
+                        查看
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-xs btn-ghost gap-1"
+                        onClick={() => void handleRestore(s.id)}
+                        disabled={restorePending === s.id}
+                      >
+                        <ArrowCounterClockwiseIcon className="size-3.5" />
+                        {restorePending === s.id ? "回退中..." : "回退"}
+                      </button>
+                    </div>
                   </div>
                 ))
               )}
@@ -801,6 +837,85 @@ function PricingPage() {
               {savePending ? "保存中..." : "保存"}
             </button>
           </div>
+        </div>
+      </dialog>
+
+      <dialog ref={detailDialogRef} className="modal">
+        <div className="modal-box max-w-2xl">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold text-lg">
+              {detailSnapshot?.name ?? "快照详情"}
+            </h3>
+            <button
+              type="button"
+              className="btn btn-ghost btn-square btn-sm"
+              onClick={() => detailDialogRef.current?.close()}
+            >
+              <XIcon className="size-4" />
+            </button>
+          </div>
+          {detailSnapshot && (
+            <div className="flex flex-col gap-4 text-sm">
+              <div className="flex items-center gap-3">
+                <span
+                  className={`badge badge-sm ${detailSnapshot.status === "published" ? "badge-success" : "badge-ghost"}`}
+                >
+                  {detailSnapshot.status === "published" ? "已发布" : "草稿"}
+                </span>
+                <span className="text-base-content/60">
+                  保存于 {formatTime(detailSnapshot.created_at)}
+                </span>
+                {detailSnapshot.published_at && (
+                  <span className="text-base-content/60">
+                    · 发布于 {formatTime(detailSnapshot.published_at)}
+                  </span>
+                )}
+              </div>
+              <div className="bg-base-200 rounded-lg p-3">
+                <span className="font-semibold">时段设置</span>
+                <p className="text-base-content/60 mt-1">
+                  白天 {detailSnapshot.data.config.daytime_start} ~{" "}
+                  {detailSnapshot.data.config.daytime_end}
+                </p>
+              </div>
+              {detailSnapshot.data.plans.map((plan, i) => (
+                <div key={i} className="bg-base-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">{plan.name}</span>
+                    <span
+                      className={`badge badge-xs ${plan.plan_type === "fallback" ? "badge-success" : "badge-info"}`}
+                    >
+                      {plan.plan_type === "fallback" ? "兜底" : "条件"}
+                    </span>
+                    {!plan.enabled && (
+                      <span className="badge badge-xs badge-ghost">未启用</span>
+                    )}
+                  </div>
+                  <div className="mt-2 text-base-content/60 space-y-1">
+                    <p>
+                      计费:{" "}
+                      {plan.billing_type === "fixed"
+                        ? `固定 ¥${(plan.price / 100).toFixed(2)}`
+                        : `¥${(plan.price / 100).toFixed(2)}/时`}
+                    </p>
+                    {plan.cap_enabled && plan.cap_unit === "per_day" && (
+                      <p>
+                        封顶: ¥{((plan.cap_price ?? 0) / 100).toFixed(2)}/天
+                      </p>
+                    )}
+                    {plan.cap_enabled &&
+                      plan.cap_unit === "split_day_night" && (
+                        <p>
+                          封顶: 白天 ¥
+                          {((plan.cap_price_day ?? 0) / 100).toFixed(2)} / 晚上
+                          ¥{((plan.cap_price_night ?? 0) / 100).toFixed(2)}
+                        </p>
+                      )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </dialog>
     </main>
