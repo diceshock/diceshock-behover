@@ -333,15 +333,26 @@ function PricingPage() {
   const [savePending, setSavePending] = useState(false);
   const [publishPending, setPublishPending] = useState(false);
   const [restorePending, setRestorePending] = useState<string | null>(null);
+  const [snapshotName, setSnapshotName] = useState("未命名");
+  const saveDialogRef = useRef<HTMLDialogElement>(null);
 
   const handleSaveDraft = async () => {
+    if (!snapshotName.trim()) {
+      msg.error("请输入快照名称");
+      return;
+    }
     setSavePending(true);
     try {
-      await trpcClientDash.pricingPlansManagement.save.mutate({ data });
+      const result = await trpcClientDash.pricingPlansManagement.save.mutate({
+        data,
+        name: snapshotName.trim(),
+      });
       setSavedData(data);
+      setSnapshotName(result.name);
       const snapshotList =
         await trpcClientDash.pricingPlansManagement.listSnapshots.query();
       setSnapshots(snapshotList);
+      saveDialogRef.current?.close();
       msg.success("草稿已保存");
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "保存失败");
@@ -610,7 +621,8 @@ function PricingPage() {
                         >
                           {s.status === "published" ? "已发布" : "草稿"}
                         </span>
-                        <span className="text-sm">
+                        <span className="text-sm font-medium">{s.name}</span>
+                        <span className="text-xs text-base-content/40">
                           {formatTime(s.created_at)}
                         </span>
                         {s.published_at && (
@@ -648,7 +660,7 @@ function PricingPage() {
         <button
           type="button"
           className="btn btn-sm gap-2"
-          onClick={() => void handleSaveDraft()}
+          onClick={() => saveDialogRef.current?.showModal()}
           disabled={savePending || !hasChanges}
         >
           <FloppyDiskIcon className="size-4" />
@@ -753,6 +765,43 @@ function PricingPage() {
             </div>
           </div>
         )}
+      </dialog>
+
+      <dialog ref={saveDialogRef} className="modal">
+        <div className="modal-box">
+          <h3 className="font-bold text-lg mb-4">保存草稿</h3>
+          <label className="flex flex-col gap-2">
+            <span className="label text-sm font-semibold">快照名称</span>
+            <input
+              type="text"
+              className="input input-bordered w-full"
+              value={snapshotName}
+              onChange={(e) => setSnapshotName(e.target.value)}
+              placeholder="例：周末活动价格"
+              maxLength={50}
+            />
+          </label>
+          <p className="text-xs text-base-content/50 mt-2">
+            名称重复时会自动追加随机后缀
+          </p>
+          <div className="modal-action mt-6">
+            <button
+              type="button"
+              className="btn"
+              onClick={() => saveDialogRef.current?.close()}
+            >
+              取消
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => void handleSaveDraft()}
+              disabled={savePending || !snapshotName.trim()}
+            >
+              {savePending ? "保存中..." : "保存"}
+            </button>
+          </div>
+        </div>
       </dialog>
     </main>
   );

@@ -1,12 +1,26 @@
 import db, { drizzle, pricingSnapshotsTable } from "@lib/db";
+import { customAlphabet } from "nanoid/non-secure";
 import { dashProcedure } from "./baseTRPC";
 
 type SnapshotData = NonNullable<typeof pricingSnapshotsTable.$inferSelect.data>;
+
+const nanoid = customAlphabet("0123456789abcdef", 4);
 
 const EMPTY_DATA: SnapshotData = {
   config: { daytime_start: "10:00", daytime_end: "18:00" },
   plans: [],
 };
+
+async function deduplicateName(
+  tdb: ReturnType<typeof db>,
+  name: string,
+): Promise<string> {
+  const existing = await tdb.query.pricingSnapshotsTable.findFirst({
+    where: (s, { eq }) => eq(s.name, name),
+    columns: { id: true },
+  });
+  return existing ? `${name}-${nanoid()}` : name;
+}
 
 const load = dashProcedure.query(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
@@ -16,24 +30,32 @@ const load = dashProcedure.query(async ({ ctx }) => {
   return {
     data: (latest?.data as SnapshotData | null) ?? EMPTY_DATA,
     snapshotId: latest?.id ?? null,
+    snapshotName: latest?.name ?? null,
     status: latest?.status ?? null,
   };
 });
 
 const save = dashProcedure
   .input((v: unknown) => {
-    const { data } = v as { data: SnapshotData };
+    const { data, name } = v as { data: SnapshotData; name: string };
     if (!data?.config || !Array.isArray(data.plans))
       throw new Error("invalid snapshot data");
-    return { data };
+    if (!name?.trim()) throw new Error("name is required");
+    return { data, name: name.trim() };
   })
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
+    const finalName = await deduplicateName(tdb, input.name);
     const [row] = await tdb
       .insert(pricingSnapshotsTable)
-      .values({ data: input.data, status: "draft", created_at: new Date() })
+      .values({
+        name: finalName,
+        data: input.data,
+        status: "draft",
+        created_at: new Date(),
+      })
       .returning();
-    return { id: row.id };
+    return { id: row.id, name: finalName };
   });
 
 const publish = dashProcedure.mutation(async ({ ctx }) => {
@@ -78,6 +100,7 @@ const listSnapshots = dashProcedure.query(async ({ ctx }) => {
   });
   return rows.map((row) => ({
     id: row.id,
+    name: row.name,
     status: row.status,
     created_at: row.created_at,
     published_at: row.published_at,
@@ -98,16 +121,18 @@ const restoreSnapshot = dashProcedure
     });
     if (!snapshot?.data) throw new Error("快照不存在");
 
+    const finalName = await deduplicateName(tdb, snapshot.name);
     const [row] = await tdb
       .insert(pricingSnapshotsTable)
       .values({
+        name: finalName,
         data: snapshot.data,
         status: "draft",
         created_at: new Date(),
       })
       .returning();
 
-    return { id: row.id, data: snapshot.data as SnapshotData };
+    return { id: row.id, name: finalName, data: snapshot.data as SnapshotData };
   });
 
 export default { load, save, publish, listSnapshots, restoreSnapshot };

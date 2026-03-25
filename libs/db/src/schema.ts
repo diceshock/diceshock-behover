@@ -340,6 +340,10 @@ export const tempIdentitiesTable = sqlite.sqliteTable("temp_identities", {
 
 export const pricingSnapshotsTable = sqlite.sqliteTable("pricing_snapshots", {
   id: sqlite.text().$defaultFn(createId).primaryKey(),
+  name: sqlite
+    .text("name")
+    .notNull()
+    .$default(() => "未命名"),
   data: sqlite.text("data", { mode: "json" }).$type<{
     config: {
       daytime_start: string;

@@ -211,6 +211,13 @@
       "when": 1774458661948,
       "tag": "0029_fine_terrax",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1774459492793,
+      "tag": "0030_grey_titanium_man",
+      "breakpoints": true
     }
   ]
 }
