@@ -1,6 +1,9 @@
 import {
   CurrencyDollarIcon,
+  PauseIcon,
+  PlayIcon,
   PlusIcon,
+  StopIcon,
   TrashIcon,
   WarningCircleIcon,
   WarningIcon,
@@ -173,6 +176,9 @@ function UserDetailPage() {
   >;
   const [occupancies, setOccupancies] = useState<UserOccupancy>([]);
   const [occupanciesLoading, setOccupanciesLoading] = useState(false);
+  const [orderActionPending, setOrderActionPending] = useState<string | null>(
+    null,
+  );
 
   const [, setOccTick] = useState(0);
   useEffect(() => {
@@ -269,6 +275,45 @@ function UserDetailPage() {
     fetchPlans();
     fetchOccupancies();
   }, [fetchUser, fetchPlans, fetchOccupancies]);
+
+  const handleEndOccOrder = async (occId: string) => {
+    setOrderActionPending(occId);
+    try {
+      await trpcClientDash.ordersManagement.endOrder.mutate({ id: occId });
+      msg.success("已终止");
+      await fetchOccupancies();
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "终止失败");
+    } finally {
+      setOrderActionPending(null);
+    }
+  };
+
+  const handlePauseOccOrder = async (occId: string) => {
+    setOrderActionPending(occId);
+    try {
+      await trpcClientDash.ordersManagement.pauseOrder.mutate({ id: occId });
+      msg.success("已暂停");
+      await fetchOccupancies();
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "暂停失败");
+    } finally {
+      setOrderActionPending(null);
+    }
+  };
+
+  const handleResumeOccOrder = async (occId: string) => {
+    setOrderActionPending(occId);
+    try {
+      await trpcClientDash.ordersManagement.resumeOrder.mutate({ id: occId });
+      msg.success("已继续");
+      await fetchOccupancies();
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "继续失败");
+    } finally {
+      setOrderActionPending(null);
+    }
+  };
 
   const computeSmartDates = useCallback(
     (planType: PlanType) => {
@@ -1000,7 +1045,7 @@ function UserDetailPage() {
                             </Link>
                             {occ.table && (
                               <span
-                                className={`badge badge-sm ${occ.table.type === "mahjong" ? "badge-warning" : "badge-info"}`}
+                                className={`badge badge-sm ${occ.table.type === "mahjong" ? "badge-accent" : "badge-info"}`}
                               >
                                 {occ.table.type === "mahjong"
                                   ? "麻将台"
@@ -1023,6 +1068,26 @@ function UserDetailPage() {
                               开始
                             </span>
                           </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            className="btn btn-xs btn-ghost"
+                            onClick={() => void handlePauseOccOrder(occ.id)}
+                            disabled={orderActionPending === occ.id}
+                          >
+                            <PauseIcon className="size-3.5" />
+                            暂停
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-xs btn-ghost btn-error"
+                            onClick={() => void handleEndOccOrder(occ.id)}
+                            disabled={orderActionPending === occ.id}
+                          >
+                            <StopIcon className="size-3.5" />
+                            终止
+                          </button>
                         </div>
                       </div>
                     );

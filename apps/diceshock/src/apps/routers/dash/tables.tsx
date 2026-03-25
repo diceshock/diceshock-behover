@@ -265,7 +265,7 @@ function RouteComponent() {
                     <td className="font-semibold">{table.name}</td>
                     <td>
                       <span
-                        className={`badge badge-sm ${table.type === "mahjong" ? "badge-warning" : "badge-info"}`}
+                        className={`badge badge-sm ${table.type === "mahjong" ? "badge-accent" : "badge-info"}`}
                       >
                         {TYPE_LABELS[table.type] ?? table.type}
                       </span>
@@ -290,7 +290,7 @@ function RouteComponent() {
                       <div className="flex items-center gap-1">
                         <button
                           type="button"
-                          className={`btn btn-xs btn-ghost ${table.status === "active" ? "btn-warning" : "btn-success"}`}
+                          className={`btn btn-xs btn-ghost ${table.status === "active" ? "btn-neutral" : "btn-success"}`}
                           onClick={() => void handleToggleStatus(table)}
                         >
                           <PowerIcon className="size-3.5" />

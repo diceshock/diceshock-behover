@@ -105,8 +105,8 @@ function RouteComponent() {
 
 function DashNotFound() {
   return (
-    <main className="size-full p-4 overflow-y-auto">
-      <div className="max-w-7xl mx-auto flex flex-col items-center justify-center min-h-[calc(100vh-2rem)]">
+    <main className="fixed inset-0 z-[100] bg-base-100 p-4 overflow-y-auto">
+      <div className="max-w-7xl mx-auto flex flex-col items-center justify-center min-h-screen">
         <p className="font-mono font-black text-[20vw] md:text-[14vw] lg:text-[10rem] leading-none text-primary/20 select-none">
           404
         </p>
@@ -132,8 +132,8 @@ function DashError({ error }: { error: unknown }) {
     error instanceof Error ? error.message : "发生了未知错误，请稍后再试。";
 
   return (
-    <main className="size-full p-4 overflow-y-auto">
-      <div className="max-w-7xl mx-auto flex flex-col items-center justify-center min-h-[calc(100vh-2rem)]">
+    <main className="fixed inset-0 z-[100] bg-base-100 p-4 overflow-y-auto">
+      <div className="max-w-7xl mx-auto flex flex-col items-center justify-center min-h-screen">
         <p className="font-mono font-black text-[20vw] md:text-[14vw] lg:text-[10rem] leading-none text-error/20 select-none">
           500
         </p>
