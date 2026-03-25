@@ -1,23 +1,45 @@
 import {
   ClientOnly,
   createFileRoute,
-  Link,
   useNavigate,
 } from "@tanstack/react-router";
+import { atom, useAtom } from "jotai";
 import { useCallback, useEffect, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
-import { trpcClientDash } from "@/shared/utils/trpc";
+import type { trpcClientDash } from "@/shared/utils/trpc";
 
 export const Route = createFileRoute("/dash/pricing_/$id")({
   component: PricingDetailPage,
 });
 
-type PricingPlan = Awaited<
-  ReturnType<typeof trpcClientDash.pricingPlansManagement.getById.query>
->;
+type SnapshotData = Awaited<
+  ReturnType<typeof trpcClientDash.pricingPlansManagement.load.query>
+>["data"];
 
-type Conditions = NonNullable<PricingPlan["conditions"]>;
+type PlanEntry = SnapshotData["plans"][number];
+
+type Conditions = {
+  date:
+    | { type: "fixed"; start: string; end: string }
+    | { type: "workdays" }
+    | { type: "holidays" }
+    | { type: "weekly"; days: number[] }
+    | { type: "monthly"; nth: number; unit: "natural" | "workday" | "holiday" };
+  time:
+    | { type: "all_day" }
+    | { type: "daytime" }
+    | { type: "nighttime" }
+    | { type: "custom"; start: string; end: string };
+  member:
+    | { type: "irrelevant" }
+    | { type: "non_member" }
+    | { type: "any_member" }
+    | { type: "specific"; planTypes: string[] };
+  scope: string[];
+};
+
+export const pricingDataAtom = atom<SnapshotData | null>(null);
 
 const PLAN_TYPE_OPTIONS = [
   { value: "yearly", label: "桌面通行证 LTS" },
@@ -71,11 +93,12 @@ function defaultConditions(): Conditions {
 
 function PricingDetailPage() {
   const { id } = Route.useParams();
+  const planIndex = Number(id);
   const navigate = useNavigate();
   const msg = useMsg();
+  const [pricingData, setPricingData] = useAtom(pricingDataAtom);
 
-  const [plan, setPlan] = useState<PricingPlan | null>(null);
-  const [loading, setLoading] = useState(true);
+  const plan = pricingData?.plans[planIndex] ?? null;
 
   const [name, setName] = useState("");
   const [conditions, setConditions] = useState<Conditions>(defaultConditions());
@@ -87,86 +110,68 @@ function PricingDetailPage() {
   const [capPrice, setCapPrice] = useState("");
   const [capPriceDay, setCapPriceDay] = useState("");
   const [capPriceNight, setCapPriceNight] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  const fetchPlan = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await trpcClientDash.pricingPlansManagement.getById.query({
-        id,
-      });
-      setPlan(data);
-      setName(data.name);
-      setConditions(data.conditions ?? defaultConditions());
-      setBillingType(data.billing_type);
-      setPrice(centsToYuan(data.price));
-      setCapUnit(data.cap_unit ?? "per_day");
-      setCapPrice(centsToYuan(data.cap_price));
-      setCapPriceDay(centsToYuan(data.cap_price_day));
-      setCapPriceNight(centsToYuan(data.cap_price_night));
-    } catch (err) {
-      msg.error(err instanceof Error ? err.message : "加载计划失败");
-    } finally {
-      setLoading(false);
-    }
-  }, [id, msg]);
 
   useEffect(() => {
-    void fetchPlan();
-  }, [fetchPlan]);
+    if (plan) {
+      setName(plan.name);
+      setConditions((plan.conditions as Conditions) ?? defaultConditions());
+      setBillingType(plan.billing_type);
+      setPrice(centsToYuan(plan.price));
+      setCapUnit(plan.cap_unit ?? "per_day");
+      setCapPrice(centsToYuan(plan.cap_price));
+      setCapPriceDay(centsToYuan(plan.cap_price_day));
+      setCapPriceNight(centsToYuan(plan.cap_price_night));
+    }
+  }, [plan]);
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!name.trim()) {
       msg.error("请输入计划名称");
       return;
     }
-    setSaving(true);
-    try {
-      await trpcClientDash.pricingPlansManagement.update.mutate({
-        id,
-        name: name.trim(),
-        conditions,
-        billing_type: billingType,
-        price: yuanToCents(price),
-        cap_enabled: billingType === "hourly",
-        cap_unit: billingType === "hourly" ? capUnit : null,
-        cap_price:
-          billingType === "hourly" && capUnit === "per_day"
-            ? yuanToCents(capPrice)
-            : null,
-        cap_price_day:
-          billingType === "hourly" && capUnit === "split_day_night"
-            ? yuanToCents(capPriceDay)
-            : null,
-        cap_price_night:
-          billingType === "hourly" && capUnit === "split_day_night"
-            ? yuanToCents(capPriceNight)
-            : null,
-      });
-      msg.success("已保存到工作区");
-      void navigate({ to: "/dash/pricing" });
-    } catch (err) {
-      msg.error(err instanceof Error ? err.message : "保存失败");
-    } finally {
-      setSaving(false);
-    }
+    if (!pricingData) return;
+
+    const updated: PlanEntry = {
+      ...plan!,
+      name: name.trim(),
+      conditions,
+      billing_type: billingType,
+      price: yuanToCents(price),
+      cap_enabled: billingType === "hourly",
+      cap_unit: billingType === "hourly" ? capUnit : null,
+      cap_price:
+        billingType === "hourly" && capUnit === "per_day"
+          ? yuanToCents(capPrice)
+          : null,
+      cap_price_day:
+        billingType === "hourly" && capUnit === "split_day_night"
+          ? yuanToCents(capPriceDay)
+          : null,
+      cap_price_night:
+        billingType === "hourly" && capUnit === "split_day_night"
+          ? yuanToCents(capPriceNight)
+          : null,
+    };
+
+    setPricingData({
+      ...pricingData,
+      plans: pricingData.plans.map((p, i) => (i === planIndex ? updated : p)),
+    });
+
+    void navigate({ to: "/dash/pricing" });
   };
 
-  if (loading) {
-    return (
-      <main className="size-full flex items-center justify-center">
-        <span className="loading loading-spinner loading-lg" />
-      </main>
-    );
-  }
-
-  if (!plan) {
+  if (!pricingData || !plan) {
     return (
       <main className="size-full flex flex-col items-center justify-center gap-4">
-        <p className="text-base-content/60">计划不存在</p>
-        <Link to="/dash/pricing" className="btn btn-primary btn-sm">
+        <p className="text-base-content/60">计划不存在或数据未加载</p>
+        <button
+          type="button"
+          className="btn btn-primary btn-sm"
+          onClick={() => navigate({ to: "/dash/pricing" })}
+        >
           返回价格计划
-        </Link>
+        </button>
       </main>
     );
   }
@@ -222,10 +227,9 @@ function PricingDetailPage() {
               <button
                 type="button"
                 className="btn btn-primary"
-                onClick={() => void handleSave()}
-                disabled={saving}
+                onClick={handleSave}
               >
-                {saving ? "保存中..." : "保存并返回"}
+                保存并返回
               </button>
             </div>
           </div>
@@ -544,12 +548,7 @@ function ConditionFormFields({
                     key={opt.value}
                     type="button"
                     onClick={() => toggleWeekday(opt.value)}
-                    className={`btn btn-xs ${
-                      conditions.date.type === "weekly" &&
-                      conditions.date.days.includes(opt.value)
-                        ? "btn-primary"
-                        : "btn-ghost border border-base-300"
-                    }`}
+                    className={`btn btn-xs ${conditions.date.type === "weekly" && conditions.date.days.includes(opt.value) ? "btn-primary" : "btn-ghost border border-base-300"}`}
                   >
                     {opt.label}
                   </button>
@@ -662,10 +661,7 @@ function ConditionFormFields({
                   value={conditions.time.start}
                   onChange={(e) => {
                     if (conditions.time.type !== "custom") return;
-                    updateTime({
-                      ...conditions.time,
-                      start: e.target.value,
-                    });
+                    updateTime({ ...conditions.time, start: e.target.value });
                   }}
                 />
                 <span className="text-sm text-base-content/40">→</span>
@@ -675,10 +671,7 @@ function ConditionFormFields({
                   value={conditions.time.end}
                   onChange={(e) => {
                     if (conditions.time.type !== "custom") return;
-                    updateTime({
-                      ...conditions.time,
-                      end: e.target.value,
-                    });
+                    updateTime({ ...conditions.time, end: e.target.value });
                   }}
                 />
               </div>

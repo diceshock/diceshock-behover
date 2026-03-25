@@ -11,26 +11,47 @@ import {
   XIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useAtom } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import { trpcClientDash } from "@/shared/utils/trpc";
+import { pricingDataAtom } from "./pricing_.$id";
+
+function isEqual(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
 
 export const Route = createFileRoute("/dash/pricing")({
   component: PricingPage,
 });
 
-type PricingPlan = Awaited<
-  ReturnType<typeof trpcClientDash.pricingPlansManagement.list.query>
->[number];
+type SnapshotData = Awaited<
+  ReturnType<typeof trpcClientDash.pricingPlansManagement.load.query>
+>["data"];
 
-type Conditions = NonNullable<PricingPlan["conditions"]>;
+type PlanEntry = SnapshotData["plans"][number];
+type Conditions = NonNullable<PlanEntry["conditions"]> & {
+  date:
+    | { type: "fixed"; start: string; end: string }
+    | { type: "workdays" }
+    | { type: "holidays" }
+    | { type: "weekly"; days: number[] }
+    | { type: "monthly"; nth: number; unit: "natural" | "workday" | "holiday" };
+  time:
+    | { type: "all_day" }
+    | { type: "daytime" }
+    | { type: "nighttime" }
+    | { type: "custom"; start: string; end: string };
+  member:
+    | { type: "irrelevant" }
+    | { type: "non_member" }
+    | { type: "any_member" }
+    | { type: "specific"; planTypes: string[] };
+  scope: string[];
+};
 
-type GlobalConfig = Awaited<
-  ReturnType<typeof trpcClientDash.pricingPlansManagement.getConfig.query>
->;
-
-type Snapshot = Awaited<
+type SnapshotRow = Awaited<
   ReturnType<typeof trpcClientDash.pricingPlansManagement.listSnapshots.query>
 >[number];
 
@@ -69,12 +90,6 @@ function centsToYuan(cents: number | null | undefined): string {
   return (cents / 100).toString();
 }
 
-function yuanToCents(yuan: string): number {
-  const n = Number.parseFloat(yuan);
-  if (Number.isNaN(n)) return 0;
-  return Math.round(n * 100);
-}
-
 function getDateLabel(date: Conditions["date"]): string {
   switch (date.type) {
     case "fixed":
@@ -84,9 +99,11 @@ function getDateLabel(date: Conditions["date"]): string {
     case "holidays":
       return "全部节假日";
     case "weekly":
-      return `每周${date.days.map((d) => WEEKDAY_OPTIONS.find((o) => o.value === d)?.label ?? d).join("/")}`;
+      return `每周${date.days.map((d: number) => WEEKDAY_OPTIONS.find((o) => o.value === d)?.label ?? d).join("/")}`;
     case "monthly":
       return `每月第${date.nth}个${MONTHLY_UNIT_OPTIONS.find((o) => o.value === date.unit)?.label ?? date.unit}`;
+    default:
+      return "";
   }
 }
 
@@ -100,6 +117,8 @@ function getTimeLabel(time: Conditions["time"]): string {
       return "晚上";
     case "custom":
       return `${time.start}~${time.end}`;
+    default:
+      return "";
   }
 }
 
@@ -113,8 +132,13 @@ function getMemberLabel(member: Conditions["member"]): string {
       return "任意会员";
     case "specific":
       return member.planTypes
-        .map((pt) => PLAN_TYPE_OPTIONS.find((o) => o.value === pt)?.label ?? pt)
+        .map(
+          (pt: string) =>
+            PLAN_TYPE_OPTIONS.find((o) => o.value === pt)?.label ?? pt,
+        )
         .join(", ");
+    default:
+      return "";
   }
 }
 
@@ -129,26 +153,46 @@ function formatTime(val: Date | number | null | undefined): string {
   });
 }
 
+const EMPTY_DATA: SnapshotData = {
+  config: { daytime_start: "10:00", daytime_end: "18:00" },
+  plans: [],
+};
+
 function PricingPage() {
   const msg = useMsg();
   const navigate = useNavigate();
-  const [plans, setPlans] = useState<PricingPlan[]>([]);
-  const [config, setConfig] = useState<GlobalConfig | null>(null);
-  const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
+
+  const [data, setData] = useState<SnapshotData>(EMPTY_DATA);
+  const [savedData, setSavedData] = useState<SnapshotData>(EMPTY_DATA);
+  const [snapshots, setSnapshots] = useState<SnapshotRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [pricingAtom, setPricingAtom] = useAtom(pricingDataAtom);
+
+  const hasChanges = !isEqual(data, savedData);
+  const hasDraft = snapshots.some((s) => s.status === "draft");
+
+  useEffect(() => {
+    setPricingAtom(data);
+  }, [data, setPricingAtom]);
+
+  useEffect(() => {
+    if (pricingAtom && !isEqual(pricingAtom, data)) {
+      setData(pricingAtom);
+    }
+  }, [pricingAtom]);
 
   const refreshData = useCallback(async () => {
     setLoading(true);
     try {
-      const [planData, configData, snapshotData] = await Promise.all([
-        trpcClientDash.pricingPlansManagement.list.query(),
-        trpcClientDash.pricingPlansManagement.getConfig.query(),
+      const [loaded, snapshotList] = await Promise.all([
+        trpcClientDash.pricingPlansManagement.load.query(),
         trpcClientDash.pricingPlansManagement.listSnapshots.query(),
       ]);
-      setPlans(planData);
-      setConfig(configData);
-      setSnapshots(snapshotData);
+      const d = loaded.data ?? EMPTY_DATA;
+      setData(d);
+      setSavedData(d);
+      setSnapshots(snapshotList);
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "加载失败");
     } finally {
@@ -160,8 +204,66 @@ function PricingPage() {
     void refreshData();
   }, [refreshData]);
 
-  const fallbackPlan = plans.find((p) => p.plan_type === "fallback") ?? null;
-  const conditionalPlans = plans.filter((p) => p.plan_type === "conditional");
+  const fallbackPlan =
+    data.plans.find((p) => p.plan_type === "fallback") ?? null;
+  const conditionalPlans = data.plans.filter(
+    (p) => p.plan_type === "conditional",
+  );
+
+  const updatePlan = (index: number, updates: Partial<PlanEntry>) => {
+    setData((prev) => ({
+      ...prev,
+      plans: prev.plans.map((p, i) => (i === index ? { ...p, ...updates } : p)),
+    }));
+  };
+
+  const removePlan = (index: number) => {
+    setData((prev) => ({
+      ...prev,
+      plans: prev.plans.filter((_, i) => i !== index),
+    }));
+  };
+
+  const addConditionalPlan = () => {
+    const newPlan: PlanEntry = {
+      plan_type: "conditional",
+      name: "新条件计划",
+      sort_order: conditionalPlans.length + 1,
+      enabled: true,
+      conditions: {
+        date: { type: "workdays" },
+        time: { type: "all_day" },
+        member: { type: "irrelevant" },
+        scope: [],
+      },
+      billing_type: "hourly",
+      price: 1000,
+      cap_enabled: true,
+      cap_unit: "per_day",
+      cap_price: 5000,
+      cap_price_day: null,
+      cap_price_night: null,
+    };
+    setData((prev) => ({ ...prev, plans: [...prev.plans, newPlan] }));
+  };
+
+  const addFallbackPlan = () => {
+    const newPlan: PlanEntry = {
+      plan_type: "fallback",
+      name: "兜底计划",
+      sort_order: 0,
+      enabled: true,
+      conditions: null,
+      billing_type: "hourly",
+      price: 1000,
+      cap_enabled: true,
+      cap_unit: "per_day",
+      cap_price: 5000,
+      cap_price_day: null,
+      cap_price_night: null,
+    };
+    setData((prev) => ({ ...prev, plans: [newPlan, ...prev.plans] }));
+  };
 
   const configDialogRef = useRef<HTMLDialogElement>(null);
   const deleteDialogRef = useRef<HTMLDialogElement>(null);
@@ -172,139 +274,60 @@ function PricingPage() {
   });
 
   useEffect(() => {
-    if (config) {
-      setConfigForm({
-        daytime_start: config.daytime_start,
-        daytime_end: config.daytime_end,
-      });
-    }
-  }, [config]);
+    setConfigForm({
+      daytime_start: data.config.daytime_start,
+      daytime_end: data.config.daytime_end,
+    });
+  }, [data.config]);
 
-  const [configPending, setConfigPending] = useState(false);
-
-  const handleSaveConfig = async () => {
-    setConfigPending(true);
-    try {
-      await trpcClientDash.pricingPlansManagement.updateConfig.mutate(
-        configForm,
-      );
-      msg.success("时段设置已保存");
-      configDialogRef.current?.close();
-      await refreshData();
-    } catch (err) {
-      msg.error(err instanceof Error ? err.message : "保存失败");
-    } finally {
-      setConfigPending(false);
-    }
+  const handleSaveConfig = () => {
+    setData((prev) => ({ ...prev, config: { ...configForm } }));
+    configDialogRef.current?.close();
   };
 
-  const [pendingDelete, setPendingDelete] = useState<PricingPlan | null>(null);
-  const [deletePending, setDeletePending] = useState(false);
+  const [pendingDeleteIdx, setPendingDeleteIdx] = useState<number | null>(null);
 
-  const openDeleteDialog = (plan: PricingPlan) => {
-    setPendingDelete(plan);
+  const openDeleteDialog = (globalIdx: number) => {
+    setPendingDeleteIdx(globalIdx);
     setTimeout(() => deleteDialogRef.current?.showModal(), 0);
   };
 
-  const confirmDelete = async () => {
-    if (!pendingDelete) return;
-    setDeletePending(true);
-    try {
-      await trpcClientDash.pricingPlansManagement.remove.mutate({
-        id: pendingDelete.id,
-      });
-      msg.success("计划已删除");
+  const confirmDelete = () => {
+    if (pendingDeleteIdx != null) {
+      removePlan(pendingDeleteIdx);
       deleteDialogRef.current?.close();
-      setPendingDelete(null);
-      await refreshData();
-    } catch (err) {
-      msg.error(err instanceof Error ? err.message : "删除失败");
-    } finally {
-      setDeletePending(false);
+      setPendingDeleteIdx(null);
     }
   };
 
-  const [dragOverId, setDragOverId] = useState<string | null>(null);
-  const dragItemRef = useRef<string | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const dragItemRef = useRef<number | null>(null);
 
-  const handleDragStart = (id: string) => {
-    dragItemRef.current = id;
+  const handleDragStart = (idx: number) => {
+    dragItemRef.current = idx;
   };
 
-  const handleDragOver = (e: React.DragEvent, id: string) => {
-    e.preventDefault();
-    setDragOverId(id);
-  };
-
-  const handleDragLeave = () => {
-    setDragOverId(null);
-  };
-
-  const handleDrop = async (targetId: string) => {
-    setDragOverId(null);
-    const sourceId = dragItemRef.current;
+  const handleDrop = (targetIdx: number) => {
+    setDragOverIdx(null);
+    const sourceIdx = dragItemRef.current;
     dragItemRef.current = null;
-    if (!sourceId || sourceId === targetId) return;
+    if (sourceIdx == null || sourceIdx === targetIdx) return;
 
-    const ids = conditionalPlans.map((p) => p.id);
-    const fromIdx = ids.indexOf(sourceId);
-    const toIdx = ids.indexOf(targetId);
-    if (fromIdx === -1 || toIdx === -1) return;
-
-    ids.splice(fromIdx, 1);
-    ids.splice(toIdx, 0, sourceId);
-
-    try {
-      await trpcClientDash.pricingPlansManagement.reorder.mutate({ ids });
-      await refreshData();
-    } catch (err) {
-      msg.error(err instanceof Error ? err.message : "排序失败");
-    }
+    setData((prev) => {
+      const plans = [...prev.plans];
+      const [moved] = plans.splice(sourceIdx, 1);
+      plans.splice(targetIdx, 0, moved);
+      return {
+        ...prev,
+        plans: plans.map((p, i) => ({ ...p, sort_order: i })),
+      };
+    });
   };
 
-  const [createPending, setCreatePending] = useState(false);
-
-  const handleCreate = async () => {
-    setCreatePending(true);
-    try {
-      const created = await trpcClientDash.pricingPlansManagement.create.mutate(
-        {
-          plan_type: "conditional",
-          name: "新条件计划",
-          billing_type: "hourly",
-          price: 1000,
-          conditions: {
-            date: { type: "workdays" },
-            time: { type: "all_day" },
-            member: { type: "irrelevant" },
-            scope: [],
-          },
-          cap_enabled: true,
-          cap_unit: "per_day",
-          cap_price: 5000,
-        },
-      );
-      void navigate({
-        to: "/dash/pricing/$id",
-        params: { id: created.id },
-      });
-    } catch (err) {
-      msg.error(err instanceof Error ? err.message : "创建失败");
-    } finally {
-      setCreatePending(false);
-    }
-  };
-
-  const handleToggle = async (plan: PricingPlan) => {
-    try {
-      await trpcClientDash.pricingPlansManagement.update.mutate({
-        id: plan.id,
-        enabled: !plan.enabled,
-      });
-      await refreshData();
-    } catch (err) {
-      msg.error(err instanceof Error ? err.message : "操作失败");
-    }
+  const handleToggle = (globalIdx: number) => {
+    updatePlan(globalIdx, {
+      enabled: !data.plans[globalIdx].enabled,
+    });
   };
 
   const [savePending, setSavePending] = useState(false);
@@ -314,11 +337,14 @@ function PricingPage() {
   const handleSaveDraft = async () => {
     setSavePending(true);
     try {
-      await trpcClientDash.pricingPlansManagement.saveSnapshot.mutate();
+      await trpcClientDash.pricingPlansManagement.save.mutate({ data });
+      setSavedData(data);
+      const snapshotList =
+        await trpcClientDash.pricingPlansManagement.listSnapshots.query();
+      setSnapshots(snapshotList);
       msg.success("草稿已保存");
-      await refreshData();
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "保存草稿失败");
+      msg.error(err instanceof Error ? err.message : "保存失败");
     } finally {
       setSavePending(false);
     }
@@ -328,8 +354,10 @@ function PricingPage() {
     setPublishPending(true);
     try {
       await trpcClientDash.pricingPlansManagement.publish.mutate();
+      const snapshotList =
+        await trpcClientDash.pricingPlansManagement.listSnapshots.query();
+      setSnapshots(snapshotList);
       msg.success("已发布");
-      await refreshData();
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "发布失败");
     } finally {
@@ -340,20 +368,23 @@ function PricingPage() {
   const handleRestore = async (snapshotId: string) => {
     setRestorePending(snapshotId);
     try {
-      await trpcClientDash.pricingPlansManagement.restoreSnapshot.mutate({
-        id: snapshotId,
-      });
-      msg.success("已回退到此版本");
-      await refreshData();
+      const result =
+        await trpcClientDash.pricingPlansManagement.restoreSnapshot.mutate({
+          id: snapshotId,
+        });
+      const d = (result.data ?? EMPTY_DATA) as SnapshotData;
+      setData(d);
+      setSavedData(d);
+      const snapshotList =
+        await trpcClientDash.pricingPlansManagement.listSnapshots.query();
+      setSnapshots(snapshotList);
+      msg.success("已回退到此版本（已创建为新草稿）");
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "回退失败");
     } finally {
       setRestorePending(null);
     }
   };
-
-  const latestPublished = snapshots.find((s) => s.status === "published");
-  const hasDraft = snapshots.some((s) => s.status === "draft");
 
   if (loading) {
     return (
@@ -363,26 +394,25 @@ function PricingPage() {
     );
   }
 
+  const pendingDeletePlan =
+    pendingDeleteIdx != null ? data.plans[pendingDeleteIdx] : null;
+
   return (
     <main className="size-full overflow-y-auto">
       <div className="px-4 pt-4 flex items-center justify-between">
         <DashBackButton />
         <div className="flex items-center gap-2">
-          {latestPublished && (
-            <span className="text-xs text-base-content/50">
-              最近发布: {formatTime(latestPublished.published_at)}
-            </span>
+          {hasChanges && (
+            <span className="badge badge-warning badge-sm">未保存</span>
           )}
           <button
             type="button"
             className="btn btn-sm btn-ghost gap-2"
             onClick={() => {
-              if (config) {
-                setConfigForm({
-                  daytime_start: config.daytime_start,
-                  daytime_end: config.daytime_end,
-                });
-              }
+              setConfigForm({
+                daytime_start: data.config.daytime_start,
+                daytime_end: data.config.daytime_end,
+              });
               configDialogRef.current?.showModal();
             }}
           >
@@ -393,29 +423,47 @@ function PricingPage() {
       </div>
 
       <div className="mx-auto w-full max-w-4xl px-4 pb-28 space-y-6">
-        {config && (
-          <div className="text-sm text-base-content/60">
-            白天 {config.daytime_start} ~ {config.daytime_end} / 晚上{" "}
-            {config.daytime_end} ~ 次日{config.daytime_start}
+        <div className="text-sm text-base-content/60">
+          白天 {data.config.daytime_start} ~ {data.config.daytime_end} / 晚上{" "}
+          {data.config.daytime_end} ~ 次日{data.config.daytime_start}
+        </div>
+
+        {/* Fallback */}
+        {!fallbackPlan ? (
+          <div className="card bg-base-100 shadow-sm">
+            <div className="card-body items-center py-8 gap-4">
+              <p className="text-base-content/60">尚未创建兜底计划</p>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={addFallbackPlan}
+              >
+                初始化兜底计划
+              </button>
+            </div>
           </div>
+        ) : (
+          <FallbackSection
+            plan={fallbackPlan}
+            onChange={(updates) => {
+              const idx = data.plans.findIndex(
+                (p) => p.plan_type === "fallback",
+              );
+              if (idx !== -1) updatePlan(idx, updates);
+            }}
+          />
         )}
 
-        <FallbackSection
-          plan={fallbackPlan}
-          onRefresh={refreshData}
-          msg={msg}
-        />
-
+        {/* Conditional */}
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold">条件计划</h2>
           <button
             type="button"
             className="btn btn-sm btn-primary"
-            onClick={() => void handleCreate()}
-            disabled={createPending}
+            onClick={addConditionalPlan}
           >
             <PlusIcon className="size-4" />
-            {createPending ? "创建中..." : "新建条件计划"}
+            新建条件计划
           </button>
         </div>
 
@@ -425,27 +473,33 @@ function PricingPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {conditionalPlans.map((plan) => {
-              const cond = plan.conditions ?? {
-                date: { type: "workdays" as const },
-                time: { type: "all_day" as const },
-                member: { type: "irrelevant" as const },
+            {data.plans.map((plan, globalIdx) => {
+              if (plan.plan_type !== "conditional") return null;
+              const cond = (plan.conditions ?? {
+                date: { type: "workdays" },
+                time: { type: "all_day" },
+                member: { type: "irrelevant" },
                 scope: [],
-              };
+              }) as Conditions;
 
               return (
                 <div
-                  key={plan.id}
+                  key={globalIdx}
                   draggable
-                  onDragStart={() => handleDragStart(plan.id)}
-                  onDragOver={(e) => handleDragOver(e, plan.id)}
-                  onDragLeave={handleDragLeave}
+                  onDragStart={() => handleDragStart(globalIdx)}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragOverIdx(globalIdx);
+                  }}
+                  onDragLeave={() => setDragOverIdx(null)}
                   onDrop={(e) => {
                     e.preventDefault();
-                    void handleDrop(plan.id);
+                    handleDrop(globalIdx);
                   }}
-                  className={`card bg-base-100 shadow-sm transition-all ${dragOverId === plan.id ? "ring-2 ring-primary" : ""}`}
-                  style={{ opacity: dragOverId === plan.id ? 0.6 : 1 }}
+                  className={`card bg-base-100 shadow-sm transition-all ${dragOverIdx === globalIdx ? "ring-2 ring-primary" : ""}`}
+                  style={{
+                    opacity: dragOverIdx === globalIdx ? 0.6 : 1,
+                  }}
                 >
                   <div className="card-body p-4">
                     <div className="flex items-center gap-3">
@@ -478,7 +532,7 @@ function PricingPage() {
                             <span className="badge badge-outline badge-xs">
                               {cond.scope
                                 .map(
-                                  (s) =>
+                                  (s: string) =>
                                     SCOPE_OPTIONS.find((o) => o.value === s)
                                       ?.label ?? s,
                                 )
@@ -498,11 +552,11 @@ function PricingPage() {
                           type="checkbox"
                           className="toggle toggle-sm toggle-success"
                           checked={plan.enabled}
-                          onChange={() => void handleToggle(plan)}
+                          onChange={() => handleToggle(globalIdx)}
                         />
                         <Link
                           to="/dash/pricing/$id"
-                          params={{ id: plan.id }}
+                          params={{ id: String(globalIdx) }}
                           className="btn btn-xs btn-ghost"
                         >
                           <PencilSimpleIcon className="size-4" />
@@ -511,7 +565,7 @@ function PricingPage() {
                         <button
                           type="button"
                           className="btn btn-xs btn-ghost btn-error"
-                          onClick={() => openDeleteDialog(plan)}
+                          onClick={() => openDeleteDialog(globalIdx)}
                         >
                           <TrashIcon className="size-4" />
                         </button>
@@ -524,6 +578,7 @@ function PricingPage() {
           </div>
         )}
 
+        {/* History */}
         <div className="mt-8">
           <button
             type="button"
@@ -585,12 +640,16 @@ function PricingPage() {
         </div>
       </div>
 
+      {/* Sticky bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-base-100 border-t border-base-200 px-4 py-3 flex items-center justify-end gap-3 z-50">
+        {hasChanges && (
+          <span className="text-xs text-warning mr-auto">有未保存的改动</span>
+        )}
         <button
           type="button"
           className="btn btn-sm gap-2"
           onClick={() => void handleSaveDraft()}
-          disabled={savePending}
+          disabled={savePending || !hasChanges}
         >
           <FloppyDiskIcon className="size-4" />
           {savePending ? "保存中..." : "保存草稿"}
@@ -599,14 +658,17 @@ function PricingPage() {
           type="button"
           className="btn btn-sm btn-primary gap-2"
           onClick={() => void handlePublish()}
-          disabled={publishPending || !hasDraft}
-          title={!hasDraft ? "没有可发布的草稿，请先保存" : undefined}
+          disabled={publishPending || hasChanges || !hasDraft}
+          title={
+            hasChanges ? "请先保存草稿" : !hasDraft ? "没有可发布的草稿" : ""
+          }
         >
           <CloudArrowUpIcon className="size-4" />
           {publishPending ? "发布中..." : "发布"}
         </button>
       </div>
 
+      {/* Config dialog */}
       <dialog ref={configDialogRef} className="modal">
         <div className="modal-box">
           <div className="flex items-center justify-between mb-4">
@@ -619,7 +681,6 @@ function PricingPage() {
               <XIcon className="size-4" />
             </button>
           </div>
-
           <div className="flex flex-col gap-4">
             <label className="flex flex-col gap-2">
               <span className="label text-sm font-semibold">白天开始时间</span>
@@ -650,27 +711,26 @@ function PricingPage() {
               />
             </label>
           </div>
-
           <div className="modal-action mt-6">
             <button
               type="button"
               className="btn btn-primary"
-              onClick={() => void handleSaveConfig()}
-              disabled={configPending}
+              onClick={handleSaveConfig}
             >
-              {configPending ? "保存中..." : "保存"}
+              确认
             </button>
           </div>
         </div>
       </dialog>
 
+      {/* Delete dialog */}
       <dialog ref={deleteDialogRef} className="modal">
-        {pendingDelete && (
+        {pendingDeletePlan && (
           <div className="modal-box">
             <h3 className="font-bold text-lg mb-4">确认删除计划</h3>
             <p>
-              确定要删除 <strong>{pendingDelete.name}</strong>{" "}
-              吗？此操作不可撤销。
+              确定要删除 <strong>{pendingDeletePlan.name}</strong>{" "}
+              吗？此操作需保存后生效。
             </p>
             <div className="modal-action mt-6">
               <button
@@ -678,7 +738,7 @@ function PricingPage() {
                 className="btn"
                 onClick={() => {
                   deleteDialogRef.current?.close();
-                  setTimeout(() => setPendingDelete(null), 100);
+                  setPendingDeleteIdx(null);
                 }}
               >
                 取消
@@ -686,10 +746,9 @@ function PricingPage() {
               <button
                 type="button"
                 className="btn btn-error"
-                onClick={() => void confirmDelete()}
-                disabled={deletePending}
+                onClick={confirmDelete}
               >
-                {deletePending ? "删除中..." : "确认删除"}
+                确认删除
               </button>
             </div>
           </div>
@@ -701,102 +760,11 @@ function PricingPage() {
 
 function FallbackSection({
   plan,
-  onRefresh,
-  msg,
+  onChange,
 }: {
-  plan: PricingPlan | null;
-  onRefresh: () => Promise<void>;
-  msg: ReturnType<typeof useMsg>;
+  plan: PlanEntry;
+  onChange: (updates: Partial<PlanEntry>) => void;
 }) {
-  const [price, setPrice] = useState("");
-  const [capUnit, setCapUnit] = useState<"per_day" | "split_day_night">(
-    "per_day",
-  );
-  const [capPrice, setCapPrice] = useState("");
-  const [capPriceDay, setCapPriceDay] = useState("");
-  const [capPriceNight, setCapPriceNight] = useState("");
-  const [saving, setSaving] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (plan) {
-      setPrice(centsToYuan(plan.price));
-      setCapUnit(plan.cap_unit ?? "per_day");
-      setCapPrice(centsToYuan(plan.cap_price));
-      setCapPriceDay(centsToYuan(plan.cap_price_day));
-      setCapPriceNight(centsToYuan(plan.cap_price_night));
-    }
-  }, [plan]);
-
-  const handleInit = async () => {
-    setSaving(true);
-    try {
-      await trpcClientDash.pricingPlansManagement.create.mutate({
-        plan_type: "fallback",
-        name: "兜底计划",
-        billing_type: "hourly",
-        price: 1000,
-        cap_enabled: true,
-        cap_unit: "per_day",
-        cap_price: 5000,
-      });
-      msg.success("兜底计划已初始化");
-      await onRefresh();
-    } catch (err) {
-      msg.error(err instanceof Error ? err.message : "初始化失败");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const autoSave = useCallback(
-    (updates: Record<string, unknown>) => {
-      if (!plan) return;
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(async () => {
-        try {
-          await trpcClientDash.pricingPlansManagement.update.mutate({
-            id: plan.id,
-            ...updates,
-          });
-        } catch {}
-      }, 800);
-    },
-    [plan],
-  );
-
-  const handlePriceChange = (val: string) => {
-    setPrice(val);
-    autoSave({ price: yuanToCents(val) });
-  };
-
-  const handleCapUnitChange = (unit: "per_day" | "split_day_night") => {
-    setCapUnit(unit);
-    autoSave({
-      cap_unit: unit,
-      cap_price: unit === "per_day" ? yuanToCents(capPrice) : null,
-      cap_price_day:
-        unit === "split_day_night" ? yuanToCents(capPriceDay) : null,
-      cap_price_night:
-        unit === "split_day_night" ? yuanToCents(capPriceNight) : null,
-    });
-  };
-
-  const handleCapPriceChange = (val: string) => {
-    setCapPrice(val);
-    autoSave({ cap_price: yuanToCents(val) });
-  };
-
-  const handleCapPriceDayChange = (val: string) => {
-    setCapPriceDay(val);
-    autoSave({ cap_price_day: yuanToCents(val) });
-  };
-
-  const handleCapPriceNightChange = (val: string) => {
-    setCapPriceNight(val);
-    autoSave({ cap_price_night: yuanToCents(val) });
-  };
-
   return (
     <div className="card bg-base-100 shadow-sm">
       <div className="card-body">
@@ -804,109 +772,120 @@ function FallbackSection({
           <h2 className="card-title text-lg">兜底计划</h2>
           <span className="badge badge-success badge-sm">始终生效</span>
         </div>
+        <div className="flex flex-col gap-4">
+          <label className="flex flex-col gap-2">
+            <span className="label text-sm font-semibold">每小时价格 (元)</span>
+            <input
+              type="number"
+              className="input input-bordered w-full max-w-xs"
+              value={centsToYuan(plan.price)}
+              onChange={(e) => {
+                const n = Number.parseFloat(e.target.value);
+                onChange({ price: Number.isNaN(n) ? 0 : Math.round(n * 100) });
+              }}
+              min={0}
+              step={0.01}
+            />
+          </label>
 
-        {!plan ? (
-          <div className="flex flex-col items-center gap-4 py-8">
-            <p className="text-base-content/60">尚未创建兜底计划</p>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => void handleInit()}
-              disabled={saving}
-            >
-              {saving ? "创建中..." : "初始化兜底计划"}
-            </button>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-4">
-            <label className="flex flex-col gap-2">
-              <span className="label text-sm font-semibold">
-                每小时价格 (元)
-              </span>
-              <input
-                type="number"
-                className="input input-bordered w-full max-w-xs"
-                value={price}
-                onChange={(e) => handlePriceChange(e.target.value)}
-                min={0}
-                step={0.01}
-              />
-            </label>
+          <div className="flex flex-col gap-2">
+            <span className="label text-sm font-semibold">封顶设置</span>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="fallback-cap-unit"
+                  className="radio radio-sm"
+                  checked={plan.cap_unit === "per_day"}
+                  onChange={() =>
+                    onChange({
+                      cap_unit: "per_day",
+                      cap_price_day: null,
+                      cap_price_night: null,
+                    })
+                  }
+                />
+                <span className="text-sm">按天封顶</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="fallback-cap-unit"
+                  className="radio radio-sm"
+                  checked={plan.cap_unit === "split_day_night"}
+                  onChange={() =>
+                    onChange({ cap_unit: "split_day_night", cap_price: null })
+                  }
+                />
+                <span className="text-sm">白天/晚上分别封顶</span>
+              </label>
+            </div>
 
-            <div className="flex flex-col gap-2">
-              <span className="label text-sm font-semibold">封顶设置</span>
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="fallback-cap-unit"
-                    className="radio radio-sm"
-                    checked={capUnit === "per_day"}
-                    onChange={() => handleCapUnitChange("per_day")}
-                  />
-                  <span className="text-sm">按天封顶</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="fallback-cap-unit"
-                    className="radio radio-sm"
-                    checked={capUnit === "split_day_night"}
-                    onChange={() => handleCapUnitChange("split_day_night")}
-                  />
-                  <span className="text-sm">白天/晚上分别封顶</span>
-                </label>
-              </div>
-
-              {capUnit === "per_day" ? (
-                <label className="flex flex-col gap-1">
+            {plan.cap_unit === "per_day" ? (
+              <label className="flex flex-col gap-1">
+                <span className="text-sm text-base-content/60">
+                  封顶价格 (元)
+                </span>
+                <input
+                  type="number"
+                  className="input input-bordered input-sm w-full max-w-xs"
+                  value={centsToYuan(plan.cap_price)}
+                  onChange={(e) => {
+                    const n = Number.parseFloat(e.target.value);
+                    onChange({
+                      cap_price: Number.isNaN(n) ? 0 : Math.round(n * 100),
+                    });
+                  }}
+                  min={0}
+                  step={0.01}
+                />
+              </label>
+            ) : (
+              <div className="flex gap-4">
+                <label className="flex flex-col gap-1 flex-1 max-w-xs">
                   <span className="text-sm text-base-content/60">
-                    封顶价格 (元)
+                    白天封顶 (元)
                   </span>
                   <input
                     type="number"
-                    className="input input-bordered input-sm w-full max-w-xs"
-                    value={capPrice}
-                    onChange={(e) => handleCapPriceChange(e.target.value)}
+                    className="input input-bordered input-sm w-full"
+                    value={centsToYuan(plan.cap_price_day)}
+                    onChange={(e) => {
+                      const n = Number.parseFloat(e.target.value);
+                      onChange({
+                        cap_price_day: Number.isNaN(n)
+                          ? 0
+                          : Math.round(n * 100),
+                      });
+                    }}
                     min={0}
                     step={0.01}
                   />
                 </label>
-              ) : (
-                <div className="flex gap-4">
-                  <label className="flex flex-col gap-1 flex-1 max-w-xs">
-                    <span className="text-sm text-base-content/60">
-                      白天封顶 (元)
-                    </span>
-                    <input
-                      type="number"
-                      className="input input-bordered input-sm w-full"
-                      value={capPriceDay}
-                      onChange={(e) => handleCapPriceDayChange(e.target.value)}
-                      min={0}
-                      step={0.01}
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1 flex-1 max-w-xs">
-                    <span className="text-sm text-base-content/60">
-                      晚上封顶 (元)
-                    </span>
-                    <input
-                      type="number"
-                      className="input input-bordered input-sm w-full"
-                      value={capPriceNight}
-                      onChange={(e) =>
-                        handleCapPriceNightChange(e.target.value)
-                      }
-                      min={0}
-                      step={0.01}
-                    />
-                  </label>
-                </div>
-              )}
-            </div>
+                <label className="flex flex-col gap-1 flex-1 max-w-xs">
+                  <span className="text-sm text-base-content/60">
+                    晚上封顶 (元)
+                  </span>
+                  <input
+                    type="number"
+                    className="input input-bordered input-sm w-full"
+                    value={centsToYuan(plan.cap_price_night)}
+                    onChange={(e) => {
+                      const n = Number.parseFloat(e.target.value);
+                      onChange({
+                        cap_price_night: Number.isNaN(n)
+                          ? 0
+                          : Math.round(n * 100),
+                      });
+                    }}
+                    min={0}
+                    step={0.01}
+                  />
+                </label>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
