@@ -13,7 +13,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import dayjs from "@/shared/utils/dayjs-config";
-import { trpcClientDash } from "@/shared/utils/trpc";
+import {
+  calculatePrice,
+  formatPrice,
+  type SnapshotData,
+} from "@/shared/utils/pricing";
+import trpcClientPublic, { trpcClientDash } from "@/shared/utils/trpc";
 
 type StatusFilter = "all" | "active" | "paused" | "ended";
 type SortBy = "start_at" | "end_at" | "seats";
@@ -43,6 +48,10 @@ function RouteComponent() {
   const msg = useMsg();
   const [data, setData] = useState<OrdersList | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pricingSnapshot, setPricingSnapshot] = useState<SnapshotData | null>(
+    null,
+  );
+  const [, setTick] = useState(0);
 
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -60,16 +69,20 @@ function RouteComponent() {
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await trpcClientDash.ordersManagement.list.query({
-        search: searchRef.current,
-        status: statusFilter,
-        sortBy,
-        sortOrder,
-        groupBy,
-        page,
-        pageSize,
-      });
+      const [result, published] = await Promise.all([
+        trpcClientDash.ordersManagement.list.query({
+          search: searchRef.current,
+          status: statusFilter,
+          sortBy,
+          sortOrder,
+          groupBy,
+          page,
+          pageSize,
+        }),
+        trpcClientPublic.pricing.getPublished.query(),
+      ]);
       setData(result);
+      setPricingSnapshot(published?.data ?? null);
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "获取订单列表失败");
     } finally {
@@ -80,6 +93,11 @@ function RouteComponent() {
   useEffect(() => {
     void fetchOrders();
   }, [fetchOrders]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setTick((t) => t + 1), 30000);
+    return () => clearInterval(timer);
+  }, []);
 
   const handleSearch = () => {
     setPage(1);
@@ -370,9 +388,23 @@ function RouteComponent() {
                       <td className="text-sm">{order.seats}</td>
                       <td className="text-sm font-mono">
                         {order.final_price != null
-                          ? `¥${(order.final_price / 100).toFixed(2)}`
-                          : order.status !== "ended"
-                            ? "计时中"
+                          ? formatPrice(order.final_price)
+                          : order.status !== "ended" && pricingSnapshot
+                            ? (() => {
+                                const p = calculatePrice(
+                                  order.start_at,
+                                  Date.now(),
+                                  order.table?.type ?? "boardgame",
+                                  pricingSnapshot,
+                                );
+                                return p ? (
+                                  <span className="text-base-content/50">
+                                    ~{formatPrice(p.finalPrice)}
+                                  </span>
+                                ) : (
+                                  "—"
+                                );
+                              })()
                             : "—"}
                       </td>
                       <td>
