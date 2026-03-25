@@ -108,7 +108,12 @@ const occupy = publicProcedure
 
     const table = await tdb.query.tablesTable.findFirst({
       where: (t, { eq }) => eq(t.code, input.code),
-      with: { occupancies: { columns: { seats: true } } },
+      with: {
+        occupancies: {
+          where: (o, { ne }) => ne(o.status, "ended"),
+          columns: { seats: true },
+        },
+      },
     });
     if (!table) throw new Error("桌台不存在");
     if (table.status === "inactive") throw new Error("桌台已下架");

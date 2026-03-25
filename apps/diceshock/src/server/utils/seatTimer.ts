@@ -25,7 +25,11 @@ export async function fetchTableStateForDO(
 ): Promise<{ table: TableInfo; occupancies: OccupancyInfo[] } | null> {
   const table = await tdb.query.tablesTable.findFirst({
     where: (t, { eq }) => eq(t.id, tableId),
-    with: { occupancies: true },
+    with: {
+      occupancies: {
+        where: (o, { ne }) => ne(o.status, "ended"),
+      },
+    },
   });
   if (!table) return null;
 
