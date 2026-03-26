@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "./target/release/ty-jk --dev",
     "x": "./target/release/ty-jk",
+    "deploy-diceshock": "nx run diceshock:deploy",
+    "deploy-runespark": "nx run runespark:deploy",
     "drizzle": "./target/release/ty-jk --run drizzle drizzle-kit",
     "lint": "./target/release/ty-jk --run lint biome check",
     "build": "./target/release/ty-jk --run build nx run-many --target=build"
