@@ -1,8 +1,4 @@
-import {
-  PencilSimpleIcon,
-  PlusIcon,
-  TrashIcon,
-} from "@phosphor-icons/react/dist/ssr";
+import { EyeIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
@@ -192,8 +188,8 @@ function RouteComponent() {
                         params={{ id: event.id }}
                         className="btn btn-xs btn-ghost"
                       >
-                        <PencilSimpleIcon className="size-4" />
-                        编辑
+                        <EyeIcon className="size-4" />
+                        详情
                       </Link>
                       <button
                         type="button"

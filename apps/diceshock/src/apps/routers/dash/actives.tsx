@@ -1,6 +1,6 @@
 import {
+  EyeIcon,
   MagnifyingGlassIcon,
-  PencilSimpleIcon,
   TrashIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -312,8 +312,8 @@ function RouteComponent() {
                           params={{ id: active.id }}
                           className="btn btn-xs btn-ghost"
                         >
-                          <PencilSimpleIcon className="size-4" />
-                          编辑
+                          <EyeIcon className="size-4" />
+                          详情
                         </Link>
                         <button
                           type="button"

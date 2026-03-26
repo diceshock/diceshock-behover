@@ -595,8 +595,8 @@ function PricingPage() {
                           params={{ id: String(globalIdx) }}
                           className="btn btn-xs btn-ghost"
                         >
-                          <PencilSimpleIcon className="size-4" />
-                          编辑
+                          <EyeIcon className="size-4" />
+                          详情
                         </Link>
                         <button
                           type="button"

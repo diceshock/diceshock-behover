@@ -1,4 +1,4 @@
-import { PencilLineIcon, UserMinusIcon } from "@phosphor-icons/react/dist/ssr";
+import { EyeIcon, UserMinusIcon } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
@@ -228,8 +228,8 @@ function RouteComponent() {
                           params={{ id: user.id }}
                           className="btn btn-xs btn-ghost btn-primary"
                         >
-                          编辑
-                          <PencilLineIcon />
+                          详情
+                          <EyeIcon />
                         </Link>
 
                         <button
