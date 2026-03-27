@@ -7,10 +7,12 @@ import {
   MegaphoneIcon,
   PackageIcon,
   RobotIcon,
+  TableIcon,
   UserIcon,
   UsersIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { DashNavMenuButton } from "@/client/components/diceshock/DashNavMenu";
 import InventoryManagementCard from "@/client/components/diceshock/InventoryManagementCard";
 
 export const Route = createFileRoute("/dash/")({
@@ -21,6 +23,7 @@ function RouteComponent() {
   return (
     <main className="size-full p-4 overflow-y-auto">
       <div className="max-w-7xl mx-auto space-y-6">
+        <DashNavMenuButton />
         <div className="bg-base-100 shadow-sm rounded-lg p-4">
           <h2 className="text-lg font-semibold mb-4">快速导航</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -121,6 +124,25 @@ function RouteComponent() {
                   <h3 className="card-title text-lg">活动管理</h3>
                   <p className="text-sm text-base-content/60">
                     管理活动发布和编辑
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            to="/dash/tables"
+            className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+          >
+            <div className="card-body">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-secondary/10 rounded-lg">
+                  <TableIcon className="size-8 text-secondary" />
+                </div>
+                <div>
+                  <h3 className="card-title text-lg">桌台管理</h3>
+                  <p className="text-sm text-base-content/60">
+                    管理桌台和座位信息
                   </p>
                 </div>
               </div>
