@@ -637,30 +637,32 @@ function PricingPage() {
                 snapshots.map((s) => (
                   <div
                     key={s.id}
-                    className="flex items-center justify-between bg-base-200 rounded-lg px-4 py-3"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-base-200 rounded-lg px-4 py-3 gap-2 sm:gap-4"
                   >
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         <span
-                          className={`badge badge-sm ${s.status === "published" ? "badge-success" : "badge-ghost"}`}
+                          className={`badge badge-sm shrink-0 ${s.status === "published" ? "badge-success" : "badge-ghost"}`}
                         >
                           {s.status === "published" ? "已发布" : "草稿"}
                         </span>
-                        <span className="text-sm font-medium">{s.name}</span>
-                        <span className="text-xs text-base-content/40">
+                        <span className="text-sm font-medium truncate">
+                          {s.name}
+                        </span>
+                        <span className="text-xs text-base-content/40 whitespace-nowrap">
                           {formatTime(s.created_at)}
                         </span>
                         {s.published_at && (
-                          <span className="text-xs text-base-content/50">
+                          <span className="text-xs text-base-content/50 whitespace-nowrap">
                             · 发布于 {formatTime(s.published_at)}
                           </span>
                         )}
                       </div>
-                      <span className="text-xs text-base-content/50">
+                      <span className="text-xs text-base-content/50 line-clamp-2">
                         {s.summary}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 shrink-0 self-end sm:self-center">
                       <button
                         type="button"
                         className="btn btn-xs btn-ghost gap-1"
