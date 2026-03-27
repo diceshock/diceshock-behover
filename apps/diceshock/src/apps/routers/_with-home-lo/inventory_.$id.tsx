@@ -75,13 +75,13 @@ function PlayerAxis({
               <span
                 className={`
                   font-bold
-                  ${isBest ? "text-lg sm:text-xl text-warning" : isSupported ? "text-base sm:text-lg text-base-content" : "text-sm text-base-content/30"}
+                  ${isBest ? "text-lg sm:text-xl text-warning" : isSupported ? "text-base sm:text-lg text-neutral-content" : "text-sm text-neutral-content/30"}
                 `}
               >
                 {n}
               </span>
             </div>
-            <span className="text-[0.625rem] text-base-content/40">
+            <span className="text-[0.625rem] text-neutral-content/40">
               {isBest ? "最佳" : isSupported ? "可玩" : ""}
             </span>
           </div>
@@ -402,9 +402,9 @@ function BoardGameDetailPage() {
         </div>
 
         {playerNum.length > 0 && (
-          <div className="card bg-neutral border border-base-content/5 mb-8">
+          <div className="card bg-neutral text-neutral-content border border-base-content/5 mb-8">
             <div className="card-body p-5 sm:p-6">
-              <h3 className="text-sm font-bold text-base-content/60 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <h3 className="text-sm font-bold text-neutral-content/60 uppercase tracking-wider mb-4 flex items-center gap-2">
                 <UsersIcon className="size-4" />
                 人数适配
               </h3>
@@ -415,7 +415,7 @@ function BoardGameDetailPage() {
                 />
               </div>
               {bestPlayerNum.length > 0 && (
-                <p className="text-xs text-base-content/30 text-center mt-3">
+                <p className="text-xs text-neutral-content/30 text-center mt-3">
                   <CrownSimpleIcon
                     className="inline size-3 text-warning mr-1"
                     weight="fill"
@@ -428,9 +428,9 @@ function BoardGameDetailPage() {
         )}
 
         {(categories.length > 0 || modes.length > 0) && (
-          <div className="card bg-neutral border border-base-content/5 mb-8">
+          <div className="card bg-neutral text-neutral-content border border-base-content/5 mb-8">
             <div className="card-body p-5 sm:p-6">
-              <h3 className="text-sm font-bold text-base-content/60 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <h3 className="text-sm font-bold text-neutral-content/60 uppercase tracking-wider mb-4 flex items-center gap-2">
                 <TagIcon className="size-4" />
                 分类与模式
               </h3>
@@ -444,7 +444,7 @@ function BoardGameDetailPage() {
                       {c.sch_domain_value || c.eng_domain_value}
                     </span>
                     {c.sch_domain_value && c.eng_domain_value && (
-                      <span className="text-base-content/30 ml-2 text-xs">
+                      <span className="text-neutral-content/30 ml-2 text-xs">
                         {c.eng_domain_value}
                       </span>
                     )}
@@ -459,7 +459,7 @@ function BoardGameDetailPage() {
                       {m.sch_domain_value || m.eng_domain_value}
                     </span>
                     {m.sch_domain_value && m.eng_domain_value && (
-                      <span className="text-base-content/30 ml-2 text-xs">
+                      <span className="text-neutral-content/30 ml-2 text-xs">
                         {m.eng_domain_value}
                       </span>
                     )}
@@ -471,9 +471,9 @@ function BoardGameDetailPage() {
         )}
 
         {difficulty > 0 && (
-          <div className="card bg-neutral border border-base-content/5 mb-8">
+          <div className="card bg-neutral text-neutral-content border border-base-content/5 mb-8">
             <div className="card-body p-5 sm:p-6">
-              <h3 className="text-sm font-bold text-base-content/60 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <h3 className="text-sm font-bold text-neutral-content/60 uppercase tracking-wider mb-4 flex items-center gap-2">
                 <GameControllerIcon className="size-4" />
                 难度指数
               </h3>
@@ -484,12 +484,12 @@ function BoardGameDetailPage() {
                     style={{ width: `${(difficulty / 5) * 100}%` }}
                   />
                 </div>
-                <span className="text-lg font-bold text-base-content/70 shrink-0">
+                <span className="text-lg font-bold text-neutral-content/70 shrink-0">
                   {difficulty.toFixed(1)}
-                  <span className="text-sm text-base-content/30">/5</span>
+                  <span className="text-sm text-neutral-content/30">/5</span>
                 </span>
               </div>
-              <div className="flex justify-between text-xs text-base-content/30 mt-1 px-0.5">
+              <div className="flex justify-between text-xs text-neutral-content/30 mt-1 px-0.5">
                 <span>简单</span>
                 <span>中等</span>
                 <span>困难</span>
