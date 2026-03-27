@@ -1,19 +1,18 @@
 import { ArrowLeftIcon } from "@phosphor-icons/react/dist/ssr";
 import { Link } from "@tanstack/react-router";
+import { DashNavMenuButton } from "@/client/components/diceshock/DashNavMenu";
 
 type DashBackButtonProps = {
   to?: string;
-  label?: string;
 };
 
-export default function DashBackButton({
-  to = "/dash",
-  label = "返回仪表盘",
-}: DashBackButtonProps) {
+export default function DashBackButton({ to = "/dash" }: DashBackButtonProps) {
   return (
-    <Link to={to} className="btn btn-ghost btn-sm gap-2 mb-4">
-      <ArrowLeftIcon className="size-4" />
-      {label}
-    </Link>
+    <div className="flex items-center gap-1">
+      <Link to={to} className="btn btn-ghost btn-square btn-sm">
+        <ArrowLeftIcon className="size-5" />
+      </Link>
+      <DashNavMenuButton />
+    </div>
   );
 }

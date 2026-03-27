@@ -1,20 +1,10 @@
 import {
-  CalendarDotsIcon,
-  ClipboardTextIcon,
-  CurrencyDollarIcon,
-  GaugeIcon,
-  MegaphoneIcon,
-  SignOutIcon,
-  TableIcon,
-  UsersIcon,
-} from "@phosphor-icons/react/dist/ssr";
-import {
   ClientOnly,
   createFileRoute,
   Link,
   Outlet,
 } from "@tanstack/react-router";
-import ThemeSwap from "@/client/components/ThemeSwap";
+import DashNavDrawer from "@/client/components/diceshock/DashNavMenu";
 
 export const Route = createFileRoute("/dash")({
   component: RouteComponent,
@@ -25,80 +15,9 @@ export const Route = createFileRoute("/dash")({
 function RouteComponent() {
   return (
     <ClientOnly>
-      {/* 侧边栏 - 大屏幕显示，小屏幕隐藏 */}
-      <aside className="hidden lg:block fixed w-20 hover:w-auto h-screen bg-secondary overflow-hidden z-50">
-        <ul className="menu menu-xl rounded-none bg-base-200 rounded-box w-56 h-screen">
-          <li>
-            <Link to="/dash" className="gap-12">
-              <GaugeIcon className="size-6" />
-              仪表盘
-            </Link>
-          </li>
-
-          <li>
-            <Link to="/dash/users" className="gap-12">
-              <UsersIcon className="size-6" />
-              用户
-            </Link>
-          </li>
-
-          <li>
-            <Link to="/dash/actives" className="gap-12">
-              <CalendarDotsIcon className="size-6" />
-              约局管理
-            </Link>
-          </li>
-
-          <li>
-            <Link to="/dash/events" className="gap-12">
-              <MegaphoneIcon className="size-6" />
-              活动管理
-            </Link>
-          </li>
-
-          <li>
-            <Link to="/dash/tables" className="gap-12">
-              <TableIcon className="size-6" />
-              桌台管理
-            </Link>
-          </li>
-
-          <li>
-            <Link to="/dash/orders" className="gap-12">
-              <ClipboardTextIcon className="size-6" />
-              订单管理
-            </Link>
-          </li>
-
-          <li>
-            <Link to="/dash/pricing" className="gap-12">
-              <CurrencyDollarIcon className="size-6" />
-              价格计划
-            </Link>
-          </li>
-
-          <li className="mt-auto">
-            <label className="gap-12">
-              <ThemeSwap />
-              主题
-            </label>
-          </li>
-
-          <li>
-            <a
-              href="https://diceshock.cloudflareaccess.com/cdn-cgi/access/logout"
-              className="gap-12"
-            >
-              <SignOutIcon />
-              登出
-            </a>
-          </li>
-        </ul>
-      </aside>
-
-      <main className="flex min-h-screen lg:pl-20">
+      <DashNavDrawer>
         <Outlet />
-      </main>
+      </DashNavDrawer>
     </ClientOnly>
   );
 }
