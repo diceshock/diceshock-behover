@@ -2,6 +2,7 @@ import {
   ArrowDownIcon,
   ArrowUpIcon,
   CopyIcon,
+  DotsThreeVerticalIcon,
   MagnifyingGlassIcon,
   PauseIcon,
   PlayIcon,
@@ -12,6 +13,7 @@ import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import { useIsMobile } from "@/client/hooks/useIsMobile";
 import dayjs from "@/shared/utils/dayjs-config";
 import {
   calculatePrice,
@@ -47,6 +49,7 @@ function formatTime(val: number | null | undefined): string {
 function RouteComponent() {
   const msg = useMsg();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [data, setData] = useState<OrdersList | null>(null);
   const [loading, setLoading] = useState(true);
   const [pricingSnapshot, setPricingSnapshot] = useState<SnapshotData | null>(
@@ -445,7 +448,9 @@ function RouteComponent() {
                                   "btn btn-xs btn-ghost btn-error",
                                   actionPending === order.id && "btn-disabled",
                                 )}
-                                onClick={() => void handleEndOrder(order.id)}
+                                onClick={() =>
+                                  void handleEndOrder(order.id, order.status)
+                                }
                                 disabled={actionPending === order.id}
                               >
                                 <StopIcon className="size-3" />
@@ -473,7 +478,9 @@ function RouteComponent() {
                                   "btn btn-xs btn-ghost btn-error",
                                   actionPending === order.id && "btn-disabled",
                                 )}
-                                onClick={() => void handleEndOrder(order.id)}
+                                onClick={() =>
+                                  void handleEndOrder(order.id, order.status)
+                                }
                                 disabled={actionPending === order.id}
                               >
                                 <StopIcon className="size-3" />
