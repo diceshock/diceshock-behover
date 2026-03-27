@@ -396,11 +396,12 @@ function RouteComponent() {
                           "—"
                         )}
                       </td>
-                      <td>
+                      <td className="max-w-[120px]">
                         <Link
                           to="/dash/users/$id"
                           params={{ id: order.user_id ?? "" }}
-                          className="link link-hover"
+                          className="link link-hover block truncate"
+                          title={order.nickname}
                         >
                           {order.nickname}
                         </Link>
