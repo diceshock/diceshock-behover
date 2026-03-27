@@ -313,10 +313,27 @@ const getOccupancyByUserId = dashProcedure
     return occupancies;
   });
 
+const getByCode = dashProcedure
+  .input((v: unknown) => {
+    const { code } = v as { code: string };
+    if (!code) throw new Error("code is required");
+    return { code };
+  })
+  .query(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const table = await tdb.query.tablesTable.findFirst({
+      where: (t, { eq }) => eq(t.code, input.code),
+      columns: { id: true, name: true, type: true, status: true },
+    });
+    if (!table) throw new Error("桌台不存在");
+    return table;
+  });
+
 export default {
   list,
   create,
   getById,
+  getByCode,
   update,
   toggleStatus,
   remove,

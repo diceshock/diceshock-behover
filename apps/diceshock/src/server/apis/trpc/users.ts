@@ -1,6 +1,7 @@
 import db, { drizzle, pagedZ, sessions, userInfoTable, users } from "@lib/db";
 import z4, { z } from "zod/v4";
-import { publicProcedure } from "./baseTRPC";
+import { generateTOTP } from "@/shared/utils/totp";
+import { dashProcedure, publicProcedure } from "./baseTRPC";
 
 export const getFilterZ = z4.object({
   searchWords: z4.string().nonempty().optional(),
@@ -237,4 +238,46 @@ const disable = publicProcedure
     return { success: true };
   });
 
-export default { get, getById, mutation, disable };
+const verifyTotpZ = z.object({
+  totp: z.string(),
+  ua: z.string(),
+  lt: z.number(),
+});
+
+const verifyTotp = dashProcedure
+  .input(verifyTotpZ)
+  .mutation(async ({ input, ctx }) => {
+    const { KV } = ctx.env;
+
+    // List all TOTP secret keys from KV
+    let cursor: string | undefined;
+    const prefix = "totp_secret:";
+
+    do {
+      const listResult = await KV.list({
+        prefix,
+        cursor,
+      });
+
+      for (const key of listResult.keys) {
+        const userId = key.name.slice(prefix.length);
+        const secret = await KV.get(key.name);
+        if (!secret) continue;
+
+        // Check current and previous time step (allow 30s tolerance)
+        const now = Date.now();
+        const currentCode = await generateTOTP(secret, 30, 6, now);
+        const prevCode = await generateTOTP(secret, 30, 6, now - 30_000);
+
+        if (input.totp === currentCode || input.totp === prevCode) {
+          return { success: true as const, userId };
+        }
+      }
+
+      cursor = listResult.list_complete ? undefined : listResult.cursor;
+    } while (cursor);
+
+    return { success: false as const, message: "验证码无效或已过期" };
+  });
+
+export default { get, getById, mutation, disable, verifyTotp };
