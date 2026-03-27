@@ -15,7 +15,8 @@ import trpcClientPublic from "@/shared/utils/trpc";
 
 const SITE_KEY = "0x4AAAAAACNaVUPcjZJ2BWv-";
 
-const turnstileIns: typeof turnstile | null =
+/** Read lazily — the `defer` script may not be ready at module-eval time. */
+const getTurnstile = (): typeof turnstile | null =>
   (globalThis as any).turnstile ?? null;
 
 type SmsFormState = {
@@ -76,17 +77,19 @@ export default function useSmsCode({
     setCountdown(0);
     setError(null);
     prevPhoneRef.current = "";
-    if (turnstileIns && turnstileIdRef.current) {
-      turnstileIns.reset(turnstileIdRef.current);
+    const ts = getTurnstile();
+    if (ts && turnstileIdRef.current) {
+      ts.reset(turnstileIdRef.current);
     }
   }, []);
 
   useLayoutEffect(() => {
-    if (!turnstileIns || typeof window === "undefined") return;
+    if (typeof window === "undefined") return;
 
     if (!enabled) {
-      if (turnstileIdRef.current) {
-        turnstileIns.remove(turnstileIdRef.current);
+      const ts = getTurnstile();
+      if (ts && turnstileIdRef.current) {
+        ts.remove(turnstileIdRef.current);
         turnstileIdRef.current = null;
       }
       dispatchSmsForm({ type: "RESET" });
@@ -96,30 +99,43 @@ export default function useSmsCode({
       return;
     }
 
-    // 检查容器是否存在
     const container = document.querySelector(containerId);
     if (!container) return;
 
-    // 如果已经渲染过，先移除
-    if (turnstileIdRef.current) {
-      turnstileIns.remove(turnstileIdRef.current);
-      turnstileIdRef.current = null;
+    const renderWidget = (ts: typeof turnstile) => {
+      if (turnstileIdRef.current) {
+        ts.remove(turnstileIdRef.current);
+        turnstileIdRef.current = null;
+      }
+
+      turnstileIdRef.current = ts.render(containerId, {
+        sitekey: SITE_KEY,
+        theme: theme === "dark" ? "dark" : "light",
+        size: "normal",
+        callback: (token: string) => {
+          dispatchSmsForm({ type: "SET_BOTCHECK", payload: token });
+        },
+      });
+    };
+
+    const ts = getTurnstile();
+    if (ts) {
+      renderWidget(ts);
+    } else {
+      const pollId = window.setInterval(() => {
+        const ts = getTurnstile();
+        if (ts) {
+          clearInterval(pollId);
+          renderWidget(ts);
+        }
+      }, 200);
+      return () => clearInterval(pollId);
     }
 
-    // 渲染新的 turnstile
-    turnstileIdRef.current = turnstileIns.render(containerId, {
-      sitekey: SITE_KEY,
-      theme: theme === "dark" ? "dark" : "light",
-      size: "normal",
-      callback: (token) => {
-        dispatchSmsForm({ type: "SET_BOTCHECK", payload: token });
-      },
-    });
-
     return () => {
-      // 组件卸载或 enabled 变为 false 时清理
-      if (turnstileIdRef.current) {
-        turnstileIns.remove(turnstileIdRef.current);
+      const ts = getTurnstile();
+      if (ts && turnstileIdRef.current) {
+        ts.remove(turnstileIdRef.current);
         turnstileIdRef.current = null;
       }
     };
@@ -130,8 +146,9 @@ export default function useSmsCode({
     if (phone !== prevPhoneRef.current) {
       if (prevPhoneRef.current && smsForm.botcheck) {
         dispatchSmsForm({ type: "RESET" });
-        if (turnstileIns && turnstileIdRef.current) {
-          turnstileIns.reset(turnstileIdRef.current);
+        const ts = getTurnstile();
+        if (ts && turnstileIdRef.current) {
+          ts.reset(turnstileIdRef.current);
         }
       }
       prevPhoneRef.current = phone;
@@ -165,10 +182,10 @@ export default function useSmsCode({
 
       if (result.success) return setCountdown(20);
 
-      // 发送失败，重置人机验证
       dispatchSmsForm({ type: "RESET" });
-      if (turnstileIns && turnstileIdRef.current) {
-        turnstileIns.reset(turnstileIdRef.current);
+      const ts = getTurnstile();
+      if (ts && turnstileIdRef.current) {
+        ts.reset(turnstileIdRef.current);
       }
 
       if (!result.success && "message" in result)
@@ -176,10 +193,10 @@ export default function useSmsCode({
 
       setError("发送失败，请稍后重试");
     } catch {
-      // 网络错误，重置人机验证
       dispatchSmsForm({ type: "RESET" });
-      if (turnstileIns && turnstileIdRef.current) {
-        turnstileIns.reset(turnstileIdRef.current);
+      const ts = getTurnstile();
+      if (ts && turnstileIdRef.current) {
+        ts.reset(turnstileIdRef.current);
       }
       setError("网络错误，请稍后重试");
     }
