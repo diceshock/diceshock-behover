@@ -1,77 +1,60 @@
-import Image from "@tiptap/extension-image";
-import Link from "@tiptap/extension-link";
-import Underline from "@tiptap/extension-underline";
-import { EditorContent, useEditor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import { useState } from "react";
-import { BoardGameCard } from "./BoardGameCardExtension";
+import {
+  headingsPlugin,
+  imagePlugin,
+  linkPlugin,
+  listsPlugin,
+  MDXEditor,
+  quotePlugin,
+  thematicBreakPlugin,
+} from "@mdxeditor/editor";
+import "@mdxeditor/editor/style.css";
+import { useCallback, useState } from "react";
 
-function parseContent(content?: string) {
-  if (!content) return undefined;
-  try {
-    return JSON.parse(content);
-  } catch {
-    return undefined;
-  }
-}
-
-type TiptapViewerProps = {
+type MarkdownViewerProps = {
   content: string;
   className?: string;
 };
 
-export default function TiptapViewer({
+export default function MarkdownViewer({
   content,
   className,
-}: TiptapViewerProps) {
+}: MarkdownViewerProps) {
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
-      Image.configure({ inline: false }),
-      Link.configure({ openOnClick: true }),
-      Underline,
-      BoardGameCard,
-    ],
-    content: parseContent(content),
-    editable: false,
-    immediatelyRender: false,
-    editorProps: {
-      attributes: {
-        class: `tiptap-content prose prose-sm max-w-none ${className ?? ""}`,
-      },
-      handleClickOn(_view, _pos, node, _nodePos, event) {
-        if (node.type.name === "image") {
-          const src = node.attrs.src as string;
-          if (src) {
-            event.preventDefault();
-            setLightboxSrc(src);
-            return true;
-          }
-        }
-        return false;
-      },
-      handleClick(_view, _pos, event) {
-        const target = event.target as HTMLElement;
-        if (target.tagName === "IMG") {
-          const src = (target as HTMLImageElement).src;
-          if (src) {
-            event.preventDefault();
-            setLightboxSrc(src);
-            return true;
-          }
-        }
-        return false;
-      },
-    },
-  });
-
-  if (!editor) return null;
+  const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName === "IMG") {
+      const src = (target as HTMLImageElement).src;
+      if (src) {
+        e.preventDefault();
+        setLightboxSrc(src);
+      }
+    }
+  }, []);
 
   return (
     <>
-      <EditorContent editor={editor} />
+      <div
+        className={className}
+        onClick={handleClick}
+        onKeyDown={undefined}
+        role="presentation"
+      >
+        <MDXEditor
+          className="dark-theme"
+          contentEditableClassName="mdx-content"
+          markdown={content}
+          readOnly
+          plugins={[
+            headingsPlugin(),
+            listsPlugin(),
+            quotePlugin(),
+            thematicBreakPlugin(),
+            linkPlugin(),
+            imagePlugin(),
+          ]}
+        />
+      </div>
       {lightboxSrc && (
         <dialog
           className="modal modal-open"
