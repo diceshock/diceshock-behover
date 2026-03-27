@@ -75,7 +75,7 @@ function PlayerAxis({
               <span
                 className={`
                   font-bold
-                  ${isBest ? "text-lg sm:text-xl text-warning" : isSupported ? "text-base sm:text-lg text-neutral-content" : "text-sm text-neutral-content/30"}
+                  ${isBest ? "text-lg sm:text-xl text-warning" : isSupported ? "text-base sm:text-lg text-base-content" : "text-sm text-neutral-content/30"}
                 `}
               >
                 {n}
@@ -92,7 +92,7 @@ function PlayerAxis({
 }
 
 function DifficultyMeter({ value }: { value: number }) {
-  const maxDots = 5;
+  const maxDots = 10;
   const filled = Math.round(value);
   return (
     <div className="flex items-center gap-1">
@@ -106,7 +106,7 @@ function DifficultyMeter({ value }: { value: number }) {
         />
       ))}
       <span className="ml-1.5 text-xs text-base-content/50">
-        {value.toFixed(1)}/5
+        {value.toFixed(1)}/10
       </span>
     </div>
   );
@@ -480,13 +480,16 @@ function BoardGameDetailPage() {
               <div className="flex items-center gap-4">
                 <div className="flex-1 h-3 bg-base-300 rounded-full overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-success via-warning to-error transition-all duration-700"
-                    style={{ width: `${(difficulty / 5) * 100}%` }}
+                    className="h-full w-full rounded-full bg-gradient-to-r from-success via-warning to-error transition-all duration-700"
+                    style={{
+                      maskImage: `linear-gradient(to right, black ${(difficulty / 10) * 100}%, transparent ${(difficulty / 10) * 100}%)`,
+                      WebkitMaskImage: `linear-gradient(to right, black ${(difficulty / 10) * 100}%, transparent ${(difficulty / 10) * 100}%)`,
+                    }}
                   />
                 </div>
                 <span className="text-lg font-bold text-neutral-content/70 shrink-0">
                   {difficulty.toFixed(1)}
-                  <span className="text-sm text-neutral-content/30">/5</span>
+                  <span className="text-sm text-neutral-content/30">/10</span>
                 </span>
               </div>
               <div className="flex justify-between text-xs text-neutral-content/30 mt-1 px-0.5">
