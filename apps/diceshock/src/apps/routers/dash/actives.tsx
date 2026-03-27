@@ -175,7 +175,7 @@ function RouteComponent() {
   };
 
   return (
-    <main className="size-full">
+    <main className="size-full flex flex-col">
       {/* Header */}
       <div className="px-4 pt-4 flex items-center justify-between gap-3">
         <DashBackButton />
@@ -214,7 +214,7 @@ function RouteComponent() {
       </div>
 
       {/* Table */}
-      <div className="w-full h-[calc(100vh-8rem)] overflow-auto pb-40">
+      <div className="w-full flex-1 min-h-0 overflow-auto">
         <table className="table table-lg table-pin-rows table-pin-cols min-w-[1400px]">
           <thead>
             <tr className="z-20">

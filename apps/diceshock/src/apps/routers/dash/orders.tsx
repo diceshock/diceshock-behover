@@ -7,7 +7,7 @@ import {
   PlayIcon,
   StopIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
@@ -46,6 +46,7 @@ function formatTime(val: number | null | undefined): string {
 
 function RouteComponent() {
   const msg = useMsg();
+  const navigate = useNavigate();
   const [data, setData] = useState<OrdersList | null>(null);
   const [loading, setLoading] = useState(true);
   const [pricingSnapshot, setPricingSnapshot] = useState<SnapshotData | null>(
@@ -115,14 +116,15 @@ function RouteComponent() {
 
   const [actionPending, setActionPending] = useState<string | null>(null);
 
-  const handleEndOrder = async (id: string) => {
+  const handleEndOrder = async (id: string, status: string) => {
     setActionPending(id);
     try {
-      await trpcClientDash.ordersManagement.endOrder.mutate({ id });
-      msg.success("已终止");
-      await fetchOrders();
+      if (status === "active") {
+        await trpcClientDash.ordersManagement.pauseOrder.mutate({ id });
+      }
+      void navigate({ to: "/dash/orders/$id/settle", params: { id } });
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "终止失败");
+      msg.error(err instanceof Error ? err.message : "操作失败");
     } finally {
       setActionPending(null);
     }
@@ -204,23 +206,24 @@ function RouteComponent() {
   };
 
   return (
-    <main className="size-full">
-      <div className="px-4 pt-4 flex items-center justify-between gap-3 flex-wrap">
-        <DashBackButton />
+    <main className="size-full flex flex-col">
+      <div className="px-4 pt-4 flex flex-col gap-3">
+        <div className="flex items-center gap-3">
+          <DashBackButton />
+          <label className="input input-bordered input-sm flex items-center gap-2 flex-1 min-w-0">
+            <MagnifyingGlassIcon className="size-4 opacity-50 shrink-0" />
+            <input
+              type="text"
+              className="grow min-w-0"
+              placeholder="搜索订单号/桌台/用户..."
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            />
+          </label>
+        </div>
 
-        <label className="input input-bordered input-sm flex items-center gap-2 flex-1 max-w-xs">
-          <MagnifyingGlassIcon className="size-4 opacity-50" />
-          <input
-            type="text"
-            className="grow"
-            placeholder="搜索订单号/桌台/用户..."
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-          />
-        </label>
-
-        <div className="flex gap-1">
+        <div className="flex items-center gap-1">
           {(
             [
               ["all", "全部"],
@@ -241,50 +244,52 @@ function RouteComponent() {
               {label}
             </button>
           ))}
+
+          <div className="flex items-center gap-1 ml-auto shrink-0">
+            <select
+              className="select select-bordered select-xs"
+              value={sortBy}
+              onChange={(e) => {
+                setSortBy(e.target.value as SortBy);
+                setPage(1);
+              }}
+            >
+              <option value="start_at">开始时间</option>
+              <option value="end_at">结束时间</option>
+              <option value="seats">人数</option>
+            </select>
+
+            <button
+              type="button"
+              className="btn btn-xs btn-ghost btn-square"
+              onClick={toggleSortOrder}
+              title={sortOrder === "asc" ? "升序" : "降序"}
+            >
+              {sortOrder === "asc" ? (
+                <ArrowUpIcon className="size-4" />
+              ) : (
+                <ArrowDownIcon className="size-4" />
+              )}
+            </button>
+
+            <select
+              className="select select-bordered select-xs"
+              value={groupBy}
+              onChange={(e) => {
+                setGroupBy(e.target.value as GroupBy);
+                setPage(1);
+              }}
+            >
+              <option value="none">无分组</option>
+              <option value="table">按桌台</option>
+              <option value="user">按用户</option>
+              <option value="date">按日期</option>
+            </select>
+          </div>
         </div>
-
-        <select
-          className="select select-bordered select-xs"
-          value={sortBy}
-          onChange={(e) => {
-            setSortBy(e.target.value as SortBy);
-            setPage(1);
-          }}
-        >
-          <option value="start_at">开始时间</option>
-          <option value="end_at">结束时间</option>
-          <option value="seats">人数</option>
-        </select>
-
-        <button
-          type="button"
-          className="btn btn-xs btn-ghost"
-          onClick={toggleSortOrder}
-          title={sortOrder === "asc" ? "升序" : "降序"}
-        >
-          {sortOrder === "asc" ? (
-            <ArrowUpIcon className="size-4" />
-          ) : (
-            <ArrowDownIcon className="size-4" />
-          )}
-        </button>
-
-        <select
-          className="select select-bordered select-xs"
-          value={groupBy}
-          onChange={(e) => {
-            setGroupBy(e.target.value as GroupBy);
-            setPage(1);
-          }}
-        >
-          <option value="none">无分组</option>
-          <option value="table">按桌台</option>
-          <option value="user">按用户</option>
-          <option value="date">按日期</option>
-        </select>
       </div>
 
-      <div className="w-full h-[calc(100vh-8rem)] overflow-auto pb-40">
+      <div className="w-full flex-1 min-h-0 overflow-auto">
         <table className="table table-lg table-pin-rows table-pin-cols min-w-[1200px]">
           <thead>
             <tr className="z-20">
