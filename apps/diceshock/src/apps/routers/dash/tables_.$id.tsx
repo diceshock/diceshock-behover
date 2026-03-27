@@ -80,8 +80,6 @@ function TableDetailPage() {
   const [addOccForm, setAddOccForm] = useState({ userId: "", seats: 1 });
   const [addOccPending, setAddOccPending] = useState(false);
 
-  const endOccDialogRef = useRef<HTMLDialogElement>(null);
-  const [pendingEndOcc, setPendingEndOcc] = useState<Occupancy | null>(null);
   const [orderActionPending, setOrderActionPending] = useState(false);
 
   const [, setTick] = useState(0);
@@ -198,24 +196,18 @@ function TableDetailPage() {
     }
   };
 
-  const openEndOccDialog = (occ: Occupancy) => {
-    setPendingEndOcc(occ);
-    setTimeout(() => endOccDialogRef.current?.showModal(), 0);
-  };
-
-  const confirmEndOcc = async () => {
-    if (!pendingEndOcc) return;
+  const handleNavigateToSettle = async (occ: Occupancy) => {
     setOrderActionPending(true);
     try {
-      await trpcClientDash.ordersManagement.endOrder.mutate({
-        id: pendingEndOcc.id,
+      if (occ.status === "active") {
+        await trpcClientDash.ordersManagement.pauseOrder.mutate({ id: occ.id });
+      }
+      void navigate({
+        to: "/dash/orders/$id/settle",
+        params: { id: occ.id },
       });
-      msg.success("已终止");
-      endOccDialogRef.current?.close();
-      setPendingEndOcc(null);
-      await fetchTable();
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "终止失败");
+      msg.error(err instanceof Error ? err.message : "操作失败");
     } finally {
       setOrderActionPending(false);
     }
@@ -484,19 +476,32 @@ function TableDetailPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          className="btn btn-xs btn-ghost"
-                          onClick={() => void handlePauseOrder(occ.id)}
-                          disabled={orderActionPending}
-                        >
-                          <PauseIcon className="size-3.5" />
-                          暂停
-                        </button>
+                        {occ.status === "active" && (
+                          <button
+                            type="button"
+                            className="btn btn-xs btn-ghost"
+                            onClick={() => void handlePauseOrder(occ.id)}
+                            disabled={orderActionPending}
+                          >
+                            <PauseIcon className="size-3.5" />
+                            暂停
+                          </button>
+                        )}
+                        {occ.status === "paused" && (
+                          <button
+                            type="button"
+                            className="btn btn-xs btn-ghost btn-success"
+                            onClick={() => void handleResumeOrder(occ.id)}
+                            disabled={orderActionPending}
+                          >
+                            <PlayIcon className="size-3.5" />
+                            继续
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="btn btn-xs btn-ghost btn-error"
-                          onClick={() => openEndOccDialog(occ)}
+                          onClick={() => void handleNavigateToSettle(occ)}
                           disabled={orderActionPending}
                         >
                           <StopIcon className="size-3.5" />
@@ -598,37 +603,6 @@ function TableDetailPage() {
               </button>
             </div>
           </form>
-        </dialog>
-
-        <dialog ref={endOccDialogRef} className="modal">
-          {pendingEndOcc && (
-            <div className="modal-box">
-              <h3 className="font-bold text-lg mb-4">确认终止</h3>
-              <p>
-                确定要终止 <strong>{pendingEndOcc.nickname}</strong> 的订单吗？
-              </p>
-              <div className="modal-action mt-6">
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={() => {
-                    endOccDialogRef.current?.close();
-                    setPendingEndOcc(null);
-                  }}
-                >
-                  取消
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-error"
-                  onClick={() => void confirmEndOcc()}
-                  disabled={orderActionPending}
-                >
-                  {orderActionPending ? "终止中..." : "确认终止"}
-                </button>
-              </div>
-            </div>
-          )}
         </dialog>
       </main>
     </ClientOnly>

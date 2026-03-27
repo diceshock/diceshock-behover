@@ -3,6 +3,7 @@ import {
   ArrowUpIcon,
   CopyIcon,
   DotsThreeVerticalIcon,
+  EyeIcon,
   MagnifyingGlassIcon,
   PauseIcon,
   PlayIcon,
@@ -507,6 +508,17 @@ function RouteComponent() {
                                   </li>
                                 </>
                               )}
+                              {order.status === "ended" && (
+                                <li>
+                                  <Link
+                                    to="/dash/orders/$id/settle"
+                                    params={{ id: order.id }}
+                                  >
+                                    <EyeIcon className="size-3" />
+                                    详情
+                                  </Link>
+                                </li>
+                              )}
                             </ul>
                           </div>
                         ) : (
@@ -578,6 +590,16 @@ function RouteComponent() {
                                   终止
                                 </button>
                               </>
+                            )}
+                            {order.status === "ended" && (
+                              <Link
+                                to="/dash/orders/$id/settle"
+                                params={{ id: order.id }}
+                                className="btn btn-xs btn-ghost"
+                              >
+                                <EyeIcon className="size-3" />
+                                详情
+                              </Link>
                             )}
                           </div>
                         )}

@@ -276,14 +276,18 @@ function UserDetailPage() {
     fetchOccupancies();
   }, [fetchUser, fetchPlans, fetchOccupancies]);
 
-  const handleEndOccOrder = async (occId: string) => {
+  const handleEndOccOrder = async (occId: string, status: string) => {
     setOrderActionPending(occId);
     try {
-      await trpcClientDash.ordersManagement.endOrder.mutate({ id: occId });
-      msg.success("已终止");
-      await fetchOccupancies();
+      if (status === "active") {
+        await trpcClientDash.ordersManagement.pauseOrder.mutate({ id: occId });
+      }
+      void navigate({
+        to: "/dash/orders/$id/settle",
+        params: { id: occId },
+      });
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "终止失败");
+      msg.error(err instanceof Error ? err.message : "操作失败");
     } finally {
       setOrderActionPending(null);
     }
@@ -1070,19 +1074,34 @@ function UserDetailPage() {
                           </div>
                         </div>
                         <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            className="btn btn-xs btn-ghost"
-                            onClick={() => void handlePauseOccOrder(occ.id)}
-                            disabled={orderActionPending === occ.id}
-                          >
-                            <PauseIcon className="size-3.5" />
-                            暂停
-                          </button>
+                          {occ.status === "active" && (
+                            <button
+                              type="button"
+                              className="btn btn-xs btn-ghost"
+                              onClick={() => void handlePauseOccOrder(occ.id)}
+                              disabled={orderActionPending === occ.id}
+                            >
+                              <PauseIcon className="size-3.5" />
+                              暂停
+                            </button>
+                          )}
+                          {occ.status === "paused" && (
+                            <button
+                              type="button"
+                              className="btn btn-xs btn-ghost btn-success"
+                              onClick={() => void handleResumeOccOrder(occ.id)}
+                              disabled={orderActionPending === occ.id}
+                            >
+                              <PlayIcon className="size-3.5" />
+                              继续
+                            </button>
+                          )}
                           <button
                             type="button"
                             className="btn btn-xs btn-ghost btn-error"
-                            onClick={() => void handleEndOccOrder(occ.id)}
+                            onClick={() =>
+                              void handleEndOccOrder(occ.id, occ.status)
+                            }
                             disabled={orderActionPending === occ.id}
                           >
                             <StopIcon className="size-3.5" />
