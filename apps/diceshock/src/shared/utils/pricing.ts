@@ -150,13 +150,24 @@ export function calculatePrice(
   endAt: number,
   tableType: string,
   snapshot: SnapshotData | null,
+  pauseLogs?: Array<{ pausedAt: number; resumedAt: number | null }>,
 ): PriceBreakdown | null {
   if (!snapshot || snapshot.plans.length === 0) return null;
 
   const totalMs = Math.max(0, endAt - startAt);
   const totalMinutes = Math.floor(totalMs / 60000);
 
-  const billableMs = Math.max(0, totalMs - FREE_PERIOD_MS);
+  let pausedMs = 0;
+  if (pauseLogs && pauseLogs.length > 0) {
+    for (const log of pauseLogs) {
+      const pStart = Math.max(log.pausedAt, startAt);
+      const pEnd = Math.min(log.resumedAt ?? endAt, endAt);
+      if (pEnd > pStart) pausedMs += pEnd - pStart;
+    }
+  }
+
+  const effectiveMs = Math.max(0, totalMs - pausedMs);
+  const billableMs = Math.max(0, effectiveMs - FREE_PERIOD_MS);
   const billableHalfHours = Math.ceil(billableMs / HALF_HOUR_MS);
 
   const startDate = new Date(startAt);
