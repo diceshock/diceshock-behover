@@ -320,6 +320,89 @@ export const tableOccupancyTable = sqlite.sqliteTable("table_occupancy", {
     capType: string | null;
     finalPrice: number;
   }>(),
+  settlement_snapshot: sqlite
+    .text("settlement_snapshot", { mode: "json" })
+    .$type<{
+      /** 订单基础信息 */
+      orderId: string;
+      tableName: string;
+      tableType: string;
+      nickname: string;
+      uid: string | null;
+      seats: number;
+      startAt: number;
+      endAt: number;
+      /** 费用信息 */
+      totalMinutes: number;
+      pausedMinutes: number;
+      billableMinutes: number;
+      finalPrice: number;
+      priceBreakdown: {
+        planName: string;
+        planType: "fallback" | "conditional";
+        billingType: "hourly" | "fixed";
+        unitPrice: number;
+        totalMinutes: number;
+        billableHalfHours: number;
+        rawPrice: number;
+        capApplied: boolean;
+        capType: string | null;
+        finalPrice: number;
+      } | null;
+      /** 会员信息 */
+      membership: {
+        hasTimePlan: boolean;
+        timePlanActive: boolean;
+        timePlanType: string | null;
+        timePlanEndDate: number | null;
+        storedValueBalance: number;
+      };
+      /** 储值卡扣费信息 */
+      storedValueDeduction: {
+        deducted: boolean;
+        amount: number;
+        note: string;
+        balanceBefore: number;
+        balanceAfter: number;
+      } | null;
+      /** 暂停记录 */
+      pauseLogs: Array<{
+        pausedAt: number;
+        resumedAt: number | null;
+      }>;
+      /** 参与结算的计划快照 */
+      pricingPlans: Array<{
+        name: string;
+        planType: "fallback" | "conditional";
+        billingType: "hourly" | "fixed";
+        price: number;
+        matched: boolean;
+      }>;
+      /** 用户最近订单历史 */
+      recentOrders: Array<{
+        id: string;
+        tableName: string;
+        startAt: number;
+        endAt: number | null;
+        finalPrice: number | null;
+        status: string;
+      }>;
+      /** 快照生成时间 */
+      createdAt: number;
+    }>(),
+});
+
+export const orderPauseLogsTable = sqlite.sqliteTable("order_pause_logs", {
+  id: sqlite.text().$defaultFn(createId).primaryKey(),
+  occupancy_id: sqlite
+    .text("occupancy_id")
+    .notNull()
+    .references(() => tableOccupancyTable.id, { onDelete: "cascade" }),
+  paused_at: sqlite
+    .integer("paused_at", { mode: "timestamp_ms" })
+    .notNull()
+    .$defaultFn(() => new Date(Date.now())),
+  resumed_at: sqlite.integer("resumed_at", { mode: "timestamp_ms" }),
 });
 
 export const tablesRelations = relations(tablesTable, ({ many }) => ({
@@ -328,7 +411,7 @@ export const tablesRelations = relations(tablesTable, ({ many }) => ({
 
 export const tableOccupancyRelations = relations(
   tableOccupancyTable,
-  ({ one }) => ({
+  ({ one, many }) => ({
     table: one(tablesTable, {
       fields: [tableOccupancyTable.table_id],
       references: [tablesTable.id],
@@ -336,6 +419,17 @@ export const tableOccupancyRelations = relations(
     user: one(users, {
       fields: [tableOccupancyTable.user_id],
       references: [users.id],
+    }),
+    pauseLogs: many(orderPauseLogsTable),
+  }),
+);
+
+export const orderPauseLogsRelations = relations(
+  orderPauseLogsTable,
+  ({ one }) => ({
+    occupancy: one(tableOccupancyTable, {
+      fields: [orderPauseLogsTable.occupancy_id],
+      references: [tableOccupancyTable.id],
     }),
   }),
 );
