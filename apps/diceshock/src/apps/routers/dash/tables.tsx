@@ -163,21 +163,30 @@ function RouteComponent() {
 
   return (
     <main className="size-full flex flex-col">
-      <div className="px-4 pt-4 flex items-center justify-between gap-3">
-        <DashBackButton />
+      <div className="px-4 pt-4 flex flex-col gap-3">
+        <div className="flex items-center gap-3">
+          <DashBackButton />
+          <label className="input input-bordered input-sm flex items-center gap-2 flex-1 min-w-0">
+            <MagnifyingGlassIcon className="size-4 opacity-50 shrink-0" />
+            <input
+              type="text"
+              className="grow min-w-0"
+              placeholder="搜索桌台名称..."
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+            />
+          </label>
+          <button
+            type="button"
+            className="btn btn-sm btn-primary shrink-0"
+            onClick={() => createDialogRef.current?.showModal()}
+          >
+            <PlusIcon className="size-4" />
+            新建桌台
+          </button>
+        </div>
 
-        <label className="input input-bordered input-sm flex items-center gap-2 flex-1 max-w-xs">
-          <MagnifyingGlassIcon className="size-4 opacity-50" />
-          <input
-            type="text"
-            className="grow"
-            placeholder="搜索桌台名称..."
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-          />
-        </label>
-
-        <div className="flex gap-1">
+        <div className="flex items-center gap-1">
           {(
             [
               ["all", "全部"],
@@ -195,35 +204,26 @@ function RouteComponent() {
               {label}
             </button>
           ))}
-        </div>
 
-        <div className="flex gap-1">
-          {(
-            [
-              ["all", "全部"],
-              ["active", "上架"],
-              ["inactive", "下架"],
-            ] as const
-          ).map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              className={`btn btn-xs ${statusFilter === key ? "btn-secondary" : "btn-ghost"}`}
-              onClick={() => setStatusFilter(key)}
-            >
-              {label}
-            </button>
-          ))}
+          <div className="flex items-center gap-1 ml-auto shrink-0">
+            {(
+              [
+                ["all", "全部"],
+                ["active", "上架"],
+                ["inactive", "下架"],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                className={`btn btn-xs ${statusFilter === key ? "btn-secondary" : "btn-ghost"}`}
+                onClick={() => setStatusFilter(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
-
-        <button
-          type="button"
-          className="btn btn-sm btn-primary"
-          onClick={() => createDialogRef.current?.showModal()}
-        >
-          <PlusIcon className="size-4" />
-          新建桌台
-        </button>
       </div>
 
       <div className="w-full flex-1 min-h-0 overflow-auto">
