@@ -1,4 +1,5 @@
 import {
+  DotsThreeVerticalIcon,
   MagnifyingGlassIcon,
   PencilSimpleIcon,
   PlusIcon,
@@ -10,6 +11,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import { useIsMobile } from "@/client/hooks/useIsMobile";
 import dayjs from "@/shared/utils/dayjs-config";
 import { trpcClientDash } from "@/shared/utils/trpc";
 
@@ -33,6 +35,7 @@ export const Route = createFileRoute("/dash/tables")({
 
 function RouteComponent() {
   const msg = useMsg();
+  const isMobile = useIsMobile();
   const [tables, setTables] = useState<TableItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -297,32 +300,80 @@ function RouteComponent() {
                       {formatCreateAt(table.create_at)}
                     </td>
                     <th className="whitespace-nowrap">
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          className={`btn btn-xs btn-ghost ${table.status === "active" ? "btn-neutral" : "btn-success"}`}
-                          onClick={() => void handleToggleStatus(table)}
-                        >
-                          <PowerIcon className="size-3.5" />
-                          {table.status === "active" ? "下架" : "上架"}
-                        </button>
-                        <Link
-                          to="/dash/tables/$id"
-                          params={{ id: table.id }}
-                          className="btn btn-xs btn-ghost"
-                        >
-                          <PencilSimpleIcon className="size-4" />
-                          详情
-                        </Link>
-                        <button
-                          type="button"
-                          className="btn btn-xs btn-ghost btn-error"
-                          onClick={() => openDeleteDialog(table)}
-                        >
-                          <TrashIcon className="size-3.5" />
-                          删除
-                        </button>
-                      </div>
+                      {isMobile ? (
+                        <div className="dropdown dropdown-end">
+                          <div
+                            tabIndex={0}
+                            role="button"
+                            className="btn btn-xs btn-ghost btn-square"
+                          >
+                            <DotsThreeVerticalIcon
+                              className="size-4"
+                              weight="bold"
+                            />
+                          </div>
+                          <ul
+                            tabIndex={0}
+                            className="dropdown-content menu bg-base-200 rounded-box z-50 w-32 p-2 shadow-lg"
+                          >
+                            <li>
+                              <button
+                                type="button"
+                                onClick={() => void handleToggleStatus(table)}
+                              >
+                                <PowerIcon className="size-3.5" />
+                                {table.status === "active" ? "下架" : "上架"}
+                              </button>
+                            </li>
+                            <li>
+                              <Link
+                                to="/dash/tables/$id"
+                                params={{ id: table.id }}
+                              >
+                                <PencilSimpleIcon className="size-4" />
+                                详情
+                              </Link>
+                            </li>
+                            <li>
+                              <button
+                                type="button"
+                                className="text-error"
+                                onClick={() => openDeleteDialog(table)}
+                              >
+                                <TrashIcon className="size-3.5" />
+                                删除
+                              </button>
+                            </li>
+                          </ul>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            className={`btn btn-xs btn-ghost ${table.status === "active" ? "btn-neutral" : "btn-success"}`}
+                            onClick={() => void handleToggleStatus(table)}
+                          >
+                            <PowerIcon className="size-3.5" />
+                            {table.status === "active" ? "下架" : "上架"}
+                          </button>
+                          <Link
+                            to="/dash/tables/$id"
+                            params={{ id: table.id }}
+                            className="btn btn-xs btn-ghost"
+                          >
+                            <PencilSimpleIcon className="size-4" />
+                            详情
+                          </Link>
+                          <button
+                            type="button"
+                            className="btn btn-xs btn-ghost btn-error"
+                            onClick={() => openDeleteDialog(table)}
+                          >
+                            <TrashIcon className="size-3.5" />
+                            删除
+                          </button>
+                        </div>
+                      )}
                     </th>
                   </tr>
                 );

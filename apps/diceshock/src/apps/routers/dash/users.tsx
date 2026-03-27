@@ -1,5 +1,6 @@
 import {
   CopyIcon,
+  DotsThreeVerticalIcon,
   EyeIcon,
   UserMinusIcon,
 } from "@phosphor-icons/react/dist/ssr";
@@ -13,6 +14,7 @@ import {
   type MembershipPlan,
 } from "@/client/components/diceshock/MembershipBadge";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import { useIsMobile } from "@/client/hooks/useIsMobile";
 import dayjs from "@/shared/utils/dayjs-config";
 import { trpcClientDash } from "@/shared/utils/trpc";
 
@@ -27,6 +29,7 @@ export const Route = createFileRoute("/dash/users")({
 
 function RouteComponent() {
   const msg = useMsg();
+  const isMobile = useIsMobile();
   const [searchWords, setSearchWords] = useState("");
   const [page, setPage] = useState(1);
   const [users, setUsers] = useState<UserItem[]>([]);
@@ -255,25 +258,64 @@ function RouteComponent() {
                         : "—"}
                     </td>
                     <th className="whitespace-nowrap">
-                      <div className="flex items-center gap-4 py-2 h-full">
-                        <Link
-                          to="/dash/users/$id"
-                          params={{ id: user.id }}
-                          className="btn btn-xs btn-ghost btn-primary"
-                        >
-                          详情
-                          <EyeIcon />
-                        </Link>
+                      {isMobile ? (
+                        <div className="dropdown dropdown-end">
+                          <div
+                            tabIndex={0}
+                            role="button"
+                            className="btn btn-xs btn-ghost btn-square"
+                          >
+                            <DotsThreeVerticalIcon
+                              className="size-4"
+                              weight="bold"
+                            />
+                          </div>
+                          <ul
+                            tabIndex={0}
+                            className="dropdown-content menu bg-base-200 rounded-box z-50 w-32 p-2 shadow-lg"
+                          >
+                            <li>
+                              <Link
+                                to="/dash/users/$id"
+                                params={{ id: user.id }}
+                              >
+                                <EyeIcon className="size-4" />
+                                详情
+                              </Link>
+                            </li>
+                            <li>
+                              <button
+                                type="button"
+                                className="text-error"
+                                onClick={() => openDisableDialog(user)}
+                              >
+                                <UserMinusIcon className="size-4" />
+                                关停
+                              </button>
+                            </li>
+                          </ul>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-4 py-2 h-full">
+                          <Link
+                            to="/dash/users/$id"
+                            params={{ id: user.id }}
+                            className="btn btn-xs btn-ghost btn-primary"
+                          >
+                            详情
+                            <EyeIcon />
+                          </Link>
 
-                        <button
-                          type="button"
-                          className="btn btn-xs btn-ghost btn-error"
-                          onClick={() => openDisableDialog(user)}
-                        >
-                          关停
-                          <UserMinusIcon />
-                        </button>
-                      </div>
+                          <button
+                            type="button"
+                            className="btn btn-xs btn-ghost btn-error"
+                            onClick={() => openDisableDialog(user)}
+                          >
+                            关停
+                            <UserMinusIcon />
+                          </button>
+                        </div>
+                      )}
                     </th>
                   </tr>
                 );

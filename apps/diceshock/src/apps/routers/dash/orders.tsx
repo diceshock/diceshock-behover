@@ -427,68 +427,160 @@ function RouteComponent() {
                             : "—"}
                       </td>
                       <th className="whitespace-nowrap">
-                        <div className="flex items-center gap-1">
-                          {order.status === "active" && (
-                            <>
-                              <button
-                                type="button"
-                                className={clsx(
-                                  "btn btn-xs btn-ghost",
-                                  actionPending === order.id && "btn-disabled",
-                                )}
-                                onClick={() => void handlePauseOrder(order.id)}
-                                disabled={actionPending === order.id}
-                              >
-                                <PauseIcon className="size-3" />
-                                暂停
-                              </button>
-                              <button
-                                type="button"
-                                className={clsx(
-                                  "btn btn-xs btn-ghost btn-error",
-                                  actionPending === order.id && "btn-disabled",
-                                )}
-                                onClick={() =>
-                                  void handleEndOrder(order.id, order.status)
-                                }
-                                disabled={actionPending === order.id}
-                              >
-                                <StopIcon className="size-3" />
-                                终止
-                              </button>
-                            </>
-                          )}
-                          {order.status === "paused" && (
-                            <>
-                              <button
-                                type="button"
-                                className={clsx(
-                                  "btn btn-xs btn-ghost btn-success",
-                                  actionPending === order.id && "btn-disabled",
-                                )}
-                                onClick={() => void handleResumeOrder(order.id)}
-                                disabled={actionPending === order.id}
-                              >
-                                <PlayIcon className="size-3" />
-                                继续
-                              </button>
-                              <button
-                                type="button"
-                                className={clsx(
-                                  "btn btn-xs btn-ghost btn-error",
-                                  actionPending === order.id && "btn-disabled",
-                                )}
-                                onClick={() =>
-                                  void handleEndOrder(order.id, order.status)
-                                }
-                                disabled={actionPending === order.id}
-                              >
-                                <StopIcon className="size-3" />
-                                终止
-                              </button>
-                            </>
-                          )}
-                        </div>
+                        {isMobile ? (
+                          <div className="dropdown dropdown-end">
+                            <div
+                              tabIndex={0}
+                              role="button"
+                              className="btn btn-xs btn-ghost btn-square"
+                            >
+                              <DotsThreeVerticalIcon
+                                className="size-4"
+                                weight="bold"
+                              />
+                            </div>
+                            <ul
+                              tabIndex={0}
+                              className="dropdown-content menu bg-base-200 rounded-box z-50 w-32 p-2 shadow-lg"
+                            >
+                              {order.status === "active" && (
+                                <>
+                                  <li>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        void handlePauseOrder(order.id)
+                                      }
+                                      disabled={actionPending === order.id}
+                                    >
+                                      <PauseIcon className="size-3" />
+                                      暂停
+                                    </button>
+                                  </li>
+                                  <li>
+                                    <button
+                                      type="button"
+                                      className="text-error"
+                                      onClick={() =>
+                                        void handleEndOrder(
+                                          order.id,
+                                          order.status,
+                                        )
+                                      }
+                                      disabled={actionPending === order.id}
+                                    >
+                                      <StopIcon className="size-3" />
+                                      终止
+                                    </button>
+                                  </li>
+                                </>
+                              )}
+                              {order.status === "paused" && (
+                                <>
+                                  <li>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        void handleResumeOrder(order.id)
+                                      }
+                                      disabled={actionPending === order.id}
+                                    >
+                                      <PlayIcon className="size-3" />
+                                      继续
+                                    </button>
+                                  </li>
+                                  <li>
+                                    <button
+                                      type="button"
+                                      className="text-error"
+                                      onClick={() =>
+                                        void handleEndOrder(
+                                          order.id,
+                                          order.status,
+                                        )
+                                      }
+                                      disabled={actionPending === order.id}
+                                    >
+                                      <StopIcon className="size-3" />
+                                      终止
+                                    </button>
+                                  </li>
+                                </>
+                              )}
+                            </ul>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            {order.status === "active" && (
+                              <>
+                                <button
+                                  type="button"
+                                  className={clsx(
+                                    "btn btn-xs btn-ghost",
+                                    actionPending === order.id &&
+                                      "btn-disabled",
+                                  )}
+                                  onClick={() =>
+                                    void handlePauseOrder(order.id)
+                                  }
+                                  disabled={actionPending === order.id}
+                                >
+                                  <PauseIcon className="size-3" />
+                                  暂停
+                                </button>
+                                <button
+                                  type="button"
+                                  className={clsx(
+                                    "btn btn-xs btn-ghost btn-error",
+                                    actionPending === order.id &&
+                                      "btn-disabled",
+                                  )}
+                                  onClick={() =>
+                                    void handleEndOrder(order.id, order.status)
+                                  }
+                                  disabled={actionPending === order.id}
+                                >
+                                  <StopIcon className="size-3" />
+                                  终止
+                                </button>
+                              </>
+                            )}
+                            {order.status === "paused" && (
+                              <>
+                                <button
+                                  type="button"
+                                  className={clsx(
+                                    "btn btn-xs btn-ghost btn-success",
+                                    actionPending === order.id &&
+                                      "btn-disabled",
+                                  )}
+                                  onClick={() =>
+                                    void handleResumeOrder(order.id)
+                                  }
+                                  disabled={actionPending === order.id}
+                                >
+                                  <PlayIcon className="size-3" />
+                                  继续
+                                </button>
+                                <button
+                                  type="button"
+                                  className={clsx(
+                                    "btn btn-xs btn-ghost btn-error",
+                                    actionPending === order.id &&
+                                      "btn-disabled",
+                                  )}
+                                  onClick={() =>
+                                    void handleEndOrder(order.id, order.status)
+                                  }
+                                  disabled={actionPending === order.id}
+                                >
+                                  <StopIcon className="size-3" />
+                                  终止
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        )}
                       </th>
                     </tr>
                   ))}

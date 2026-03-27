@@ -1,5 +1,6 @@
 import {
   CopyIcon,
+  DotsThreeVerticalIcon,
   EyeIcon,
   MagnifyingGlassIcon,
   TrashIcon,
@@ -8,6 +9,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import { useIsMobile } from "@/client/hooks/useIsMobile";
 import dayjs from "@/shared/utils/dayjs-config";
 import { trpcClientDash } from "@/shared/utils/trpc";
 
@@ -34,6 +36,7 @@ export const Route = createFileRoute("/dash/actives")({
 
 function RouteComponent() {
   const msg = useMsg();
+  const isMobile = useIsMobile();
   const [actives, setActives] = useState<ActiveItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -334,24 +337,63 @@ function RouteComponent() {
                       )}
                     </td>
                     <th className="whitespace-nowrap">
-                      <div className="flex items-center gap-1">
-                        <Link
-                          to="/dash/actives/$id"
-                          params={{ id: active.id }}
-                          className="btn btn-xs btn-ghost"
-                        >
-                          <EyeIcon className="size-4" />
-                          详情
-                        </Link>
-                        <button
-                          type="button"
-                          className="btn btn-xs btn-ghost btn-error"
-                          onClick={() => openDeleteDialog(active)}
-                        >
-                          删除
-                          <TrashIcon />
-                        </button>
-                      </div>
+                      {isMobile ? (
+                        <div className="dropdown dropdown-end">
+                          <div
+                            tabIndex={0}
+                            role="button"
+                            className="btn btn-xs btn-ghost btn-square"
+                          >
+                            <DotsThreeVerticalIcon
+                              className="size-4"
+                              weight="bold"
+                            />
+                          </div>
+                          <ul
+                            tabIndex={0}
+                            className="dropdown-content menu bg-base-200 rounded-box z-50 w-32 p-2 shadow-lg"
+                          >
+                            <li>
+                              <Link
+                                to="/dash/actives/$id"
+                                params={{ id: active.id }}
+                              >
+                                <EyeIcon className="size-4" />
+                                详情
+                              </Link>
+                            </li>
+                            <li>
+                              <button
+                                type="button"
+                                className="text-error"
+                                onClick={() => openDeleteDialog(active)}
+                              >
+                                <TrashIcon className="size-4" />
+                                删除
+                              </button>
+                            </li>
+                          </ul>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <Link
+                            to="/dash/actives/$id"
+                            params={{ id: active.id }}
+                            className="btn btn-xs btn-ghost"
+                          >
+                            <EyeIcon className="size-4" />
+                            详情
+                          </Link>
+                          <button
+                            type="button"
+                            className="btn btn-xs btn-ghost btn-error"
+                            onClick={() => openDeleteDialog(active)}
+                          >
+                            删除
+                            <TrashIcon />
+                          </button>
+                        </div>
+                      )}
                     </th>
                   </tr>
                 );
