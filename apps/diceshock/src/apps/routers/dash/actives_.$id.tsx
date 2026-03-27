@@ -140,7 +140,7 @@ function ActiveEditorPage() {
     <ClientOnly>
       <main className="size-full overflow-y-auto">
         <div className="px-4 pt-4">
-          <DashBackButton to="/dash/actives" label="返回约局列表" />
+          <DashBackButton to="/dash/actives" />
         </div>
 
         <div className="mx-auto w-full max-w-2xl px-4 pb-20">

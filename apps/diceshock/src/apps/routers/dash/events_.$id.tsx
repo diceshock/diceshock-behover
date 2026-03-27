@@ -85,7 +85,7 @@ function EventEditorPage() {
     <ClientOnly>
       <main className="size-full overflow-y-auto">
         <div className="px-4 pt-4">
-          <DashBackButton to="/dash/events" label="返回活动列表" />
+          <DashBackButton to="/dash/events" />
         </div>
 
         <div className="mx-auto w-full max-w-2xl px-4 pb-20">

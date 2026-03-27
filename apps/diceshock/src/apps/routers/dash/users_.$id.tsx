@@ -565,7 +565,7 @@ function UserDetailPage() {
     <ClientOnly>
       <main className="size-full overflow-y-auto">
         <div className="px-4 pt-4">
-          <DashBackButton to="/dash/users" label="返回用户列表" />
+          <DashBackButton to="/dash/users" />
         </div>
 
         <div className="mx-auto w-full max-w-3xl px-4 pb-20">

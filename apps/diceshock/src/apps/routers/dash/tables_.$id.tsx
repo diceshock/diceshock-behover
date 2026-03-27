@@ -275,7 +275,7 @@ function TableDetailPage() {
     <ClientOnly>
       <main className="size-full overflow-y-auto">
         <div className="px-4 pt-4">
-          <DashBackButton to="/dash/tables" label="返回桌台列表" />
+          <DashBackButton to="/dash/tables" />
         </div>
 
         <div className="mx-auto w-full max-w-3xl px-4 pb-20">

@@ -185,7 +185,7 @@ function PricingDetailPage() {
     <ClientOnly>
       <main className="size-full overflow-y-auto">
         <div className="px-4 pt-4">
-          <DashBackButton to="/dash/pricing" label="返回价格计划" />
+          <DashBackButton to="/dash/pricing" />
         </div>
 
         <div className="mx-auto w-full max-w-3xl px-4 pb-20">
