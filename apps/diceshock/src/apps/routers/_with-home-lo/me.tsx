@@ -251,18 +251,28 @@ function RouteComponent() {
           <div className="w-full flex flex-col items-center justify-center gap-3 sm:gap-4">
             {myPlans.filter(isActivePlan).length > 0 && (
               <div className="w-full flex flex-wrap justify-center gap-4 mb-2">
-                {myPlans
-                  .filter(isActivePlan)
-                  .sort(
-                    (a, b) =>
-                      getPlanConfig(a.plan_type).priority -
-                      getPlanConfig(b.plan_type).priority,
-                  )
-                  .map((plan) => {
+                {(() => {
+                  const activePlans = myPlans.filter(isActivePlan);
+                  // Deduplicate by plan_type: keep the highest-priority (first) plan per type
+                  const seen = new Set<string>();
+                  const uniquePlans = activePlans
+                    .sort(
+                      (a, b) =>
+                        getPlanConfig(a.plan_type).priority -
+                        getPlanConfig(b.plan_type).priority,
+                    )
+                    .filter((plan) => {
+                      if (seen.has(plan.plan_type)) return false;
+                      seen.add(plan.plan_type);
+                      return true;
+                    });
+
+                  return uniquePlans.map((plan) => {
                     const config = getPlanConfig(plan.plan_type);
                     const Icon = config.icon;
+                    const totalBalance = getStoredValueBalance(myPlans);
                     return (
-                      <div key={plan.id} className="hover-3d">
+                      <div key={plan.plan_type} className="hover-3d">
                         <div className="card bg-base-200 w-44 sm:w-52 shadow-xl border border-base-content/10">
                           <figure className="pt-4 px-4">
                             <Icon className="w-full h-20 sm:h-24" />
@@ -275,7 +285,7 @@ function RouteComponent() {
                               {plan.end_date
                                 ? `到期: ${dayjs(plan.end_date).format("YYYY/MM/DD")}`
                                 : plan.plan_type === "stored_value"
-                                  ? `余额: ¥${((plan.amount ?? 0) / 100).toFixed(0)}`
+                                  ? `余额: ¥${(totalBalance / 100).toFixed(0)}`
                                   : "永久有效"}
                             </p>
                           </div>
@@ -290,19 +300,10 @@ function RouteComponent() {
                         <div />
                       </div>
                     );
-                  })}
+                  });
+                })()}
               </div>
             )}
-
-            {myPlans.filter(isActivePlan).length > 0 &&
-              getStoredValueBalance(myPlans) > 0 && (
-                <p className="text-sm text-base-content/70 mb-2">
-                  储值总余额:{" "}
-                  <span className="font-mono font-bold text-accent">
-                    ¥{(getStoredValueBalance(myPlans) / 100).toFixed(0)}
-                  </span>
-                </p>
-              )}
 
             {myPlans.filter(isActivePlan).length === 0 &&
               myPlans.length === 0 && (
