@@ -118,14 +118,16 @@ const occupy = publicProcedure
     if (!table) throw new Error("桌台不存在");
     if (table.status === "inactive") throw new Error("桌台已下架");
 
-    const totalOccupied = table.occupancies.reduce(
-      (sum, o) => sum + (o.seats ?? 1),
-      0,
-    );
-    if (totalOccupied + seats > table.capacity) {
-      throw new Error(
-        `桌台不足，当前已使用 ${totalOccupied}/${table.capacity}`,
+    if (table.type !== "solo") {
+      const totalOccupied = table.occupancies.reduce(
+        (sum, o) => sum + (o.seats ?? 1),
+        0,
       );
+      if (totalOccupied + seats > table.capacity) {
+        throw new Error(
+          `桌台不足，当前已使用 ${totalOccupied}/${table.capacity}`,
+        );
+      }
     }
 
     const id = createId();

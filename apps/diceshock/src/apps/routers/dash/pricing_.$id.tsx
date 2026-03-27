@@ -756,7 +756,7 @@ function ConditionFormFields({
             badge="多选"
             desc="选择此计划适用的营运项目，不选择表示全部适用"
           />
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <ToggleCard
               icon={"🎲"}
               label="桌游"
@@ -770,6 +770,13 @@ function ConditionFormFields({
               desc="日本麻将"
               selected={conditions.scope.includes("mahjong")}
               onClick={() => toggleScope("mahjong")}
+            />
+            <ToggleCard
+              icon={"🧑"}
+              label="散人"
+              desc="散客计时"
+              selected={conditions.scope.includes("solo")}
+              onClick={() => toggleScope("solo")}
             />
             <ToggleCard
               icon={"📖"}

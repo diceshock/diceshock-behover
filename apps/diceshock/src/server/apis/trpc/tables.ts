@@ -114,14 +114,19 @@ const occupy = protectedProcedure
     if (!table) throw new Error("桌台不存在");
     if (table.status === "inactive") throw new Error("桌台已下架");
 
-    const totalOccupied = table.occupancies.reduce(
-      (sum, o) => sum + (o.seats ?? 1),
-      0,
-    );
-    if (totalOccupied + input.seats > table.capacity) {
-      throw new Error(
-        `桌台不足，当前已使用 ${totalOccupied}/${table.capacity}`,
+    const isSolo = table.type === "solo";
+    const effectiveSeats = isSolo ? 1 : input.seats;
+
+    if (!isSolo) {
+      const totalOccupied = table.occupancies.reduce(
+        (sum, o) => sum + (o.seats ?? 1),
+        0,
       );
+      if (totalOccupied + effectiveSeats > table.capacity) {
+        throw new Error(
+          `桌台不足，当前已使用 ${totalOccupied}/${table.capacity}`,
+        );
+      }
     }
 
     const id = createId();
@@ -129,7 +134,7 @@ const occupy = protectedProcedure
       id,
       table_id: table.id,
       user_id: ctx.userId,
-      seats: input.seats,
+      seats: effectiveSeats,
       start_at: new Date(),
     });
 

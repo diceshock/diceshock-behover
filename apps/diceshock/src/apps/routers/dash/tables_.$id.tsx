@@ -34,6 +34,7 @@ type Occupancy = TableDetail["occupancies"][number];
 const TYPE_LABELS: Record<string, string> = {
   mahjong: "麻将台",
   boardgame: "桌游台",
+  solo: "散人台",
 };
 
 export const Route = createFileRoute("/dash/tables_/$id")({
@@ -286,7 +287,7 @@ function TableDetailPage() {
               </p>
             </div>
             <span
-              className={`badge ${table.type === "mahjong" ? "badge-accent" : "badge-info"}`}
+              className={`badge ${table.type === "mahjong" ? "badge-accent" : table.type === "solo" ? "badge-secondary" : "badge-info"}`}
             >
               {TYPE_LABELS[table.type] ?? table.type}
             </span>
@@ -356,22 +357,24 @@ function TableDetailPage() {
                 </div>
               </div>
 
-              <label className="flex flex-col gap-2">
-                <span className="label text-sm font-semibold">适用人数</span>
-                <input
-                  type="number"
-                  className="input input-bordered w-full"
-                  value={editForm.capacity}
-                  onChange={(e) =>
-                    setEditForm((p) => ({
-                      ...p,
-                      capacity: Number(e.target.value),
-                    }))
-                  }
-                  min={1}
-                  max={20}
-                />
-              </label>
+              {table.type !== "solo" && (
+                <label className="flex flex-col gap-2">
+                  <span className="label text-sm font-semibold">适用人数</span>
+                  <input
+                    type="number"
+                    className="input input-bordered w-full"
+                    value={editForm.capacity}
+                    onChange={(e) =>
+                      setEditForm((p) => ({
+                        ...p,
+                        capacity: Number(e.target.value),
+                      }))
+                    }
+                    min={1}
+                    max={20}
+                  />
+                </label>
+              )}
 
               <label className="flex flex-col gap-2">
                 <span className="label text-sm font-semibold">
@@ -422,7 +425,11 @@ function TableDetailPage() {
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold">
-                  使用情况 ({totalOccupiedSeats}/{table.capacity})
+                  使用情况 (
+                  {table.type === "solo"
+                    ? totalOccupiedSeats
+                    : `${totalOccupiedSeats}/${table.capacity}`}
+                  )
                 </h3>
                 <div className="flex items-center gap-2">
                   <Link
@@ -559,22 +566,26 @@ function TableDetailPage() {
                 />
               </label>
 
-              <label className="flex flex-col gap-2">
-                <span className="label text-sm font-semibold">使用位置数</span>
-                <input
-                  type="number"
-                  className="input input-bordered w-full"
-                  value={addOccForm.seats}
-                  onChange={(e) =>
-                    setAddOccForm((p) => ({
-                      ...p,
-                      seats: Number(e.target.value),
-                    }))
-                  }
-                  min={1}
-                  max={table.capacity}
-                />
-              </label>
+              {table.type !== "solo" && (
+                <label className="flex flex-col gap-2">
+                  <span className="label text-sm font-semibold">
+                    使用位置数
+                  </span>
+                  <input
+                    type="number"
+                    className="input input-bordered w-full"
+                    value={addOccForm.seats}
+                    onChange={(e) =>
+                      setAddOccForm((p) => ({
+                        ...p,
+                        seats: Number(e.target.value),
+                      }))
+                    }
+                    min={1}
+                    max={table.capacity}
+                  />
+                </label>
+              )}
             </div>
 
             <div className="modal-action mt-6">

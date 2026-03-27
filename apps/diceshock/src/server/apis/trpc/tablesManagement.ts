@@ -51,13 +51,13 @@ const create = dashProcedure
   .input((v: unknown) => {
     const data = v as {
       name: string;
-      type: "mahjong" | "boardgame";
-      capacity: number;
+      type: "mahjong" | "boardgame" | "solo";
+      capacity?: number;
       description?: string;
     };
     if (!data.name?.trim()) throw new Error("name is required");
     if (!data.type) throw new Error("type is required");
-    if (!data.capacity || data.capacity < 1)
+    if (data.type !== "solo" && (!data.capacity || data.capacity < 1))
       throw new Error("capacity must be >= 1");
     return data;
   })
@@ -71,7 +71,7 @@ const create = dashProcedure
       name: input.name.trim(),
       type: input.type,
       status: "active",
-      capacity: input.capacity,
+      capacity: input.type === "solo" ? 0 : input.capacity!,
       description: input.description?.trim() || null,
       code,
       create_at: now,
