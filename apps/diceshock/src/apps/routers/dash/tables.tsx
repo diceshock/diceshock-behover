@@ -18,12 +18,13 @@ type TablesList = Awaited<
 >;
 type TableItem = TablesList[number];
 
-type TypeFilter = "all" | "mahjong" | "boardgame";
+type TypeFilter = "all" | "mahjong" | "boardgame" | "solo";
 type StatusFilter = "all" | "active" | "inactive";
 
 const TYPE_LABELS: Record<string, string> = {
   mahjong: "麻将台",
   boardgame: "桌游台",
+  solo: "散人台",
 };
 
 export const Route = createFileRoute("/dash/tables")({
@@ -42,7 +43,7 @@ function RouteComponent() {
   const createDialogRef = useRef<HTMLDialogElement>(null);
   const [createForm, setCreateForm] = useState({
     name: "",
-    type: "boardgame" as "mahjong" | "boardgame",
+    type: "boardgame" as "mahjong" | "boardgame" | "solo",
     capacity: 4,
   });
   const [createPending, setCreatePending] = useState(false);
@@ -97,7 +98,9 @@ function RouteComponent() {
       await trpcClientDash.tablesManagement.create.mutate({
         name: createForm.name.trim(),
         type: createForm.type,
-        capacity: createForm.capacity,
+        ...(createForm.type !== "solo"
+          ? { capacity: createForm.capacity }
+          : {}),
       });
       msg.success("桌台已创建");
       createDialogRef.current?.close();
@@ -177,6 +180,7 @@ function RouteComponent() {
               ["all", "全部"],
               ["mahjong", "麻将台"],
               ["boardgame", "桌游台"],
+              ["solo", "散人台"],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -219,8 +223,8 @@ function RouteComponent() {
         </button>
       </div>
 
-      <div className="w-full h-[calc(100vh-8rem)] overflow-y-auto overflow-x-auto pb-40">
-        <table className="table table-pin-rows table-pin-cols">
+      <div className="w-full h-[calc(100vh-8rem)] overflow-auto pb-40">
+        <table className="table table-lg table-pin-rows table-pin-cols min-w-[900px]">
           <thead>
             <tr className="z-20">
               <td>名称</td>
@@ -265,7 +269,7 @@ function RouteComponent() {
                     <td className="font-semibold">{table.name}</td>
                     <td>
                       <span
-                        className={`badge badge-sm ${table.type === "mahjong" ? "badge-accent" : "badge-info"}`}
+                        className={`badge badge-sm ${table.type === "mahjong" ? "badge-accent" : table.type === "solo" ? "badge-secondary" : "badge-info"}`}
                       >
                         {TYPE_LABELS[table.type] ?? table.type}
                       </span>
@@ -279,13 +283,13 @@ function RouteComponent() {
                         <span className="badge badge-ghost badge-sm">下架</span>
                       )}
                     </td>
-                    <td className="text-sm">{table.capacity}</td>
-                    <td className="text-sm">
-                      {occupiedSeats}/{table.capacity}
+                    <td>{table.type === "solo" ? "∞" : table.capacity}</td>
+                    <td>
+                      {table.type === "solo"
+                        ? occupiedSeats
+                        : `${occupiedSeats}/${table.capacity}`}
                     </td>
-                    <td className="text-sm">
-                      {formatCreateAt(table.create_at)}
-                    </td>
+                    <td>{formatCreateAt(table.create_at)}</td>
                     <td>
                       <div className="flex items-center gap-1">
                         <button
@@ -358,31 +362,34 @@ function RouteComponent() {
                 onChange={(e) =>
                   setCreateForm((p) => ({
                     ...p,
-                    type: e.target.value as "mahjong" | "boardgame",
+                    type: e.target.value as "mahjong" | "boardgame" | "solo",
                   }))
                 }
               >
                 <option value="boardgame">桌游台</option>
                 <option value="mahjong">麻将台</option>
+                <option value="solo">散人台</option>
               </select>
             </label>
 
-            <label className="flex flex-col gap-2">
-              <span className="label text-sm font-semibold">适用人数</span>
-              <input
-                type="number"
-                className="input input-bordered w-full"
-                value={createForm.capacity}
-                onChange={(e) =>
-                  setCreateForm((p) => ({
-                    ...p,
-                    capacity: Number(e.target.value),
-                  }))
-                }
-                min={1}
-                max={20}
-              />
-            </label>
+            {createForm.type !== "solo" && (
+              <label className="flex flex-col gap-2">
+                <span className="label text-sm font-semibold">适用人数</span>
+                <input
+                  type="number"
+                  className="input input-bordered w-full"
+                  value={createForm.capacity}
+                  onChange={(e) =>
+                    setCreateForm((p) => ({
+                      ...p,
+                      capacity: Number(e.target.value),
+                    }))
+                  }
+                  min={1}
+                  max={20}
+                />
+              </label>
+            )}
           </div>
 
           <div className="modal-action mt-6">

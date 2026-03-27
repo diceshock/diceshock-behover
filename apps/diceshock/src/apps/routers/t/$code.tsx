@@ -27,6 +27,7 @@ export const Route = createFileRoute("/t/$code")({
 const TYPE_LABELS: Record<string, string> = {
   mahjong: "麻将台",
   boardgame: "桌游台",
+  solo: "散人台",
 };
 
 const TOTP_TIME_STEP = 30;
@@ -133,7 +134,10 @@ function SeatTimerPage() {
   const occupancies = wsState?.occupancies ?? tableData?.occupancies ?? [];
 
   const totalOccupied = occupancies.reduce((sum, o) => sum + o.seats, 0);
-  const remainingCapacity = (table?.capacity ?? 0) - totalOccupied;
+  const isSolo = table?.type === "solo";
+  const remainingCapacity = isSolo
+    ? Number.MAX_SAFE_INTEGER
+    : (table?.capacity ?? 0) - totalOccupied;
 
   const myOccupancy = useMemo(() => {
     if (!identity) return null;
@@ -269,7 +273,7 @@ function SeatTimerPage() {
           </div>
         )}
 
-        {identity.kind === "temp" ? (
+        {identity.kind === "temp" || isSolo ? (
           <div className="flex flex-col gap-4 bg-base-200 rounded-xl p-5">
             <button
               className={clsx(
@@ -404,6 +408,7 @@ function TableInfoSection({
   totalOccupied: number;
   connected: boolean;
 }) {
+  const isSolo = table.type === "solo";
   return (
     <div className="bg-base-200 rounded-xl p-4 flex flex-col gap-2">
       <div className="flex items-center justify-between">
@@ -412,7 +417,11 @@ function TableInfoSection({
           <span
             className={clsx(
               "badge badge-sm",
-              table.type === "mahjong" ? "badge-warning" : "badge-info",
+              table.type === "mahjong"
+                ? "badge-warning"
+                : table.type === "solo"
+                  ? "badge-secondary"
+                  : "badge-info",
             )}
           >
             {TYPE_LABELS[table.type] ?? table.type}
@@ -432,7 +441,7 @@ function TableInfoSection({
         </span>
         <span className="flex items-center gap-1">
           <UsersIcon className="size-3.5" />
-          {totalOccupied}/{table.capacity}
+          {isSolo ? totalOccupied : `${totalOccupied}/${table.capacity}`}
         </span>
       </div>
     </div>
