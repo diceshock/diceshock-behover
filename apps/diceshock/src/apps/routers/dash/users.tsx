@@ -1,4 +1,8 @@
-import { EyeIcon, UserMinusIcon } from "@phosphor-icons/react/dist/ssr";
+import {
+  CopyIcon,
+  EyeIcon,
+  UserMinusIcon,
+} from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
@@ -38,6 +42,15 @@ function RouteComponent() {
 
   const [pendingDisable, setPendingDisable] = useState<UserItem | null>(null);
   const [disablePending, setDisablePending] = useState(false);
+
+  const handleCopy = (text: string) => {
+    try {
+      navigator.clipboard.writeText(text);
+      msg.success("已复制");
+    } catch {
+      msg.error("没有剪贴板访问权限");
+    }
+  };
 
   const refreshUsers = useCallback(async () => {
     setLoading(true);
@@ -113,21 +126,20 @@ function RouteComponent() {
         </div>
       </form>
 
-      <div className="w-full h-[calc(100vh-8rem)] overflow-y-auto overflow-x-auto pb-40">
-        <table className="table table-pin-rows table-pin-cols">
+      <div className="w-full h-[calc(100vh-8rem)] overflow-auto pb-40">
+        <table className="table table-lg table-pin-rows table-pin-cols min-w-[1200px]">
           <thead>
             <tr className="z-20">
               <th></th>
-              <td>ID</td>
-              <td>昵称</td>
-              <td>姓名</td>
-              <td>会员计划</td>
-              <td>储值余额</td>
-              <td>手机号</td>
-              <td>UID</td>
-              <td>创建时间</td>
-              <td>操作</td>
-              <th></th>
+              <td className="whitespace-nowrap">ID</td>
+              <td className="whitespace-nowrap">昵称</td>
+              <td className="whitespace-nowrap">姓名</td>
+              <td className="whitespace-nowrap">会员计划</td>
+              <td className="whitespace-nowrap">储值余额</td>
+              <td className="whitespace-nowrap">手机号</td>
+              <td className="whitespace-nowrap">UID</td>
+              <td className="whitespace-nowrap">创建时间</td>
+              <th className="whitespace-nowrap">操作</th>
             </tr>
           </thead>
 
@@ -155,9 +167,30 @@ function RouteComponent() {
                 return (
                   <tr key={user.id}>
                     <th className="z-10"></th>
-                    <td className="font-mono text-xs">{user.id}</td>
-                    <td>{user.userInfo?.nickname || "—"}</td>
-                    <td>{user.name || "—"}</td>
+                    <td className="font-mono">
+                      <div className="relative group flex items-center gap-1">
+                        <span className="cursor-default">
+                          {user.id.slice(0, 5)}
+                        </span>
+                        <button
+                          type="button"
+                          className="btn btn-xs btn-ghost btn-square shrink-0"
+                          onClick={() => handleCopy(user.id)}
+                          title="复制用户ID"
+                        >
+                          <CopyIcon className="size-3.5" />
+                        </button>
+                        <div className="absolute right-0 top-full z-30 hidden group-hover:block pt-1">
+                          <div className="bg-base-200 shadow-lg rounded-lg px-3 py-1.5 text-xs font-mono whitespace-nowrap">
+                            {user.id}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="whitespace-nowrap">
+                      {user.userInfo?.nickname || "—"}
+                    </td>
+                    <td className="whitespace-nowrap">{user.name || "—"}</td>
                     <td className="relative group">
                       {(() => {
                         const activePlans = plans.filter(isActivePlan);
@@ -210,18 +243,18 @@ function RouteComponent() {
                         "—"
                       )}
                     </td>
-                    <td>{user.phone || "—"}</td>
-                    <td className="font-mono text-xs">
+                    <td className="whitespace-nowrap">{user.phone || "—"}</td>
+                    <td className="font-mono whitespace-nowrap">
                       {user.userInfo?.uid || "—"}
                     </td>
-                    <td>
+                    <td className="whitespace-nowrap">
                       {user.userInfo?.create_at
                         ? dayjs(user.userInfo.create_at).format(
                             "YYYY/MM/DD HH:mm",
                           )
                         : "—"}
                     </td>
-                    <td>
+                    <th className="whitespace-nowrap">
                       <div className="flex items-center gap-4 py-2 h-full">
                         <Link
                           to="/dash/users/$id"
@@ -241,8 +274,7 @@ function RouteComponent() {
                           <UserMinusIcon />
                         </button>
                       </div>
-                    </td>
-                    <th></th>
+                    </th>
                   </tr>
                 );
               })

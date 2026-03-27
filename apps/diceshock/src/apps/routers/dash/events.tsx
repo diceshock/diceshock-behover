@@ -1,4 +1,9 @@
-import { EyeIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react/dist/ssr";
+import {
+  CopyIcon,
+  EyeIcon,
+  PlusIcon,
+  TrashIcon,
+} from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
@@ -33,6 +38,15 @@ function RouteComponent() {
   const deleteDialogRef = useRef<HTMLDialogElement>(null);
   const [pendingDelete, setPendingDelete] = useState<EventItem | null>(null);
   const [deletePending, setDeletePending] = useState(false);
+
+  const handleCopy = (text: string) => {
+    try {
+      navigator.clipboard.writeText(text);
+      msg.success("已复制");
+    } catch {
+      msg.error("没有剪贴板访问权限");
+    }
+  };
 
   const refreshEvents = useCallback(async () => {
     setLoading(true);
@@ -113,20 +127,19 @@ function RouteComponent() {
         </button>
       </div>
 
-      <div className="w-full h-[calc(100vh-8rem)] overflow-y-auto overflow-x-auto pb-40">
-        <table className="table table-pin-rows table-pin-cols">
+      <div className="w-full h-[calc(100vh-8rem)] overflow-auto pb-40">
+        <table className="table table-lg table-pin-rows table-pin-cols min-w-[1100px]">
           <thead>
             <tr className="z-20">
               <th />
-              <td>ID</td>
-              <td>标题</td>
-              <td>描述</td>
-              <td>头图</td>
-              <td>状态</td>
-              <td>创建时间</td>
-              <td>更新时间</td>
-              <td>操作</td>
-              <th />
+              <td className="whitespace-nowrap">ID</td>
+              <td className="whitespace-nowrap">标题</td>
+              <td className="whitespace-nowrap">描述</td>
+              <td className="whitespace-nowrap">头图</td>
+              <td className="whitespace-nowrap">状态</td>
+              <td className="whitespace-nowrap">创建时间</td>
+              <td className="whitespace-nowrap">更新时间</td>
+              <th className="whitespace-nowrap">操作</th>
             </tr>
           </thead>
 
@@ -150,16 +163,33 @@ function RouteComponent() {
               events.map((event) => (
                 <tr key={event.id}>
                   <th className="z-10" />
-                  <td className="font-mono text-xs max-w-24 truncate">
-                    {event.id}
+                  <td className="font-mono">
+                    <div className="relative group flex items-center gap-1">
+                      <span className="cursor-default">
+                        {event.id.slice(0, 5)}
+                      </span>
+                      <button
+                        type="button"
+                        className="btn btn-xs btn-ghost btn-square shrink-0"
+                        onClick={() => handleCopy(event.id)}
+                        title="复制ID"
+                      >
+                        <CopyIcon className="size-3.5" />
+                      </button>
+                      <div className="absolute right-0 top-full z-30 hidden group-hover:block pt-1">
+                        <div className="bg-base-200 shadow-lg rounded-lg px-3 py-1.5 text-xs font-mono whitespace-nowrap">
+                          {event.id}
+                        </div>
+                      </div>
+                    </div>
                   </td>
                   <td className="font-semibold max-w-40 truncate">
                     {event.title}
                   </td>
-                  <td className="text-sm max-w-48 truncate">
+                  <td className="max-w-48 truncate">
                     {event.description || "—"}
                   </td>
-                  <td className="text-sm">
+                  <td>
                     {event.cover_image_url ? (
                       <img
                         src={event.cover_image_url}
@@ -170,7 +200,7 @@ function RouteComponent() {
                       "—"
                     )}
                   </td>
-                  <td>
+                  <td className="whitespace-nowrap">
                     {event.is_published ? (
                       <span className="badge badge-success badge-sm">
                         已上架
@@ -179,9 +209,13 @@ function RouteComponent() {
                       <span className="badge badge-ghost badge-sm">未上架</span>
                     )}
                   </td>
-                  <td className="text-sm">{formatCreateAt(event.create_at)}</td>
-                  <td className="text-sm">{formatCreateAt(event.update_at)}</td>
-                  <td>
+                  <td className="whitespace-nowrap">
+                    {formatCreateAt(event.create_at)}
+                  </td>
+                  <td className="whitespace-nowrap">
+                    {formatCreateAt(event.update_at)}
+                  </td>
+                  <th className="whitespace-nowrap">
                     <div className="flex items-center gap-1">
                       <Link
                         to="/dash/events/$id"
@@ -207,8 +241,7 @@ function RouteComponent() {
                         <TrashIcon />
                       </button>
                     </div>
-                  </td>
-                  <th />
+                  </th>
                 </tr>
               ))
             )}

@@ -284,19 +284,19 @@ function RouteComponent() {
         </select>
       </div>
 
-      <div className="w-full h-[calc(100vh-8rem)] overflow-y-auto overflow-x-auto pb-40">
-        <table className="table table-pin-rows table-pin-cols">
+      <div className="w-full h-[calc(100vh-8rem)] overflow-auto pb-40">
+        <table className="table table-lg table-pin-rows table-pin-cols min-w-[1200px]">
           <thead>
             <tr className="z-20">
-              <td>订单号</td>
-              <td>状态</td>
-              <td>开始时间</td>
-              <td>结束时间</td>
-              <td>桌台</td>
-              <td>用户</td>
-              <td>人数</td>
-              <td>费用</td>
-              <td>操作</td>
+              <td className="whitespace-nowrap">订单号</td>
+              <td className="whitespace-nowrap">状态</td>
+              <td className="whitespace-nowrap">开始时间</td>
+              <td className="whitespace-nowrap">结束时间</td>
+              <td className="whitespace-nowrap">桌台</td>
+              <td className="whitespace-nowrap">用户</td>
+              <td className="whitespace-nowrap">人数</td>
+              <td className="whitespace-nowrap">费用</td>
+              <th className="whitespace-nowrap">操作</th>
             </tr>
           </thead>
 
@@ -333,20 +333,27 @@ function RouteComponent() {
                   )}
                   {group.items.map((order) => (
                     <tr key={order.id}>
-                      <td className="font-mono text-xs max-w-32">
-                        <div className="flex items-center gap-1">
-                          <span className="truncate">{order.id}</span>
+                      <td className="font-mono">
+                        <div className="relative group flex items-center gap-1">
+                          <span className="cursor-default">
+                            {order.id.slice(0, 5)}
+                          </span>
                           <button
                             type="button"
                             className="btn btn-xs btn-ghost btn-square shrink-0"
                             onClick={() => handleCopy(order.id)}
                             title="复制订单号"
                           >
-                            <CopyIcon className="size-3" />
+                            <CopyIcon className="size-3.5" />
                           </button>
+                          <div className="absolute right-0 top-full z-30 hidden group-hover:block pt-1">
+                            <div className="bg-base-200 shadow-lg rounded-lg px-3 py-1.5 text-xs font-mono whitespace-nowrap">
+                              {order.id}
+                            </div>
+                          </div>
                         </div>
                       </td>
-                      <td>
+                      <td className="whitespace-nowrap">
                         {order.status === "active" ? (
                           <span className="badge badge-success badge-sm">
                             进行中
@@ -361,9 +368,13 @@ function RouteComponent() {
                           </span>
                         )}
                       </td>
-                      <td className="text-sm">{formatTime(order.start_at)}</td>
-                      <td className="text-sm">{formatTime(order.end_at)}</td>
-                      <td className="text-sm">
+                      <td className="whitespace-nowrap">
+                        {formatTime(order.start_at)}
+                      </td>
+                      <td className="whitespace-nowrap">
+                        {formatTime(order.end_at)}
+                      </td>
+                      <td className="whitespace-nowrap">
                         {order.table ? (
                           <Link
                             to="/dash/tables/$id"
@@ -376,7 +387,7 @@ function RouteComponent() {
                           "—"
                         )}
                       </td>
-                      <td className="text-sm">
+                      <td>
                         <Link
                           to="/dash/users/$id"
                           params={{ id: order.user_id ?? "" }}
@@ -385,8 +396,8 @@ function RouteComponent() {
                           {order.nickname}
                         </Link>
                       </td>
-                      <td className="text-sm">{order.seats}</td>
-                      <td className="text-sm font-mono">
+                      <td className="whitespace-nowrap">{order.seats}</td>
+                      <td className="font-mono whitespace-nowrap">
                         {order.final_price != null
                           ? formatPrice(order.final_price)
                           : order.status !== "ended" && pricingSnapshot
@@ -407,7 +418,7 @@ function RouteComponent() {
                               })()
                             : "—"}
                       </td>
-                      <td>
+                      <th className="whitespace-nowrap">
                         <div className="flex items-center gap-1">
                           {order.status === "active" && (
                             <>
@@ -466,7 +477,7 @@ function RouteComponent() {
                             </>
                           )}
                         </div>
-                      </td>
+                      </th>
                     </tr>
                   ))}
                 </>

@@ -227,13 +227,13 @@ function RouteComponent() {
         <table className="table table-lg table-pin-rows table-pin-cols min-w-[900px]">
           <thead>
             <tr className="z-20">
-              <td>名称</td>
-              <td>类型</td>
-              <td>状态</td>
-              <td>适用人数</td>
-              <td>当前使用</td>
-              <td>创建时间</td>
-              <td>操作</td>
+              <td className="whitespace-nowrap">名称</td>
+              <td className="whitespace-nowrap">类型</td>
+              <td className="whitespace-nowrap">状态</td>
+              <td className="whitespace-nowrap">适用人数</td>
+              <td className="whitespace-nowrap">当前使用</td>
+              <td className="whitespace-nowrap">创建时间</td>
+              <th className="whitespace-nowrap">操作</th>
             </tr>
           </thead>
 
@@ -266,15 +266,17 @@ function RouteComponent() {
 
                 return (
                   <tr key={table.id}>
-                    <td className="font-semibold">{table.name}</td>
-                    <td>
+                    <td className="font-semibold whitespace-nowrap">
+                      {table.name}
+                    </td>
+                    <td className="whitespace-nowrap">
                       <span
                         className={`badge badge-sm ${table.type === "mahjong" ? "badge-accent" : table.type === "solo" ? "badge-secondary" : "badge-info"}`}
                       >
                         {TYPE_LABELS[table.type] ?? table.type}
                       </span>
                     </td>
-                    <td>
+                    <td className="whitespace-nowrap">
                       {table.status === "active" ? (
                         <span className="badge badge-success badge-sm">
                           上架
@@ -283,14 +285,18 @@ function RouteComponent() {
                         <span className="badge badge-ghost badge-sm">下架</span>
                       )}
                     </td>
-                    <td>{table.type === "solo" ? "∞" : table.capacity}</td>
-                    <td>
+                    <td className="whitespace-nowrap">
+                      {table.type === "solo" ? "∞" : table.capacity}
+                    </td>
+                    <td className="whitespace-nowrap">
                       {table.type === "solo"
                         ? occupiedSeats
                         : `${occupiedSeats}/${table.capacity}`}
                     </td>
-                    <td>{formatCreateAt(table.create_at)}</td>
-                    <td>
+                    <td className="whitespace-nowrap">
+                      {formatCreateAt(table.create_at)}
+                    </td>
+                    <th className="whitespace-nowrap">
                       <div className="flex items-center gap-1">
                         <button
                           type="button"
@@ -317,7 +323,7 @@ function RouteComponent() {
                           删除
                         </button>
                       </div>
-                    </td>
+                    </th>
                   </tr>
                 );
               })
