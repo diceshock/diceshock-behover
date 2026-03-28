@@ -415,7 +415,7 @@ function RouteComponent() {
                                 const p = calculatePrice(
                                   order.start_at,
                                   Date.now(),
-                                  order.table?.type ?? "boardgame",
+                                  order.table?.scope ?? "boardgame",
                                   pricingSnapshot,
                                 );
                                 return p ? (

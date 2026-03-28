@@ -765,20 +765,6 @@ function ConditionFormFields({
               onClick={() => toggleScope("boardgame")}
             />
             <ToggleCard
-              icon={"🀄"}
-              label="日麻"
-              desc="日本麻将"
-              selected={conditions.scope.includes("mahjong")}
-              onClick={() => toggleScope("mahjong")}
-            />
-            <ToggleCard
-              icon={"🧑"}
-              label="散人"
-              desc="散客计时"
-              selected={conditions.scope.includes("solo")}
-              onClick={() => toggleScope("solo")}
-            />
-            <ToggleCard
               icon={"📖"}
               label="跑团"
               desc="桌上角色扮演"
@@ -786,11 +772,25 @@ function ConditionFormFields({
               onClick={() => toggleScope("trpg")}
             />
             <ToggleCard
+              icon={"🎲"}
+              label="桌游"
+              desc="桌面游戏"
+              selected={conditions.scope.includes("boardgame")}
+              onClick={() => toggleScope("boardgame")}
+            />
+            <ToggleCard
               icon={"🎮"}
               label="电玩"
               desc="电子游戏"
               selected={conditions.scope.includes("console")}
               onClick={() => toggleScope("console")}
+            />
+            <ToggleCard
+              icon={"🀄"}
+              label="日麻"
+              desc="日本麻将"
+              selected={conditions.scope.includes("mahjong")}
+              onClick={() => toggleScope("mahjong")}
             />
           </div>
         </div>

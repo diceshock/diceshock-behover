@@ -1049,11 +1049,11 @@ function UserDetailPage() {
                             </Link>
                             {occ.table && (
                               <span
-                                className={`badge badge-sm ${occ.table.type === "mahjong" ? "badge-accent" : "badge-info"}`}
+                                className={`badge badge-sm ${occ.table.type === "solo" ? "badge-secondary" : "badge-info"}`}
                               >
-                                {occ.table.type === "mahjong"
-                                  ? "麻将台"
-                                  : "桌游台"}
+                                {occ.table.type === "solo"
+                                  ? "散人桌"
+                                  : "固定桌"}
                               </span>
                             )}
                             {occ.table?.status === "inactive" && (
