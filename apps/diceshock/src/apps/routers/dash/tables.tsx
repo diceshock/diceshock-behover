@@ -20,13 +20,19 @@ type TablesList = Awaited<
 >;
 type TableItem = TablesList[number];
 
-type TypeFilter = "all" | "mahjong" | "boardgame" | "solo";
+type TypeFilter = "all" | "fixed" | "solo";
 type StatusFilter = "all" | "active" | "inactive";
 
 const TYPE_LABELS: Record<string, string> = {
-  mahjong: "麻将台",
-  boardgame: "桌游台",
-  solo: "散人台",
+  fixed: "固定桌",
+  solo: "散人桌",
+};
+
+const SCOPE_LABELS: Record<string, string> = {
+  trpg: "跑团",
+  boardgame: "桌游",
+  console: "电玩",
+  mahjong: "日麻",
 };
 
 export const Route = createFileRoute("/dash/tables")({
@@ -46,7 +52,8 @@ function RouteComponent() {
   const createDialogRef = useRef<HTMLDialogElement>(null);
   const [createForm, setCreateForm] = useState({
     name: "",
-    type: "boardgame" as "mahjong" | "boardgame" | "solo",
+    type: "fixed" as "fixed" | "solo",
+    scope: "boardgame" as "trpg" | "boardgame" | "console" | "mahjong",
     capacity: 4,
   });
   const [createPending, setCreatePending] = useState(false);
@@ -101,13 +108,19 @@ function RouteComponent() {
       await trpcClientDash.tablesManagement.create.mutate({
         name: createForm.name.trim(),
         type: createForm.type,
+        scope: createForm.scope,
         ...(createForm.type !== "solo"
           ? { capacity: createForm.capacity }
           : {}),
       });
       msg.success("桌台已创建");
       createDialogRef.current?.close();
-      setCreateForm({ name: "", type: "boardgame", capacity: 4 });
+      setCreateForm({
+        name: "",
+        type: "fixed",
+        scope: "boardgame",
+        capacity: 4,
+      });
       await refreshTables();
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "创建失败");
@@ -190,9 +203,8 @@ function RouteComponent() {
           {(
             [
               ["all", "全部"],
-              ["mahjong", "麻将台"],
-              ["boardgame", "桌游台"],
-              ["solo", "散人台"],
+              ["fixed", "固定桌"],
+              ["solo", "散人桌"],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -274,10 +286,15 @@ function RouteComponent() {
                     </td>
                     <td className="whitespace-nowrap">
                       <span
-                        className={`badge badge-sm ${table.type === "mahjong" ? "badge-accent" : table.type === "solo" ? "badge-secondary" : "badge-info"}`}
+                        className={`badge badge-sm ${table.type === "solo" ? "badge-secondary" : "badge-info"}`}
                       >
                         {TYPE_LABELS[table.type] ?? table.type}
                       </span>
+                      {table.scope && (
+                        <span className="badge badge-sm badge-outline ml-1">
+                          {SCOPE_LABELS[table.scope] ?? table.scope}
+                        </span>
+                      )}
                     </td>
                     <td className="whitespace-nowrap">
                       {table.status === "active" ? (
@@ -419,13 +436,35 @@ function RouteComponent() {
                 onChange={(e) =>
                   setCreateForm((p) => ({
                     ...p,
-                    type: e.target.value as "mahjong" | "boardgame" | "solo",
+                    type: e.target.value as "fixed" | "solo",
                   }))
                 }
               >
-                <option value="boardgame">桌游台</option>
-                <option value="mahjong">麻将台</option>
-                <option value="solo">散人台</option>
+                <option value="fixed">固定桌</option>
+                <option value="solo">散人桌</option>
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-2">
+              <span className="label text-sm font-semibold">营业范围</span>
+              <select
+                className="select select-bordered w-full"
+                value={createForm.scope}
+                onChange={(e) =>
+                  setCreateForm((p) => ({
+                    ...p,
+                    scope: e.target.value as
+                      | "trpg"
+                      | "boardgame"
+                      | "console"
+                      | "mahjong",
+                  }))
+                }
+              >
+                <option value="boardgame">桌游</option>
+                <option value="mahjong">日麻</option>
+                <option value="trpg">跑团</option>
+                <option value="console">电玩</option>
               </select>
             </label>
 

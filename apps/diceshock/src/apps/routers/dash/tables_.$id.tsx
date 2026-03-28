@@ -32,9 +32,15 @@ type TableDetail = Awaited<
 type Occupancy = TableDetail["occupancies"][number];
 
 const TYPE_LABELS: Record<string, string> = {
-  mahjong: "麻将台",
-  boardgame: "桌游台",
-  solo: "散人台",
+  fixed: "固定桌",
+  solo: "散人桌",
+};
+
+const SCOPE_LABELS: Record<string, string> = {
+  trpg: "跑团",
+  boardgame: "桌游",
+  console: "电玩",
+  mahjong: "日麻",
 };
 
 export const Route = createFileRoute("/dash/tables_/$id")({
@@ -279,9 +285,12 @@ function TableDetailPage() {
               </p>
             </div>
             <span
-              className={`badge ${table.type === "mahjong" ? "badge-accent" : table.type === "solo" ? "badge-secondary" : "badge-info"}`}
+              className={`badge ${table.type === "solo" ? "badge-secondary" : "badge-info"}`}
             >
               {TYPE_LABELS[table.type] ?? table.type}
+            </span>
+            <span className="badge badge-outline">
+              {SCOPE_LABELS[table.scope] ?? table.scope}
             </span>
             {table.status === "active" ? (
               <span className="badge badge-success">上架</span>
