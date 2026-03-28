@@ -117,14 +117,14 @@ function matchTimeCondition(
   }
 }
 
-function matchScopeCondition(tableType: string, scope: string[]): boolean {
+function matchScopeCondition(tableScope: string, scope: string[]): boolean {
   if (scope.length === 0) return true;
-  return scope.includes(tableType);
+  return scope.includes(tableScope);
 }
 
 function findMatchingPlan(
   startDate: Date,
-  tableType: string,
+  tableScope: string,
   snapshot: SnapshotData,
 ): PlanEntry | null {
   const conditionals = snapshot.plans
@@ -137,7 +137,7 @@ function findMatchingPlan(
 
     const dateMatch = matchDateCondition(startDate, cond.date);
     const timeMatch = matchTimeCondition(startDate, cond.time, snapshot.config);
-    const scopeMatch = matchScopeCondition(tableType, cond.scope);
+    const scopeMatch = matchScopeCondition(tableScope, cond.scope);
 
     if (dateMatch && timeMatch && scopeMatch) return plan;
   }
@@ -148,7 +148,7 @@ function findMatchingPlan(
 export function calculatePrice(
   startAt: number,
   endAt: number,
-  tableType: string,
+  tableScope: string,
   snapshot: SnapshotData | null,
   pauseLogs?: Array<{ pausedAt: number; resumedAt: number | null }>,
 ): PriceBreakdown | null {
@@ -171,7 +171,7 @@ export function calculatePrice(
   const billableHalfHours = Math.ceil(billableMs / HALF_HOUR_MS);
 
   const startDate = new Date(startAt);
-  const plan = findMatchingPlan(startDate, tableType, snapshot);
+  const plan = findMatchingPlan(startDate, tableScope, snapshot);
   if (!plan) return null;
 
   let rawPrice: number;

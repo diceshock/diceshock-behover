@@ -47,7 +47,13 @@ const list = dashProcedure
     const allOccupancies = await tdb.query.tableOccupancyTable.findMany({
       with: {
         table: {
-          columns: { id: true, name: true, type: true, code: true },
+          columns: {
+            id: true,
+            name: true,
+            type: true,
+            scope: true,
+            code: true,
+          },
         },
         user: {
           columns: { id: true, name: true },
@@ -160,7 +166,13 @@ const getById = dashProcedure
       where: (o, { eq }) => eq(o.id, input.id),
       with: {
         table: {
-          columns: { id: true, name: true, type: true, code: true },
+          columns: {
+            id: true,
+            name: true,
+            type: true,
+            scope: true,
+            code: true,
+          },
         },
         user: {
           columns: { id: true, name: true },
@@ -249,7 +261,7 @@ const endOrder = dashProcedure
 
     const occ = await tdb.query.tableOccupancyTable.findFirst({
       where: (o, { eq }) => eq(o.id, input.id),
-      with: { table: { columns: { type: true } } },
+      with: { table: { columns: { type: true, scope: true } } },
     });
     if (!occ) throw new Error("订单不存在");
 
@@ -277,7 +289,7 @@ const endOrder = dashProcedure
         : Number(occ.start_at);
     const endAt = now.getTime();
     const snapshotData = publishedSnapshot?.data as SnapshotData | null;
-    const tableType = occ.table?.type ?? "boardgame";
+    const tableScope = occ.table?.scope ?? "boardgame";
 
     const pauseLogsMapped = pauseLogs.map((l) => ({
       pausedAt:
@@ -294,7 +306,7 @@ const endOrder = dashProcedure
     const breakdown = calculatePrice(
       startAt,
       endAt,
-      tableType,
+      tableScope,
       snapshotData,
       pauseLogsMapped,
     );
@@ -322,7 +334,7 @@ async function buildSettlementData(
     where: (o, { eq }) => eq(o.id, occupancyId),
     with: {
       table: {
-        columns: { id: true, name: true, type: true, code: true },
+        columns: { id: true, name: true, type: true, scope: true, code: true },
       },
       user: { columns: { id: true, name: true } },
     },
@@ -363,7 +375,7 @@ async function buildSettlementData(
       ? occ.end_at.getTime()
       : Number(occ.end_at)
     : Date.now();
-  const tableType = occ.table?.type ?? "boardgame";
+  const tableScope = occ.table?.scope ?? "boardgame";
 
   const pauseLogsMapped = pauseLogs.map((l) => ({
     pausedAt:
@@ -397,7 +409,7 @@ async function buildSettlementData(
       : calculatePrice(
           startAt,
           endAt,
-          tableType,
+          tableScope,
           snapshotData,
           pauseLogsMapped,
         );
@@ -540,7 +552,15 @@ const settleOrder = dashProcedure
     const occ = await tdb.query.tableOccupancyTable.findFirst({
       where: (o, { eq }) => eq(o.id, input.id),
       with: {
-        table: { columns: { id: true, name: true, type: true, code: true } },
+        table: {
+          columns: {
+            id: true,
+            name: true,
+            type: true,
+            scope: true,
+            code: true,
+          },
+        },
       },
     });
     if (!occ) throw new Error("订单不存在");
@@ -568,7 +588,7 @@ const settleOrder = dashProcedure
         ? occ.start_at.getTime()
         : Number(occ.start_at);
     const endAt = now.getTime();
-    const tableType = occ.table?.type ?? "boardgame";
+    const tableScope = occ.table?.scope ?? "boardgame";
     const snapshotData = publishedSnapshot?.data as SnapshotData | null;
 
     const allPauseLogs = openLog
@@ -592,7 +612,7 @@ const settleOrder = dashProcedure
     const breakdown = calculatePrice(
       startAt,
       endAt,
-      tableType,
+      tableScope,
       snapshotData,
       pauseLogsMapped,
     );
@@ -770,7 +790,7 @@ const settleOrder = dashProcedure
     const snapshot: SettlementSnapshot = {
       orderId: occ.id,
       tableName: occ.table?.name ?? "未知",
-      tableType,
+      tableType: tableScope,
       nickname,
       uid,
       seats: occ.seats,

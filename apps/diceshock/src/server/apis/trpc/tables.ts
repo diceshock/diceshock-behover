@@ -71,6 +71,7 @@ const getByCode = publicProcedure
       id: table.id,
       name: table.name,
       type: table.type,
+      scope: table.scope,
       status: table.status,
       capacity: table.capacity,
       code: table.code,
