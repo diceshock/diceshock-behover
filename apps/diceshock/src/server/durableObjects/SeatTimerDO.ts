@@ -18,7 +18,8 @@ interface OccupancyInfo {
 interface TableInfo {
   id: string;
   name: string;
-  type: "mahjong" | "boardgame";
+  type: "fixed" | "solo";
+  scope: "trpg" | "boardgame" | "console" | "mahjong";
   status: "active" | "inactive";
   capacity: number;
   code: string;

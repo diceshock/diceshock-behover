@@ -14,6 +14,7 @@ interface TableInfo {
   id: string;
   name: string;
   type: string;
+  scope: string;
   status: string;
   capacity: number;
   code: string;
@@ -76,6 +77,7 @@ export async function fetchTableStateForDO(
       id: table.id,
       name: table.name,
       type: table.type,
+      scope: table.scope,
       status: table.status,
       capacity: table.capacity,
       code: table.code,
