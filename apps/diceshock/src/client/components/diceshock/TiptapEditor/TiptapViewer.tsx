@@ -1,14 +1,10 @@
-import {
-  headingsPlugin,
-  imagePlugin,
-  linkPlugin,
-  listsPlugin,
-  MDXEditor,
-  quotePlugin,
-  thematicBreakPlugin,
-} from "@mdxeditor/editor";
-import "@mdxeditor/editor/style.css";
+import Image from "@tiptap/extension-image";
+import Link from "@tiptap/extension-link";
+import Underline from "@tiptap/extension-underline";
+import { EditorContent, useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
 import { useCallback, useState } from "react";
+import { Markdown } from "tiptap-markdown";
 
 type MarkdownViewerProps = {
   content: string;
@@ -21,6 +17,18 @@ export default function MarkdownViewer({
 }: MarkdownViewerProps) {
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({ codeBlock: false }),
+      Link.configure({ openOnClick: true }),
+      Image,
+      Underline,
+      Markdown,
+    ],
+    content,
+    editable: false,
+  });
+
   const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
     if (target.tagName === "IMG") {
@@ -32,6 +40,8 @@ export default function MarkdownViewer({
     }
   }, []);
 
+  if (!editor) return null;
+
   return (
     <>
       <div
@@ -40,20 +50,7 @@ export default function MarkdownViewer({
         onKeyDown={undefined}
         role="presentation"
       >
-        <MDXEditor
-          className="dark-theme"
-          contentEditableClassName="mdx-content"
-          markdown={content}
-          readOnly
-          plugins={[
-            headingsPlugin(),
-            listsPlugin(),
-            quotePlugin(),
-            thematicBreakPlugin(),
-            linkPlugin(),
-            imagePlugin(),
-          ]}
-        />
+        <EditorContent editor={editor} className="mdx-content" />
       </div>
       {lightboxSrc && (
         <dialog
