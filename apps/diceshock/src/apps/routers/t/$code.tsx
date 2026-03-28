@@ -25,9 +25,15 @@ export const Route = createFileRoute("/t/$code")({
 });
 
 const TYPE_LABELS: Record<string, string> = {
-  mahjong: "麻将台",
-  boardgame: "桌游台",
-  solo: "散人台",
+  fixed: "固定桌",
+  solo: "散人桌",
+};
+
+const SCOPE_LABELS: Record<string, string> = {
+  trpg: "跑团",
+  boardgame: "桌游",
+  console: "电玩",
+  mahjong: "日麻",
 };
 
 const TOTP_TIME_STEP = 30;
@@ -125,6 +131,7 @@ function SeatTimerPage() {
           id: tableData.id,
           name: tableData.name,
           type: tableData.type,
+          scope: tableData.scope,
           status: tableData.status,
           capacity: tableData.capacity,
           code: tableData.code,
@@ -338,7 +345,7 @@ function SeatTimerPage() {
         <OccupancyListSection
           occupancies={occupancies}
           identity={identity}
-          tableType={table.type}
+          tableType={table.scope}
           snapshot={pricingSnapshot}
         />
       </div>
@@ -382,7 +389,7 @@ function SeatTimerPage() {
       {myOccupancy && (
         <PricePreviewSection
           startAt={myOccupancy.start_at}
-          tableType={table.type}
+          tableType={table.scope}
           snapshot={pricingSnapshot}
         />
       )}
@@ -392,7 +399,7 @@ function SeatTimerPage() {
       <OccupancyListSection
         occupancies={occupancies}
         identity={identity}
-        tableType={table.type}
+        tableType={table.scope}
         snapshot={pricingSnapshot}
       />
     </div>
@@ -404,7 +411,13 @@ function TableInfoSection({
   totalOccupied,
   connected,
 }: {
-  table: { name: string; code: string; type: string; capacity: number };
+  table: {
+    name: string;
+    code: string;
+    type: string;
+    scope: string;
+    capacity: number;
+  };
   totalOccupied: number;
   connected: boolean;
 }) {
@@ -417,14 +430,13 @@ function TableInfoSection({
           <span
             className={clsx(
               "badge badge-sm",
-              table.type === "mahjong"
-                ? "badge-warning"
-                : table.type === "solo"
-                  ? "badge-secondary"
-                  : "badge-info",
+              table.type === "solo" ? "badge-secondary" : "badge-info",
             )}
           >
             {TYPE_LABELS[table.type] ?? table.type}
+          </span>
+          <span className="badge badge-sm badge-outline">
+            {SCOPE_LABELS[table.scope] ?? table.scope}
           </span>
           <span
             className={clsx(
