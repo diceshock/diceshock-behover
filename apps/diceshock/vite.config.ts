@@ -9,6 +9,9 @@ import svgr from "vite-plugin-svgr";
 import path from "node:path";
 
 const config = defineConfig({
+  define: {
+    global: "globalThis",
+  },
   plugins: [
     svgr(),
     tailwindcss(),
