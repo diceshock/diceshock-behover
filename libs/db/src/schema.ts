@@ -265,9 +265,11 @@ export const userMembershipPlansRelations = relations(
 export const tablesTable = sqlite.sqliteTable("tables", {
   id: sqlite.text().$defaultFn(createId).primaryKey(),
   name: sqlite.text().notNull(),
-  type: sqlite
-    .text("type", { enum: ["mahjong", "boardgame", "solo"] })
-    .notNull(),
+  type: sqlite.text("type", { enum: ["fixed", "solo"] }).notNull(),
+  scope: sqlite
+    .text("scope", { enum: ["trpg", "boardgame", "console", "mahjong"] })
+    .notNull()
+    .$default(() => "boardgame"),
   status: sqlite
     .text("status", { enum: ["active", "inactive"] })
     .notNull()

@@ -1,0 +1,1 @@
+ALTER TABLE `tables` ADD `scope` text NOT NULL;
