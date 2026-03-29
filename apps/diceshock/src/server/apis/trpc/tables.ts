@@ -231,9 +231,21 @@ const pause = protectedProcedure
     return { success: true };
   });
 
+const getMyActiveOccupancy = protectedProcedure.query(async ({ ctx }) => {
+  const tdb = db(ctx.env.DB);
+  const occ = await tdb.query.tableOccupancyTable.findFirst({
+    where: (o, { eq, ne, and }) =>
+      and(eq(o.user_id, ctx.userId), ne(o.status, "ended")),
+    with: { table: { columns: { code: true, name: true } } },
+  });
+  if (!occ) return null;
+  return { code: occ.table.code, name: occ.table.name };
+});
+
 export default {
   getByCode,
   occupy,
   leave,
   pause,
+  getMyActiveOccupancy,
 };

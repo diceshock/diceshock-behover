@@ -219,4 +219,24 @@ const transfer = publicProcedure
     return { transferred: true, occupancyId: activeOccupancies.id };
   });
 
-export default { create, validate, occupy, leave, transfer };
+const getActiveOccupancy = publicProcedure
+  .input(z.object({ tempId: z.string() }))
+  .query(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const occ = await tdb.query.tableOccupancyTable.findFirst({
+      where: (o, { eq, ne, and }) =>
+        and(eq(o.temp_id, input.tempId), ne(o.status, "ended")),
+      with: { table: { columns: { code: true, name: true } } },
+    });
+    if (!occ) return null;
+    return { code: occ.table.code, name: occ.table.name };
+  });
+
+export default {
+  create,
+  validate,
+  occupy,
+  leave,
+  transfer,
+  getActiveOccupancy,
+};

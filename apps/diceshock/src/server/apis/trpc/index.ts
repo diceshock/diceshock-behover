@@ -51,6 +51,7 @@ export const appRouterPublic = router({
     occupy: tables.occupy,
     leave: tables.leave,
     pause: tables.pause,
+    getMyActiveOccupancy: tables.getMyActiveOccupancy,
   },
   tempIdentity: {
     create: tempIdentity.create,
@@ -58,6 +59,7 @@ export const appRouterPublic = router({
     occupy: tempIdentity.occupy,
     leave: tempIdentity.leave,
     transfer: tempIdentity.transfer,
+    getActiveOccupancy: tempIdentity.getActiveOccupancy,
   },
   pricing: {
     getPublished: pricingPlansManagement.getPublished,
