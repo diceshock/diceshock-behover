@@ -19,6 +19,8 @@ type SnapshotData = Awaited<
 
 type PlanEntry = SnapshotData["plans"][number];
 
+type Identity = "temporary" | "registered";
+
 type Conditions = {
   date:
     | { type: "fixed"; start: string; end: string }
@@ -31,6 +33,7 @@ type Conditions = {
     | { type: "daytime" }
     | { type: "nighttime" }
     | { type: "custom"; start: string; end: string };
+  identity: Identity[];
   member:
     | { type: "irrelevant" }
     | { type: "non_member" }
@@ -87,10 +90,31 @@ function yuanToCents(yuan: string): number {
   return Math.round(n * 100);
 }
 
+const IDENTITY_OPTIONS: {
+  value: Identity;
+  label: string;
+  icon: string;
+  desc: string;
+}[] = [
+  {
+    value: "temporary",
+    label: "临时身份",
+    icon: "👤",
+    desc: "未登录的临时访客",
+  },
+  {
+    value: "registered",
+    label: "注册用户",
+    icon: "🔑",
+    desc: "已注册登录的用户",
+  },
+];
+
 function defaultConditions(): Conditions {
   return {
     date: { type: "workdays" },
     time: { type: "all_day" },
+    identity: ["registered"],
     member: { type: "irrelevant" },
     scope: [],
   };
@@ -412,10 +436,32 @@ function ConditionFormFields({
     setConditions({ ...conditions, date });
   const updateTime = (time: Conditions["time"]) =>
     setConditions({ ...conditions, time });
+  const updateIdentity = (identity: Identity[]) => {
+    const onlyRegistered =
+      identity.length === 1 && identity[0] === "registered";
+    setConditions({
+      ...conditions,
+      identity,
+      member: onlyRegistered ? conditions.member : { type: "irrelevant" },
+    });
+  };
   const updateMember = (member: Conditions["member"]) =>
     setConditions({ ...conditions, member });
   const updateScope = (scope: string[]) =>
     setConditions({ ...conditions, scope });
+
+  const toggleIdentity = (val: Identity) => {
+    const current = conditions.identity ?? ["registered"];
+    const next = current.includes(val)
+      ? current.filter((v) => v !== val)
+      : [...current, val];
+    if (next.length === 0) return; // must select at least one
+    updateIdentity(next);
+  };
+
+  const memberDisabled = !(
+    conditions.identity.length === 1 && conditions.identity[0] === "registered"
+  );
 
   const toggleScope = (val: string) => {
     updateScope(
@@ -688,10 +734,41 @@ function ConditionFormFields({
       <div className="card bg-base-200/50">
         <div className="card-body p-4 gap-3">
           <SectionHeader
+            icon={"🪪"}
+            title="注册用户条件"
+            badge="多选"
+            desc="选择此计划适用的用户身份类型，至少选一个"
+          />
+          <div className="grid grid-cols-2 gap-3">
+            {IDENTITY_OPTIONS.map((opt) => (
+              <ToggleCard
+                key={opt.value}
+                icon={opt.icon}
+                label={opt.label}
+                desc={opt.desc}
+                selected={(conditions.identity ?? ["registered"]).includes(
+                  opt.value,
+                )}
+                onClick={() => toggleIdentity(opt.value)}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div
+        className={`card bg-base-200/50 ${memberDisabled ? "opacity-50 pointer-events-none" : ""}`}
+      >
+        <div className="card-body p-4 gap-3">
+          <SectionHeader
             icon={"👤"}
             title="会员条件"
             badge="单选"
-            desc="选择此计划适用的会员类型"
+            desc={
+              memberDisabled
+                ? "仅当用户身份为「仅注册用户」时可用"
+                : "选择此计划适用的会员类型"
+            }
           />
           <div className="grid grid-cols-2 gap-3">
             <OptionCard

@@ -32,6 +32,8 @@ type SnapshotData = Awaited<
 >["data"];
 
 type PlanEntry = SnapshotData["plans"][number];
+type Identity = "temporary" | "registered";
+
 type Conditions = NonNullable<PlanEntry["conditions"]> & {
   date:
     | { type: "fixed"; start: string; end: string }
@@ -44,6 +46,7 @@ type Conditions = NonNullable<PlanEntry["conditions"]> & {
     | { type: "daytime" }
     | { type: "nighttime" }
     | { type: "custom"; start: string; end: string };
+  identity: Identity[];
   member:
     | { type: "irrelevant" }
     | { type: "non_member" }
@@ -121,6 +124,16 @@ function getTimeLabel(time: Conditions["time"]): string {
     default:
       return "";
   }
+}
+
+const IDENTITY_LABELS: Record<string, string> = {
+  temporary: "临时身份",
+  registered: "注册用户",
+};
+
+function getIdentityLabel(identity: string[]): string {
+  if (!identity || identity.length === 0) return "注册用户";
+  return identity.map((v) => IDENTITY_LABELS[v] ?? v).join(", ");
 }
 
 function getMemberLabel(member: Conditions["member"]): string {
@@ -232,6 +245,7 @@ function PricingPage() {
       conditions: {
         date: { type: "workdays" },
         time: { type: "all_day" },
+        identity: ["registered"],
         member: { type: "irrelevant" },
         scope: [],
       },
@@ -514,6 +528,7 @@ function PricingPage() {
               const cond = (plan.conditions ?? {
                 date: { type: "workdays" },
                 time: { type: "all_day" },
+                identity: ["registered"],
                 member: { type: "irrelevant" },
                 scope: [],
               }) as Conditions;
@@ -559,6 +574,15 @@ function PricingPage() {
                           <span className="badge badge-outline badge-xs">
                             {getTimeLabel(cond.time)}
                           </span>
+                          {cond.identity &&
+                            !(
+                              cond.identity.length === 1 &&
+                              cond.identity[0] === "registered"
+                            ) && (
+                              <span className="badge badge-outline badge-xs">
+                                {getIdentityLabel(cond.identity)}
+                              </span>
+                            )}
                           {cond.member.type !== "irrelevant" && (
                             <span className="badge badge-outline badge-xs">
                               {getMemberLabel(cond.member)}
@@ -920,6 +944,15 @@ function PricingPage() {
                         <span className="badge badge-outline badge-xs">
                           🕐 {getTimeLabel(cond.time)}
                         </span>
+                        {cond.identity &&
+                          !(
+                            cond.identity.length === 1 &&
+                            cond.identity[0] === "registered"
+                          ) && (
+                            <span className="badge badge-outline badge-xs">
+                              🪪 {getIdentityLabel(cond.identity)}
+                            </span>
+                          )}
                         {cond.member.type !== "irrelevant" && (
                           <span className="badge badge-outline badge-xs">
                             👤 {getMemberLabel(cond.member)}

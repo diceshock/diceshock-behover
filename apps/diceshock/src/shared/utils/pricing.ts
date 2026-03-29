@@ -13,6 +13,7 @@ interface PlanConditions {
     | { type: "daytime" }
     | { type: "nighttime" }
     | { type: "custom"; start: string; end: string };
+  identity?: ("temporary" | "registered")[];
   member:
     | { type: "irrelevant" }
     | { type: "non_member" }
