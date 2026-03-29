@@ -5,12 +5,15 @@ import {
   UserIcon,
   UsersIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import clsx from "clsx";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import QRCode from "qrcode";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useAuth from "@/client/hooks/useAuth";
+import useCrossData from "@/client/hooks/useCrossData";
 import useSeatTimer from "@/client/hooks/useSeatTimer";
 import useTempIdentity from "@/client/hooks/useTempIdentity";
+import { getLoginTime } from "@/client/hooks/useTOTP";
 import type { SeatIdentity } from "@/shared/types";
 import {
   calculatePrice,
@@ -22,6 +25,9 @@ import trpcClientPublic from "@/shared/utils/trpc";
 
 export const Route = createFileRoute("/t/$code")({
   component: SeatTimerPage,
+  validateSearch: (search: Record<string, unknown>) => ({
+    from: (search.from as string) ?? "",
+  }),
 });
 
 const TYPE_LABELS: Record<string, string> = {
@@ -74,9 +80,10 @@ function useSeatIdentity(): SeatIdentity | null {
 
 function SeatTimerPage() {
   const { code } = Route.useParams();
+  const { from } = Route.useSearch();
   const identity = useSeatIdentity();
   const { tempIdentity } = useTempIdentity();
-  const navigate = useNavigate();
+  const [redirectedFrom, setRedirectedFrom] = useState(from || "");
 
   const [tableData, setTableData] = useState<Awaited<
     ReturnType<typeof trpcClientPublic.tables.getByCode.query>
@@ -88,6 +95,8 @@ function SeatTimerPage() {
   const [pricingSnapshot, setPricingSnapshot] = useState<SnapshotData | null>(
     null,
   );
+  const [redirecting, setRedirecting] = useState(false);
+  const [activeChecked, setActiveChecked] = useState(false);
 
   const identityId =
     identity?.kind === "real"
@@ -123,6 +132,36 @@ function SeatTimerPage() {
   useEffect(() => {
     void fetchTable();
   }, [fetchTable]);
+
+  const activeCheckRef = useRef(false);
+  useEffect(() => {
+    if (!identity || activeCheckRef.current) return;
+    activeCheckRef.current = true;
+
+    const check = async () => {
+      try {
+        let active: { code: string; name: string } | null = null;
+        if (identity.kind === "real") {
+          active = await trpcClientPublic.tables.getMyActiveOccupancy.query();
+        } else if (identity.kind === "temp") {
+          active = await trpcClientPublic.tempIdentity.getActiveOccupancy.query(
+            {
+              tempId: identity.tempId,
+            },
+          );
+        }
+
+        if (active && active.code !== code) {
+          setRedirecting(true);
+          window.location.href = `/t/${active.code}?from=${encodeURIComponent(code)}`;
+          return;
+        }
+      } catch {}
+      setActiveChecked(true);
+    };
+
+    void check();
+  }, [identity, code]);
 
   const table =
     wsState?.table ??
@@ -164,7 +203,9 @@ function SeatTimerPage() {
   const isExpired =
     identity?.kind === "temp" && Date.now() > identity.expiresAt;
 
-  if (loading) {
+  const showLoading = loading || redirecting || (!!identity && !activeChecked);
+
+  if (showLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <span className="loading loading-spinner loading-lg" />
@@ -237,7 +278,7 @@ function SeatTimerPage() {
         const [, existingCode, existingName] = message.split(":");
         setError(`你正在使用 ${existingName}，跳转中...`);
         setTimeout(() => {
-          void navigate({ to: "/t/$code", params: { code: existingCode } });
+          window.location.href = `/t/${existingCode}?from=${encodeURIComponent(table?.name ?? code)}`;
         }, 1500);
       } else {
         setError(message);
@@ -360,6 +401,20 @@ function SeatTimerPage() {
           <button
             className="btn btn-xs btn-ghost"
             onClick={() => setError(null)}
+          >
+            关闭
+          </button>
+        </div>
+      )}
+
+      {redirectedFrom && (
+        <div className="alert alert-warning alert-soft text-sm">
+          <span>
+            你正在 {table?.name} 计时中，已从 {redirectedFrom} 跳转至此
+          </span>
+          <button
+            className="btn btn-xs btn-ghost"
+            onClick={() => setRedirectedFrom("")}
           >
             关闭
           </button>
@@ -489,6 +544,16 @@ function TOTPSection({ identity }: { identity: SeatIdentity | null }) {
 
 function RealTOTPSection() {
   const { code, remainingSeconds, isLoading, error } = __useTOTPImport(true);
+  const crossData = useCrossData();
+  const userAgentRef = useRef(
+    crossData?.UserAgentMeta?.userAgent ?? navigator.userAgent,
+  );
+  const loginTimeRef = useRef(getLoginTime() || Date.now());
+
+  const qrPayload = useMemo(() => {
+    if (!code) return null;
+    return `{"totp":"${code}","ua":"${userAgentRef.current}","lt":${loginTimeRef.current}}`;
+  }, [code]);
 
   if (error) {
     return (
@@ -503,6 +568,7 @@ function RealTOTPSection() {
       code={code}
       remainingSeconds={remainingSeconds}
       isLoading={isLoading}
+      qrPayload={qrPayload}
     />
   );
 }
@@ -527,11 +593,17 @@ function TempTOTPSection({ secret }: { secret: string }) {
     return () => clearInterval(timer);
   }, [secret]);
 
+  const qrPayload = useMemo(() => {
+    if (!code) return null;
+    return `{"totp":"${code}"}`;
+  }, [code]);
+
   return (
     <TOTPDisplay
       code={code}
       remainingSeconds={remainingSeconds}
       isLoading={!code}
+      qrPayload={qrPayload}
     />
   );
 }
@@ -540,63 +612,95 @@ function TOTPDisplay({
   code,
   remainingSeconds,
   isLoading,
+  qrPayload,
 }: {
   code: string;
   remainingSeconds: number;
   isLoading: boolean;
+  qrPayload: string | null;
 }) {
   const progress = remainingSeconds / TOTP_TIME_STEP;
   const circumference = 2 * Math.PI * 14;
   const dashOffset = circumference * (1 - progress);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [qrError, setQrError] = useState(false);
+  const prevQrPayloadRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!qrPayload || !canvasRef.current) return;
+    if (qrPayload === prevQrPayloadRef.current) return;
+    prevQrPayloadRef.current = qrPayload;
+
+    setQrError(false);
+    QRCode.toCanvas(canvasRef.current, qrPayload, {
+      width: 200,
+      margin: 1,
+      color: { dark: "#000000", light: "#ffffff" },
+    }).catch(() => setQrError(true));
+  }, [qrPayload]);
 
   return (
-    <div className="bg-base-200 rounded-xl p-4 flex items-center justify-between">
-      <div className="flex flex-col gap-1">
-        <span className="text-xs text-base-content/50">活动验证码</span>
-        {isLoading ? (
-          <span className="loading loading-dots loading-sm" />
-        ) : (
-          <span className="font-mono text-2xl font-bold tracking-[0.25em]">
-            {code || "------"}
-          </span>
-        )}
-      </div>
-      <div className="relative flex items-center justify-center">
-        <svg className="size-8 -rotate-90" viewBox="0 0 32 32">
-          <circle
-            cx="16"
-            cy="16"
-            r="14"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            className="text-base-300"
-          />
-          <circle
-            cx="16"
-            cy="16"
-            r="14"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeDasharray={circumference}
-            strokeDashoffset={dashOffset}
-            strokeLinecap="round"
-            className={clsx(
-              "transition-all duration-1000 linear",
-              remainingSeconds <= 5 ? "text-error" : "text-primary",
-            )}
-          />
-        </svg>
-        <span
-          className={clsx(
-            "absolute text-[10px] font-mono font-bold",
-            remainingSeconds <= 5 ? "text-error" : "text-base-content",
+    <div className="bg-base-200 rounded-xl p-4 flex flex-col items-center gap-4">
+      <div className="flex items-center justify-between w-full">
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-base-content/50">活动验证码</span>
+          {isLoading ? (
+            <span className="loading loading-dots loading-sm" />
+          ) : (
+            <span className="font-mono text-2xl font-bold tracking-[0.25em]">
+              {code || "------"}
+            </span>
           )}
-        >
-          {remainingSeconds}
-        </span>
+        </div>
+        <div className="relative flex items-center justify-center">
+          <svg className="size-8 -rotate-90" viewBox="0 0 32 32">
+            <circle
+              cx="16"
+              cy="16"
+              r="14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="text-base-300"
+            />
+            <circle
+              cx="16"
+              cy="16"
+              r="14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeDasharray={circumference}
+              strokeDashoffset={dashOffset}
+              strokeLinecap="round"
+              className={clsx(
+                "transition-all duration-1000 linear",
+                remainingSeconds <= 5 ? "text-error" : "text-primary",
+              )}
+            />
+          </svg>
+          <span
+            className={clsx(
+              "absolute text-[10px] font-mono font-bold",
+              remainingSeconds <= 5 ? "text-error" : "text-base-content",
+            )}
+          >
+            {remainingSeconds}
+          </span>
+        </div>
       </div>
+
+      {!isLoading && (
+        <div className="bg-white rounded-lg p-2">
+          {qrError ? (
+            <div className="size-[200px] flex items-center justify-center text-error text-sm">
+              二维码生成失败
+            </div>
+          ) : (
+            <canvas ref={canvasRef} />
+          )}
+        </div>
+      )}
     </div>
   );
 }
