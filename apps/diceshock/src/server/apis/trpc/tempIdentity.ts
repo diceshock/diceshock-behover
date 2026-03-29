@@ -77,7 +77,6 @@ const occupy = publicProcedure
   .input(z.object({ tempId: z.string(), code: z.string() }))
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
-    const seats = 1;
 
     let tempRow: typeof tempIdentitiesTable.$inferSelect | undefined;
     try {
@@ -111,7 +110,7 @@ const occupy = publicProcedure
       with: {
         occupancies: {
           where: (o, { ne }) => ne(o.status, "ended"),
-          columns: { seats: true },
+          columns: { id: true },
         },
       },
     });
@@ -119,11 +118,8 @@ const occupy = publicProcedure
     if (table.status === "inactive") throw new Error("桌台已下架");
 
     if (table.type !== "solo") {
-      const totalOccupied = table.occupancies.reduce(
-        (sum, o) => sum + (o.seats ?? 1),
-        0,
-      );
-      if (totalOccupied + seats > table.capacity) {
+      const totalOccupied = table.occupancies.length;
+      if (totalOccupied + 1 > table.capacity) {
         throw new Error(
           `桌台不足，当前已使用 ${totalOccupied}/${table.capacity}`,
         );
@@ -135,7 +131,7 @@ const occupy = publicProcedure
       id,
       table_id: table.id,
       temp_id: input.tempId,
-      seats: seats,
+      seats: 1,
       start_at: new Date(),
     });
 

@@ -1063,7 +1063,6 @@ function UserDetailPage() {
                             )}
                           </div>
                           <div className="flex items-center gap-4 text-sm text-base-content/70">
-                            <span>使用 {occ.seats} 个位置</span>
                             <span>{durationStr}</span>
                             <span className="text-xs text-base-content/50">
                               {start.isValid()

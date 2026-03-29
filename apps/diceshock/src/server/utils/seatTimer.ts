@@ -6,7 +6,6 @@ interface OccupancyInfo {
   temp_id: string | null;
   nickname: string;
   uid: string | null;
-  seats: number;
   start_at: number;
 }
 
@@ -63,7 +62,6 @@ export async function fetchTableStateForDO(
         temp_id: occ.temp_id ?? null,
         nickname,
         uid,
-        seats: occ.seats ?? 1,
         start_at:
           occ.start_at instanceof Date
             ? occ.start_at.getTime()

@@ -40,7 +40,7 @@ const list = dashProcedure.query(async ({ ctx }) => {
     with: {
       occupancies: {
         where: (o, { ne }) => ne(o.status, "ended"),
-        columns: { id: true, user_id: true, seats: true, start_at: true },
+        columns: { id: true, user_id: true, start_at: true },
       },
     },
   });
@@ -227,7 +227,7 @@ const regenerateCode = dashProcedure
 
 const addOccupancy = dashProcedure
   .input((v: unknown) => {
-    const data = v as { table_id: string; user_id: string; seats?: number };
+    const data = v as { table_id: string; user_id: string };
     if (!data.table_id) throw new Error("table_id is required");
     if (!data.user_id) throw new Error("user_id is required");
     return data;
@@ -245,7 +245,7 @@ const addOccupancy = dashProcedure
       id,
       table_id: input.table_id,
       user_id: input.user_id,
-      seats: input.seats ?? 1,
+      seats: 1,
       start_at: new Date(),
     });
 

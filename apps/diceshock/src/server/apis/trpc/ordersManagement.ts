@@ -16,7 +16,7 @@ import { calculatePrice, type SnapshotData } from "@/shared/utils/pricing";
 import { dashProcedure } from "./baseTRPC";
 
 type StatusFilter = "all" | "active" | "paused" | "ended";
-type SortBy = "start_at" | "end_at" | "seats";
+type SortBy = "start_at" | "end_at";
 type SortOrder = "asc" | "desc";
 type GroupBy = "table" | "user" | "date" | "none";
 
@@ -64,8 +64,6 @@ const list = dashProcedure
         switch (input.sortBy) {
           case "end_at":
             return dir(o.end_at);
-          case "seats":
-            return dir(o.seats);
           default:
             return dir(o.start_at);
         }
@@ -693,7 +691,7 @@ const settleOrder = dashProcedure
       if (input.deductFromStoredValue && svBalance > 0 && finalPrice > 0) {
         const deductAmount = Math.min(svBalance, finalPrice);
         const tableName = occ.table?.name ?? "未知桌台";
-        const deductNote = `自动扣费 · ${new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })} · ${tableName} · ${occ.seats}人`;
+        const deductNote = `自动扣费 · ${new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })} · ${tableName}`;
 
         const svPlans = plans
           .filter((p) => p.plan_type === "stored_value" && (p.amount ?? 0) > 0)

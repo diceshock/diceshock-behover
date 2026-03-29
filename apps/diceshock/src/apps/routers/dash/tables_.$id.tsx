@@ -85,7 +85,7 @@ function TableDetailPage() {
   const [regeneratePending, setRegeneratePending] = useState(false);
 
   const addOccDialogRef = useRef<HTMLDialogElement>(null);
-  const [addOccForm, setAddOccForm] = useState({ userId: "", seats: 1 });
+  const [addOccForm, setAddOccForm] = useState({ userId: "" });
   const [addOccPending, setAddOccPending] = useState(false);
 
   const [orderActionPending, setOrderActionPending] = useState(false);
@@ -195,11 +195,10 @@ function TableDetailPage() {
       await trpcClientDash.tablesManagement.addOccupancy.mutate({
         table_id: id,
         user_id: addOccForm.userId.trim(),
-        seats: addOccForm.seats,
       });
       msg.success("已添加使用");
       addOccDialogRef.current?.close();
-      setAddOccForm({ userId: "", seats: 1 });
+      setAddOccForm({ userId: "" });
       await fetchTable();
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "添加失败");
@@ -270,10 +269,7 @@ function TableDetailPage() {
     );
   }
 
-  const totalOccupiedSeats = table.occupancies.reduce(
-    (sum, o) => sum + (o.seats ?? 1),
-    0,
-  );
+  const totalOccupied = table.occupancies.length;
 
   return (
     <ClientOnly>
@@ -474,8 +470,8 @@ function TableDetailPage() {
                 <h3 className="text-lg font-semibold">
                   使用情况 (
                   {table.type === "solo"
-                    ? totalOccupiedSeats
-                    : `${totalOccupiedSeats}/${table.capacity}`}
+                    ? totalOccupied
+                    : `${totalOccupied}/${table.capacity}`}
                   )
                 </h3>
                 <div className="flex items-center gap-2">
@@ -489,7 +485,7 @@ function TableDetailPage() {
                     type="button"
                     className="btn btn-primary btn-sm"
                     onClick={() => {
-                      setAddOccForm({ userId: "", seats: 1 });
+                      setAddOccForm({ userId: "" });
                       addOccDialogRef.current?.showModal();
                     }}
                   >
@@ -526,7 +522,6 @@ function TableDetailPage() {
                           )}
                         </div>
                         <div className="flex items-center gap-4 text-sm text-base-content/70">
-                          <span>使用 {occ.seats} 个位置</span>
                           <span>{formatDuration(occ.start_at)}</span>
                         </div>
                       </div>
@@ -625,27 +620,6 @@ function TableDetailPage() {
                   placeholder="输入用户 ID"
                 />
               </label>
-
-              {table.type !== "solo" && (
-                <label className="flex flex-col gap-2">
-                  <span className="label text-sm font-semibold">
-                    使用位置数
-                  </span>
-                  <input
-                    type="number"
-                    className="input input-bordered w-full"
-                    value={addOccForm.seats}
-                    onChange={(e) =>
-                      setAddOccForm((p) => ({
-                        ...p,
-                        seats: Number(e.target.value),
-                      }))
-                    }
-                    min={1}
-                    max={table.capacity}
-                  />
-                </label>
-              )}
             </div>
 
             <div className="modal-action mt-6">

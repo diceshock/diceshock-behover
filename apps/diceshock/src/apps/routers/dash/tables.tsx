@@ -274,10 +274,7 @@ function RouteComponent() {
               </tr>
             ) : (
               filteredTables.map((table) => {
-                const occupiedSeats = table.occupancies.reduce(
-                  (sum, o) => sum + (o.seats ?? 1),
-                  0,
-                );
+                const occupiedCount = table.occupancies.length;
 
                 return (
                   <tr key={table.id}>
@@ -310,8 +307,8 @@ function RouteComponent() {
                     </td>
                     <td className="whitespace-nowrap">
                       {table.type === "solo"
-                        ? occupiedSeats
-                        : `${occupiedSeats}/${table.capacity}`}
+                        ? occupiedCount
+                        : `${occupiedCount}/${table.capacity}`}
                     </td>
                     <td className="whitespace-nowrap">
                       {formatCreateAt(table.create_at)}

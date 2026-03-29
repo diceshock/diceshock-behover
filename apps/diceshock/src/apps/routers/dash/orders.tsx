@@ -24,7 +24,7 @@ import {
 import trpcClientPublic, { trpcClientDash } from "@/shared/utils/trpc";
 
 type StatusFilter = "all" | "active" | "paused" | "ended";
-type SortBy = "start_at" | "end_at" | "seats";
+type SortBy = "start_at" | "end_at";
 type SortOrder = "asc" | "desc";
 type GroupBy = "table" | "user" | "date" | "none";
 
@@ -260,7 +260,6 @@ function RouteComponent() {
             >
               <option value="start_at">开始时间</option>
               <option value="end_at">结束时间</option>
-              <option value="seats">人数</option>
             </select>
 
             <button
@@ -303,7 +302,6 @@ function RouteComponent() {
               <td className="whitespace-nowrap">结束时间</td>
               <td className="whitespace-nowrap">桌台</td>
               <td className="whitespace-nowrap">用户</td>
-              <td className="whitespace-nowrap">人数</td>
               <td className="whitespace-nowrap">费用</td>
               <th className="whitespace-nowrap">操作</th>
             </tr>
@@ -312,14 +310,14 @@ function RouteComponent() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={8} className="py-12 text-center">
+                <td colSpan={7} className="py-12 text-center">
                   <span className="loading loading-dots loading-md" />
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={7}
                   className="py-12 text-center text-base-content/60"
                 >
                   {searchText.trim() || statusFilter !== "all"
@@ -406,7 +404,6 @@ function RouteComponent() {
                           {order.nickname}
                         </Link>
                       </td>
-                      <td className="whitespace-nowrap">{order.seats}</td>
                       <td className="font-mono whitespace-nowrap">
                         {order.final_price != null
                           ? formatPrice(order.final_price)

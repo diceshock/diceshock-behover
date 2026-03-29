@@ -3,7 +3,6 @@ import {
   CurrencyDollarIcon,
   HashIcon,
   UserIcon,
-  UsersIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute } from "@tanstack/react-router";
 import clsx from "clsx";
@@ -90,7 +89,6 @@ function SeatTimerPage() {
   > | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [seats, setSeats] = useState(1);
   const [occupying, setOccupying] = useState(false);
   const [pricingSnapshot, setPricingSnapshot] = useState<SnapshotData | null>(
     null,
@@ -179,7 +177,7 @@ function SeatTimerPage() {
 
   const occupancies = wsState?.occupancies ?? tableData?.occupancies ?? [];
 
-  const totalOccupied = occupancies.reduce((sum, o) => sum + o.seats, 0);
+  const totalOccupied = occupancies.length;
   const isSolo = table?.type === "solo";
   const remainingCapacity = isSolo
     ? Number.MAX_SAFE_INTEGER
@@ -259,9 +257,8 @@ function SeatTimerPage() {
     );
   }
 
-  const handleOccupyWithSeats = async (count: number) => {
+  const handleOccupy = async () => {
     if (!identity || occupying) return;
-    setSeats(count);
     setOccupying(true);
     try {
       if (identity.kind === "temp") {
@@ -270,7 +267,7 @@ function SeatTimerPage() {
           code,
         });
       } else {
-        await trpcClientPublic.tables.occupy.mutate({ code, seats: count });
+        await trpcClientPublic.tables.occupy.mutate({ code });
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "使用失败";
@@ -321,49 +318,22 @@ function SeatTimerPage() {
           </div>
         )}
 
-        {identity.kind === "temp" || isSolo ? (
-          <div className="flex flex-col gap-4 bg-base-200 rounded-xl p-5">
-            <button
-              className={clsx(
-                "btn btn-lg btn-primary font-bold",
-                occupying && "btn-disabled",
-              )}
-              onClick={() => handleOccupyWithSeats(1)}
-              disabled={occupying}
-            >
-              {occupying ? (
-                <span className="loading loading-spinner loading-sm" />
-              ) : (
-                "开始记时"
-              )}
-            </button>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-4 bg-base-200 rounded-xl p-5">
-            <h3 className="font-semibold text-base text-center">选择人数</h3>
-            <div className="flex flex-wrap justify-center gap-3">
-              {Array.from({ length: remainingCapacity }, (_, i) => i + 1).map(
-                (n) => (
-                  <button
-                    key={n}
-                    className={clsx(
-                      "btn btn-circle btn-lg text-xl font-bold",
-                      occupying ? "btn-disabled" : "btn-primary btn-outline",
-                    )}
-                    onClick={() => handleOccupyWithSeats(n)}
-                    disabled={occupying}
-                  >
-                    {occupying && seats === n ? (
-                      <span className="loading loading-spinner loading-sm" />
-                    ) : (
-                      n
-                    )}
-                  </button>
-                ),
-              )}
-            </div>
-          </div>
-        )}
+        <div className="flex flex-col gap-4 bg-base-200 rounded-xl p-5">
+          <button
+            className={clsx(
+              "btn btn-lg btn-primary font-bold",
+              occupying && "btn-disabled",
+            )}
+            onClick={() => handleOccupy()}
+            disabled={occupying}
+          >
+            {occupying ? (
+              <span className="loading loading-spinner loading-sm" />
+            ) : (
+              "开始记时"
+            )}
+          </button>
+        </div>
       </div>
     );
   }
@@ -507,7 +477,7 @@ function TableInfoSection({
           {table.code}
         </span>
         <span className="flex items-center gap-1">
-          <UsersIcon className="size-3.5" />
+          <UserIcon className="size-3.5" />
           {isSolo ? totalOccupied : `${totalOccupied}/${table.capacity}`}
         </span>
       </div>
@@ -755,7 +725,6 @@ function OccupancyListSection({
     temp_id?: string | null;
     nickname: string;
     uid: string | null;
-    seats: number;
     start_at: number;
   }>;
   identity: SeatIdentity | null;
@@ -819,7 +788,6 @@ function OccupancyListSection({
                 )}
               </div>
               <div className="flex items-center gap-3 text-base-content/60 text-xs">
-                <span>{occ.seats}人</span>
                 <span>{formatDurationShort(occ.start_at)}</span>
                 {snapshot &&
                   (() => {

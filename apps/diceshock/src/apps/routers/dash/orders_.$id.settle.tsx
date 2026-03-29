@@ -224,10 +224,6 @@ function OrderInfoSection({ order }: { order: SettlementPreview["order"] }) {
           </p>
         </div>
         <div>
-          <span className="text-base-content/50">人数</span>
-          <p>{order.seats}</p>
-        </div>
-        <div>
           <span className="text-base-content/50">开始时间</span>
           <p>{formatTime(order.start_at)}</p>
         </div>

@@ -58,7 +58,6 @@ const getByCode = publicProcedure
           temp_id: occ.temp_id ?? null,
           nickname,
           uid,
-          seats: occ.seats ?? 1,
           start_at:
             occ.start_at instanceof Date
               ? occ.start_at.getTime()
@@ -82,9 +81,8 @@ const getByCode = publicProcedure
 
 const occupy = protectedProcedure
   .input((v: unknown) => {
-    const data = v as { code: string; seats: number };
+    const data = v as { code: string };
     if (!data.code) throw new Error("code is required");
-    if (!data.seats || data.seats < 1) throw new Error("seats must be >= 1");
     return data;
   })
   .mutation(async ({ input, ctx }) => {
@@ -108,22 +106,16 @@ const occupy = protectedProcedure
       with: {
         occupancies: {
           where: (o, { ne }) => ne(o.status, "ended"),
-          columns: { seats: true },
+          columns: { id: true },
         },
       },
     });
     if (!table) throw new Error("桌台不存在");
     if (table.status === "inactive") throw new Error("桌台已下架");
 
-    const isSolo = table.type === "solo";
-    const effectiveSeats = isSolo ? 1 : input.seats;
-
-    if (!isSolo) {
-      const totalOccupied = table.occupancies.reduce(
-        (sum, o) => sum + (o.seats ?? 1),
-        0,
-      );
-      if (totalOccupied + effectiveSeats > table.capacity) {
+    if (table.type !== "solo") {
+      const totalOccupied = table.occupancies.length;
+      if (totalOccupied + 1 > table.capacity) {
         throw new Error(
           `桌台不足，当前已使用 ${totalOccupied}/${table.capacity}`,
         );
@@ -135,7 +127,7 @@ const occupy = protectedProcedure
       id,
       table_id: table.id,
       user_id: ctx.userId,
-      seats: effectiveSeats,
+      seats: 1,
       start_at: new Date(),
     });
 

@@ -27,7 +27,6 @@ type RecentOrder = {
   status: string;
   start_at: number;
   end_at: number | null;
-  seats: number;
   nickname: string;
   table: { id: string; name: string; type: string; code: string } | null;
 };
