@@ -1,1 +1,1 @@
-ALTER TABLE `tables` ADD `scope` text NOT NULL;
+ALTER TABLE `tables` ADD `scope` text NOT NULL DEFAULT 'boardgame';
