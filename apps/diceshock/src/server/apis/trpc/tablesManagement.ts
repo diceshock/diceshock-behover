@@ -148,6 +148,8 @@ const update = dashProcedure
     const data = v as {
       id: string;
       name?: string;
+      type?: "fixed" | "solo";
+      scope?: "trpg" | "boardgame" | "console" | "mahjong";
       capacity?: number;
       description?: string | null;
     };
@@ -159,6 +161,8 @@ const update = dashProcedure
     const { id, ...fields } = input;
     const updateData: Record<string, unknown> = { update_at: new Date() };
     if (fields.name !== undefined) updateData.name = fields.name.trim();
+    if (fields.type !== undefined) updateData.type = fields.type;
+    if (fields.scope !== undefined) updateData.scope = fields.scope;
     if (fields.capacity !== undefined) updateData.capacity = fields.capacity;
     if (fields.description !== undefined)
       updateData.description = fields.description;

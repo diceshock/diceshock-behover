@@ -72,6 +72,8 @@ function TableDetailPage() {
 
   const [editForm, setEditForm] = useState({
     name: "",
+    type: "fixed" as "fixed" | "solo",
+    scope: "boardgame" as "trpg" | "boardgame" | "console" | "mahjong",
     capacity: 1,
     description: "",
   });
@@ -101,6 +103,8 @@ function TableDetailPage() {
       setTable(data);
       setEditForm({
         name: data.name,
+        type: data.type as "fixed" | "solo",
+        scope: data.scope as "trpg" | "boardgame" | "console" | "mahjong",
         capacity: data.capacity,
         description: data.description ?? "",
       });
@@ -137,6 +141,8 @@ function TableDetailPage() {
       await trpcClientDash.tablesManagement.update.mutate({
         id,
         name: editForm.name.trim(),
+        type: editForm.type,
+        scope: editForm.scope,
         capacity: editForm.capacity,
         description: editForm.description.trim() || null,
       });
@@ -342,6 +348,46 @@ function TableDetailPage() {
                 />
               </label>
 
+              <label className="flex flex-col gap-2">
+                <span className="label text-sm font-semibold">桌台类型</span>
+                <select
+                  className="select select-bordered w-full"
+                  value={editForm.type}
+                  onChange={(e) =>
+                    setEditForm((p) => ({
+                      ...p,
+                      type: e.target.value as "fixed" | "solo",
+                    }))
+                  }
+                >
+                  <option value="fixed">固定桌</option>
+                  <option value="solo">散人桌</option>
+                </select>
+              </label>
+
+              <label className="flex flex-col gap-2">
+                <span className="label text-sm font-semibold">营业范围</span>
+                <select
+                  className="select select-bordered w-full"
+                  value={editForm.scope}
+                  onChange={(e) =>
+                    setEditForm((p) => ({
+                      ...p,
+                      scope: e.target.value as
+                        | "trpg"
+                        | "boardgame"
+                        | "console"
+                        | "mahjong",
+                    }))
+                  }
+                >
+                  <option value="boardgame">桌游</option>
+                  <option value="mahjong">日麻</option>
+                  <option value="trpg">跑团</option>
+                  <option value="console">电玩</option>
+                </select>
+              </label>
+
               <div className="flex items-center justify-between">
                 <span className="label text-sm font-semibold">上架状态</span>
                 <div className="flex items-center gap-3">
@@ -358,7 +404,7 @@ function TableDetailPage() {
                 </div>
               </div>
 
-              {table.type !== "solo" && (
+              {editForm.type !== "solo" && (
                 <label className="flex flex-col gap-2">
                   <span className="label text-sm font-semibold">适用人数</span>
                   <input

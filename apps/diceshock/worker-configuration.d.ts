@@ -15,6 +15,7 @@ declare namespace Cloudflare {
 		ALIBABA_CLOUD_ACCESS_KEY_ID: string;
 		ALIBABA_CLOUD_ACCESS_KEY_SECRET: string;
 		DEV_SMS_CODE?: string;
+		GSZ_TOKEN: string;
 		R2: R2Bucket;
 		DB: D1Database;
 		CF_VERSION_METADATA: WorkerVersionMetadata;

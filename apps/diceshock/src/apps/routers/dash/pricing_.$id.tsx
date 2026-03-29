@@ -756,13 +756,20 @@ function ConditionFormFields({
             badge="多选"
             desc="选择此计划适用的营运项目，不选择表示全部适用"
           />
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <ToggleCard
               icon={"🎲"}
               label="桌游"
               desc="桌面游戏"
               selected={conditions.scope.includes("boardgame")}
               onClick={() => toggleScope("boardgame")}
+            />
+            <ToggleCard
+              icon={"🀄"}
+              label="日麻"
+              desc="日本麻将"
+              selected={conditions.scope.includes("mahjong")}
+              onClick={() => toggleScope("mahjong")}
             />
             <ToggleCard
               icon={"📖"}
@@ -772,25 +779,11 @@ function ConditionFormFields({
               onClick={() => toggleScope("trpg")}
             />
             <ToggleCard
-              icon={"🎲"}
-              label="桌游"
-              desc="桌面游戏"
-              selected={conditions.scope.includes("boardgame")}
-              onClick={() => toggleScope("boardgame")}
-            />
-            <ToggleCard
               icon={"🎮"}
               label="电玩"
               desc="电子游戏"
               selected={conditions.scope.includes("console")}
               onClick={() => toggleScope("console")}
-            />
-            <ToggleCard
-              icon={"🀄"}
-              label="日麻"
-              desc="日本麻将"
-              selected={conditions.scope.includes("mahjong")}
-              onClick={() => toggleScope("mahjong")}
             />
           </div>
         </div>

@@ -5,6 +5,7 @@ import { router } from "./baseTRPC";
 import businessCard from "./businessCard";
 import events from "./events";
 import eventsManagement from "./eventsManagement";
+import gsz from "./gsz";
 import membershipPlans from "./membershipPlans";
 import ordersManagement from "./ordersManagement";
 import owned from "./owned";
@@ -24,6 +25,7 @@ export const appRouterDash = router({
   users,
   membershipPlans,
   pricingPlansManagement,
+  gsz,
 });
 
 export const appRouterPublic = router({
