@@ -7,12 +7,6 @@ type MarkdownViewerProps = {
   className?: string;
 };
 
-const components = {
-  img: ({ alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => (
-    <img {...props} alt="" />
-  ),
-};
-
 export default function MarkdownViewer({
   content,
   className,
@@ -20,11 +14,7 @@ export default function MarkdownViewer({
   return (
     <div className={className}>
       <div className="mdx-content">
-        <Markdown
-          remarkPlugins={[remarkGfm]}
-          rehypePlugins={[rehypeRaw]}
-          components={components}
-        >
+        <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
           {content}
         </Markdown>
       </div>
