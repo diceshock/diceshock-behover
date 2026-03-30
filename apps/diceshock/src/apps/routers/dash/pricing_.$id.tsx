@@ -459,8 +459,9 @@ function ConditionFormFields({
     updateIdentity(next);
   };
 
+  const identity = conditions.identity ?? ["registered"];
   const memberDisabled = !(
-    conditions.identity.length === 1 && conditions.identity[0] === "registered"
+    identity.length === 1 && identity[0] === "registered"
   );
 
   const toggleScope = (val: string) => {
