@@ -21,6 +21,7 @@ import { Route as DashUsersRouteImport } from './routers/dash/users'
 import { Route as DashTablesRouteImport } from './routers/dash/tables'
 import { Route as DashPricingRouteImport } from './routers/dash/pricing'
 import { Route as DashOrdersRouteImport } from './routers/dash/orders'
+import { Route as DashMediaRouteImport } from './routers/dash/media'
 import { Route as DashGszRouteImport } from './routers/dash/gsz'
 import { Route as DashEventsRouteImport } from './routers/dash/events'
 import { Route as DashActivesRouteImport } from './routers/dash/actives'
@@ -99,6 +100,11 @@ const DashPricingRoute = DashPricingRouteImport.update({
 const DashOrdersRoute = DashOrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
+  getParentRoute: () => DashRoute,
+} as any)
+const DashMediaRoute = DashMediaRouteImport.update({
+  id: '/media',
+  path: '/media',
   getParentRoute: () => DashRoute,
 } as any)
 const DashGszRoute = DashGszRouteImport.update({
@@ -218,6 +224,7 @@ export interface FileRoutesByFullPath {
   '/dash/actives': typeof DashActivesRoute
   '/dash/events': typeof DashEventsRoute
   '/dash/gsz': typeof DashGszRoute
+  '/dash/media': typeof DashMediaRoute
   '/dash/orders': typeof DashOrdersRoute
   '/dash/pricing': typeof DashPricingRoute
   '/dash/tables': typeof DashTablesRoute
@@ -249,6 +256,7 @@ export interface FileRoutesByTo {
   '/dash/actives': typeof DashActivesRoute
   '/dash/events': typeof DashEventsRoute
   '/dash/gsz': typeof DashGszRoute
+  '/dash/media': typeof DashMediaRoute
   '/dash/orders': typeof DashOrdersRoute
   '/dash/pricing': typeof DashPricingRoute
   '/dash/tables': typeof DashTablesRoute
@@ -284,6 +292,7 @@ export interface FileRoutesById {
   '/dash/actives': typeof DashActivesRoute
   '/dash/events': typeof DashEventsRoute
   '/dash/gsz': typeof DashGszRoute
+  '/dash/media': typeof DashMediaRoute
   '/dash/orders': typeof DashOrdersRoute
   '/dash/pricing': typeof DashPricingRoute
   '/dash/tables': typeof DashTablesRoute
@@ -320,6 +329,7 @@ export interface FileRouteTypes {
     | '/dash/actives'
     | '/dash/events'
     | '/dash/gsz'
+    | '/dash/media'
     | '/dash/orders'
     | '/dash/pricing'
     | '/dash/tables'
@@ -351,6 +361,7 @@ export interface FileRouteTypes {
     | '/dash/actives'
     | '/dash/events'
     | '/dash/gsz'
+    | '/dash/media'
     | '/dash/orders'
     | '/dash/pricing'
     | '/dash/tables'
@@ -385,6 +396,7 @@ export interface FileRouteTypes {
     | '/dash/actives'
     | '/dash/events'
     | '/dash/gsz'
+    | '/dash/media'
     | '/dash/orders'
     | '/dash/pricing'
     | '/dash/tables'
@@ -497,6 +509,13 @@ declare module '@tanstack/react-router' {
       path: '/orders'
       fullPath: '/dash/orders'
       preLoaderRoute: typeof DashOrdersRouteImport
+      parentRoute: typeof DashRoute
+    }
+    '/dash/media': {
+      id: '/dash/media'
+      path: '/media'
+      fullPath: '/dash/media'
+      preLoaderRoute: typeof DashMediaRouteImport
       parentRoute: typeof DashRoute
     }
     '/dash/gsz': {
@@ -678,6 +697,7 @@ interface DashRouteChildren {
   DashActivesRoute: typeof DashActivesRoute
   DashEventsRoute: typeof DashEventsRoute
   DashGszRoute: typeof DashGszRoute
+  DashMediaRoute: typeof DashMediaRoute
   DashOrdersRoute: typeof DashOrdersRoute
   DashPricingRoute: typeof DashPricingRoute
   DashTablesRoute: typeof DashTablesRoute
@@ -696,6 +716,7 @@ const DashRouteChildren: DashRouteChildren = {
   DashActivesRoute: DashActivesRoute,
   DashEventsRoute: DashEventsRoute,
   DashGszRoute: DashGszRoute,
+  DashMediaRoute: DashMediaRoute,
   DashOrdersRoute: DashOrdersRoute,
   DashPricingRoute: DashPricingRoute,
   DashTablesRoute: DashTablesRoute,
