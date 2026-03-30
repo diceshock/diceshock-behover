@@ -1,9 +1,6 @@
 import db, { drizzle, tableOccupancyTable, tablesTable } from "@lib/db";
 import { createId } from "@paralleldrive/cuid2";
-import {
-  fetchTableStateForDO,
-  notifySeatTimerDO,
-} from "@/server/utils/seatTimer";
+import { fetchTableStateForDO, notifySocketDO } from "@/server/utils/seatTimer";
 import { dashProcedure } from "./baseTRPC";
 
 const SHORT_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -251,12 +248,7 @@ const addOccupancy = dashProcedure
 
     const fresh = await fetchTableStateForDO(tdb, table.id);
     if (fresh) {
-      await notifySeatTimerDO(
-        ctx.env,
-        table.code,
-        fresh.table,
-        fresh.occupancies,
-      );
+      await notifySocketDO(ctx.env, table.code, fresh.table, fresh.occupancies);
     }
 
     return { id };
@@ -289,7 +281,7 @@ const removeOccupancy = dashProcedure
       if (table) {
         const fresh = await fetchTableStateForDO(tdb, table.id);
         if (fresh) {
-          await notifySeatTimerDO(
+          await notifySocketDO(
             ctx.env,
             table.code,
             fresh.table,

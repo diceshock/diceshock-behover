@@ -6,6 +6,8 @@ import businessCard from "./businessCard";
 import events from "./events";
 import eventsManagement from "./eventsManagement";
 import gsz from "./gsz";
+import gszManagement from "./gszManagement";
+import mahjong from "./mahjong";
 import membershipPlans from "./membershipPlans";
 import ordersManagement from "./ordersManagement";
 import owned from "./owned";
@@ -26,6 +28,7 @@ export const appRouterDash = router({
   membershipPlans,
   pricingPlansManagement,
   gsz,
+  gszManagement,
 });
 
 export const appRouterPublic = router({
@@ -63,5 +66,12 @@ export const appRouterPublic = router({
   },
   pricing: {
     getPublished: pricingPlansManagement.getPublished,
+  },
+  mahjong: {
+    saveMatch: mahjong.saveMatch,
+    getMyMatches: mahjong.getMyMatches,
+    getMatchById: mahjong.getMatchById,
+    checkRegistration: mahjong.checkRegistration,
+    register: mahjong.register,
   },
 });

@@ -79,7 +79,7 @@ const customerPageInputZ = z.object({
   wechat: z.string().optional(),
 });
 
-interface GszCustomerRecord {
+export interface GszCustomerRecord {
   id: number;
   name: string;
   phone: string | null;
@@ -94,7 +94,7 @@ interface GszCustomerRecord {
   [key: string]: unknown;
 }
 
-interface GszPageResult {
+export interface GszPageResult {
   records: GszCustomerRecord[];
   total: number;
   size: number;

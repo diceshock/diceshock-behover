@@ -1,6 +1,6 @@
 import { ClientOnly, createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import TiptapViewer from "@/client/components/diceshock/TiptapEditor/TiptapViewer";
+import MarkdownViewer from "@/client/components/diceshock/MarkdownEditor/MarkdownViewer";
 import { useMessages } from "@/client/hooks/useMessages";
 import dayjs from "@/shared/utils/dayjs-config";
 import trpcClientPublic from "@/shared/utils/trpc";
@@ -95,7 +95,7 @@ function EventDetailPage() {
             {event.content && (
               <div className="card bg-base-200 border border-base-content/10">
                 <div className="card-body p-4 sm:p-6">
-                  <TiptapViewer content={event.content} />
+                  <MarkdownViewer content={event.content} />
                 </div>
               </div>
             )}

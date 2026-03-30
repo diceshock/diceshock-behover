@@ -513,3 +513,57 @@ export const authenticators = sqlite.sqliteTable(
     }),
   ],
 );
+
+export const mahjongMatchesTable = sqlite.sqliteTable("mahjong_matches", {
+  id: sqlite.text().$defaultFn(createId).primaryKey(),
+  table_id: sqlite.text().references(() => tablesTable.id),
+  mode: sqlite.text().$type<"3p" | "4p">().notNull(),
+  format: sqlite.text().$type<"tonpuu" | "hanchan">().notNull(),
+  started_at: sqlite.integer({ mode: "timestamp_ms" }).notNull(),
+  ended_at: sqlite.integer({ mode: "timestamp_ms" }).notNull(),
+  termination_reason: sqlite
+    .text()
+    .$type<"format_complete" | "bust" | "vote">()
+    .notNull(),
+  players: sqlite.text({ mode: "json" }).$type<
+    Array<{
+      userId: string;
+      nickname: string;
+      seat: string;
+      finalScore: number;
+    }>
+  >(),
+  round_history: sqlite.text({ mode: "json" }).$type<
+    Array<{
+      round: number;
+      wind: string;
+      honba: number;
+      dealerUserId: string;
+      scores: Record<string, number>;
+      result: string;
+    }>
+  >(),
+  config: sqlite.text({ mode: "json" }).$type<{
+    mode: string;
+    format: string;
+  }>(),
+  created_at: sqlite
+    .integer("created_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date(Date.now())),
+});
+
+export const mahjongRegistrationsTable = sqlite.sqliteTable(
+  "mahjong_registrations",
+  {
+    id: sqlite.text().$defaultFn(createId).primaryKey(),
+    user_id: sqlite
+      .text()
+      .notNull()
+      .unique()
+      .references(() => users.id, { onDelete: "cascade" }),
+    phone: sqlite.text().notNull(),
+    registered_at: sqlite
+      .integer("registered_at", { mode: "timestamp_ms" })
+      .$defaultFn(() => new Date(Date.now())),
+  },
+);

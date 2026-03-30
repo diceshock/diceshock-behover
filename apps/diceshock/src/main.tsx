@@ -4,6 +4,7 @@ import apisRoot from "@/server/apis/apisRoot";
 import fileRoute from "@/server/apis/fileRoute";
 import sitemap from "@/server/apis/sitemap";
 import type { HonoCtxEnv } from "@/shared/types";
+import seatRedirect from "./server/middlewares/seatRedirect";
 import "@/shared/utils/dayjs-config";
 import aliyunInj from "./server/middlewares/aliyunInj";
 import {
@@ -16,7 +17,7 @@ import serverMetaInj from "./server/middlewares/serverMetaInj";
 import trpcServerDash from "./server/middlewares/trpcServerDash";
 import trpcServerPublic from "./server/middlewares/trpcServerPublic";
 
-export { SeatTimerDO } from "./server/durableObjects/SeatTimerDO";
+export { SocketDO } from "./server/durableObjects/SocketDO";
 
 export const app = new Hono<{ Bindings: HonoCtxEnv }>();
 
@@ -36,8 +37,8 @@ app.get("/sitemap.xml", sitemap);
 
 app.get("/ws/seat/:code", async (c) => {
   const code = c.req.param("code");
-  const id = c.env.SEAT_TIMER.idFromName(code);
-  const stub = c.env.SEAT_TIMER.get(id);
+  const id = c.env.SOCKET.idFromName(code);
+  const stub = c.env.SOCKET.get(id);
   const url = new URL(c.req.url);
   return stub.fetch(
     new Request(`${url.origin}/ws?${url.searchParams.toString()}`, {
@@ -48,6 +49,8 @@ app.get("/ws/seat/:code", async (c) => {
 
 app.use("*", userInjMiddleware);
 app.use("*", authGuard);
+
+app.use("/t/:code", seatRedirect);
 
 app.get("/*", fileRoute);
 

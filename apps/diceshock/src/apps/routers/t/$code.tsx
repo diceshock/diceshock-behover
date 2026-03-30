@@ -1,15 +1,19 @@
 import {
+  CalendarDotsIcon,
   ClockIcon,
   CurrencyDollarIcon,
   HashIcon,
+  PackageIcon,
   UserIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import clsx from "clsx";
 import QRCode from "qrcode";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import MahjongMatchStepper from "@/client/components/diceshock/MahjongMatch/MahjongMatchStepper";
 import useAuth from "@/client/hooks/useAuth";
 import useCrossData from "@/client/hooks/useCrossData";
+import useMahjongMatch from "@/client/hooks/useMahjongMatch";
 import useSeatTimer from "@/client/hooks/useSeatTimer";
 import useTempIdentity from "@/client/hooks/useTempIdentity";
 import { getLoginTime } from "@/client/hooks/useTOTP";
@@ -81,7 +85,6 @@ function SeatTimerPage() {
   const { code } = Route.useParams();
   const { from } = Route.useSearch();
   const identity = useSeatIdentity();
-  const { tempIdentity } = useTempIdentity();
   const [redirectedFrom, setRedirectedFrom] = useState(from || "");
 
   const [tableData, setTableData] = useState<Awaited<
@@ -89,12 +92,11 @@ function SeatTimerPage() {
   > | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [occupying, setOccupying] = useState(false);
+  const [activeTab, setActiveTab] = useState<"main" | "mahjong">("main");
+
   const [pricingSnapshot, setPricingSnapshot] = useState<SnapshotData | null>(
     null,
   );
-  const [redirecting, setRedirecting] = useState(false);
-  const [activeChecked, setActiveChecked] = useState(false);
 
   const identityId =
     identity?.kind === "real"
@@ -103,11 +105,21 @@ function SeatTimerPage() {
         ? identity.tempId
         : undefined;
 
-  const { state: wsState, connected } = useSeatTimer({
+  const {
+    state: wsState,
+    connected,
+    sendMessage,
+  } = useSeatTimer({
     code,
     userId: identityId,
     role: "user",
     enabled: !!identity,
+  });
+
+  const mahjong = useMahjongMatch({
+    wsState,
+    sendMessage,
+    userId: identityId ?? "",
   });
 
   const fetchTable = useCallback(async () => {
@@ -131,36 +143,6 @@ function SeatTimerPage() {
     void fetchTable();
   }, [fetchTable]);
 
-  const activeCheckRef = useRef(false);
-  useEffect(() => {
-    if (!identity || activeCheckRef.current) return;
-    activeCheckRef.current = true;
-
-    const check = async () => {
-      try {
-        let active: { code: string; name: string } | null = null;
-        if (identity.kind === "real") {
-          active = await trpcClientPublic.tables.getMyActiveOccupancy.query();
-        } else if (identity.kind === "temp") {
-          active = await trpcClientPublic.tempIdentity.getActiveOccupancy.query(
-            {
-              tempId: identity.tempId,
-            },
-          );
-        }
-
-        if (active && active.code !== code) {
-          setRedirecting(true);
-          window.location.href = `/t/${active.code}?from=${encodeURIComponent(code)}`;
-          return;
-        }
-      } catch {}
-      setActiveChecked(true);
-    };
-
-    void check();
-  }, [identity, code]);
-
   const table =
     wsState?.table ??
     (tableData
@@ -178,10 +160,6 @@ function SeatTimerPage() {
   const occupancies = wsState?.occupancies ?? tableData?.occupancies ?? [];
 
   const totalOccupied = occupancies.length;
-  const isSolo = table?.type === "solo";
-  const remainingCapacity = isSolo
-    ? Number.MAX_SAFE_INTEGER
-    : (table?.capacity ?? 0) - totalOccupied;
 
   const myOccupancy = useMemo(() => {
     if (!identity) return null;
@@ -201,9 +179,7 @@ function SeatTimerPage() {
   const isExpired =
     identity?.kind === "temp" && Date.now() > identity.expiresAt;
 
-  const showLoading = loading || redirecting || (!!identity && !activeChecked);
-
-  if (showLoading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <span className="loading loading-spinner loading-lg" />
@@ -257,111 +233,7 @@ function SeatTimerPage() {
     );
   }
 
-  const handleOccupy = async () => {
-    if (!identity || occupying) return;
-    setOccupying(true);
-    try {
-      if (identity.kind === "temp") {
-        await trpcClientPublic.tempIdentity.occupy.mutate({
-          tempId: identity.tempId,
-          code,
-        });
-      } else {
-        await trpcClientPublic.tables.occupy.mutate({ code });
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "使用失败";
-      if (message.startsWith("ALREADY_OCCUPIED:")) {
-        const [, existingCode, existingName] = message.split(":");
-        setError(`你正在使用 ${existingName}，跳转中...`);
-        setTimeout(() => {
-          window.location.href = `/t/${existingCode}?from=${encodeURIComponent(table?.name ?? code)}`;
-        }, 1500);
-      } else {
-        setError(message);
-      }
-    } finally {
-      setOccupying(false);
-    }
-  };
-
-  if (!myOccupancy && remainingCapacity > 0 && identity) {
-    return (
-      <div className="mx-auto w-full max-w-lg px-4 py-6 flex flex-col gap-5">
-        {error && (
-          <div className="alert alert-error alert-soft text-sm">
-            <span>{error}</span>
-            <button
-              className="btn btn-xs btn-ghost"
-              onClick={() => setError(null)}
-            >
-              关闭
-            </button>
-          </div>
-        )}
-
-        <TableInfoSection
-          table={table}
-          totalOccupied={totalOccupied}
-          connected={connected}
-        />
-
-        {identity.kind === "temp" && (
-          <div className="alert alert-info alert-soft text-xs">
-            <span>
-              临时身份: {identity.nickname} · 有效期至{" "}
-              {new Date(identity.expiresAt).toLocaleTimeString("zh-CN", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </span>
-          </div>
-        )}
-
-        <div className="flex flex-col gap-4 bg-base-200 rounded-xl p-5">
-          <button
-            className={clsx(
-              "btn btn-lg btn-primary font-bold",
-              occupying && "btn-disabled",
-            )}
-            onClick={() => handleOccupy()}
-            disabled={occupying}
-          >
-            {occupying ? (
-              <span className="loading loading-spinner loading-sm" />
-            ) : (
-              "开始记时"
-            )}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!myOccupancy && remainingCapacity <= 0) {
-    return (
-      <div className="mx-auto w-full max-w-lg px-4 py-6 flex flex-col gap-5">
-        <TableInfoSection
-          table={table}
-          totalOccupied={totalOccupied}
-          connected={connected}
-        />
-
-        <div className="alert alert-warning text-sm">
-          <span>
-            桌台已满 ({totalOccupied}/{table.capacity})
-          </span>
-        </div>
-
-        <OccupancyListSection
-          occupancies={occupancies}
-          identity={identity}
-          tableType={table.scope}
-          snapshot={pricingSnapshot}
-        />
-      </div>
-    );
-  }
+  const isMahjong = table?.scope === "mahjong";
 
   return (
     <div className="mx-auto w-full max-w-lg px-4 py-6 flex flex-col gap-5">
@@ -391,12 +263,6 @@ function SeatTimerPage() {
         </div>
       )}
 
-      <TableInfoSection
-        table={table}
-        totalOccupied={totalOccupied}
-        connected={connected}
-      />
-
       {identity?.kind === "temp" && (
         <div className="alert alert-info alert-soft text-xs">
           <span>
@@ -409,24 +275,95 @@ function SeatTimerPage() {
         </div>
       )}
 
-      {myOccupancy && <TimerSection startAt={myOccupancy.start_at} />}
+      <div role="tablist" className="tabs tabs-bordered">
+        <button
+          type="button"
+          role="tab"
+          className={clsx("tab", activeTab === "main" && "tab-active")}
+          onClick={() => setActiveTab("main")}
+        >
+          主页
+        </button>
+        {isMahjong && (
+          <button
+            type="button"
+            role="tab"
+            className={clsx("tab", activeTab === "mahjong" && "tab-active")}
+            onClick={() => setActiveTab("mahjong")}
+          >
+            公式战
+          </button>
+        )}
+      </div>
 
-      {myOccupancy && (
-        <PricePreviewSection
-          startAt={myOccupancy.start_at}
-          tableType={table.scope}
-          snapshot={pricingSnapshot}
-        />
+      {activeTab === "main" && (
+        <>
+          <TableInfoSection
+            table={table}
+            totalOccupied={totalOccupied}
+            connected={connected}
+          />
+
+          {myOccupancy && <TimerSection startAt={myOccupancy.start_at} />}
+
+          {myOccupancy && (
+            <PricePreviewSection
+              startAt={myOccupancy.start_at}
+              tableType={table.scope}
+              snapshot={pricingSnapshot}
+            />
+          )}
+
+          <TOTPSection identity={identity} />
+
+          <div className="grid grid-cols-2 gap-3">
+            <Link
+              to="/inventory"
+              className="card bg-base-200 hover:bg-base-300 transition-colors cursor-pointer"
+            >
+              <div className="card-body p-4 flex-row items-center gap-3">
+                <PackageIcon
+                  className="w-6 h-6 text-primary"
+                  weight="duotone"
+                />
+                <span className="text-sm font-medium">库存</span>
+              </div>
+            </Link>
+            <Link
+              to="/actives"
+              className="card bg-base-200 hover:bg-base-300 transition-colors cursor-pointer"
+            >
+              <div className="card-body p-4 flex-row items-center gap-3">
+                <CalendarDotsIcon
+                  className="w-6 h-6 text-primary"
+                  weight="duotone"
+                />
+                <span className="text-sm font-medium">约局</span>
+              </div>
+            </Link>
+          </div>
+
+          <OccupancyListSection
+            occupancies={occupancies}
+            identity={identity}
+            tableType={table.scope}
+            snapshot={pricingSnapshot}
+          />
+        </>
       )}
 
-      <TOTPSection identity={identity} />
-
-      <OccupancyListSection
-        occupancies={occupancies}
-        identity={identity}
-        tableType={table.scope}
-        snapshot={pricingSnapshot}
-      />
+      {activeTab === "mahjong" && isMahjong && (
+        <MahjongMatchStepper
+          state={mahjong.state}
+          myPlayer={mahjong.myPlayer}
+          actions={mahjong.actions}
+          userId={identityId ?? ""}
+          nickname={identity?.nickname ?? ""}
+          phone={identity?.kind === "real" ? identity.phone : null}
+          isTemp={identity?.kind === "temp"}
+          registered={true}
+        />
+      )}
     </div>
   );
 }

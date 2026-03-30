@@ -7,6 +7,7 @@ import {
   MegaphoneIcon,
   PackageIcon,
   ScanIcon,
+  SwordIcon,
   TableIcon,
   UsersIcon,
 } from "@phosphor-icons/react/dist/ssr";
@@ -209,6 +210,23 @@ function RouteComponent() {
               </div>
               <p className="text-sm text-base-content/60 mt-1">
                 管理定价和收费规则
+              </p>
+            </div>
+          </Link>
+
+          <Link
+            to="/dash/gsz"
+            className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
+          >
+            <div className="card-body p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold">公式战管理</h3>
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <SwordIcon className="size-6 text-primary" />
+                </div>
+              </div>
+              <p className="text-sm text-base-content/60 mt-1">
+                查看和管理公式战对局
               </p>
             </div>
           </Link>

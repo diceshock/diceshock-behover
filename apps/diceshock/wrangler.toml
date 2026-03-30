@@ -40,12 +40,12 @@ bucket_name = "diceshock"
 preview_bucket_name = "diceshock-preview"
 
 [[durable_objects.bindings]]
-name = "SEAT_TIMER"
-class_name = "SeatTimerDO"
+name = "SOCKET"
+class_name = "SocketDO"
 
 [[migrations]]
 tag = "v1"
-new_sqlite_classes = ["SeatTimerDO"]
+new_sqlite_classes = ["SocketDO"]
 
 [[routes]]
 pattern = "www.diceshock.com"

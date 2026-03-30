@@ -19,7 +19,7 @@ declare namespace Cloudflare {
 		R2: R2Bucket;
 		DB: D1Database;
 		CF_VERSION_METADATA: WorkerVersionMetadata;
-		SEAT_TIMER: DurableObjectNamespace<import("./src/server/durableObjects/SeatTimerDO").SeatTimerDO>;
+		SOCKET: DurableObjectNamespace<import("./src/server/durableObjects/SocketDO").SocketDO>;
 	}
 }
 interface CloudflareBindings extends Cloudflare.Env {}

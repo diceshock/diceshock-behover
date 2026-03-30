@@ -13,6 +13,7 @@
     "helper": "npm run start --workspace=scripts --"
   },
   "dependencies": {
+    "@dnd-kit/react": "^0.3.2",
     "@hono/auth-js": "^1.1.1",
     "@hono/trpc-server": "^0.4.2",
     "@paralleldrive/cuid2": "^2.2.2",
@@ -46,6 +47,8 @@
     "react-dom": "^19.2.4",
     "react-i18next": "^16.5.8",
     "react-json-view-lite": "^2.5.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "tiptap-markdown": "^0.9.0",
     "zdog": "^1.1.3"
   },

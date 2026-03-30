@@ -84,14 +84,14 @@ export async function fetchTableStateForDO(
   };
 }
 
-export async function notifySeatTimerDO(
+export async function notifySocketDO(
   env: Cloudflare.Env,
   code: string,
   table: TableInfo,
   occupancies: OccupancyInfo[],
 ): Promise<void> {
-  const doId = env.SEAT_TIMER.idFromName(code);
-  const stub = env.SEAT_TIMER.get(doId);
+  const doId = env.SOCKET.idFromName(code);
+  const stub = env.SOCKET.get(doId);
   await stub.fetch(
     new Request("https://do/update-state", {
       method: "POST",

@@ -6,8 +6,8 @@ import {
 import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
+import MarkdownTextEditor from "@/client/components/diceshock/MarkdownEditor/MarkdownTextEditor";
 import { useMsg } from "@/client/components/diceshock/Msg";
-import TiptapEditor from "@/client/components/diceshock/TiptapEditor";
 import { trpcClientDash } from "@/shared/utils/trpc";
 
 export const Route = createFileRoute("/dash/events_/$id")({
@@ -138,7 +138,7 @@ function EventEditorPage() {
 
             <div className="flex flex-col gap-2">
               <span className="label text-sm font-semibold">正文</span>
-              <TiptapEditor
+              <MarkdownTextEditor
                 content={content}
                 onChange={setContent}
                 placeholder="活动详情..."

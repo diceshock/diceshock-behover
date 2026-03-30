@@ -8,10 +8,7 @@ import db, {
   userMembershipPlansTable,
   users,
 } from "@lib/db";
-import {
-  fetchTableStateForDO,
-  notifySeatTimerDO,
-} from "@/server/utils/seatTimer";
+import { fetchTableStateForDO, notifySocketDO } from "@/server/utils/seatTimer";
 import { calculatePrice, type SnapshotData } from "@/shared/utils/pricing";
 import { dashProcedure } from "./baseTRPC";
 
@@ -228,7 +225,7 @@ const getById = dashProcedure
 
 async function notifyDOForOrder(
   tdb: ReturnType<typeof db>,
-  env: Parameters<typeof notifySeatTimerDO>[0],
+  env: Parameters<typeof notifySocketDO>[0],
   occupancyId: string,
 ) {
   const occ = await tdb.query.tableOccupancyTable.findFirst({
@@ -243,7 +240,7 @@ async function notifyDOForOrder(
   if (!table) return;
   const fresh = await fetchTableStateForDO(tdb, table.id);
   if (fresh) {
-    await notifySeatTimerDO(env, table.code, fresh.table, fresh.occupancies);
+    await notifySocketDO(env, table.code, fresh.table, fresh.occupancies);
   }
 }
 

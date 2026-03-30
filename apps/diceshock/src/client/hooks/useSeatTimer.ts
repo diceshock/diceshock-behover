@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { SeatTimerState } from "@/server/durableObjects/SeatTimerDO";
+import type { SocketState } from "@/server/durableObjects/SocketDO";
 
 const RECONNECT_BASE_DELAY = 1000;
 const RECONNECT_MAX_DELAY = 30000;
@@ -18,7 +18,7 @@ export default function useSeatTimer({
   role = "user",
   enabled = true,
 }: UseSeatTimerOptions) {
-  const [state, setState] = useState<SeatTimerState | null>(null);
+  const [state, setState] = useState<SocketState | null>(null);
   const [connected, setConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectDelayRef = useRef(RECONNECT_BASE_DELAY);
@@ -72,7 +72,7 @@ export default function useSeatTimer({
       try {
         const msg = JSON.parse(event.data) as {
           type: string;
-          data?: SeatTimerState;
+          data?: SocketState;
         };
         if (msg.type === "state" && msg.data) {
           setState(msg.data);
@@ -120,5 +120,11 @@ export default function useSeatTimer({
     }
   }, []);
 
-  return { state, connected, requestSync };
+  const sendMessage = useCallback((msg: Record<string, unknown>) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(msg));
+    }
+  }, []);
+
+  return { state, connected, requestSync, sendMessage };
 }

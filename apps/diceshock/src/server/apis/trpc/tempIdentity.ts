@@ -7,10 +7,7 @@ import db, {
 import { createId } from "@paralleldrive/cuid2";
 import z from "zod/v4";
 import { genNickname } from "@/server/utils/auth";
-import {
-  fetchTableStateForDO,
-  notifySeatTimerDO,
-} from "@/server/utils/seatTimer";
+import { fetchTableStateForDO, notifySocketDO } from "@/server/utils/seatTimer";
 import { generateTotpSecret } from "@/shared/utils/totp";
 import { publicProcedure } from "./baseTRPC";
 
@@ -137,12 +134,7 @@ const occupy = publicProcedure
 
     const fresh = await fetchTableStateForDO(tdb, table.id);
     if (fresh) {
-      await notifySeatTimerDO(
-        ctx.env,
-        input.code,
-        fresh.table,
-        fresh.occupancies,
-      );
+      await notifySocketDO(ctx.env, input.code, fresh.table, fresh.occupancies);
     }
 
     return { id };
@@ -172,7 +164,7 @@ const leave = publicProcedure
     if (table) {
       const fresh = await fetchTableStateForDO(tdb, table.id);
       if (fresh) {
-        await notifySeatTimerDO(
+        await notifySocketDO(
           ctx.env,
           input.code,
           fresh.table,
@@ -204,7 +196,7 @@ const transfer = publicProcedure
 
     const fresh = await fetchTableStateForDO(tdb, activeOccupancies.table.id);
     if (fresh) {
-      await notifySeatTimerDO(
+      await notifySocketDO(
         ctx.env,
         activeOccupancies.table.code,
         fresh.table,
