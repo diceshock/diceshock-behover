@@ -1,6 +1,7 @@
 import { EyeIcon, PencilSimpleIcon } from "@phosphor-icons/react/dist/ssr";
 import { useState } from "react";
 import Markdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 
 type MarkdownTextEditorProps = {
@@ -48,7 +49,9 @@ export default function MarkdownTextEditor({
         <div className="p-4 min-h-[16rem]">
           {content.trim() ? (
             <div className="mdx-content">
-              <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
+              <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                {content}
+              </Markdown>
             </div>
           ) : (
             <p className="text-base-content/40 text-sm">暂无内容</p>

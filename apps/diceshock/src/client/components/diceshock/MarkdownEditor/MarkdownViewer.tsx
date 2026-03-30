@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import Markdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 
 type MarkdownViewerProps = {
@@ -33,7 +34,9 @@ export default function MarkdownViewer({
         role="presentation"
       >
         <div className="mdx-content">
-          <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
+          <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+            {content}
+          </Markdown>
         </div>
       </div>
       {lightboxSrc && (
