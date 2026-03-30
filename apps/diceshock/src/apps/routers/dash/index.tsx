@@ -4,6 +4,7 @@ import {
   CurrencyDollarIcon,
   EnvelopeIcon,
   HouseIcon,
+  ImageSquareIcon,
   MegaphoneIcon,
   PackageIcon,
   ScanIcon,
@@ -227,6 +228,23 @@ function RouteComponent() {
               </div>
               <p className="text-sm text-base-content/60 mt-1">
                 查看和管理公式战对局
+              </p>
+            </div>
+          </Link>
+
+          <Link
+            to="/dash/media"
+            className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
+          >
+            <div className="card-body p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold">媒体库</h3>
+                <div className="p-2 bg-cyan-500/10 rounded-lg">
+                  <ImageSquareIcon className="size-6 text-cyan-500" />
+                </div>
+              </div>
+              <p className="text-sm text-base-content/60 mt-1">
+                上传和管理媒体文件
               </p>
             </div>
           </Link>

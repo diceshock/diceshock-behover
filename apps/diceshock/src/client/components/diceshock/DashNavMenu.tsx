@@ -3,6 +3,7 @@ import {
   ClipboardTextIcon,
   CurrencyDollarIcon,
   GaugeIcon,
+  ImageSquareIcon,
   ListIcon,
   MegaphoneIcon,
   ScanIcon,
@@ -32,6 +33,7 @@ const NAV_ITEMS: ReadonlyArray<{
   { to: "/dash/orders", icon: ClipboardTextIcon, label: "订单管理" },
   { to: "/dash/gsz", icon: SwordIcon, label: "公式战" },
   { to: "/dash/pricing", icon: CurrencyDollarIcon, label: "价格计划" },
+  { to: "/dash/media", icon: ImageSquareIcon, label: "媒体库" },
 ];
 
 export function DashNavMenuButton() {
