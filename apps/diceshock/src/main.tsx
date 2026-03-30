@@ -29,14 +29,14 @@ app.use(authInit);
 
 app.use(serverMetaInj);
 
+app.post("/edge/media/upload", mediaUpload);
+
 app.use("/edge/*", trpcServerDash);
 app.use("/apis/*", trpcServerPublic);
 
 app.use("/api/auth/*", authHandler());
 
 app.get("/sitemap.xml", sitemap);
-
-app.post("/edge/media/upload", mediaUpload);
 
 app.get("/ws/seat/:code", async (c) => {
   const code = c.req.param("code");
