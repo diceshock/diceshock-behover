@@ -2,6 +2,7 @@ import { authHandler } from "@hono/auth-js";
 import { Hono } from "hono";
 import apisRoot from "@/server/apis/apisRoot";
 import fileRoute from "@/server/apis/fileRoute";
+import mediaUpload from "@/server/apis/mediaUpload";
 import sitemap from "@/server/apis/sitemap";
 import type { HonoCtxEnv } from "@/shared/types";
 import seatRedirect from "./server/middlewares/seatRedirect";
@@ -34,6 +35,8 @@ app.use("/apis/*", trpcServerPublic);
 app.use("/api/auth/*", authHandler());
 
 app.get("/sitemap.xml", sitemap);
+
+app.post("/edge/media/upload", mediaUpload);
 
 app.get("/ws/seat/:code", async (c) => {
   const code = c.req.param("code");

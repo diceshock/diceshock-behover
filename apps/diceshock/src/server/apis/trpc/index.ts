@@ -8,6 +8,7 @@ import eventsManagement from "./eventsManagement";
 import gsz from "./gsz";
 import gszManagement from "./gszManagement";
 import mahjong from "./mahjong";
+import mediaManagement from "./mediaManagement";
 import membershipPlans from "./membershipPlans";
 import ordersManagement from "./ordersManagement";
 import owned from "./owned";
@@ -24,6 +25,7 @@ export const appRouterDash = router({
   eventsManagement,
   tablesManagement,
   ordersManagement,
+  mediaManagement,
   users,
   membershipPlans,
   pricingPlansManagement,
