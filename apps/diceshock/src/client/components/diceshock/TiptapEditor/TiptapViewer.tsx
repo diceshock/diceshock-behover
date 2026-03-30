@@ -23,7 +23,7 @@ export default function MarkdownViewer({
       Link.configure({ openOnClick: true }),
       Image,
       Underline,
-      Markdown,
+      Markdown.configure({ html: false }),
     ],
     content,
     editable: false,

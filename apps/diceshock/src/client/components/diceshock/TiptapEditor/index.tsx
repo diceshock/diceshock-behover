@@ -51,7 +51,7 @@ export default function MarkdownEditor({
       Image,
       Underline,
       Placeholder.configure({ placeholder }),
-      Markdown,
+      Markdown.configure({ html: false }),
     ],
     content,
     onUpdate: ({ editor }) => {
