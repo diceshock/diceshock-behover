@@ -11,6 +11,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import BusinessCardModal from "@/client/components/diceshock/BusinessCardModal";
+import MahjongMatchHistory from "@/client/components/diceshock/MahjongMatch/MahjongMatchHistory";
 import {
   getPlanConfig,
   getStoredValueBalance,
@@ -323,6 +324,8 @@ function RouteComponent() {
               )}
 
             <TOTPCard />
+
+            <MahjongMatchHistory />
 
             <button
               onClick={handleEditPhoneClick}

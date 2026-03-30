@@ -1,4 +1,5 @@
 import db, { mahjongMatchesTable, mahjongRegistrationsTable } from "@lib/db";
+import { like } from "drizzle-orm";
 import z from "zod/v4";
 import { protectedProcedure } from "./baseTRPC";
 
@@ -57,6 +58,7 @@ const saveMatch = protectedProcedure
 const getMyMatches = protectedProcedure.query(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
   const matches = await tdb.query.mahjongMatchesTable.findMany({
+    where: (m) => like(m.players, `%"userId":"${ctx.userId}"%`),
     orderBy: (m, { desc }) => desc(m.created_at),
     limit: 50,
   });
