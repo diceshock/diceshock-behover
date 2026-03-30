@@ -120,6 +120,9 @@ function EventEditorPage() {
               <span className="label text-sm font-semibold">
                 头图URL（可选）
               </span>
+              <span className="text-xs text-base-content/50">
+                推荐尺寸 1500 × 600，比例 2.5:1
+              </span>
               <input
                 type="url"
                 placeholder="https://example.com/image.jpg"
