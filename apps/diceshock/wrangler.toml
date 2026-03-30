@@ -45,7 +45,12 @@ class_name = "SocketDO"
 
 [[migrations]]
 tag = "v1"
+new_sqlite_classes = ["SeatTimerDO"]
+
+[[migrations]]
+tag = "v2"
 new_sqlite_classes = ["SocketDO"]
+deleted_classes = ["SeatTimerDO"]
 
 [[routes]]
 pattern = "www.diceshock.com"
