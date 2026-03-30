@@ -210,11 +210,6 @@ body {
     white-space: nowrap;
 }
 
-@keyframes md-img-fade-in {
-    from { opacity: 0; transform: scale(0.97); }
-    to { opacity: 1; transform: scale(1); }
-}
-
 @keyframes md-blockquote-glow {
     0%, 100% { border-image-source: linear-gradient(180deg, var(--color-primary), var(--color-secondary)); }
     50% { border-image-source: linear-gradient(180deg, var(--color-secondary), var(--color-accent)); }
@@ -463,19 +458,6 @@ body {
     border-radius: 0.75rem;
     margin: 0.75rem auto;
     display: block;
-    cursor: pointer;
-    box-shadow:
-        0 4px 12px color-mix(in oklch, var(--color-base-content), transparent 85%),
-        0 0 0 1px color-mix(in oklch, var(--color-primary), transparent 80%);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    animation: md-img-fade-in 0.4s ease-out;
-}
-
-.mdx-content img:hover {
-    transform: scale(1.01);
-    box-shadow:
-        0 8px 24px color-mix(in oklch, var(--color-base-content), transparent 75%),
-        0 0 0 2px color-mix(in oklch, var(--color-primary), transparent 50%);
 }
 
 .mdx-content table {
