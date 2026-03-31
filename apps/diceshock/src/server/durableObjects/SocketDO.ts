@@ -1,10 +1,12 @@
 import { DurableObject } from "cloudflare:workers";
+import db, { mahjongMatchesTable } from "@lib/db";
 import type { Seat } from "@/shared/mahjong/constants";
 import * as engine from "@/shared/mahjong/engine";
 import type {
   MatchConfig,
   MatchState,
   RoundResult,
+  TerminationReason,
 } from "@/shared/mahjong/types";
 
 interface SessionMeta {
@@ -36,11 +38,13 @@ export interface SocketState {
   occupancies: OccupancyInfo[];
   serverTime: number;
   mahjong: MatchState | null;
+  step: number;
 }
 
 type ClientMessage =
   | { action: "sync" }
   | { action: "update_state"; table: TableInfo; occupancies: OccupancyInfo[] }
+  | { action: "app_ping"; ts: number }
   | { action: "mahjong_set_config"; config: MatchConfig }
   | {
       action: "mahjong_join";
@@ -60,16 +64,22 @@ type ClientMessage =
   | { action: "mahjong_initiate_vote" }
   | { action: "mahjong_cast_vote"; vote: boolean }
   | { action: "mahjong_resolve_vote" }
-  | { action: "mahjong_reset" };
+  | { action: "mahjong_reset" }
+  | {
+      action: "mahjong_admin_abort";
+      reason?: "admin_abort" | "order_invalid";
+    };
 
 type ServerMessage =
   | { type: "state"; data: SocketState }
-  | { type: "error"; message: string };
+  | { type: "error"; message: string }
+  | { type: "app_pong"; ts: number; serverTime: number };
 
 export class SocketDO extends DurableObject<Cloudflare.Env> {
   private tableInfo: TableInfo | null = null;
   private occupancies: OccupancyInfo[] = [];
   private mahjongState: MatchState | null = null;
+  private step = 0;
 
   constructor(ctx: DurableObjectState, env: Cloudflare.Env) {
     super(ctx, env);
@@ -93,12 +103,29 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
       };
       this.tableInfo = body.table;
       this.occupancies = body.occupancies;
+      this.checkOrderValidity();
       this.broadcastState();
       return new Response("ok");
     }
 
     if (url.pathname === "/state" && request.method === "GET") {
       return Response.json(this.buildState());
+    }
+
+    if (url.pathname === "/mahjong-state" && request.method === "GET") {
+      return Response.json({
+        mahjong: this.mahjongState,
+        table: this.tableInfo,
+        occupancies: this.occupancies,
+      });
+    }
+
+    if (url.pathname === "/mahjong-abort" && request.method === "POST") {
+      const body = (await request.json()) as {
+        reason?: "admin_abort" | "order_invalid";
+      };
+      await this.abortMatch(body.reason ?? "admin_abort");
+      return Response.json({ success: true });
     }
 
     return new Response("Not found", { status: 404 });
@@ -141,12 +168,24 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
         case "update_state":
           this.tableInfo = data.table;
           this.occupancies = data.occupancies;
+          this.checkOrderValidity();
+          this.step++;
           this.broadcastState();
+          break;
+
+        case "app_ping":
+          ws.send(
+            JSON.stringify({
+              type: "app_pong",
+              ts: data.ts,
+              serverTime: Date.now(),
+            } satisfies ServerMessage),
+          );
           break;
 
         default:
           if (data.action.startsWith("mahjong_")) {
-            this.handleMahjongAction(meta, data);
+            await this.handleMahjongAction(meta, data);
           }
           break;
       }
@@ -160,7 +199,65 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
     }
   }
 
-  private handleMahjongAction(meta: SessionMeta, data: ClientMessage): void {
+  private checkOrderValidity(): void {
+    if (!this.mahjongState) return;
+    const activePhases: MatchState["phase"][] = [
+      "playing",
+      "scoring",
+      "round_review",
+      "voting",
+    ];
+    if (!activePhases.includes(this.mahjongState.phase)) return;
+
+    const occupancyUserIds = new Set(this.occupancies.map((o) => o.user_id));
+    const missingPlayer = this.mahjongState.players.find(
+      (p) => !occupancyUserIds.has(p.userId),
+    );
+
+    if (missingPlayer) {
+      void this.abortMatch("order_invalid");
+    }
+  }
+
+  private async abortMatch(reason: TerminationReason): Promise<void> {
+    if (!this.mahjongState || this.mahjongState.phase === "ended") return;
+
+    this.mahjongState = engine.abortMatch(
+      this.mahjongState,
+      reason as "admin_abort" | "order_invalid",
+    );
+    this.step++;
+    this.broadcastState();
+    await this.saveMatchToDB();
+  }
+
+  private async saveMatchToDB(): Promise<void> {
+    if (!this.mahjongState || this.mahjongState.phase !== "ended") return;
+    const result = engine.serializeForDB(this.mahjongState);
+    if (!result) return;
+
+    try {
+      const tdb = db(this.env.DB);
+      await tdb.insert(mahjongMatchesTable).values({
+        table_id: this.tableInfo?.id ?? null,
+        mode: result.mode,
+        format: result.format,
+        started_at: new Date(result.startedAt),
+        ended_at: new Date(result.endedAt),
+        termination_reason: result.terminationReason,
+        players: result.players,
+        round_history: result.roundHistory,
+        config: result.config,
+      });
+    } catch {
+      // noop
+    }
+  }
+
+  private async handleMahjongAction(
+    meta: SessionMeta,
+    data: ClientMessage,
+  ): Promise<void> {
     try {
       switch (data.action) {
         case "mahjong_set_config": {
@@ -261,6 +358,10 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
           this.mahjongState = engine.resolveVote(this.mahjongState);
           break;
         }
+        case "mahjong_admin_abort": {
+          await this.abortMatch(data.reason ?? "admin_abort");
+          return;
+        }
         case "mahjong_reset": {
           if (this.mahjongState) {
             this.mahjongState = engine.resetKeepConfig(this.mahjongState);
@@ -270,6 +371,7 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
           break;
         }
       }
+      this.step++;
       this.broadcastState();
     } catch (err) {
       this.broadcastError(
@@ -297,6 +399,7 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
       occupancies: this.occupancies,
       serverTime: Date.now(),
       mahjong: this.mahjongState,
+      step: this.step,
     };
   }
 

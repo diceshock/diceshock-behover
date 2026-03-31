@@ -33,6 +33,7 @@
     "immer": "^11.1.4",
     "lodash": "^4.17.23",
     "qrcode": "^1.5.4",
+    "reconnecting-websocket": "^4.4.0",
     "wrangler": "^4.75.0",
     "zod": "^4.3.6"
   },
