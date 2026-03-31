@@ -3,7 +3,12 @@ import type { Seat, Wind } from "./constants";
 export type MatchMode = "3p" | "4p";
 export type MatchFormat = "tonpuu" | "hanchan";
 export type RoundResult = "dealer_win" | "non_dealer_win" | "draw";
-export type TerminationReason = "format_complete" | "bust" | "vote";
+export type TerminationReason =
+  | "format_complete"
+  | "bust"
+  | "vote"
+  | "admin_abort"
+  | "order_invalid";
 
 export type MatchPhase =
   | "lobby"
@@ -64,6 +69,7 @@ export interface MatchState {
   terminationReason: TerminationReason | null;
   startedAt: number | null;
   endedAt: number | null;
+  step: number;
 }
 
 export interface MatchResultForDB {

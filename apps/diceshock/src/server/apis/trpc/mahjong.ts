@@ -11,7 +11,13 @@ const saveMatch = protectedProcedure
       format: z.enum(["tonpuu", "hanchan"]),
       startedAt: z.number(),
       endedAt: z.number(),
-      terminationReason: z.enum(["format_complete", "bust", "vote"]),
+      terminationReason: z.enum([
+        "format_complete",
+        "bust",
+        "vote",
+        "admin_abort",
+        "order_invalid",
+      ]),
       players: z.array(
         z.object({
           userId: z.string(),

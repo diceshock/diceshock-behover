@@ -43,6 +43,7 @@ export function createInitialState(): MatchState {
     terminationReason: null,
     startedAt: null,
     endedAt: null,
+    step: 0,
   };
 }
 
@@ -422,15 +423,28 @@ export function canEndMatch(state: MatchState): boolean {
   return hasBust;
 }
 
+export function abortMatch(
+  state: MatchState,
+  reason: "admin_abort" | "order_invalid",
+): MatchState {
+  if (state.phase === "ended") return state;
+
+  return {
+    ...state,
+    phase: "ended",
+    terminationReason: reason,
+    endedAt: Date.now(),
+  };
+}
+
 export function serializeForDB(state: MatchState): MatchResultForDB | null {
   if (state.phase !== "ended") return null;
-  if (!state.config || !state.startedAt || !state.terminationReason)
-    return null;
+  if (!state.config || !state.terminationReason) return null;
 
   return {
     mode: state.config.mode,
     format: state.config.format,
-    startedAt: state.startedAt,
+    startedAt: state.startedAt ?? Date.now(),
     endedAt: state.endedAt ?? Date.now(),
     terminationReason: state.terminationReason,
     players: state.players.map((p) => ({

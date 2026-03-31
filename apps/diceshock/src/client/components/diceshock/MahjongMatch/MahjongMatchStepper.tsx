@@ -37,6 +37,8 @@ interface Props {
   phone: string | null;
   isTemp: boolean;
   registered: boolean;
+  isPending: (actionType: string) => boolean;
+  connected: boolean;
 }
 
 export default function MahjongMatchStepper({
@@ -48,8 +50,10 @@ export default function MahjongMatchStepper({
   phone,
   isTemp,
   registered,
+  isPending,
+  connected,
 }: Props) {
-  if (isTemp) {
+  if (isTemp && !import.meta.env.DEV) {
     return (
       <div className="alert alert-warning text-sm">
         <span>临时身份不支持公式战，请先登录。</span>
@@ -62,7 +66,14 @@ export default function MahjongMatchStepper({
   }
 
   if (!state || state.phase === "lobby" || state.phase === "config_select") {
-    return <ConfigSelectView state={state} actions={actions} />;
+    return (
+      <ConfigSelectView
+        state={state}
+        actions={actions}
+        isPending={isPending}
+        connected={connected}
+      />
+    );
   }
 
   if (state.phase === "seat_select") {
@@ -74,30 +85,68 @@ export default function MahjongMatchStepper({
         userId={userId}
         nickname={nickname}
         phone={phone}
+        isPending={isPending}
+        connected={connected}
       />
     );
   }
 
   if (state.phase === "playing") {
     return (
-      <MatchBoardView state={state} myPlayer={myPlayer} actions={actions} />
+      <MatchBoardView
+        state={state}
+        myPlayer={myPlayer}
+        actions={actions}
+        isPending={isPending}
+        connected={connected}
+      />
     );
   }
 
   if (state.phase === "scoring") {
-    return <ScoreInputView state={state} actions={actions} userId={userId} />;
+    return (
+      <ScoreInputView
+        state={state}
+        actions={actions}
+        userId={userId}
+        isPending={isPending}
+        connected={connected}
+      />
+    );
   }
 
   if (state.phase === "round_review") {
-    return <RoundReviewView state={state} actions={actions} />;
+    return (
+      <RoundReviewView
+        state={state}
+        actions={actions}
+        isPending={isPending}
+        connected={connected}
+      />
+    );
   }
 
   if (state.phase === "voting") {
-    return <VotePanelView state={state} actions={actions} userId={userId} />;
+    return (
+      <VotePanelView
+        state={state}
+        actions={actions}
+        userId={userId}
+        isPending={isPending}
+        connected={connected}
+      />
+    );
   }
 
   if (state.phase === "ended") {
-    return <MatchResultView state={state} actions={actions} />;
+    return (
+      <MatchResultView
+        state={state}
+        actions={actions}
+        isPending={isPending}
+        connected={connected}
+      />
+    );
   }
 
   return null;
@@ -168,9 +217,13 @@ const FORMAT_OPTIONS: {
 function ConfigSelectView({
   state,
   actions,
+  isPending,
+  connected,
 }: {
   state: MatchState | null;
   actions: MahjongActions;
+  isPending: (a: string) => boolean;
+  connected: boolean;
 }) {
   const currentMode = state?.config?.mode ?? "4p";
   const currentFormat = state?.config?.format ?? "hanchan";
@@ -246,9 +299,14 @@ function ConfigSelectView({
       <button
         type="button"
         className="btn btn-primary btn-lg gap-2 shadow-md shadow-primary/25"
+        disabled={!connected || isPending("mahjong_start_seat_select")}
         onClick={actions.startSeatSelect}
       >
-        <PlayIcon className="size-5" weight="fill" />
+        {isPending("mahjong_start_seat_select") ? (
+          <span className="loading loading-spinner loading-xs" />
+        ) : (
+          <PlayIcon className="size-5" weight="fill" />
+        )}
         开始对局
       </button>
     </div>
@@ -262,6 +320,8 @@ function SeatSelectView({
   userId,
   nickname,
   phone,
+  isPending,
+  connected,
 }: {
   state: MatchState;
   myPlayer: PlayerState | null;
@@ -269,6 +329,8 @@ function SeatSelectView({
   userId: string;
   nickname: string;
   phone: string | null;
+  isPending: (a: string) => boolean;
+  connected: boolean;
 }) {
   const currentMode = state.config?.mode ?? "4p";
   const seats = currentMode === "3p" ? SEATS_3P : SEATS_4P;
@@ -313,9 +375,14 @@ function SeatSelectView({
       <button
         type="button"
         className="btn btn-outline btn-sm gap-1.5"
+        disabled={!connected || isPending("mahjong_back_to_config")}
         onClick={actions.backToConfig}
       >
-        <ArrowLeftIcon className="size-4" />
+        {isPending("mahjong_back_to_config") ? (
+          <span className="loading loading-spinner loading-xs" />
+        ) : (
+          <ArrowLeftIcon className="size-4" />
+        )}
         返回重新选择
       </button>
     </div>
@@ -373,10 +440,14 @@ function MatchBoardView({
   state,
   myPlayer,
   actions,
+  isPending,
+  connected,
 }: {
   state: MatchState;
   myPlayer: PlayerState | null;
   actions: MahjongActions;
+  isPending: (a: string) => boolean;
+  connected: boolean;
 }) {
   const dealer = state.players[state.currentRound.dealerIndex];
   const ranking = engine.getRanking(state);
@@ -416,19 +487,27 @@ function MatchBoardView({
         ))}
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-col items-center gap-2">
         <button
           type="button"
-          className="btn btn-primary flex-1"
+          className="btn btn-primary btn-lg w-full"
+          disabled={!connected || isPending("mahjong_begin_scoring")}
           onClick={actions.beginScoring}
         >
+          {isPending("mahjong_begin_scoring") && (
+            <span className="loading loading-spinner loading-xs" />
+          )}
           结束本局
         </button>
         <button
           type="button"
-          className="btn btn-warning flex-1"
+          className="btn btn-ghost btn-sm text-base-content/50"
+          disabled={!connected || isPending("mahjong_initiate_vote")}
           onClick={actions.initiateVote}
         >
+          {isPending("mahjong_initiate_vote") && (
+            <span className="loading loading-spinner loading-xs" />
+          )}
           结算本场
         </button>
       </div>
@@ -440,13 +519,20 @@ function ScoreInputView({
   state,
   actions,
   userId,
+  isPending,
+  connected,
 }: {
   state: MatchState;
   actions: MahjongActions;
   userId: string;
+  isPending: (a: string) => boolean;
+  connected: boolean;
 }) {
   const [score, setScore] = useState("");
   const submitted = userId in state.pendingScores;
+
+  const dealer = state.players[state.currentRound.dealerIndex];
+  const allSubmitted = engine.allScoresSubmitted(state);
 
   return (
     <div className="flex flex-col gap-4 py-4">
@@ -456,7 +542,7 @@ function ScoreInputView({
         <>
           <input
             type="number"
-            className="input input-bordered input-lg text-center font-mono"
+            className="input input-bordered input-lg w-full text-center font-mono"
             placeholder="输入当前点数"
             value={score}
             onChange={(e) => setScore(e.target.value)}
@@ -464,13 +550,16 @@ function ScoreInputView({
           <button
             type="button"
             className="btn btn-primary btn-lg"
-            disabled={!score}
+            disabled={!score || !connected || isPending("mahjong_submit_score")}
             onClick={() => {
               const pts = Number.parseInt(score, 10);
               if (Number.isNaN(pts)) return;
               actions.submitScore(pts);
             }}
           >
+            {isPending("mahjong_submit_score") && (
+              <span className="loading loading-spinner loading-xs" />
+            )}
             确认点数
           </button>
         </>
@@ -480,17 +569,55 @@ function ScoreInputView({
         </div>
       )}
 
-      <div className="text-xs text-base-content/50 text-center">
-        {Object.keys(state.pendingScores).length}/
-        {state.config?.mode === "3p" ? 3 : 4} 已录入
+      <div className="flex flex-col gap-1.5">
+        {state.players.map((p) => {
+          const hasScore = p.userId in state.pendingScores;
+          const isMe = p.userId === userId;
+          const isDealer = p.userId === dealer?.userId;
+          return (
+            <div
+              key={p.userId}
+              className={clsx(
+                "flex items-center justify-between px-3 py-2 rounded-lg text-sm",
+                isMe ? "bg-primary/10" : "bg-base-200",
+              )}
+            >
+              <div className="flex items-center gap-1.5">
+                {p.seat && (
+                  <span className="badge badge-xs badge-outline">
+                    {SEAT_LABELS[p.seat]}
+                  </span>
+                )}
+                <span className={clsx(!hasScore && "text-base-content/40")}>
+                  {p.nickname}
+                </span>
+                {isMe && <span className="text-xs text-primary">(你)</span>}
+                {allSubmitted && isDealer && (
+                  <span className="badge badge-xs badge-warning">庄</span>
+                )}
+              </div>
+              {hasScore ? (
+                <span className="font-mono font-bold">
+                  {state.pendingScores[p.userId]}
+                </span>
+              ) : (
+                <span className="text-xs text-base-content/30">等待录入</span>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {engine.allScoresSubmitted(state) && (
         <button
           type="button"
           className="btn btn-accent btn-lg"
+          disabled={!connected || isPending("mahjong_confirm_scores")}
           onClick={actions.confirmScores}
         >
+          {isPending("mahjong_confirm_scores") && (
+            <span className="loading loading-spinner loading-xs" />
+          )}
           确认全部点数
         </button>
       )}
@@ -501,9 +628,13 @@ function ScoreInputView({
 function RoundReviewView({
   state,
   actions,
+  isPending,
+  connected,
 }: {
   state: MatchState;
   actions: MahjongActions;
+  isPending: (a: string) => boolean;
+  connected: boolean;
 }) {
   const [result, setResult] = useState<
     "dealer_win" | "non_dealer_win" | "draw" | ""
@@ -567,8 +698,12 @@ function RoundReviewView({
         <button
           type="button"
           className="btn btn-primary btn-lg"
+          disabled={!connected || isPending("mahjong_end_round")}
           onClick={() => actions.endRound(result)}
         >
+          {isPending("mahjong_end_round") && (
+            <span className="loading loading-spinner loading-xs" />
+          )}
           确认并继续
         </button>
       )}
@@ -580,10 +715,14 @@ function VotePanelView({
   state,
   actions,
   userId,
+  isPending,
+  connected,
 }: {
   state: MatchState;
   actions: MahjongActions;
   userId: string;
+  isPending: (a: string) => boolean;
+  connected: boolean;
 }) {
   const hasVoted = state.votes.some((v) => v.userId === userId);
   const yesCount = state.votes.filter((v) => v.vote).length;
@@ -620,13 +759,18 @@ function VotePanelView({
           <button
             type="button"
             className="btn btn-success btn-lg"
+            disabled={!connected || isPending("mahjong_cast_vote")}
             onClick={() => actions.castVote(true)}
           >
+            {isPending("mahjong_cast_vote") && (
+              <span className="loading loading-spinner loading-xs" />
+            )}
             同意结算
           </button>
           <button
             type="button"
             className="btn btn-error btn-lg"
+            disabled={!connected || isPending("mahjong_cast_vote")}
             onClick={() => actions.castVote(false)}
           >
             继续对局
@@ -638,8 +782,12 @@ function VotePanelView({
         <button
           type="button"
           className="btn btn-primary"
+          disabled={!connected || isPending("mahjong_resolve_vote")}
           onClick={actions.resolveVote}
         >
+          {isPending("mahjong_resolve_vote") && (
+            <span className="loading loading-spinner loading-xs" />
+          )}
           确认投票结果
         </button>
       )}
@@ -650,9 +798,13 @@ function VotePanelView({
 function MatchResultView({
   state,
   actions,
+  isPending,
+  connected,
 }: {
   state: MatchState;
   actions: MahjongActions;
+  isPending: (a: string) => boolean;
+  connected: boolean;
 }) {
   const ranking = engine.getRanking(state);
 
@@ -694,7 +846,15 @@ function MatchResultView({
         共 {state.roundHistory.length} 局
       </div>
 
-      <button type="button" className="btn btn-primary" onClick={actions.reset}>
+      <button
+        type="button"
+        className="btn btn-primary"
+        disabled={!connected || isPending("mahjong_reset")}
+        onClick={actions.reset}
+      >
+        {isPending("mahjong_reset") && (
+          <span className="loading loading-spinner loading-xs" />
+        )}
         新的一场
       </button>
     </div>

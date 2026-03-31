@@ -10,10 +10,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import clsx from "clsx";
 import QRCode from "qrcode";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import DisconnectionOverlay from "@/client/components/diceshock/DisconnectionOverlay";
 import MahjongMatchStepper from "@/client/components/diceshock/MahjongMatch/MahjongMatchStepper";
+import NetworkSignalIndicator from "@/client/components/diceshock/NetworkSignalIndicator";
 import useAuth from "@/client/hooks/useAuth";
 import useCrossData from "@/client/hooks/useCrossData";
 import useMahjongMatch from "@/client/hooks/useMahjongMatch";
+import useNetworkQuality from "@/client/hooks/useNetworkQuality";
 import useSeatTimer from "@/client/hooks/useSeatTimer";
 import useTempIdentity from "@/client/hooks/useTempIdentity";
 import { getLoginTime } from "@/client/hooks/useTOTP";
@@ -32,6 +35,8 @@ export const Route = createFileRoute("/t/$code")({
     from: (search.from as string) ?? "",
   }),
 });
+
+const pricingCache = { snapshot: null as SnapshotData | null };
 
 const TYPE_LABELS: Record<string, string> = {
   fixed: "固定桌",
@@ -95,7 +100,7 @@ function SeatTimerPage() {
   const [activeTab, setActiveTab] = useState<"main" | "mahjong">("main");
 
   const [pricingSnapshot, setPricingSnapshot] = useState<SnapshotData | null>(
-    null,
+    pricingCache.snapshot,
   );
 
   const identityId =
@@ -109,11 +114,18 @@ function SeatTimerPage() {
     state: wsState,
     connected,
     sendMessage,
+    onPongMessage,
   } = useSeatTimer({
     code,
     userId: identityId,
     role: "user",
     enabled: !!identity,
+  });
+
+  const networkQuality = useNetworkQuality({
+    sendMessage,
+    connected,
+    onPongMessage,
   });
 
   const mahjong = useMahjongMatch({
@@ -131,7 +143,8 @@ function SeatTimerPage() {
         trpcClientPublic.pricing.getPublished.query(),
       ]);
       setTableData(data);
-      setPricingSnapshot(published?.data ?? null);
+      pricingCache.snapshot = published?.data ?? null;
+      setPricingSnapshot(pricingCache.snapshot);
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载失败");
     } finally {
@@ -179,7 +192,7 @@ function SeatTimerPage() {
   const isExpired =
     identity?.kind === "temp" && Date.now() > identity.expiresAt;
 
-  if (loading) {
+  if (loading && !wsState) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <span className="loading loading-spinner loading-lg" />
@@ -223,6 +236,7 @@ function SeatTimerPage() {
           table={table}
           totalOccupied={totalOccupied}
           connected={connected}
+          signalLevel={networkQuality.signalLevel}
         />
         <div className="alert alert-warning text-sm">
           <span>
@@ -237,6 +251,7 @@ function SeatTimerPage() {
 
   return (
     <div className="mx-auto w-full max-w-lg px-4 py-6 flex flex-col gap-5">
+      <DisconnectionOverlay visible={!connected && !!wsState} retryCount={0} />
       {error && (
         <div className="alert alert-error alert-soft text-sm">
           <span>{error}</span>
@@ -302,6 +317,7 @@ function SeatTimerPage() {
             table={table}
             totalOccupied={totalOccupied}
             connected={connected}
+            signalLevel={networkQuality.signalLevel}
           />
 
           {myOccupancy && <TimerSection startAt={myOccupancy.start_at} />}
@@ -362,6 +378,8 @@ function SeatTimerPage() {
           phone={identity?.kind === "real" ? identity.phone : null}
           isTemp={identity?.kind === "temp"}
           registered={true}
+          isPending={mahjong.isPending}
+          connected={connected}
         />
       )}
     </div>
@@ -372,6 +390,7 @@ function TableInfoSection({
   table,
   totalOccupied,
   connected,
+  signalLevel,
 }: {
   table: {
     name: string;
@@ -382,6 +401,7 @@ function TableInfoSection({
   };
   totalOccupied: number;
   connected: boolean;
+  signalLevel: 0 | 1 | 2 | 3 | 4;
 }) {
   const isSolo = table.type === "solo";
   return (
@@ -400,12 +420,7 @@ function TableInfoSection({
           <span className="badge badge-sm badge-outline">
             {SCOPE_LABELS[table.scope] ?? table.scope}
           </span>
-          <span
-            className={clsx(
-              "size-2 rounded-full",
-              connected ? "bg-success" : "bg-base-300",
-            )}
-          />
+          <NetworkSignalIndicator signalLevel={signalLevel} />
         </div>
       </div>
       <div className="flex items-center gap-4 text-sm text-base-content/60">
