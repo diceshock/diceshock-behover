@@ -342,6 +342,7 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
         case "mahjong_initiate_vote": {
           if (!this.mahjongState) return;
           this.mahjongState = engine.initiateVote(this.mahjongState);
+          await this.ctx.storage.setAlarm(Date.now() + 20_000);
           break;
         }
         case "mahjong_cast_vote": {
@@ -351,11 +352,20 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
             meta.userId,
             data.vote,
           );
+          if (
+            this.mahjongState.config &&
+            this.mahjongState.votes.length >=
+              (this.mahjongState.config.mode === "3p" ? 3 : 4)
+          ) {
+            this.mahjongState = engine.resolveVote(this.mahjongState);
+            await this.ctx.storage.deleteAlarm();
+          }
           break;
         }
         case "mahjong_resolve_vote": {
           if (!this.mahjongState) return;
           this.mahjongState = engine.resolveVote(this.mahjongState);
+          await this.ctx.storage.deleteAlarm();
           break;
         }
         case "mahjong_admin_abort": {
@@ -395,6 +405,18 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
 
   async webSocketError(ws: WebSocket, _error: unknown): Promise<void> {
     ws.close(1011, "WebSocket error");
+  }
+
+  async alarm(): Promise<void> {
+    if (this.mahjongState?.phase !== "voting") return;
+
+    this.mahjongState = engine.resolveVoteByTimeout(this.mahjongState);
+    this.step++;
+    this.broadcastState();
+
+    if (this.mahjongState.phase === "ended") {
+      await this.saveMatchToDB();
+    }
   }
 
   private buildState(): SocketState {
