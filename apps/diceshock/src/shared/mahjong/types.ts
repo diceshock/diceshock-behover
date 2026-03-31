@@ -63,6 +63,7 @@ export interface MatchState {
   currentRound: RoundState;
   phase: MatchPhase;
   votes: Vote[];
+  voteStartedAt: number | null;
   roundHistory: RoundRecord[];
   pendingScores: Record<string, number>;
   roundCounter: number;

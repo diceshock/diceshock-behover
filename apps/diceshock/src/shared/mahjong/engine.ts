@@ -37,6 +37,7 @@ export function createInitialState(): MatchState {
     currentRound: { wind: "east", roundNumber: 1, honba: 0, dealerIndex: 0 },
     phase: "config_select",
     votes: [],
+    voteStartedAt: null,
     roundHistory: [],
     pendingScores: {},
     roundCounter: 0,
@@ -345,7 +346,7 @@ function advanceRound(
 export function initiateVote(state: MatchState): MatchState {
   if (state.phase !== "playing")
     throw new Error("Can only vote during playing phase");
-  return { ...state, phase: "voting", votes: [] };
+  return { ...state, phase: "voting", votes: [], voteStartedAt: Date.now() };
 }
 
 export function castVote(
@@ -393,6 +394,7 @@ export function resolveVote(state: MatchState): MatchState {
       phase: "ended",
       terminationReason: "vote",
       endedAt: Date.now(),
+      voteStartedAt: null,
     };
   }
 
@@ -400,6 +402,33 @@ export function resolveVote(state: MatchState): MatchState {
     ...state,
     phase: "playing",
     votes: [],
+    voteStartedAt: null,
+  };
+}
+
+export function resolveVoteByTimeout(state: MatchState): MatchState {
+  if (state.phase !== "voting")
+    throw new Error("Can only resolve vote during voting phase");
+
+  const yesVotes = state.votes.filter((v) => v.vote).length;
+  const noVotes = state.votes.filter((v) => !v.vote).length;
+  const hasVotes = state.votes.length > 0;
+
+  if (hasVotes && yesVotes > noVotes) {
+    return {
+      ...state,
+      phase: "ended",
+      terminationReason: "vote",
+      endedAt: Date.now(),
+      voteStartedAt: null,
+    };
+  }
+
+  return {
+    ...state,
+    phase: "playing",
+    votes: [],
+    voteStartedAt: null,
   };
 }
 

@@ -16,6 +16,7 @@ import {
   isVotePassed,
   resetKeepConfig,
   resolveVote,
+  resolveVoteByTimeout,
   selectSeat,
   serializeForDB,
   setConfig,
@@ -467,6 +468,67 @@ describe("engine - voting", () => {
     s = initiateVote(s);
     s = castVote(s, "A", true);
     expect(() => castVote(s, "A", false)).toThrow("Already voted");
+  });
+
+  it("initiateVote sets voteStartedAt", () => {
+    let s = make4pPlaying();
+    expect(s.voteStartedAt).toBeNull();
+    s = initiateVote(s);
+    expect(s.voteStartedAt).toBeGreaterThan(0);
+  });
+
+  it("resolveVote clears voteStartedAt", () => {
+    let s = make4pPlaying();
+    s = initiateVote(s);
+    s = castVote(s, "A", false);
+    s = castVote(s, "B", false);
+    s = castVote(s, "C", false);
+    s = castVote(s, "D", false);
+    s = resolveVote(s);
+    expect(s.voteStartedAt).toBeNull();
+    expect(s.phase).toBe("playing");
+  });
+
+  it("resolveVoteByTimeout with majority yes ends match", () => {
+    let s = make4pPlaying();
+    s = initiateVote(s);
+    s = castVote(s, "A", true);
+    s = castVote(s, "B", true);
+    s = castVote(s, "C", false);
+    s = resolveVoteByTimeout(s);
+    expect(s.phase).toBe("ended");
+    expect(s.terminationReason).toBe("vote");
+    expect(s.voteStartedAt).toBeNull();
+  });
+
+  it("resolveVoteByTimeout with tie continues", () => {
+    let s = make4pPlaying();
+    s = initiateVote(s);
+    s = castVote(s, "A", true);
+    s = castVote(s, "B", false);
+    s = resolveVoteByTimeout(s);
+    expect(s.phase).toBe("playing");
+    expect(s.votes).toHaveLength(0);
+    expect(s.voteStartedAt).toBeNull();
+  });
+
+  it("resolveVoteByTimeout with majority no continues", () => {
+    let s = make4pPlaying();
+    s = initiateVote(s);
+    s = castVote(s, "A", true);
+    s = castVote(s, "B", false);
+    s = castVote(s, "C", false);
+    s = resolveVoteByTimeout(s);
+    expect(s.phase).toBe("playing");
+    expect(s.voteStartedAt).toBeNull();
+  });
+
+  it("resolveVoteByTimeout with no votes continues", () => {
+    let s = make4pPlaying();
+    s = initiateVote(s);
+    s = resolveVoteByTimeout(s);
+    expect(s.phase).toBe("playing");
+    expect(s.voteStartedAt).toBeNull();
   });
 });
 
