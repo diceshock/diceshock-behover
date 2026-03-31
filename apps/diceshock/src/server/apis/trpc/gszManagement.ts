@@ -1,8 +1,10 @@
 import db from "@lib/db";
+import type { MatchState } from "@/shared/mahjong/types";
 import { dashProcedure } from "./baseTRPC";
 
 type ModeFilter = "all" | "3p" | "4p";
 type FormatFilter = "all" | "tonpuu" | "hanchan";
+type CompletionFilter = "all" | "completed" | "incomplete";
 
 const list = dashProcedure
   .input((v: unknown) => {
@@ -10,6 +12,7 @@ const list = dashProcedure
       search?: string;
       mode?: ModeFilter;
       format?: FormatFilter;
+      completion?: CompletionFilter;
       tableId?: string;
       startDate?: number;
       endDate?: number;
@@ -20,6 +23,7 @@ const list = dashProcedure
       search: data.search ?? "",
       mode: data.mode ?? "all",
       format: data.format ?? "all",
+      completion: data.completion ?? "all",
       tableId: data.tableId ?? "",
       startDate: data.startDate ?? null,
       endDate: data.endDate ?? null,
@@ -109,6 +113,17 @@ const list = dashProcedure
       });
     }
 
+    const INCOMPLETE_REASONS = new Set(["admin_abort", "order_invalid"]);
+    if (input.completion === "completed") {
+      filtered = filtered.filter(
+        (m) => !INCOMPLETE_REASONS.has(m.termination_reason),
+      );
+    } else if (input.completion === "incomplete") {
+      filtered = filtered.filter((m) =>
+        INCOMPLETE_REASONS.has(m.termination_reason),
+      );
+    }
+
     const total = filtered.length;
     const start = (input.page - 1) * input.pageSize;
     const items = filtered.slice(start, start + input.pageSize);
@@ -190,4 +205,105 @@ const listTables = dashProcedure.query(async ({ ctx }) => {
   return tables;
 });
 
-export default { list, getById, listTables };
+export interface ActiveMatchInfo {
+  tableCode: string;
+  tableName: string;
+  tableId: string;
+  phase: MatchState["phase"];
+  mode: string;
+  format: string;
+  players: Array<{
+    userId: string;
+    nickname: string;
+    seat: string | null;
+    currentPoints: number;
+  }>;
+  roundCount: number;
+  currentWind: string;
+  currentRoundNumber: number;
+  startedAt: number | null;
+}
+
+const listActive = dashProcedure.query(async ({ ctx }) => {
+  const tdb = db(ctx.env.DB);
+  const mahjongTables = await tdb.query.tablesTable.findMany({
+    where: (t, { eq }) => eq(t.scope, "mahjong"),
+    columns: { id: true, name: true, code: true },
+  });
+
+  const results: ActiveMatchInfo[] = [];
+
+  await Promise.all(
+    mahjongTables.map(async (table) => {
+      try {
+        const doId = ctx.env.SOCKET.idFromName(table.code);
+        const stub = ctx.env.SOCKET.get(doId);
+        const res = await stub.fetch(
+          new Request("https://do/mahjong-state", { method: "GET" }),
+        );
+        if (!res.ok) return;
+
+        const data = (await res.json()) as {
+          mahjong: MatchState | null;
+          table: { id: string; name: string; code: string } | null;
+        };
+
+        if (!data.mahjong) return;
+        if (data.mahjong.phase === "ended") return;
+        if (
+          data.mahjong.phase === "lobby" ||
+          data.mahjong.phase === "config_select"
+        )
+          return;
+
+        results.push({
+          tableCode: table.code,
+          tableName: table.name,
+          tableId: table.id,
+          phase: data.mahjong.phase,
+          mode: data.mahjong.config?.mode ?? "4p",
+          format: data.mahjong.config?.format ?? "hanchan",
+          players: data.mahjong.players.map((p) => ({
+            userId: p.userId,
+            nickname: p.nickname,
+            seat: p.seat,
+            currentPoints: p.currentPoints,
+          })),
+          roundCount: data.mahjong.roundHistory.length,
+          currentWind: data.mahjong.currentRound.wind,
+          currentRoundNumber: data.mahjong.currentRound.roundNumber,
+          startedAt: data.mahjong.startedAt,
+        });
+      } catch {
+        // noop
+      }
+    }),
+  );
+
+  return results;
+});
+
+const terminateMatch = dashProcedure
+  .input((v: unknown) => {
+    const data = v as { tableCode: string; reason?: string };
+    if (!data.tableCode) throw new Error("tableCode is required");
+    return {
+      tableCode: data.tableCode,
+      reason: (data.reason ?? "admin_abort") as "admin_abort" | "order_invalid",
+    };
+  })
+  .mutation(async ({ input, ctx }) => {
+    const doId = ctx.env.SOCKET.idFromName(input.tableCode);
+    const stub = ctx.env.SOCKET.get(doId);
+    const res = await stub.fetch(
+      new Request("https://do/mahjong-abort", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: input.reason }),
+      }),
+    );
+    if (!res.ok) throw new Error("终止公式战失败");
+    return { success: true };
+  });
+
+export default { list, getById, listTables, listActive, terminateMatch };

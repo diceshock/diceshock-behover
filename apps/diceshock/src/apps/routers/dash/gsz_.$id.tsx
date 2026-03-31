@@ -28,6 +28,8 @@ const TERMINATION_LABELS: Record<string, string> = {
   format_complete: "场制完成",
   bust: "飞人终局",
   vote: "投票结算",
+  admin_abort: "管理员终止",
+  order_invalid: "订单失效",
 };
 
 const RESULT_LABELS: Record<string, string> = {

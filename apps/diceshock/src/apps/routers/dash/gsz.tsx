@@ -3,25 +3,33 @@ import {
   DotsThreeVerticalIcon,
   EyeIcon,
   MagnifyingGlassIcon,
+  StopIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import clsx from "clsx";
+import { useCallback, useEffect, useRef, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
+import type { Wind } from "@/shared/mahjong/constants";
+import { WIND_LABELS } from "@/shared/mahjong/constants";
 import dayjs from "@/shared/utils/dayjs-config";
 import { trpcClientDash } from "@/shared/utils/trpc";
 
 type ModeFilter = "all" | "3p" | "4p";
 type FormatFilter = "all" | "tonpuu" | "hanchan";
+type CompletionFilter = "all" | "completed" | "incomplete";
 
 type MatchList = Awaited<
   ReturnType<typeof trpcClientDash.gszManagement.list.query>
 >;
-type MatchItem = MatchList["items"][number];
 
 type TableOption = Awaited<
   ReturnType<typeof trpcClientDash.gszManagement.listTables.query>
+>[number];
+
+type ActiveMatch = Awaited<
+  ReturnType<typeof trpcClientDash.gszManagement.listActive.query>
 >[number];
 
 const MODE_LABELS: Record<string, string> = {
@@ -38,7 +46,20 @@ const TERMINATION_LABELS: Record<string, string> = {
   format_complete: "场制完成",
   bust: "飞人终局",
   vote: "投票结算",
+  admin_abort: "管理员终止",
+  order_invalid: "订单失效",
 };
+
+const PHASE_LABELS: Record<string, string> = {
+  seat_select: "选座中",
+  countdown: "倒计时",
+  playing: "对局中",
+  scoring: "录入点数",
+  round_review: "本局总览",
+  voting: "投票结算中",
+};
+
+const INCOMPLETE_REASONS = new Set(["admin_abort", "order_invalid"]);
 
 export const Route = createFileRoute("/dash/gsz")({
   component: RouteComponent,
@@ -61,9 +82,14 @@ function RouteComponent() {
   const [loading, setLoading] = useState(true);
   const [tableOptions, setTableOptions] = useState<TableOption[]>([]);
 
+  const [activeMatches, setActiveMatches] = useState<ActiveMatch[]>([]);
+  const [activeLoading, setActiveLoading] = useState(true);
+
   const [searchText, setSearchText] = useState("");
   const [modeFilter, setModeFilter] = useState<ModeFilter>("all");
   const [formatFilter, setFormatFilter] = useState<FormatFilter>("all");
+  const [completionFilter, setCompletionFilter] =
+    useState<CompletionFilter>("all");
   const [tableFilter, setTableFilter] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -82,6 +108,7 @@ function RouteComponent() {
         search: searchRef.current,
         mode: modeFilter,
         format: formatFilter,
+        completion: completionFilter,
         tableId: tableFilter,
         startDate: startDate
           ? dayjs.tz(startDate, "Asia/Shanghai").startOf("day").valueOf()
@@ -98,11 +125,38 @@ function RouteComponent() {
     } finally {
       setLoading(false);
     }
-  }, [modeFilter, formatFilter, tableFilter, startDate, endDate, page, msg]);
+  }, [
+    modeFilter,
+    formatFilter,
+    completionFilter,
+    tableFilter,
+    startDate,
+    endDate,
+    page,
+    msg,
+  ]);
+
+  const fetchActive = useCallback(async () => {
+    setActiveLoading(true);
+    try {
+      const result = await trpcClientDash.gszManagement.listActive.query();
+      setActiveMatches(result);
+    } catch {
+      // noop
+    } finally {
+      setActiveLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     void fetchMatches();
   }, [fetchMatches]);
+
+  useEffect(() => {
+    void fetchActive();
+    const interval = setInterval(() => void fetchActive(), 10000);
+    return () => clearInterval(interval);
+  }, [fetchActive]);
 
   useEffect(() => {
     trpcClientDash.gszManagement.listTables
@@ -122,6 +176,20 @@ function RouteComponent() {
       msg.success("已复制");
     } catch {
       msg.error("没有剪贴板访问权限");
+    }
+  };
+
+  const handleTerminate = async (tableCode: string) => {
+    try {
+      await trpcClientDash.gszManagement.terminateMatch.mutate({
+        tableCode,
+        reason: "admin_abort",
+      });
+      msg.success("已终止");
+      void fetchActive();
+      void fetchMatches();
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "终止失败");
     }
   };
 
@@ -190,6 +258,28 @@ function RouteComponent() {
             </button>
           ))}
 
+          <span className="text-base-content/30 mx-1">|</span>
+
+          {(
+            [
+              ["all", "全部"],
+              ["completed", "已完成"],
+              ["incomplete", "未完成"],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              className={`btn btn-xs ${completionFilter === key ? "btn-accent" : "btn-ghost"}`}
+              onClick={() => {
+                setCompletionFilter(key);
+                setPage(1);
+              }}
+            >
+              {label}
+            </button>
+          ))}
+
           <div className="flex items-center gap-1 ml-auto shrink-0">
             {tableOptions.length > 0 && (
               <select
@@ -234,6 +324,13 @@ function RouteComponent() {
         </div>
       </div>
 
+      {!activeLoading && activeMatches.length > 0 && (
+        <ActiveMatchesSection
+          matches={activeMatches}
+          onTerminate={handleTerminate}
+        />
+      )}
+
       <div className="w-full flex-1 min-h-0 overflow-auto">
         <table className="table table-lg table-pin-rows table-pin-cols min-w-[1100px]">
           <thead>
@@ -266,6 +363,7 @@ function RouteComponent() {
                   {searchText.trim() ||
                   modeFilter !== "all" ||
                   formatFilter !== "all" ||
+                  completionFilter !== "all" ||
                   tableFilter ||
                   startDate ||
                   endDate
@@ -275,7 +373,14 @@ function RouteComponent() {
               </tr>
             ) : (
               items.map((match) => (
-                <tr key={match.id}>
+                <tr
+                  key={match.id}
+                  className={
+                    INCOMPLETE_REASONS.has(match.termination_reason)
+                      ? "opacity-60"
+                      : ""
+                  }
+                >
                   <td className="font-mono">
                     <div className="relative group flex items-center gap-1">
                       <span className="cursor-default">
@@ -324,7 +429,14 @@ function RouteComponent() {
                     {match.player_names || "—"}
                   </td>
                   <td className="whitespace-nowrap">
-                    <span className="badge badge-sm badge-ghost">
+                    <span
+                      className={clsx(
+                        "badge badge-sm",
+                        INCOMPLETE_REASONS.has(match.termination_reason)
+                          ? "badge-warning"
+                          : "badge-ghost",
+                      )}
+                    >
                       {TERMINATION_LABELS[match.termination_reason] ??
                         match.termination_reason}
                     </span>
@@ -396,5 +508,84 @@ function RouteComponent() {
         </div>
       )}
     </main>
+  );
+}
+
+function ActiveMatchesSection({
+  matches,
+  onTerminate,
+}: {
+  matches: ActiveMatch[];
+  onTerminate: (tableCode: string) => void;
+}) {
+  const [terminating, setTerminating] = useState<string | null>(null);
+
+  const handleTerminate = async (tableCode: string) => {
+    setTerminating(tableCode);
+    try {
+      onTerminate(tableCode);
+    } finally {
+      setTerminating(null);
+    }
+  };
+
+  return (
+    <div className="px-4 py-3">
+      <div className="text-sm font-semibold mb-2 flex items-center gap-2">
+        <span className="relative flex size-2">
+          <span className="animate-ping absolute inline-flex size-full rounded-full bg-success opacity-75" />
+          <span className="relative inline-flex rounded-full size-2 bg-success" />
+        </span>
+        进行中 ({matches.length})
+      </div>
+      <div className="flex flex-col gap-2">
+        {matches.map((m) => (
+          <div
+            key={m.tableCode}
+            className="flex items-center gap-3 p-3 bg-base-200 rounded-lg"
+          >
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-medium">{m.tableName}</span>
+                <span
+                  className={`badge badge-xs ${m.mode === "4p" ? "badge-primary" : "badge-secondary"}`}
+                >
+                  {MODE_LABELS[m.mode] ?? m.mode}
+                </span>
+                <span className="badge badge-xs badge-outline">
+                  {FORMAT_LABELS[m.format] ?? m.format}
+                </span>
+                <span className="badge badge-xs badge-info">
+                  {PHASE_LABELS[m.phase] ?? m.phase}
+                </span>
+                {m.phase === "playing" && (
+                  <span className="text-xs text-base-content/50">
+                    {WIND_LABELS[m.currentWind as Wind] ?? m.currentWind}
+                    {m.currentRoundNumber}局
+                    {m.roundCount > 0 && ` · 已完成${m.roundCount}局`}
+                  </span>
+                )}
+              </div>
+              <div className="text-xs text-base-content/50 mt-1 truncate">
+                {m.players.map((p) => p.nickname).join(", ")}
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn btn-xs btn-error btn-outline shrink-0"
+              disabled={terminating === m.tableCode}
+              onClick={() => handleTerminate(m.tableCode)}
+            >
+              {terminating === m.tableCode ? (
+                <span className="loading loading-spinner loading-xs" />
+              ) : (
+                <StopIcon className="size-3.5" />
+              )}
+              终止
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
