@@ -161,19 +161,21 @@ function RegistrationGate({
 }) {
   if (!phone) {
     return (
-      <div className="flex flex-col gap-3 items-center py-8">
-        <p className="text-base-content/70">需要验证手机号才能参加公式战</p>
+      <div className="bg-base-200 rounded-2xl p-6 sm:p-8 flex flex-col gap-3 items-center">
+        <p className="text-base text-base-content/70">
+          需要验证手机号才能参加公式战
+        </p>
         <p className="text-sm text-base-content/50">请前往个人设置绑定手机号</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-3 items-center py-8">
-      <p className="text-base-content/70">尚未开通公式战</p>
+    <div className="bg-base-200 rounded-2xl p-6 sm:p-8 flex flex-col gap-4 items-center">
+      <p className="text-base text-base-content/70">尚未开通公式战</p>
       <button
         type="button"
-        className="btn btn-primary"
+        className="btn btn-primary btn-lg"
         onClick={() => onRegister({ mode: "4p", format: "hanchan" })}
       >
         一键开通
@@ -233,8 +235,8 @@ function ConfigSelectView({
   };
 
   return (
-    <div className="flex flex-col gap-4 py-4">
-      <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-5 py-4">
+      <div className="bg-base-200 rounded-2xl p-4 sm:p-5 flex flex-col gap-4">
         <div className="flex gap-3">
           {MODE_OPTIONS.map((opt) => {
             const active = currentMode === opt.value;
@@ -243,27 +245,27 @@ function ConfigSelectView({
                 key={opt.value}
                 type="button"
                 className={clsx(
-                  "flex-1 flex flex-col items-center gap-1.5 rounded-xl px-3 py-4 transition-all",
+                  "flex-1 flex flex-col items-center gap-2 rounded-xl px-3 py-5 transition-all",
                   active
                     ? "bg-primary text-primary-content ring-2 ring-primary/50 shadow-lg shadow-primary/20 scale-[1.02]"
-                    : "bg-base-200 hover:bg-base-300",
+                    : "bg-base-300 hover:bg-base-300/80",
                 )}
                 onClick={() => applyConfig(opt.value, currentFormat)}
               >
                 <opt.Icon
-                  className="size-7"
+                  className="size-8"
                   weight={active ? "fill" : "duotone"}
                 />
-                <span className="text-base font-bold">{opt.label}</span>
+                <span className="text-lg font-bold">{opt.label}</span>
                 <span
                   className={clsx(
-                    "inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full",
+                    "inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full",
                     active
                       ? "bg-primary-content/15 text-primary-content/80"
-                      : "bg-base-300 text-base-content/50",
+                      : "bg-base-200 text-base-content/50",
                   )}
                 >
-                  <opt.TagIcon className="size-3" />
+                  <opt.TagIcon className="size-3.5" />
                   {opt.tag}
                 </span>
               </button>
@@ -278,10 +280,10 @@ function ConfigSelectView({
                 key={opt.value}
                 type="button"
                 className={clsx(
-                  "flex-1 flex items-center justify-center gap-2 rounded-xl px-3 py-3 transition-all",
+                  "flex-1 flex items-center justify-center gap-2 rounded-xl px-3 py-4 transition-all",
                   active
                     ? "bg-primary text-primary-content ring-2 ring-primary/50 shadow-md shadow-primary/15"
-                    : "bg-base-200 hover:bg-base-300",
+                    : "bg-base-300 hover:bg-base-300/80",
                 )}
                 onClick={() => applyConfig(currentMode, opt.value)}
               >
@@ -289,7 +291,7 @@ function ConfigSelectView({
                   className="size-5"
                   weight={active ? "fill" : "duotone"}
                 />
-                <span className="font-semibold">{opt.label}</span>
+                <span className="font-semibold text-base">{opt.label}</span>
               </button>
             );
           })}
@@ -298,7 +300,7 @@ function ConfigSelectView({
 
       <button
         type="button"
-        className="btn btn-primary btn-lg gap-2 shadow-md shadow-primary/25"
+        className="btn btn-primary btn-lg gap-2 shadow-md shadow-primary/25 w-full"
         disabled={!connected || isPending("mahjong_start_seat_select")}
         onClick={actions.startSeatSelect}
       >
@@ -347,34 +349,36 @@ function SeatSelectView({
   }, [hasJoined, actions, nickname, phone]);
 
   return (
-    <div className="flex flex-col gap-4 py-4">
-      <div className="text-sm text-base-content/60 text-center">
-        {state.config?.mode === "3p" ? "三麻" : "四麻"} ·{" "}
-        {state.config?.format === "tonpuu" ? "东风场" : "半庄"}
-      </div>
+    <div className="flex flex-col gap-5 py-4">
+      <div className="bg-base-200 rounded-2xl p-4 sm:p-5 flex flex-col gap-4">
+        <div className="text-base text-base-content/60 text-center font-medium">
+          {state.config?.mode === "3p" ? "三麻" : "四麻"} ·{" "}
+          {state.config?.format === "tonpuu" ? "东风场" : "半庄"}
+        </div>
 
-      <div className="flex flex-col gap-2">
-        {seats.map((seat) => (
-          <SeatCard
-            key={seat}
-            seat={seat}
-            occupant={state.players.find((p) => p.seat === seat) ?? null}
-            isMine={
-              state.players.find((p) => p.seat === seat)?.userId === userId
-            }
-            disabled={!hasJoined}
-            onSelect={() => actions.selectSeat(seat)}
-          />
-        ))}
-      </div>
+        <div className="flex flex-col gap-2.5">
+          {seats.map((seat) => (
+            <SeatCard
+              key={seat}
+              seat={seat}
+              occupant={state.players.find((p) => p.seat === seat) ?? null}
+              isMine={
+                state.players.find((p) => p.seat === seat)?.userId === userId
+              }
+              disabled={!hasJoined}
+              onSelect={() => actions.selectSeat(seat)}
+            />
+          ))}
+        </div>
 
-      <div className="text-xs text-base-content/50 text-center">
-        {seatedCount}/{needed} 已选座
+        <div className="text-sm text-base-content/50 text-center">
+          {seatedCount}/{needed} 已选座
+        </div>
       </div>
 
       <button
         type="button"
-        className="btn btn-outline btn-sm gap-1.5"
+        className="btn btn-outline btn-md gap-1.5 w-full"
         disabled={!connected || isPending("mahjong_back_to_config")}
         onClick={actions.backToConfig}
       >
@@ -410,27 +414,27 @@ function SeatCard({
       disabled={!canClick}
       onClick={canClick ? onSelect : undefined}
       className={clsx(
-        "flex items-center w-full rounded-xl px-4 py-3 transition-colors",
+        "flex items-center w-full rounded-xl px-4 py-4 transition-colors",
         isMine
           ? "bg-primary/15 ring-1 ring-primary"
           : occupant
-            ? "bg-base-200 opacity-60"
-            : "bg-base-200 hover:bg-base-300",
+            ? "bg-base-300 opacity-60"
+            : "bg-base-300 hover:bg-base-300/80",
         !canClick && !isMine && "cursor-default",
       )}
     >
-      <span className="text-2xl font-bold w-10 shrink-0">
+      <span className="text-3xl font-bold w-12 shrink-0">
         {SEAT_LABELS[seat]}
       </span>
 
       <span
         className={clsx(
-          "flex-1 text-left text-sm truncate",
-          occupant ? "font-medium" : "text-base-content/40",
+          "flex-1 text-left text-base truncate",
+          occupant ? "font-semibold" : "text-base-content/40",
         )}
       >
         {occupant ? occupant.nickname : "空位"}
-        {isMine && <span className="text-xs text-primary ml-1">(你)</span>}
+        {isMine && <span className="text-sm text-primary ml-1">(你)</span>}
       </span>
     </button>
   );
@@ -453,41 +457,46 @@ function MatchBoardView({
   const ranking = engine.getRanking(state);
 
   return (
-    <div className="flex flex-col gap-4 py-4">
-      <div className="text-center">
-        <span className="badge badge-lg badge-primary">
+    <div className="flex flex-col gap-5 py-4">
+      <div className="bg-base-200 rounded-2xl p-4 sm:p-5 flex items-center justify-center">
+        <span className="text-lg font-bold text-primary">
           {WIND_LABELS[state.currentRound.wind]}
-          {state.currentRound.roundNumber}局 · 本场{state.currentRound.honba}
+          {state.currentRound.roundNumber}局 · 本场
+          {state.currentRound.honba}
         </span>
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="bg-base-200 rounded-2xl p-4 sm:p-5 flex flex-col gap-2.5">
         {ranking.map((p) => (
           <div
             key={p.userId}
             className={clsx(
-              "flex items-center justify-between p-3 rounded-lg",
-              p.userId === myPlayer?.userId ? "bg-primary/10" : "bg-base-200",
+              "flex items-center justify-between px-4 py-3 rounded-xl",
+              p.userId === myPlayer?.userId ? "bg-primary/10" : "bg-base-300",
             )}
           >
             <div className="flex items-center gap-2">
               <span className="badge badge-sm">#{p.rank}</span>
-              <span className="font-medium">{p.nickname}</span>
+              <span className="text-base font-semibold">{p.nickname}</span>
               {p.seat && (
-                <span className="badge badge-xs badge-outline">
+                <span className="badge badge-sm badge-outline">
                   {SEAT_LABELS[p.seat]}
                 </span>
               )}
-              {p.userId === dealer?.userId && (
-                <span className="badge badge-xs badge-warning">庄</span>
+              {p.userId === dealer?.userId ? (
+                <span className="badge badge-sm badge-warning">庄</span>
+              ) : (
+                <span className="badge badge-sm badge-ghost">闲</span>
               )}
             </div>
-            <span className="font-mono font-bold">{p.currentPoints}</span>
+            <span className="text-lg font-mono font-bold">
+              {p.currentPoints}
+            </span>
           </div>
         ))}
       </div>
 
-      <div className="flex flex-col items-center gap-2">
+      <div className="flex flex-col items-center gap-3">
         <button
           type="button"
           className="btn btn-primary btn-lg w-full"
@@ -501,7 +510,7 @@ function MatchBoardView({
         </button>
         <button
           type="button"
-          className="btn btn-ghost btn-sm text-base-content/50"
+          className="btn btn-ghost btn-md text-base-content/50"
           disabled={!connected || isPending("mahjong_initiate_vote")}
           onClick={actions.initiateVote}
         >
@@ -532,44 +541,47 @@ function ScoreInputView({
   const submitted = userId in state.pendingScores;
 
   const dealer = state.players[state.currentRound.dealerIndex];
-  const allSubmitted = engine.allScoresSubmitted(state);
 
   return (
-    <div className="flex flex-col gap-4 py-4">
-      <h3 className="text-lg font-bold text-center">录入点数</h3>
+    <div className="flex flex-col gap-5 py-4">
+      <div className="bg-base-200 rounded-2xl p-4 sm:p-5 flex flex-col gap-4">
+        <h3 className="text-xl font-bold text-center">录入点数</h3>
 
-      {!submitted ? (
-        <>
-          <input
-            type="number"
-            className="input input-bordered input-lg w-full text-center font-mono"
-            placeholder="输入当前点数"
-            value={score}
-            onChange={(e) => setScore(e.target.value)}
-          />
-          <button
-            type="button"
-            className="btn btn-primary btn-lg"
-            disabled={!score || !connected || isPending("mahjong_submit_score")}
-            onClick={() => {
-              const pts = Number.parseInt(score, 10);
-              if (Number.isNaN(pts)) return;
-              actions.submitScore(pts);
-            }}
-          >
-            {isPending("mahjong_submit_score") && (
-              <span className="loading loading-spinner loading-xs" />
-            )}
-            确认点数
-          </button>
-        </>
-      ) : (
-        <div className="text-center text-success">
-          已提交: {state.pendingScores[userId]} 点
-        </div>
-      )}
+        {!submitted ? (
+          <>
+            <input
+              type="number"
+              className="input input-bordered input-lg w-full text-center font-mono text-lg"
+              placeholder="输入当前点数"
+              value={score}
+              onChange={(e) => setScore(e.target.value)}
+            />
+            <button
+              type="button"
+              className="btn btn-primary btn-lg w-full"
+              disabled={
+                !score || !connected || isPending("mahjong_submit_score")
+              }
+              onClick={() => {
+                const pts = Number.parseInt(score, 10);
+                if (Number.isNaN(pts)) return;
+                actions.submitScore(pts);
+              }}
+            >
+              {isPending("mahjong_submit_score") && (
+                <span className="loading loading-spinner loading-xs" />
+              )}
+              确认点数
+            </button>
+          </>
+        ) : (
+          <div className="text-center text-success text-lg font-semibold py-2">
+            已提交: {state.pendingScores[userId]} 点
+          </div>
+        )}
+      </div>
 
-      <div className="flex flex-col gap-1.5">
+      <div className="bg-base-200 rounded-2xl p-4 sm:p-5 flex flex-col gap-2.5">
         {state.players.map((p) => {
           const hasScore = p.userId in state.pendingScores;
           const isMe = p.userId === userId;
@@ -578,30 +590,37 @@ function ScoreInputView({
             <div
               key={p.userId}
               className={clsx(
-                "flex items-center justify-between px-3 py-2 rounded-lg text-sm",
-                isMe ? "bg-primary/10" : "bg-base-200",
+                "flex items-center justify-between px-4 py-3 rounded-xl",
+                isMe ? "bg-primary/10" : "bg-base-300",
               )}
             >
               <div className="flex items-center gap-1.5">
                 {p.seat && (
-                  <span className="badge badge-xs badge-outline">
+                  <span className="badge badge-sm badge-outline">
                     {SEAT_LABELS[p.seat]}
                   </span>
                 )}
-                <span className={clsx(!hasScore && "text-base-content/40")}>
+                <span
+                  className={clsx(
+                    "text-base",
+                    hasScore ? "font-semibold" : "text-base-content/40",
+                  )}
+                >
                   {p.nickname}
                 </span>
-                {isMe && <span className="text-xs text-primary">(你)</span>}
-                {allSubmitted && isDealer && (
-                  <span className="badge badge-xs badge-warning">庄</span>
+                {isMe && <span className="text-sm text-primary">(你)</span>}
+                {isDealer ? (
+                  <span className="badge badge-sm badge-warning">庄</span>
+                ) : (
+                  <span className="badge badge-sm badge-ghost">闲</span>
                 )}
               </div>
               {hasScore ? (
-                <span className="font-mono font-bold">
+                <span className="text-lg font-mono font-bold">
                   {state.pendingScores[p.userId]}
                 </span>
               ) : (
-                <span className="text-xs text-base-content/30">等待录入</span>
+                <span className="text-sm text-base-content/30">等待录入</span>
               )}
             </div>
           );
@@ -611,7 +630,7 @@ function ScoreInputView({
       {engine.allScoresSubmitted(state) && (
         <button
           type="button"
-          className="btn btn-accent btn-lg"
+          className="btn btn-accent btn-lg w-full"
           disabled={!connected || isPending("mahjong_confirm_scores")}
           onClick={actions.confirmScores}
         >
@@ -640,46 +659,59 @@ function RoundReviewView({
     "dealer_win" | "non_dealer_win" | "draw" | ""
   >("");
 
-  return (
-    <div className="flex flex-col gap-4 py-4">
-      <h3 className="text-lg font-bold text-center">本局总览</h3>
+  const dealer = state.players[state.currentRound.dealerIndex];
 
-      <div className="flex flex-col gap-2">
-        {state.players.map((p) => {
-          const prev = p.currentPoints;
-          const next = state.pendingScores[p.userId] ?? prev;
-          const diff = next - prev;
-          return (
-            <div
-              key={p.userId}
-              className="flex justify-between p-2 bg-base-200 rounded-lg"
-            >
-              <span>{p.nickname}</span>
-              <span className="font-mono">
-                {next}{" "}
-                <span
-                  className={
-                    diff > 0 ? "text-success" : diff < 0 ? "text-error" : ""
-                  }
-                >
-                  ({diff > 0 ? "+" : ""}
-                  {diff})
+  return (
+    <div className="flex flex-col gap-5 py-4">
+      <div className="bg-base-200 rounded-2xl p-4 sm:p-5 flex flex-col gap-3">
+        <h3 className="text-xl font-bold text-center">本局总览</h3>
+
+        <div className="flex flex-col gap-2.5">
+          {state.players.map((p) => {
+            const prev = p.currentPoints;
+            const next = state.pendingScores[p.userId] ?? prev;
+            const diff = next - prev;
+            const isDealer = p.userId === dealer?.userId;
+            return (
+              <div
+                key={p.userId}
+                className="flex justify-between items-center px-4 py-3 bg-base-300 rounded-xl"
+              >
+                <span className="flex items-center gap-1.5 text-base font-semibold">
+                  {p.nickname}
+                  {isDealer ? (
+                    <span className="badge badge-sm badge-warning">庄</span>
+                  ) : (
+                    <span className="badge badge-sm badge-ghost">闲</span>
+                  )}
                 </span>
-              </span>
-            </div>
-          );
-        })}
+                <span className="text-lg font-mono font-bold">
+                  {next}{" "}
+                  <span
+                    className={clsx(
+                      "text-sm",
+                      diff > 0 ? "text-success" : diff < 0 ? "text-error" : "",
+                    )}
+                  >
+                    ({diff > 0 ? "+" : ""}
+                    {diff})
+                  </span>
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <p className="text-sm font-medium">本局结果:</p>
-        <div className="flex gap-2">
+      <div className="bg-base-200 rounded-2xl p-4 sm:p-5 flex flex-col gap-3">
+        <p className="text-base font-semibold">本局结果:</p>
+        <div className="flex gap-2.5">
           {(["dealer_win", "non_dealer_win", "draw"] as const).map((r) => (
             <button
               key={r}
               type="button"
               className={clsx(
-                "btn btn-sm flex-1",
+                "btn btn-md flex-1",
                 result === r ? "btn-primary" : "btn-outline",
               )}
               onClick={() => setResult(r)}
@@ -697,7 +729,7 @@ function RoundReviewView({
       {result && (
         <button
           type="button"
-          className="btn btn-primary btn-lg"
+          className="btn btn-primary btn-lg w-full"
           disabled={!connected || isPending("mahjong_end_round")}
           onClick={() => actions.endRound(result)}
         >
@@ -710,6 +742,8 @@ function RoundReviewView({
     </div>
   );
 }
+
+const VOTE_TIMEOUT_SECONDS = 20;
 
 function VotePanelView({
   state,
@@ -728,37 +762,84 @@ function VotePanelView({
   const yesCount = state.votes.filter((v) => v.vote).length;
   const totalPlayers = state.config?.mode === "3p" ? 3 : 4;
   const threshold = state.config?.mode === "3p" ? 2 : 3;
+  const dealer = state.players[state.currentRound.dealerIndex];
+
+  const [remaining, setRemaining] = useState(() => {
+    if (!state.voteStartedAt) return VOTE_TIMEOUT_SECONDS;
+    const elapsed = Math.floor((Date.now() - state.voteStartedAt) / 1000);
+    return Math.max(0, VOTE_TIMEOUT_SECONDS - elapsed);
+  });
+
+  useEffect(() => {
+    if (!state.voteStartedAt) return;
+    const tick = () => {
+      const elapsed = Math.floor((Date.now() - state.voteStartedAt!) / 1000);
+      setRemaining(Math.max(0, VOTE_TIMEOUT_SECONDS - elapsed));
+    };
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [state.voteStartedAt]);
 
   return (
-    <div className="flex flex-col gap-4 py-4 items-center">
-      <h3 className="text-lg font-bold">投票结算本场</h3>
+    <div className="flex flex-col gap-5 py-4">
+      <div className="bg-base-200 rounded-2xl p-4 sm:p-5 flex flex-col gap-4">
+        <h3 className="text-xl font-bold text-center">提前结束</h3>
 
-      <div className="text-sm text-base-content/70">
-        {yesCount}/{threshold} 同意（需要 {threshold}/{totalPlayers}）
-      </div>
+        <div className="flex flex-col items-center gap-1">
+          <div
+            className="radial-progress text-primary"
+            style={
+              {
+                "--value": (remaining / VOTE_TIMEOUT_SECONDS) * 100,
+                "--size": "4rem",
+                "--thickness": "4px",
+              } as React.CSSProperties
+            }
+            role="progressbar"
+          >
+            <span className="text-lg font-mono font-bold">{remaining}</span>
+          </div>
+          <span className="text-xs text-base-content/50">
+            倒计时结束将按当前票数决定
+          </span>
+        </div>
 
-      <div className="flex flex-col gap-1 w-full">
-        {state.players.map((p) => {
-          const vote = state.votes.find((v) => v.userId === p.userId);
-          return (
-            <div
-              key={p.userId}
-              className="flex justify-between p-2 bg-base-200 rounded"
-            >
-              <span>{p.nickname}</span>
-              <span>
-                {vote ? (vote.vote ? "✅ 同意" : "❌ 反对") : "⏳ 等待"}
-              </span>
-            </div>
-          );
-        })}
+        <div className="text-base text-base-content/70 text-center">
+          {yesCount}/{threshold} 同意（需要 {threshold}/{totalPlayers}）
+        </div>
+
+        <div className="flex flex-col gap-2.5">
+          {state.players.map((p) => {
+            const vote = state.votes.find((v) => v.userId === p.userId);
+            const isDealer = p.userId === dealer?.userId;
+            return (
+              <div
+                key={p.userId}
+                className="flex justify-between items-center px-4 py-3 bg-base-300 rounded-xl"
+              >
+                <span className="flex items-center gap-1.5 text-base font-semibold">
+                  {p.nickname}
+                  {isDealer ? (
+                    <span className="badge badge-sm badge-warning">庄</span>
+                  ) : (
+                    <span className="badge badge-sm badge-ghost">闲</span>
+                  )}
+                </span>
+                <span className="text-base">
+                  {vote ? (vote.vote ? "✅ 同意" : "❌ 反对") : "⏳ 等待"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {!hasVoted && (
         <div className="flex gap-3">
           <button
             type="button"
-            className="btn btn-success btn-lg"
+            className="btn btn-success btn-lg flex-1"
             disabled={!connected || isPending("mahjong_cast_vote")}
             onClick={() => actions.castVote(true)}
           >
@@ -769,27 +850,13 @@ function VotePanelView({
           </button>
           <button
             type="button"
-            className="btn btn-error btn-lg"
+            className="btn btn-error btn-lg flex-1"
             disabled={!connected || isPending("mahjong_cast_vote")}
             onClick={() => actions.castVote(false)}
           >
             继续对局
           </button>
         </div>
-      )}
-
-      {state.votes.length === totalPlayers && (
-        <button
-          type="button"
-          className="btn btn-primary"
-          disabled={!connected || isPending("mahjong_resolve_vote")}
-          onClick={actions.resolveVote}
-        >
-          {isPending("mahjong_resolve_vote") && (
-            <span className="loading loading-spinner loading-xs" />
-          )}
-          确认投票结果
-        </button>
       )}
     </div>
   );
@@ -809,46 +876,50 @@ function MatchResultView({
   const ranking = engine.getRanking(state);
 
   return (
-    <div className="flex flex-col gap-4 py-4 items-center">
-      <h3 className="text-lg font-bold">对局结束</h3>
+    <div className="flex flex-col gap-5 py-4">
+      <div className="bg-base-200 rounded-2xl p-4 sm:p-5 flex flex-col gap-4 items-center">
+        <h3 className="text-xl font-bold">对局结束</h3>
 
-      <div className="badge badge-lg">
-        {state.terminationReason === "format_complete"
-          ? "场制完成"
-          : state.terminationReason === "bust"
-            ? "有人飞了"
-            : "投票结算"}
-      </div>
+        <div className="badge badge-lg">
+          {state.terminationReason === "format_complete"
+            ? "场制完成"
+            : state.terminationReason === "bust"
+              ? "有人飞了"
+              : "提前结束"}
+        </div>
 
-      <div className="flex flex-col gap-2 w-full">
-        {ranking.map((p) => (
-          <div
-            key={p.userId}
-            className="flex items-center justify-between p-3 bg-base-200 rounded-lg"
-          >
-            <div className="flex items-center gap-2">
-              <span
-                className={clsx(
-                  "badge",
-                  p.rank === 1 ? "badge-warning" : "badge-ghost",
-                )}
-              >
-                #{p.rank}
+        <div className="flex flex-col gap-2.5 w-full">
+          {ranking.map((p) => (
+            <div
+              key={p.userId}
+              className="flex items-center justify-between px-4 py-3 bg-base-300 rounded-xl"
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  className={clsx(
+                    "badge badge-sm",
+                    p.rank === 1 ? "badge-warning" : "badge-ghost",
+                  )}
+                >
+                  #{p.rank}
+                </span>
+                <span className="text-base font-semibold">{p.nickname}</span>
+              </div>
+              <span className="text-lg font-mono font-bold">
+                {p.currentPoints}
               </span>
-              <span className="font-medium">{p.nickname}</span>
             </div>
-            <span className="font-mono font-bold">{p.currentPoints}</span>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
-      <div className="text-xs text-base-content/50">
+      <div className="text-sm text-base-content/50 text-center">
         共 {state.roundHistory.length} 局
       </div>
 
       <button
         type="button"
-        className="btn btn-primary"
+        className="btn btn-primary btn-lg w-full"
         disabled={!connected || isPending("mahjong_reset")}
         onClick={actions.reset}
       >
