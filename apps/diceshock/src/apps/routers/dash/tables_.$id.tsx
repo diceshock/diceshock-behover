@@ -3,6 +3,7 @@ import {
   ArrowSquareOutIcon,
   CopyIcon,
   DownloadSimpleIcon,
+  EyeIcon,
   MagnifyingGlassMinus,
   MagnifyingGlassPlus,
   PauseIcon,
@@ -23,6 +24,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import useSeatTimer from "@/client/hooks/useSeatTimer";
+import type { Wind } from "@/shared/mahjong/constants";
+import { WIND_LABELS } from "@/shared/mahjong/constants";
 import dayjs from "@/shared/utils/dayjs-config";
 import { trpcClientDash } from "@/shared/utils/trpc";
 
@@ -30,6 +33,10 @@ type TableDetail = Awaited<
   ReturnType<typeof trpcClientDash.tablesManagement.getById.query>
 >;
 type Occupancy = TableDetail["occupancies"][number];
+
+type ActiveMatch = Awaited<
+  ReturnType<typeof trpcClientDash.gszManagement.listActive.query>
+>[number];
 
 const TYPE_LABELS: Record<string, string> = {
   fixed: "固定桌",
@@ -41,6 +48,25 @@ const SCOPE_LABELS: Record<string, string> = {
   boardgame: "桌游",
   console: "电玩",
   mahjong: "日麻",
+};
+
+const GSZ_MODE_LABELS: Record<string, string> = {
+  "3p": "三麻",
+  "4p": "四麻",
+};
+
+const GSZ_FORMAT_LABELS: Record<string, string> = {
+  tonpuu: "东风场",
+  hanchan: "半庄",
+};
+
+const GSZ_PHASE_LABELS: Record<string, string> = {
+  seat_select: "选座中",
+  countdown: "倒计时",
+  playing: "对局中",
+  scoring: "录入点数",
+  round_review: "本局总览",
+  voting: "投票结算中",
 };
 
 export const Route = createFileRoute("/dash/tables_/$id")({
@@ -90,6 +116,9 @@ function TableDetailPage() {
 
   const [orderActionPending, setOrderActionPending] = useState(false);
 
+  const [activeMatch, setActiveMatch] = useState<ActiveMatch | null>(null);
+  const [activeMatchLoading, setActiveMatchLoading] = useState(false);
+
   const [, setTick] = useState(0);
   useEffect(() => {
     const timer = setInterval(() => setTick((t) => t + 1), 60_000);
@@ -118,6 +147,25 @@ function TableDetailPage() {
   useEffect(() => {
     void fetchTable();
   }, [fetchTable]);
+
+  const fetchActiveMatch = useCallback(async () => {
+    setActiveMatchLoading(true);
+    try {
+      const all = await trpcClientDash.gszManagement.listActive.query();
+      const match = all.find((m) => m.tableId === id) ?? null;
+      setActiveMatch(match);
+    } catch {
+      // noop
+    } finally {
+      setActiveMatchLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    void fetchActiveMatch();
+    const interval = setInterval(() => void fetchActiveMatch(), 10000);
+    return () => clearInterval(interval);
+  }, [fetchActiveMatch]);
 
   const { state: wsState } = useSeatTimer({
     code: table?.code ?? "",
@@ -466,6 +514,60 @@ function TableDetailPage() {
 
           {activeTab === "occupancy" && (
             <div className="flex flex-col gap-4">
+              {!activeMatchLoading && activeMatch && (
+                <div className="flex flex-col gap-2">
+                  <div className="text-sm font-semibold flex items-center gap-2">
+                    <span className="relative flex size-2">
+                      <span className="animate-ping absolute inline-flex size-full rounded-full bg-success opacity-75" />
+                      <span className="relative inline-flex rounded-full size-2 bg-success" />
+                    </span>
+                    公式战进行中
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-base-200 rounded-lg">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium">
+                          {activeMatch.tableName}
+                        </span>
+                        <span
+                          className={`badge badge-xs ${activeMatch.mode === "4p" ? "badge-primary" : "badge-secondary"}`}
+                        >
+                          {GSZ_MODE_LABELS[activeMatch.mode] ??
+                            activeMatch.mode}
+                        </span>
+                        <span className="badge badge-xs badge-outline">
+                          {GSZ_FORMAT_LABELS[activeMatch.format] ??
+                            activeMatch.format}
+                        </span>
+                        <span className="badge badge-xs badge-info">
+                          {GSZ_PHASE_LABELS[activeMatch.phase] ??
+                            activeMatch.phase}
+                        </span>
+                        {activeMatch.phase === "playing" && (
+                          <span className="text-xs text-base-content/50">
+                            {WIND_LABELS[activeMatch.currentWind as Wind] ??
+                              activeMatch.currentWind}
+                            {activeMatch.currentRoundNumber}局
+                            {activeMatch.roundCount > 0 &&
+                              ` · 已完成${activeMatch.roundCount}局`}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-base-content/50 mt-1 truncate">
+                        {activeMatch.players.map((p) => p.nickname).join(", ")}
+                      </div>
+                    </div>
+                    <Link
+                      to="/dash/gsz"
+                      className="btn btn-xs btn-ghost btn-primary shrink-0"
+                    >
+                      <EyeIcon className="size-3.5" />
+                      查看
+                    </Link>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold">
                   使用情况 (
