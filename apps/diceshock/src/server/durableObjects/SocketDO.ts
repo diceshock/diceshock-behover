@@ -373,6 +373,10 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
       }
       this.step++;
       this.broadcastState();
+
+      if (this.mahjongState?.phase === "ended") {
+        await this.saveMatchToDB();
+      }
     } catch (err) {
       this.broadcastError(
         err instanceof Error ? err.message : "Mahjong action failed",
