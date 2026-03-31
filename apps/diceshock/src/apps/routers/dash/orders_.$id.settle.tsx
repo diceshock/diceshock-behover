@@ -165,30 +165,32 @@ function OrderSettlePage() {
         </div>
 
         {!isEnded && (
-          <div className="fixed bottom-0 right-0 left-0 lg:left-20 bg-base-100 border-t border-base-200 px-4 py-2 flex items-center justify-end gap-2 z-40">
+          <div className="fixed bottom-0 right-0 left-0 lg:left-20 bg-base-100 border-t border-base-200 px-4 py-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 z-40">
             {deductEnabled && deductAmount > 0 && (
-              <span className="text-xs text-base-content/60 mr-auto">
+              <span className="text-xs text-base-content/60 sm:mr-auto text-center sm:text-left">
                 储值扣费 {formatPrice(deductAmount)}
                 {remainingAfterDeduct > 0 &&
                   ` · 剩余 ${formatPrice(remainingAfterDeduct)}`}
               </span>
             )}
-            <button
-              type="button"
-              className="btn btn-sm gap-2"
-              onClick={() => navigate({ to: "/dash/orders" })}
-            >
-              取消
-            </button>
-            <button
-              type="button"
-              className="btn btn-sm btn-primary gap-2"
-              onClick={() => void handleSettle()}
-              disabled={settling}
-            >
-              <CheckCircleIcon className="size-4" />
-              {settling ? "结算中..." : "确认结算"}
-            </button>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                className="btn btn-sm gap-2"
+                onClick={() => navigate({ to: "/dash/orders" })}
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm btn-primary gap-2"
+                onClick={() => void handleSettle()}
+                disabled={settling}
+              >
+                <CheckCircleIcon className="size-4" />
+                {settling ? "结算中..." : "确认结算"}
+              </button>
+            </div>
           </div>
         )}
       </main>
@@ -203,33 +205,35 @@ function OrderInfoSection({ order }: { order: SettlementPreview["order"] }) {
         <ReceiptIcon className="size-4" />
         订单信息
       </h3>
-      <div className="grid grid-cols-2 gap-3 text-sm">
-        <div>
-          <span className="text-base-content/50">订单号</span>
-          <p className="font-mono">{order.id}</p>
+      <div className="flex flex-col gap-2.5 text-sm">
+        <div className="flex flex-col">
+          <span className="text-base-content/50 text-xs">订单号</span>
+          <p className="font-mono break-all">{order.id}</p>
         </div>
-        <div>
-          <span className="text-base-content/50">桌台</span>
-          <p className="font-semibold">{order.table?.name ?? "—"}</p>
-        </div>
-        <div>
-          <span className="text-base-content/50">用户</span>
-          <p>
+        <div className="flex flex-col">
+          <span className="text-base-content/50 text-xs">用户</span>
+          <p className="break-all">
             {order.nickname}
             {order.uid && (
-              <span className="text-xs text-base-content/40 ml-1">
+              <span className="text-xs text-base-content/40 ml-1 break-all">
                 {order.uid}
               </span>
             )}
           </p>
         </div>
-        <div>
-          <span className="text-base-content/50">开始时间</span>
-          <p>{formatTime(order.start_at)}</p>
-        </div>
-        <div>
-          <span className="text-base-content/50">结束时间</span>
-          <p>{order.end_at ? formatTime(order.end_at) : "进行中"}</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+          <div className="flex flex-col">
+            <span className="text-base-content/50 text-xs">桌台</span>
+            <p className="font-semibold">{order.table?.name ?? "—"}</p>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-base-content/50 text-xs">开始时间</span>
+            <p>{formatTime(order.start_at)}</p>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-base-content/50 text-xs">结束时间</span>
+            <p>{order.end_at ? formatTime(order.end_at) : "进行中"}</p>
+          </div>
         </div>
       </div>
     </div>
@@ -255,8 +259,8 @@ function PriceSection({
         <CurrencyDollarIcon className="size-4" />
         费用信息
       </h3>
-      <div className="flex items-end justify-between mb-4">
-        <div className="flex gap-6 text-sm">
+      <div className="flex flex-col gap-3 mb-4">
+        <div className="flex gap-6 text-sm flex-wrap">
           <div>
             <span className="text-base-content/50">总时长</span>
             <p>{formatMinutes(totalMinutes)}</p>
@@ -270,7 +274,7 @@ function PriceSection({
             <p className="font-semibold">{formatMinutes(billableMinutes)}</p>
           </div>
         </div>
-        <div className="text-right">
+        <div>
           <span className="text-base-content/50 text-sm">费用</span>
           <p className="font-mono text-3xl font-bold text-primary">
             {formatPrice(finalPrice)}
@@ -481,7 +485,7 @@ function PauseTimelineBar({
           );
         })}
       </div>
-      <div className="flex justify-between mt-1.5 text-xs text-base-content/50">
+      <div className="flex flex-col sm:flex-row justify-between mt-1.5 text-xs text-base-content/50 gap-0.5">
         <span>{formatTime(startAt)}</span>
         <span>{formatTime(endAt)}</span>
       </div>
@@ -519,7 +523,54 @@ function RecentOrdersSection({
       <h3 className="font-semibold text-sm text-base-content/60 mb-3">
         最近订单
       </h3>
-      <div className="overflow-x-auto">
+      {/* Mobile: card layout */}
+      <div className="flex flex-col gap-2 sm:hidden">
+        {orders.map((order) => (
+          <div
+            key={order.id}
+            className={clsx(
+              "rounded-lg px-3 py-2.5 text-sm",
+              order.id === currentOrderId
+                ? "bg-primary/10 border border-primary/20"
+                : "bg-base-100",
+            )}
+          >
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <span className="font-mono text-xs break-all">
+                {order.id.slice(0, 8)}
+                {order.id === currentOrderId && (
+                  <span className="text-xs text-primary ml-1">当前</span>
+                )}
+              </span>
+              {order.status === "active" ? (
+                <span className="badge badge-success badge-xs shrink-0">
+                  进行中
+                </span>
+              ) : order.status === "paused" ? (
+                <span className="badge badge-neutral badge-xs shrink-0">
+                  已暂停
+                </span>
+              ) : (
+                <span className="badge badge-ghost badge-xs shrink-0">
+                  已结束
+                </span>
+              )}
+            </div>
+            <div className="flex items-center justify-between text-xs text-base-content/60">
+              <span>{order.tableName}</span>
+              <span>{formatTime(order.startAt)}</span>
+            </div>
+            {order.finalPrice != null && (
+              <div className="text-right font-mono text-sm font-semibold mt-1">
+                {formatPrice(order.finalPrice)}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop: table layout */}
+      <div className="overflow-x-auto hidden sm:block">
         <table className="table table-sm">
           <thead>
             <tr>
@@ -586,7 +637,7 @@ function PricingPlansSection({
           <div
             key={plan.name}
             className={clsx(
-              "flex items-center justify-between rounded-lg px-3 py-2 text-sm",
+              "flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 rounded-lg px-3 py-2 text-sm",
               plan.matched
                 ? "bg-primary/10 border border-primary/20"
                 : "bg-base-100",

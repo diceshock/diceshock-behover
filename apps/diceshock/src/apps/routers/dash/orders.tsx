@@ -395,14 +395,26 @@ function RouteComponent() {
                         )}
                       </td>
                       <td className="max-w-[120px]">
-                        <Link
-                          to="/dash/users/$id"
-                          params={{ id: order.user_id ?? "" }}
-                          className="link link-hover block truncate"
-                          title={order.nickname}
-                        >
-                          {order.nickname}
-                        </Link>
+                        {order.user_id ? (
+                          <Link
+                            to="/dash/users/$id"
+                            params={{ id: order.user_id }}
+                            className="link link-hover block truncate"
+                            title={order.nickname}
+                          >
+                            {order.nickname}
+                          </Link>
+                        ) : (
+                          <span
+                            className="block truncate text-base-content/70"
+                            title={order.nickname}
+                          >
+                            {order.nickname}
+                            <span className="badge badge-outline badge-xs ml-1">
+                              临时
+                            </span>
+                          </span>
+                        )}
                       </td>
                       <td className="font-mono whitespace-nowrap">
                         {order.final_price != null
