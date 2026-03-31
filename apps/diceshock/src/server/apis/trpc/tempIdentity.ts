@@ -1,5 +1,7 @@
 import db, {
   drizzle,
+  orderPauseLogsTable,
+  pricingSnapshotsTable,
   tableOccupancyTable,
   tablesTable,
   tempIdentitiesTable,
@@ -8,6 +10,7 @@ import { createId } from "@paralleldrive/cuid2";
 import z from "zod/v4";
 import { genNickname } from "@/server/utils/auth";
 import { fetchTableStateForDO, notifySocketDO } from "@/server/utils/seatTimer";
+import { calculatePrice, type SnapshotData } from "@/shared/utils/pricing";
 import { generateTotpSecret } from "@/shared/utils/totp";
 import { publicProcedure } from "./baseTRPC";
 
@@ -146,16 +149,70 @@ const leave = publicProcedure
   )
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
+    const now = new Date();
 
     const occ = await tdb.query.tableOccupancyTable.findFirst({
       where: (o, { eq }) => eq(o.id, input.occupancyId),
+      with: { table: { columns: { type: true, scope: true } } },
     });
     if (!occ) throw new Error("使用记录不存在");
     if (occ.temp_id !== input.tempId) throw new Error("只能取消自己的使用");
 
+    const pauseLogs = await tdb.query.orderPauseLogsTable.findMany({
+      where: (l, { eq }) => eq(l.occupancy_id, input.occupancyId),
+      orderBy: (l, { asc }) => asc(l.paused_at),
+    });
+
+    const openLog = pauseLogs.find((l) => !l.resumed_at);
+    if (openLog) {
+      await tdb
+        .update(orderPauseLogsTable)
+        .set({ resumed_at: now })
+        .where(drizzle.eq(orderPauseLogsTable.id, openLog.id));
+    }
+
+    const publishedSnapshot = await tdb.query.pricingSnapshotsTable.findFirst({
+      where: (s, { eq }) => eq(s.status, "published"),
+      orderBy: (s, { desc }) => desc(s.created_at),
+    });
+
+    const startAt =
+      occ.start_at instanceof Date
+        ? occ.start_at.getTime()
+        : Number(occ.start_at);
+    const endAt = now.getTime();
+    const snapshotData = publishedSnapshot?.data as SnapshotData | null;
+    const tableScope = occ.table?.scope ?? "boardgame";
+
+    const pauseLogsMapped = pauseLogs.map((l) => ({
+      pausedAt:
+        l.paused_at instanceof Date
+          ? l.paused_at.getTime()
+          : Number(l.paused_at),
+      resumedAt: l.resumed_at
+        ? l.resumed_at instanceof Date
+          ? l.resumed_at.getTime()
+          : Number(l.resumed_at)
+        : endAt,
+    }));
+
+    const breakdown = calculatePrice(
+      startAt,
+      endAt,
+      tableScope,
+      snapshotData,
+      pauseLogsMapped,
+    );
+
     await tdb
       .update(tableOccupancyTable)
-      .set({ status: "ended", end_at: new Date() })
+      .set({
+        status: "ended",
+        end_at: now,
+        final_price: breakdown?.finalPrice ?? null,
+        pricing_snapshot_id: publishedSnapshot?.id ?? null,
+        price_breakdown: breakdown,
+      })
       .where(drizzle.eq(tableOccupancyTable.id, input.occupancyId));
 
     const table = await tdb.query.tablesTable.findFirst({
@@ -173,7 +230,7 @@ const leave = publicProcedure
       }
     }
 
-    return { success: true };
+    return { success: true, price: breakdown?.finalPrice ?? null };
   });
 
 const transfer = publicProcedure

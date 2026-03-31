@@ -523,7 +523,9 @@ export const mahjongMatchesTable = sqlite.sqliteTable("mahjong_matches", {
   ended_at: sqlite.integer({ mode: "timestamp_ms" }).notNull(),
   termination_reason: sqlite
     .text()
-    .$type<"format_complete" | "bust" | "vote">()
+    .$type<
+      "format_complete" | "bust" | "vote" | "admin_abort" | "order_invalid"
+    >()
     .notNull(),
   players: sqlite.text({ mode: "json" }).$type<
     Array<{
