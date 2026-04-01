@@ -189,6 +189,26 @@ function SeatTimerPage() {
     );
   }, [occupancies, identity]);
 
+  const hadOccupancyRef = useRef(false);
+  useEffect(() => {
+    if (myOccupancy) {
+      hadOccupancyRef.current = true;
+      return;
+    }
+    if (!identity) return;
+
+    // Real-time: WS pushed an update that removed our occupancy
+    if (hadOccupancyRef.current && wsState) {
+      window.location.href = `/ready/${code}`;
+      return;
+    }
+
+    // Page refresh: data loaded but we have no occupancy on this table
+    if (!loading && !hadOccupancyRef.current && (wsState || tableData)) {
+      window.location.href = `/ready/${code}`;
+    }
+  }, [myOccupancy, wsState, tableData, loading, identity, code]);
+
   const isExpired =
     identity?.kind === "temp" && Date.now() > identity.expiresAt;
 
