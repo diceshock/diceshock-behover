@@ -39,6 +39,8 @@ lerna-debug.log*
 
 # agents
 .agents/
+.sisyphus/
+agents.md
 
 # misc
 .DS_Store

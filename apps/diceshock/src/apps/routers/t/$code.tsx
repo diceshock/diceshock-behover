@@ -68,11 +68,14 @@ function formatDurationShort(startAt: number): string {
   return `${minutes}m`;
 }
 
-function useSeatIdentity(): SeatIdentity | null {
-  const { userInfo } = useAuth();
-  const { tempIdentity } = useTempIdentity();
+function useSeatIdentity(): {
+  identity: SeatIdentity | null;
+  ready: boolean;
+} {
+  const { userInfo, status } = useAuth();
+  const { tempIdentity, initialized } = useTempIdentity();
 
-  return useMemo(() => {
+  const identity = useMemo(() => {
     if (userInfo) {
       return {
         kind: "real" as const,
@@ -84,12 +87,15 @@ function useSeatIdentity(): SeatIdentity | null {
     if (tempIdentity) return tempIdentity;
     return null;
   }, [userInfo, tempIdentity]);
+  const ready = status !== "loading" && status !== undefined && initialized;
+
+  return { identity, ready };
 }
 
 function SeatTimerPage() {
   const { code } = Route.useParams();
   const { from } = Route.useSearch();
-  const identity = useSeatIdentity();
+  const { identity, ready: identityReady } = useSeatIdentity();
   const [redirectedFrom, setRedirectedFrom] = useState(from || "");
 
   const [tableData, setTableData] = useState<Awaited<
@@ -195,19 +201,17 @@ function SeatTimerPage() {
       hadOccupancyRef.current = true;
       return;
     }
-    if (!identity) return;
+    if (!identityReady || !identity) return;
 
-    // Real-time: WS pushed an update that removed our occupancy
     if (hadOccupancyRef.current && wsState) {
       window.location.href = `/ready/${code}`;
       return;
     }
 
-    // Page refresh: data loaded but we have no occupancy on this table
     if (!loading && !hadOccupancyRef.current && (wsState || tableData)) {
       window.location.href = `/ready/${code}`;
     }
-  }, [myOccupancy, wsState, tableData, loading, identity, code]);
+  }, [myOccupancy, wsState, tableData, loading, identity, identityReady, code]);
 
   const isExpired =
     identity?.kind === "temp" && Date.now() > identity.expiresAt;
