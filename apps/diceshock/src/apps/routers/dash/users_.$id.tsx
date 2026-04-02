@@ -1062,7 +1062,7 @@ function UserDetailPage() {
                       <span className="animate-ping absolute inline-flex size-full rounded-full bg-success opacity-75" />
                       <span className="relative inline-flex rounded-full size-2 bg-success" />
                     </span>
-                    公式战进行中 ({activeMatches.length})
+                    立直麻将进行中 ({activeMatches.length})
                   </div>
                   {activeMatches.map((m) => (
                     <div
@@ -1083,14 +1083,6 @@ function UserDetailPage() {
                           <span className="badge badge-xs badge-info">
                             {GSZ_PHASE_LABELS[m.phase] ?? m.phase}
                           </span>
-                          {m.phase === "playing" && (
-                            <span className="text-xs text-base-content/50">
-                              {WIND_LABELS[m.currentWind as Wind] ??
-                                m.currentWind}
-                              {m.currentRoundNumber}局
-                              {m.roundCount > 0 && ` · 已完成${m.roundCount}局`}
-                            </span>
-                          )}
                         </div>
                         <div className="text-xs text-base-content/50 mt-1 truncate">
                           {m.players.map((p) => p.nickname).join(", ")}

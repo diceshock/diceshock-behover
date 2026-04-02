@@ -1,27 +1,25 @@
-import type { Seat, Wind } from "./constants";
+import type { Seat } from "./constants";
 
+export type MatchType = "store" | "tournament";
 export type MatchMode = "3p" | "4p";
 export type MatchFormat = "tonpuu" | "hanchan";
-export type RoundResult = "dealer_win" | "non_dealer_win" | "draw";
 export type TerminationReason =
-  | "format_complete"
-  | "bust"
+  | "score_complete"
   | "vote"
   | "admin_abort"
   | "order_invalid";
 
 export type MatchPhase =
-  | "lobby"
   | "config_select"
   | "seat_select"
   | "countdown"
   | "playing"
   | "scoring"
-  | "round_review"
   | "voting"
   | "ended";
 
 export interface MatchConfig {
+  type: MatchType;
   mode: MatchMode;
   format: MatchFormat;
 }
@@ -32,24 +30,7 @@ export interface PlayerState {
   seat: Seat | null;
   phone: string | null;
   registered: boolean;
-  ready: boolean;
   currentPoints: number;
-}
-
-export interface RoundState {
-  wind: Wind;
-  roundNumber: number;
-  honba: number;
-  dealerIndex: number;
-}
-
-export interface RoundRecord {
-  round: number;
-  wind: Wind;
-  honba: number;
-  dealerUserId: string;
-  scores: Record<string, number>;
-  result: RoundResult;
 }
 
 export interface Vote {
@@ -60,20 +41,21 @@ export interface Vote {
 export interface MatchState {
   config: MatchConfig | null;
   players: PlayerState[];
-  currentRound: RoundState;
   phase: MatchPhase;
   votes: Vote[];
   voteStartedAt: number | null;
-  roundHistory: RoundRecord[];
   pendingScores: Record<string, number>;
-  roundCounter: number;
+  scoreConfirmed: Record<string, boolean>;
   terminationReason: TerminationReason | null;
   startedAt: number | null;
   endedAt: number | null;
+  pausedAt: number | null;
+  pausedDuration: number;
   step: number;
 }
 
 export interface MatchResultForDB {
+  matchType: MatchType;
   mode: MatchMode;
   format: MatchFormat;
   startedAt: number;
@@ -82,9 +64,8 @@ export interface MatchResultForDB {
   players: Array<{
     userId: string;
     nickname: string;
-    seat: Seat;
+    seat: Seat | null;
     finalScore: number;
   }>;
-  roundHistory: RoundRecord[];
   config: MatchConfig;
 }

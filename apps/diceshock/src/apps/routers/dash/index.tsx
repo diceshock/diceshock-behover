@@ -221,13 +221,13 @@ function RouteComponent() {
           >
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold">公式战管理</h3>
+                <h3 className="font-bold">立直麻将管理</h3>
                 <div className="p-2 bg-primary/10 rounded-lg">
                   <SwordIcon className="size-6 text-primary" />
                 </div>
               </div>
               <p className="text-sm text-base-content/60 mt-1">
-                查看和管理公式战对局
+                查看和管理立直麻将对局
               </p>
             </div>
           </Link>

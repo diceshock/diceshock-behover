@@ -517,21 +517,20 @@ export const authenticators = sqlite.sqliteTable(
 export const mahjongMatchesTable = sqlite.sqliteTable("mahjong_matches", {
   id: sqlite.text().$defaultFn(createId).primaryKey(),
   table_id: sqlite.text().references(() => tablesTable.id),
+  match_type: sqlite.text().$type<"store" | "tournament">(),
   mode: sqlite.text().$type<"3p" | "4p">().notNull(),
   format: sqlite.text().$type<"tonpuu" | "hanchan">().notNull(),
   started_at: sqlite.integer({ mode: "timestamp_ms" }).notNull(),
   ended_at: sqlite.integer({ mode: "timestamp_ms" }).notNull(),
   termination_reason: sqlite
     .text()
-    .$type<
-      "format_complete" | "bust" | "vote" | "admin_abort" | "order_invalid"
-    >()
+    .$type<"score_complete" | "vote" | "admin_abort" | "order_invalid">()
     .notNull(),
   players: sqlite.text({ mode: "json" }).$type<
     Array<{
       userId: string;
       nickname: string;
-      seat: string;
+      seat: string | null;
       finalScore: number;
     }>
   >(),
@@ -546,6 +545,7 @@ export const mahjongMatchesTable = sqlite.sqliteTable("mahjong_matches", {
     }>
   >(),
   config: sqlite.text({ mode: "json" }).$type<{
+    type?: string;
     mode: string;
     format: string;
   }>(),

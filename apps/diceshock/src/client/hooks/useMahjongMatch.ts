@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { SocketState } from "@/server/durableObjects/SocketDO";
 import type { Seat } from "@/shared/mahjong/constants";
-import type {
-  MatchConfig,
-  MatchPhase,
-  RoundResult,
-} from "@/shared/mahjong/types";
+import type { MatchConfig, MatchPhase } from "@/shared/mahjong/types";
 
 interface PendingAction {
   action: string;
@@ -153,12 +149,6 @@ export default function useMahjongMatch({
     [dispatch],
   );
 
-  const setReady = useCallback(
-    (ready: boolean) =>
-      dispatch("mahjong_ready", { action: "mahjong_ready", ready }),
-    [dispatch],
-  );
-
   const start = useCallback(
     () => dispatch("mahjong_start", { action: "mahjong_start" }),
     [dispatch],
@@ -167,6 +157,12 @@ export default function useMahjongMatch({
   const beginScoring = useCallback(
     () =>
       dispatch("mahjong_begin_scoring", { action: "mahjong_begin_scoring" }),
+    [dispatch],
+  );
+
+  const cancelScoring = useCallback(
+    () =>
+      dispatch("mahjong_cancel_scoring", { action: "mahjong_cancel_scoring" }),
     [dispatch],
   );
 
@@ -179,15 +175,15 @@ export default function useMahjongMatch({
     [dispatch],
   );
 
-  const confirmScores = useCallback(
+  const confirmScore = useCallback(
     () =>
-      dispatch("mahjong_confirm_scores", { action: "mahjong_confirm_scores" }),
+      dispatch("mahjong_confirm_score", { action: "mahjong_confirm_score" }),
     [dispatch],
   );
 
-  const endRound = useCallback(
-    (result: RoundResult) =>
-      dispatch("mahjong_end_round", { action: "mahjong_end_round", result }),
+  const cancelConfirm = useCallback(
+    () =>
+      dispatch("mahjong_cancel_confirm", { action: "mahjong_cancel_confirm" }),
     [dispatch],
   );
 
@@ -209,7 +205,8 @@ export default function useMahjongMatch({
   );
 
   const reset = useCallback(
-    () => dispatch("mahjong_reset", { action: "mahjong_reset" }),
+    (mode: "keep_config" | "to_config") =>
+      dispatch("mahjong_reset", { action: "mahjong_reset", mode }),
     [dispatch],
   );
 
@@ -223,12 +220,12 @@ export default function useMahjongMatch({
       backToConfig,
       join,
       selectSeat,
-      setReady,
       start,
       beginScoring,
+      cancelScoring,
       submitScore,
-      confirmScores,
-      endRound,
+      confirmScore,
+      cancelConfirm,
       initiateVote,
       castVote,
       resolveVote,

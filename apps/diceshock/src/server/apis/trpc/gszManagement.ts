@@ -155,24 +155,16 @@ const getById = dashProcedure
     type PlayerJSON = {
       userId: string;
       nickname: string;
-      seat: string;
+      seat: string | null;
       finalScore: number;
-    };
-    type RoundJSON = {
-      round: number;
-      wind: string;
-      honba: number;
-      dealerUserId: string;
-      scores: Record<string, number>;
-      result: string;
     };
 
     const players = (match.players ?? []) as PlayerJSON[];
-    const roundHistory = (match.round_history ?? []) as RoundJSON[];
 
     return {
       id: match.id,
       table_id: match.table_id,
+      match_type: match.match_type,
       table,
       mode: match.mode,
       format: match.format,
@@ -186,8 +178,11 @@ const getById = dashProcedure
           : Number(match.ended_at),
       termination_reason: match.termination_reason,
       players,
-      round_history: roundHistory,
-      config: match.config as { mode: string; format: string } | null,
+      config: match.config as {
+        type?: string;
+        mode: string;
+        format: string;
+      } | null,
       created_at:
         match.created_at instanceof Date
           ? match.created_at.getTime()
@@ -210,6 +205,7 @@ export interface ActiveMatchInfo {
   tableName: string;
   tableId: string;
   phase: MatchState["phase"];
+  matchType: string;
   mode: string;
   format: string;
   players: Array<{
@@ -218,9 +214,6 @@ export interface ActiveMatchInfo {
     seat: string | null;
     currentPoints: number;
   }>;
-  roundCount: number;
-  currentWind: string;
-  currentRoundNumber: number;
   startedAt: number | null;
 }
 
@@ -250,17 +243,14 @@ const listActive = dashProcedure.query(async ({ ctx }) => {
 
         if (!data.mahjong) return;
         if (data.mahjong.phase === "ended") return;
-        if (
-          data.mahjong.phase === "lobby" ||
-          data.mahjong.phase === "config_select"
-        )
-          return;
+        if (data.mahjong.phase === "config_select") return;
 
         results.push({
           tableCode: table.code,
           tableName: table.name,
           tableId: table.id,
           phase: data.mahjong.phase,
+          matchType: data.mahjong.config?.type ?? "store",
           mode: data.mahjong.config?.mode ?? "4p",
           format: data.mahjong.config?.format ?? "hanchan",
           players: data.mahjong.players.map((p) => ({
@@ -269,9 +259,6 @@ const listActive = dashProcedure.query(async ({ ctx }) => {
             seat: p.seat,
             currentPoints: p.currentPoints,
           })),
-          roundCount: data.mahjong.roundHistory.length,
-          currentWind: data.mahjong.currentRound.wind,
-          currentRoundNumber: data.mahjong.currentRound.roundNumber,
           startedAt: data.mahjong.startedAt,
         });
       } catch {
@@ -302,7 +289,7 @@ const terminateMatch = dashProcedure
         body: JSON.stringify({ reason: input.reason }),
       }),
     );
-    if (!res.ok) throw new Error("终止公式战失败");
+    if (!res.ok) throw new Error("终止立直麻将失败");
     return { success: true };
   });
 

@@ -31,7 +31,7 @@ const NAV_ITEMS: ReadonlyArray<{
   { to: "/dash/events", icon: MegaphoneIcon, label: "活动管理" },
   { to: "/dash/tables", icon: TableIcon, label: "桌台管理" },
   { to: "/dash/orders", icon: ClipboardTextIcon, label: "订单管理" },
-  { to: "/dash/gsz", icon: SwordIcon, label: "公式战" },
+  { to: "/dash/gsz", icon: SwordIcon, label: "立直麻将" },
   { to: "/dash/pricing", icon: CurrencyDollarIcon, label: "价格计划" },
   { to: "/dash/media", icon: ImageSquareIcon, label: "媒体库" },
 ];

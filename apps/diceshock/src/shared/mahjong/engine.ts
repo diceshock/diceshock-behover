@@ -3,15 +3,12 @@ import {
   SEATS_4P,
   STARTING_POINTS_3P,
   STARTING_POINTS_4P,
-  WINDS,
 } from "./constants";
 import type {
   MatchConfig,
   MatchResultForDB,
   MatchState,
   PlayerState,
-  RoundRecord,
-  RoundResult,
 } from "./types";
 
 function playerCount(mode: "3p" | "4p"): number {
@@ -26,44 +23,36 @@ function seatsForMode(mode: "3p" | "4p") {
   return mode === "3p" ? SEATS_3P : SEATS_4P;
 }
 
-function windCount(format: "tonpuu" | "hanchan"): number {
-  return format === "tonpuu" ? 1 : 2;
-}
-
 export function createInitialState(): MatchState {
   return {
-    config: { mode: "4p", format: "hanchan" },
+    config: null,
     players: [],
-    currentRound: { wind: "east", roundNumber: 1, honba: 0, dealerIndex: 0 },
     phase: "config_select",
     votes: [],
     voteStartedAt: null,
-    roundHistory: [],
     pendingScores: {},
-    roundCounter: 0,
+    scoreConfirmed: {},
     terminationReason: null,
     startedAt: null,
     endedAt: null,
+    pausedAt: null,
+    pausedDuration: 0,
     step: 0,
   };
 }
 
-export function resetKeepConfig(prev: MatchState): MatchState {
-  const fresh = createInitialState();
-  if (prev.config) {
-    fresh.config = { ...prev.config };
-  }
-  return fresh;
-}
-
 export function setConfig(state: MatchState, config: MatchConfig): MatchState {
-  if (state.phase !== "config_select" && state.phase !== "lobby")
-    throw new Error("Can only set config in config_select or lobby");
+  if (state.phase !== "config_select")
+    throw new Error("Can only set config in config_select");
+
+  const enforced: MatchConfig =
+    config.type === "tournament"
+      ? { type: "tournament", mode: "4p", format: "hanchan" }
+      : config;
 
   return {
     ...state,
-    config,
-    phase: "config_select",
+    config: enforced,
     players: [],
   };
 }
@@ -91,6 +80,26 @@ export function backToConfig(state: MatchState): MatchState {
   };
 }
 
+export function addPlayer(
+  state: MatchState,
+  player: Pick<PlayerState, "userId" | "nickname" | "phone" | "registered">,
+): MatchState {
+  if (state.players.find((p) => p.userId === player.userId)) return state;
+
+  const pts = state.config ? startingPoints(state.config.mode) : 0;
+  return {
+    ...state,
+    players: [
+      ...state.players,
+      {
+        ...player,
+        seat: null,
+        currentPoints: pts,
+      },
+    ],
+  };
+}
+
 export function selectSeat(
   state: MatchState,
   userId: string,
@@ -110,63 +119,14 @@ export function selectSeat(
   if (taken) throw new Error(`Seat ${seat} already taken by ${taken.nickname}`);
 
   const existing = state.players.find((p) => p.userId === userId);
-  if (existing) {
-    return {
-      ...state,
-      players: state.players.map((p) =>
-        p.userId === userId ? { ...p, seat } : p,
-      ),
-    };
-  }
-
-  throw new Error("Player not found");
-}
-
-export function addPlayer(
-  state: MatchState,
-  player: Pick<PlayerState, "userId" | "nickname" | "phone" | "registered">,
-): MatchState {
-  if (state.players.find((p) => p.userId === player.userId)) return state;
-
-  const pts = state.config ? startingPoints(state.config.mode) : 0;
-  return {
-    ...state,
-    players: [
-      ...state.players,
-      {
-        ...player,
-        seat: null,
-        ready: false,
-        currentPoints: pts,
-      },
-    ],
-  };
-}
-
-export function setReady(
-  state: MatchState,
-  userId: string,
-  ready: boolean,
-): MatchState {
-  if (state.phase !== "seat_select")
-    throw new Error("Can only set ready during seat_select");
-  const player = state.players.find((p) => p.userId === userId);
-  if (!player) throw new Error("Player not found");
-  if (!player.seat) throw new Error("Must select seat first");
+  if (!existing) throw new Error("Player not found");
 
   return {
     ...state,
     players: state.players.map((p) =>
-      p.userId === userId ? { ...p, ready } : p,
+      p.userId === userId ? { ...p, seat } : p,
     ),
   };
-}
-
-export function allReady(state: MatchState): boolean {
-  if (!state.config) return false;
-  const needed = playerCount(state.config.mode);
-  const readyPlayers = state.players.filter((p) => p.ready && p.seat);
-  return readyPlayers.length === needed;
 }
 
 export function allSeated(state: MatchState): boolean {
@@ -176,30 +136,53 @@ export function allSeated(state: MatchState): boolean {
   return seatedPlayers.length === needed;
 }
 
-export function startMatch(state: MatchState): MatchState {
+export function startCountdown(state: MatchState): MatchState {
+  if (state.phase !== "seat_select")
+    throw new Error("Can only start countdown from seat_select");
   if (!allSeated(state)) throw new Error("Not all players seated");
-  if (!state.config) throw new Error("Config not set");
 
-  const pts = startingPoints(state.config.mode);
-  const eastPlayer = state.players.findIndex((p) => p.seat === "east");
-  if (eastPlayer === -1) throw new Error("No east player found");
+  return {
+    ...state,
+    phase: "countdown",
+  };
+}
+
+export function startMatch(state: MatchState): MatchState {
+  if (state.phase !== "countdown")
+    throw new Error("Can only start match from countdown");
 
   return {
     ...state,
     phase: "playing",
     startedAt: Date.now(),
-    currentRound: {
-      wind: "east",
-      roundNumber: 1,
-      honba: 0,
-      dealerIndex: eastPlayer,
-    },
-    players: state.players.map((p) => ({
-      ...p,
-      currentPoints: pts,
-      ready: false,
-    })),
-    roundCounter: 0,
+  };
+}
+
+export function beginScoring(state: MatchState): MatchState {
+  if (state.phase !== "playing")
+    throw new Error("Can only begin scoring from playing phase");
+
+  return {
+    ...state,
+    phase: "scoring",
+    pendingScores: {},
+    scoreConfirmed: {},
+    pausedAt: Date.now(),
+  };
+}
+
+export function cancelScoring(state: MatchState): MatchState {
+  if (state.phase !== "scoring")
+    throw new Error("Can only cancel scoring from scoring phase");
+
+  const elapsed = state.pausedAt ? Date.now() - state.pausedAt : 0;
+  return {
+    ...state,
+    phase: "playing",
+    pendingScores: {},
+    scoreConfirmed: {},
+    pausedAt: null,
+    pausedDuration: state.pausedDuration + elapsed,
   };
 }
 
@@ -219,127 +202,62 @@ export function submitScore(
   };
 }
 
+export function confirmScore(state: MatchState, userId: string): MatchState {
+  if (state.phase !== "scoring")
+    throw new Error("Can only confirm score during scoring phase");
+  if (!(userId in state.pendingScores))
+    throw new Error("Must submit score before confirming");
+
+  return {
+    ...state,
+    scoreConfirmed: { ...state.scoreConfirmed, [userId]: true },
+  };
+}
+
+export function cancelConfirm(state: MatchState, userId: string): MatchState {
+  if (state.phase !== "scoring")
+    throw new Error("Can only cancel confirm during scoring phase");
+  if (allScoresConfirmed(state))
+    throw new Error("Cannot cancel after all players confirmed");
+
+  return {
+    ...state,
+    scoreConfirmed: { ...state.scoreConfirmed, [userId]: false },
+  };
+}
+
 export function allScoresSubmitted(state: MatchState): boolean {
   if (!state.config) return false;
   const needed = playerCount(state.config.mode);
   return Object.keys(state.pendingScores).length >= needed;
 }
 
-export function beginScoring(state: MatchState): MatchState {
-  if (state.phase !== "playing")
-    throw new Error("Can only begin scoring from playing phase");
-  return { ...state, phase: "scoring", pendingScores: {} };
+export function allScoresConfirmed(state: MatchState): boolean {
+  if (!state.config) return false;
+  if (!allScoresSubmitted(state)) return false;
+  const needed = playerCount(state.config.mode);
+  const confirmed = Object.values(state.scoreConfirmed).filter(Boolean).length;
+  return confirmed >= needed;
 }
 
-export function endRound(state: MatchState, result: RoundResult): MatchState {
-  if (state.phase !== "round_review")
-    throw new Error("Can only end round from round_review phase");
-  if (!state.config) throw new Error("Config not set");
-
-  const record: RoundRecord = {
-    round: state.roundCounter + 1,
-    wind: state.currentRound.wind,
-    honba: state.currentRound.honba,
-    dealerUserId: state.players[state.currentRound.dealerIndex].userId,
-    scores: { ...state.pendingScores },
-    result,
-  };
+export function finalizeScoring(state: MatchState): MatchState {
+  if (state.phase !== "scoring")
+    throw new Error("Can only finalize from scoring phase");
+  if (!allScoresConfirmed(state)) throw new Error("Not all scores confirmed");
 
   const newPlayers = state.players.map((p) => ({
     ...p,
     currentPoints: state.pendingScores[p.userId] ?? p.currentPoints,
   }));
 
-  const hasBust = newPlayers.some((p) => p.currentPoints <= 0);
-
-  if (hasBust) {
-    return {
-      ...state,
-      players: newPlayers,
-      roundHistory: [...state.roundHistory, record],
-      roundCounter: state.roundCounter + 1,
-      phase: "ended",
-      terminationReason: "bust",
-      endedAt: Date.now(),
-      pendingScores: {},
-    };
-  }
-
-  const nextRound = advanceRound(state, result);
-
-  if (!nextRound) {
-    return {
-      ...state,
-      players: newPlayers,
-      roundHistory: [...state.roundHistory, record],
-      roundCounter: state.roundCounter + 1,
-      phase: "ended",
-      terminationReason: "format_complete",
-      endedAt: Date.now(),
-      pendingScores: {},
-    };
-  }
-
   return {
     ...state,
     players: newPlayers,
-    currentRound: nextRound,
-    roundHistory: [...state.roundHistory, record],
-    roundCounter: state.roundCounter + 1,
-    phase: "playing",
+    phase: "ended",
+    terminationReason: "score_complete",
+    endedAt: Date.now(),
     pendingScores: {},
-  };
-}
-
-export function confirmScores(state: MatchState): MatchState {
-  if (state.phase !== "scoring")
-    throw new Error("Can only confirm scores from scoring phase");
-  if (!allScoresSubmitted(state)) throw new Error("Not all scores submitted");
-
-  return { ...state, phase: "round_review" };
-}
-
-function advanceRound(
-  state: MatchState,
-  result: RoundResult,
-): MatchState["currentRound"] | null {
-  if (!state.config) return null;
-
-  const { currentRound, config } = state;
-  const count = playerCount(config.mode);
-  const maxWinds = windCount(config.format);
-
-  if (result === "dealer_win" || result === "draw") {
-    return {
-      ...currentRound,
-      honba: currentRound.honba + 1,
-    };
-  }
-
-  const nextDealerIndex = (currentRound.dealerIndex + 1) % count;
-  const dealerWrapped = nextDealerIndex === 0;
-
-  if (!dealerWrapped) {
-    return {
-      ...currentRound,
-      dealerIndex: nextDealerIndex,
-      roundNumber: currentRound.roundNumber + 1,
-      honba: 0,
-    };
-  }
-
-  const windIndex = WINDS.indexOf(currentRound.wind);
-  const nextWindIndex = windIndex + 1;
-
-  if (nextWindIndex >= maxWinds) {
-    return null;
-  }
-
-  return {
-    wind: WINDS[nextWindIndex],
-    roundNumber: 1,
-    honba: 0,
-    dealerIndex: 0,
+    scoreConfirmed: {},
   };
 }
 
@@ -432,6 +350,48 @@ export function resolveVoteByTimeout(state: MatchState): MatchState {
   };
 }
 
+export function resetKeepConfig(prev: MatchState): MatchState {
+  if (!prev.config) throw new Error("No config to keep");
+
+  const pts = startingPoints(prev.config.mode);
+  return {
+    config: { ...prev.config },
+    players: prev.players.map((p) => ({
+      ...p,
+      currentPoints: pts,
+    })),
+    phase: "countdown",
+    votes: [],
+    voteStartedAt: null,
+    pendingScores: {},
+    scoreConfirmed: {},
+    terminationReason: null,
+    startedAt: null,
+    endedAt: null,
+    pausedAt: null,
+    pausedDuration: 0,
+    step: 0,
+  };
+}
+
+export function resetToConfig(prev: MatchState): MatchState {
+  return {
+    config: prev.config ? { ...prev.config } : null,
+    players: [],
+    phase: "config_select",
+    votes: [],
+    voteStartedAt: null,
+    pendingScores: {},
+    scoreConfirmed: {},
+    terminationReason: null,
+    startedAt: null,
+    endedAt: null,
+    pausedAt: null,
+    pausedDuration: 0,
+    step: 0,
+  };
+}
+
 export function getRanking(
   state: MatchState,
 ): Array<PlayerState & { rank: number }> {
@@ -439,17 +399,6 @@ export function getRanking(
     (a, b) => b.currentPoints - a.currentPoints,
   );
   return sorted.map((p, i) => ({ ...p, rank: i + 1 }));
-}
-
-export function getDealerUserId(state: MatchState): string | null {
-  if (state.currentRound.dealerIndex >= state.players.length) return null;
-  return state.players[state.currentRound.dealerIndex].userId;
-}
-
-export function canEndMatch(state: MatchState): boolean {
-  if (state.phase === "ended") return false;
-  const hasBust = state.players.some((p) => p.currentPoints <= 0);
-  return hasBust;
 }
 
 export function abortMatch(
@@ -471,6 +420,7 @@ export function serializeForDB(state: MatchState): MatchResultForDB | null {
   if (!state.config || !state.terminationReason) return null;
 
   return {
+    matchType: state.config.type,
     mode: state.config.mode,
     format: state.config.format,
     startedAt: state.startedAt ?? Date.now(),
@@ -479,10 +429,9 @@ export function serializeForDB(state: MatchState): MatchResultForDB | null {
     players: state.players.map((p) => ({
       userId: p.userId,
       nickname: p.nickname,
-      seat: p.seat!,
+      seat: p.seat,
       finalScore: p.currentPoints,
     })),
-    roundHistory: state.roundHistory,
     config: state.config,
   };
 }

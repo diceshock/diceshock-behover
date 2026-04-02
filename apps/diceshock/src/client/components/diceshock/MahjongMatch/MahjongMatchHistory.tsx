@@ -3,52 +3,36 @@ import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import Modal from "@/client/components/modal";
 import useAuth from "@/client/hooks/useAuth";
-import type { Seat, Wind } from "@/shared/mahjong/constants";
-import { SEAT_LABELS, WIND_LABELS } from "@/shared/mahjong/constants";
+import type { Seat } from "@/shared/mahjong/constants";
+import {
+  FORMAT_LABELS,
+  MATCH_TYPE_LABELS,
+  MODE_LABELS,
+  SEAT_LABELS,
+} from "@/shared/mahjong/constants";
 import dayjs from "@/shared/utils/dayjs-config";
 import trpcClientPublic from "@/shared/utils/trpc";
 
 interface MatchPlayer {
   userId: string;
   nickname: string;
-  seat: string;
+  seat: string | null;
   finalScore: number;
-}
-
-interface RoundHistoryEntry {
-  round: number;
-  wind: string;
-  honba: number;
-  dealerUserId: string;
-  scores: Record<string, number>;
-  result: string;
 }
 
 interface Match {
   id: string;
   table_id: string | null;
+  match_type: string | null;
   mode: "3p" | "4p";
   format: "tonpuu" | "hanchan";
   started_at: string;
   ended_at: string;
-  termination_reason: "format_complete" | "bust" | "vote";
+  termination_reason: string;
   players: MatchPlayer[] | null;
-  round_history: RoundHistoryEntry[] | null;
-  config: { mode: string; format: string } | null;
+  config: { type?: string; mode: string; format: string } | null;
   created_at: string | null;
 }
-
-const MODE_LABELS: Record<string, string> = { "3p": "三麻", "4p": "四麻" };
-const FORMAT_LABELS: Record<string, string> = {
-  tonpuu: "东风",
-  hanchan: "半庄",
-};
-const RESULT_LABELS: Record<string, string> = {
-  dealer_win: "庄家和了",
-  non_dealer_win: "闲家和了",
-  draw: "流局",
-};
-const CHINESE_NUMBERS = ["一", "二", "三", "四"];
 
 function getRank(players: MatchPlayer[], userId: string): number {
   const sorted = [...players].sort((a, b) => b.finalScore - a.finalScore);
@@ -84,42 +68,6 @@ function getRankBadge(rank: number) {
   }
 }
 
-function formatRoundLabel(
-  wind: string,
-  roundNumber: number,
-  honba: number,
-): string {
-  const windLabel = WIND_LABELS[wind as Wind] ?? wind;
-  const numLabel = CHINESE_NUMBERS[roundNumber - 1] ?? `${roundNumber}`;
-  let label = `${windLabel}${numLabel}局`;
-  if (honba > 0) label += ` ${honba}本场`;
-  return label;
-}
-
-/**
- * In mahjong, "局" (round number within a wind) increments when the dealer changes.
- * When dealer wins or draws, honba increments but 局 stays the same.
- * Since round_history doesn't store the per-wind round number directly,
- * we derive it by tracking dealer changes within consecutive same-wind entries.
- */
-function computeWindRoundNumber(
-  entries: RoundHistoryEntry[],
-  index: number,
-): number {
-  const entry = entries[index];
-  let windRound = 1;
-  for (let i = 1; i <= index; i++) {
-    if (entries[i].wind !== entry.wind) continue;
-    if (
-      entries[i - 1].wind === entry.wind &&
-      entries[i].dealerUserId !== entries[i - 1].dealerUserId
-    ) {
-      windRound++;
-    }
-  }
-  return windRound;
-}
-
 function MahjongMatchDetailModal({
   match,
   isOpen,
@@ -134,11 +82,9 @@ function MahjongMatchDetailModal({
   if (!match) return null;
 
   const players = match.players ?? [];
-  const roundHistory = match.round_history ?? [];
   const sortedPlayers = [...players].sort(
     (a, b) => b.finalScore - a.finalScore,
   );
-  const startingPoints = match.mode === "3p" ? 35000 : 25000;
 
   return (
     <Modal
@@ -165,8 +111,14 @@ function MahjongMatchDetailModal({
 
         <div className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3">
           <h3 className="text-sm sm:text-base font-bold flex items-center gap-2 flex-wrap">
+            {match.match_type && (
+              <span className="badge badge-sm badge-primary">
+                {MATCH_TYPE_LABELS[match.match_type] ?? match.match_type}
+              </span>
+            )}
             <span className="badge badge-sm badge-outline">
-              {MODE_LABELS[match.mode]} {FORMAT_LABELS[match.format]}
+              {MODE_LABELS[match.mode] ?? match.mode}{" "}
+              {FORMAT_LABELS[match.format] ?? match.format}
             </span>
             <span className="text-xs text-base-content/50">
               {dayjs(match.started_at).format("YYYY/MM/DD HH:mm")}
@@ -201,9 +153,11 @@ function MahjongMatchDetailModal({
                         <span className="text-xs text-primary ml-1">(我)</span>
                       )}
                     </span>
-                    <span className="text-xs text-base-content/50">
-                      {SEAT_LABELS[player.seat as Seat] ?? player.seat}
-                    </span>
+                    {player.seat && (
+                      <span className="text-xs text-base-content/50">
+                        {SEAT_LABELS[player.seat as Seat] ?? player.seat}
+                      </span>
+                    )}
                     <span className="font-mono text-sm tabular-nums">
                       {player.finalScore.toLocaleString()}
                     </span>
@@ -212,106 +166,6 @@ function MahjongMatchDetailModal({
               })}
             </div>
           </div>
-
-          {roundHistory.length > 0 && (
-            <div>
-              <h4 className="text-xs font-semibold text-base-content/60 mb-2">
-                对局详情
-              </h4>
-              <div className="overflow-x-auto -mx-4 sm:mx-0">
-                <table className="table table-xs sm:table-sm w-full min-w-[28rem]">
-                  <thead>
-                    <tr className="text-base-content/50">
-                      <th className="text-xs">局</th>
-                      {players.map((p) => (
-                        <th
-                          key={p.userId}
-                          className={clsx(
-                            "text-xs text-center",
-                            p.userId === currentUserId && "text-primary",
-                          )}
-                        >
-                          <span className="truncate max-w-16 inline-block">
-                            {p.nickname}
-                          </span>
-                        </th>
-                      ))}
-                      <th className="text-xs text-center">结果</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {roundHistory.map((round, idx) => {
-                      const windRound = computeWindRoundNumber(
-                        roundHistory,
-                        idx,
-                      );
-                      const prevScores =
-                        idx === 0
-                          ? Object.fromEntries(
-                              players.map((p) => [p.userId, startingPoints]),
-                            )
-                          : roundHistory[idx - 1].scores;
-
-                      return (
-                        <tr key={`round-${round.round}`} className="hover">
-                          <td className="text-xs font-medium whitespace-nowrap">
-                            {formatRoundLabel(
-                              round.wind,
-                              windRound,
-                              round.honba,
-                            )}
-                          </td>
-                          {players.map((p) => {
-                            const score = round.scores[p.userId] ?? 0;
-                            const prev = prevScores[p.userId] ?? startingPoints;
-                            const delta = score - prev;
-                            const isDealer = round.dealerUserId === p.userId;
-
-                            return (
-                              <td
-                                key={p.userId}
-                                className={clsx(
-                                  "text-center",
-                                  p.userId === currentUserId && "bg-primary/5",
-                                )}
-                              >
-                                <div className="flex flex-col items-center">
-                                  <span className="font-mono text-xs tabular-nums">
-                                    {score.toLocaleString()}
-                                    {isDealer && (
-                                      <span className="text-warning ml-0.5">
-                                        庄
-                                      </span>
-                                    )}
-                                  </span>
-                                  {delta !== 0 && (
-                                    <span
-                                      className={clsx(
-                                        "text-[10px] tabular-nums",
-                                        delta > 0
-                                          ? "text-success"
-                                          : "text-error",
-                                      )}
-                                    >
-                                      {delta > 0 ? "+" : ""}
-                                      {delta.toLocaleString()}
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                            );
-                          })}
-                          <td className="text-[10px] text-center text-base-content/50 whitespace-nowrap">
-                            {RESULT_LABELS[round.result] ?? round.result}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </Modal>
@@ -350,7 +204,9 @@ export default function MahjongMatchHistory() {
               <GameControllerIcon className="size-5 sm:size-6 md:size-8 text-primary" />
             </div>
             <div className="flex-1">
-              <p className="text-base sm:text-lg font-bold mb-1">公式战历史</p>
+              <p className="text-base sm:text-lg font-bold mb-1">
+                立直麻将历史
+              </p>
               <span className="loading loading-dots loading-xs" />
             </div>
           </div>
@@ -368,7 +224,9 @@ export default function MahjongMatchHistory() {
               <GameControllerIcon className="size-5 sm:size-6 md:size-8 text-primary" />
             </div>
             <div className="flex flex-col items-start justify-start flex-1 min-w-0">
-              <p className="text-base sm:text-lg font-bold mb-1">公式战历史</p>
+              <p className="text-base sm:text-lg font-bold mb-1">
+                立直麻将历史
+              </p>
               <p className="text-xs sm:text-sm text-base-content/60">
                 暂无对局记录
               </p>
@@ -388,7 +246,7 @@ export default function MahjongMatchHistory() {
               <GameControllerIcon className="size-5 sm:size-6 md:size-8 text-primary" />
             </div>
             <div className="flex flex-col items-start justify-start flex-1 min-w-0">
-              <p className="text-base sm:text-lg font-bold">公式战历史</p>
+              <p className="text-base sm:text-lg font-bold">立直麻将历史</p>
               <p className="text-xs text-base-content/50">
                 共 {matches.length} 场对局
               </p>
@@ -414,13 +272,22 @@ export default function MahjongMatchHistory() {
                     </span>
                   )}
 
+                  {match.match_type && (
+                    <span className="badge badge-xs badge-primary shrink-0">
+                      {MATCH_TYPE_LABELS[match.match_type] ?? match.match_type}
+                    </span>
+                  )}
+
                   <span className="badge badge-xs badge-outline shrink-0">
-                    {MODE_LABELS[match.mode]} {FORMAT_LABELS[match.format]}
+                    {MODE_LABELS[match.mode] ?? match.mode}{" "}
+                    {FORMAT_LABELS[match.format] ?? match.format}
                   </span>
 
                   {me && (
                     <span className="text-xs text-base-content/60 shrink-0">
-                      {SEAT_LABELS[me.seat as Seat] ?? me.seat}家
+                      {me.seat
+                        ? (SEAT_LABELS[me.seat as Seat] ?? me.seat) + "家"
+                        : ""}
                     </span>
                   )}
 

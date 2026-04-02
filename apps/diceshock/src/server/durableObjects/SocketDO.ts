@@ -1,11 +1,11 @@
 import { DurableObject } from "cloudflare:workers";
 import db, { mahjongMatchesTable } from "@lib/db";
 import type { Seat } from "@/shared/mahjong/constants";
+import { COUNTDOWN_SECONDS } from "@/shared/mahjong/constants";
 import * as engine from "@/shared/mahjong/engine";
 import type {
   MatchConfig,
   MatchState,
-  RoundResult,
   TerminationReason,
 } from "@/shared/mahjong/types";
 
@@ -55,16 +55,18 @@ type ClientMessage =
   | { action: "mahjong_start_seat_select" }
   | { action: "mahjong_back_to_config" }
   | { action: "mahjong_select_seat"; seat: Seat }
-  | { action: "mahjong_ready"; ready: boolean }
+  | { action: "mahjong_start_countdown" }
   | { action: "mahjong_start" }
   | { action: "mahjong_begin_scoring" }
+  | { action: "mahjong_cancel_scoring" }
   | { action: "mahjong_submit_score"; points: number }
-  | { action: "mahjong_confirm_scores" }
-  | { action: "mahjong_end_round"; result: RoundResult }
+  | { action: "mahjong_confirm_score" }
+  | { action: "mahjong_cancel_confirm" }
+  | { action: "mahjong_finalize_scoring" }
   | { action: "mahjong_initiate_vote" }
   | { action: "mahjong_cast_vote"; vote: boolean }
   | { action: "mahjong_resolve_vote" }
-  | { action: "mahjong_reset" }
+  | { action: "mahjong_reset"; mode: "keep_config" | "to_config" }
   | {
       action: "mahjong_admin_abort";
       reason?: "admin_abort" | "order_invalid";
@@ -75,11 +77,14 @@ type ServerMessage =
   | { type: "error"; message: string }
   | { type: "app_pong"; ts: number; serverTime: number };
 
+type AlarmType = "countdown" | "vote_timeout";
+
 export class SocketDO extends DurableObject<Cloudflare.Env> {
   private tableInfo: TableInfo | null = null;
   private occupancies: OccupancyInfo[] = [];
   private mahjongState: MatchState | null = null;
   private step = 0;
+  private pendingAlarm: AlarmType | null = null;
 
   constructor(ctx: DurableObjectState, env: Cloudflare.Env) {
     super(ctx, env);
@@ -202,9 +207,9 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
   private checkOrderValidity(): void {
     if (!this.mahjongState) return;
     const activePhases: MatchState["phase"][] = [
+      "countdown",
       "playing",
       "scoring",
-      "round_review",
       "voting",
     ];
     if (!activePhases.includes(this.mahjongState.phase)) return;
@@ -240,13 +245,13 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
       const tdb = db(this.env.DB);
       await tdb.insert(mahjongMatchesTable).values({
         table_id: this.tableInfo?.id ?? null,
+        match_type: result.matchType,
         mode: result.mode,
         format: result.format,
         started_at: new Date(result.startedAt),
         ended_at: new Date(result.endedAt),
         termination_reason: result.terminationReason,
         players: result.players,
-        round_history: result.roundHistory,
         config: result.config,
       });
     } catch {
@@ -295,19 +300,24 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
             meta.userId,
             data.seat,
           );
-          // Auto-start when all players are seated
           if (engine.allSeated(this.mahjongState)) {
-            this.mahjongState = engine.startMatch(this.mahjongState);
+            this.mahjongState = engine.startCountdown(this.mahjongState);
+            this.pendingAlarm = "countdown";
+            await this.ctx.storage.setAlarm(
+              Date.now() + COUNTDOWN_SECONDS * 1000,
+            );
           }
           break;
         }
-        case "mahjong_ready": {
+        case "mahjong_start_countdown": {
           if (!this.mahjongState) return;
-          this.mahjongState = engine.setReady(
-            this.mahjongState,
-            meta.userId,
-            data.ready,
-          );
+          if (engine.allSeated(this.mahjongState)) {
+            this.mahjongState = engine.startCountdown(this.mahjongState);
+            this.pendingAlarm = "countdown";
+            await this.ctx.storage.setAlarm(
+              Date.now() + COUNTDOWN_SECONDS * 1000,
+            );
+          }
           break;
         }
         case "mahjong_start": {
@@ -320,6 +330,11 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
           this.mahjongState = engine.beginScoring(this.mahjongState);
           break;
         }
+        case "mahjong_cancel_scoring": {
+          if (!this.mahjongState) return;
+          this.mahjongState = engine.cancelScoring(this.mahjongState);
+          break;
+        }
         case "mahjong_submit_score": {
           if (!this.mahjongState) return;
           this.mahjongState = engine.submitScore(
@@ -329,19 +344,46 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
           );
           break;
         }
-        case "mahjong_confirm_scores": {
+        case "mahjong_confirm_score": {
           if (!this.mahjongState) return;
-          this.mahjongState = engine.confirmScores(this.mahjongState);
+          this.mahjongState = engine.confirmScore(
+            this.mahjongState,
+            meta.userId,
+          );
+          if (engine.allScoresConfirmed(this.mahjongState)) {
+            this.mahjongState = engine.finalizeScoring(this.mahjongState);
+            await this.saveMatchToDB();
+            this.mahjongState = engine.resetKeepConfig(this.mahjongState);
+            this.pendingAlarm = "countdown";
+            await this.ctx.storage.setAlarm(
+              Date.now() + COUNTDOWN_SECONDS * 1000,
+            );
+          }
           break;
         }
-        case "mahjong_end_round": {
+        case "mahjong_cancel_confirm": {
           if (!this.mahjongState) return;
-          this.mahjongState = engine.endRound(this.mahjongState, data.result);
+          this.mahjongState = engine.cancelConfirm(
+            this.mahjongState,
+            meta.userId,
+          );
+          break;
+        }
+        case "mahjong_finalize_scoring": {
+          if (!this.mahjongState) return;
+          this.mahjongState = engine.finalizeScoring(this.mahjongState);
+          await this.saveMatchToDB();
+          this.mahjongState = engine.resetKeepConfig(this.mahjongState);
+          this.pendingAlarm = "countdown";
+          await this.ctx.storage.setAlarm(
+            Date.now() + COUNTDOWN_SECONDS * 1000,
+          );
           break;
         }
         case "mahjong_initiate_vote": {
           if (!this.mahjongState) return;
           this.mahjongState = engine.initiateVote(this.mahjongState);
+          this.pendingAlarm = "vote_timeout";
           await this.ctx.storage.setAlarm(Date.now() + 20_000);
           break;
         }
@@ -359,6 +401,7 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
           ) {
             this.mahjongState = engine.resolveVote(this.mahjongState);
             await this.ctx.storage.deleteAlarm();
+            this.pendingAlarm = null;
           }
           break;
         }
@@ -366,6 +409,7 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
           if (!this.mahjongState) return;
           this.mahjongState = engine.resolveVote(this.mahjongState);
           await this.ctx.storage.deleteAlarm();
+          this.pendingAlarm = null;
           break;
         }
         case "mahjong_admin_abort": {
@@ -373,10 +417,15 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
           return;
         }
         case "mahjong_reset": {
-          if (this.mahjongState) {
+          if (!this.mahjongState) return;
+          if (data.mode === "keep_config") {
             this.mahjongState = engine.resetKeepConfig(this.mahjongState);
+            this.pendingAlarm = "countdown";
+            await this.ctx.storage.setAlarm(
+              Date.now() + COUNTDOWN_SECONDS * 1000,
+            );
           } else {
-            this.mahjongState = null;
+            this.mahjongState = engine.resetToConfig(this.mahjongState);
           }
           break;
         }
@@ -408,14 +457,28 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
   }
 
   async alarm(): Promise<void> {
-    if (this.mahjongState?.phase !== "voting") return;
+    if (this.pendingAlarm === "countdown") {
+      this.pendingAlarm = null;
+      if (this.mahjongState?.phase === "countdown") {
+        this.mahjongState = engine.startMatch(this.mahjongState);
+        this.step++;
+        this.broadcastState();
+      }
+      return;
+    }
 
-    this.mahjongState = engine.resolveVoteByTimeout(this.mahjongState);
-    this.step++;
-    this.broadcastState();
+    if (this.pendingAlarm === "vote_timeout") {
+      this.pendingAlarm = null;
+      if (this.mahjongState?.phase !== "voting") return;
 
-    if (this.mahjongState.phase === "ended") {
-      await this.saveMatchToDB();
+      this.mahjongState = engine.resolveVoteByTimeout(this.mahjongState);
+      this.step++;
+      this.broadcastState();
+
+      if (this.mahjongState.phase === "ended") {
+        await this.saveMatchToDB();
+      }
+      return;
     }
   }
 

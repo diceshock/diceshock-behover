@@ -1,0 +1,1 @@
+ALTER TABLE `mahjong_matches` ADD `match_type` text;

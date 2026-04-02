@@ -1,650 +1,499 @@
 import { describe, expect, it } from "vitest";
-import {
-  addPlayer,
-  allScoresSubmitted,
-  allSeated,
-  backToConfig,
-  beginScoring,
-  castVote,
-  confirmScores,
-  createInitialState,
-  endRound,
-  getDealerUserId,
-  getRanking,
-  initiateVote,
-  isVoteFailed,
-  isVotePassed,
-  resetKeepConfig,
-  resolveVote,
-  resolveVoteByTimeout,
-  selectSeat,
-  serializeForDB,
-  setConfig,
-  startMatch,
-  startSeatSelect,
-  submitScore,
-} from "../engine";
-import type { MatchState } from "../types";
+import * as engine from "../engine";
+import type { MatchConfig, MatchState } from "../types";
 
-function make4pPlaying(): MatchState {
-  let s = createInitialState();
-  s = setConfig(s, { mode: "4p", format: "hanchan" });
-  s = startSeatSelect(s);
-  s = addPlayer(s, {
-    userId: "A",
-    nickname: "Alice",
+function makeStoreConfig(): MatchConfig {
+  return { type: "store", mode: "4p", format: "hanchan" };
+}
+
+function make3pStoreConfig(): MatchConfig {
+  return { type: "store", mode: "3p", format: "tonpuu" };
+}
+
+function addFourPlayers(state: MatchState): MatchState {
+  let s = state;
+  s = engine.addPlayer(s, {
+    userId: "u1",
+    nickname: "P1",
     phone: "111",
     registered: true,
   });
-  s = addPlayer(s, {
-    userId: "B",
-    nickname: "Bob",
+  s = engine.addPlayer(s, {
+    userId: "u2",
+    nickname: "P2",
     phone: "222",
     registered: true,
   });
-  s = addPlayer(s, {
-    userId: "C",
-    nickname: "Carol",
+  s = engine.addPlayer(s, {
+    userId: "u3",
+    nickname: "P3",
     phone: "333",
     registered: true,
   });
-  s = addPlayer(s, {
-    userId: "D",
-    nickname: "Dave",
+  s = engine.addPlayer(s, {
+    userId: "u4",
+    nickname: "P4",
     phone: "444",
     registered: true,
   });
-  s = selectSeat(s, "A", "east");
-  s = selectSeat(s, "B", "south");
-  s = selectSeat(s, "C", "west");
-  s = selectSeat(s, "D", "north");
-  s = startMatch(s);
   return s;
 }
 
-function make3pPlaying(): MatchState {
-  let s = createInitialState();
-  s = setConfig(s, { mode: "3p", format: "tonpuu" });
-  s = startSeatSelect(s);
-  s = addPlayer(s, {
-    userId: "A",
-    nickname: "Alice",
-    phone: "111",
-    registered: true,
-  });
-  s = addPlayer(s, {
-    userId: "B",
-    nickname: "Bob",
-    phone: "222",
-    registered: true,
-  });
-  s = addPlayer(s, {
-    userId: "C",
-    nickname: "Carol",
-    phone: "333",
-    registered: true,
-  });
-  s = selectSeat(s, "A", "east");
-  s = selectSeat(s, "B", "south");
-  s = selectSeat(s, "C", "west");
-  s = startMatch(s);
+function seatFourPlayers(state: MatchState): MatchState {
+  let s = state;
+  s = engine.selectSeat(s, "u1", "east");
+  s = engine.selectSeat(s, "u2", "south");
+  s = engine.selectSeat(s, "u3", "west");
+  s = engine.selectSeat(s, "u4", "north");
   return s;
 }
 
-function playRound(
-  state: MatchState,
-  scores: Record<string, number>,
-  result: "dealer_win" | "non_dealer_win" | "draw",
-): MatchState {
-  let s = beginScoring(state);
-  for (const [userId, pts] of Object.entries(scores)) {
-    s = submitScore(s, userId, pts);
-  }
-  s = confirmScores(s);
-  s = endRound(s, result);
+function toPlaying(): MatchState {
+  let s = engine.createInitialState();
+  s = engine.setConfig(s, makeStoreConfig());
+  s = engine.startSeatSelect(s);
+  s = addFourPlayers(s);
+  s = seatFourPlayers(s);
+  s = engine.startCountdown(s);
+  s = engine.startMatch(s);
   return s;
 }
 
-describe("engine - initial state", () => {
-  it("creates initial state with default config", () => {
-    const s = createInitialState();
-    expect(s.phase).toBe("config_select");
-    expect(s.players).toHaveLength(0);
-    expect(s.config).toEqual({ mode: "4p", format: "hanchan" });
-  });
-});
-
-describe("engine - config and setup", () => {
-  it("sets config and stays in config_select", () => {
-    let s = createInitialState();
-    s = setConfig(s, { mode: "4p", format: "hanchan" });
-    expect(s.phase).toBe("config_select");
-    expect(s.config?.mode).toBe("4p");
-    expect(s.config?.format).toBe("hanchan");
-  });
-
-  it("allows config change during config_select", () => {
-    let s = createInitialState();
-    s = setConfig(s, { mode: "4p", format: "hanchan" });
-    s = setConfig(s, { mode: "3p", format: "tonpuu" });
-    expect(s.config?.mode).toBe("3p");
-    expect(s.config?.format).toBe("tonpuu");
-  });
-
-  it("startSeatSelect transitions to seat_select", () => {
-    let s = createInitialState();
-    s = setConfig(s, { mode: "4p", format: "hanchan" });
-    s = startSeatSelect(s);
-    expect(s.phase).toBe("seat_select");
-  });
-
-  it("backToConfig returns from seat_select to config_select", () => {
-    let s = createInitialState();
-    s = setConfig(s, { mode: "4p", format: "hanchan" });
-    s = startSeatSelect(s);
-    s = addPlayer(s, {
-      userId: "A",
-      nickname: "A",
-      phone: null,
-      registered: true,
+describe("engine", () => {
+  describe("createInitialState", () => {
+    it("returns config_select phase with empty state", () => {
+      const s = engine.createInitialState();
+      expect(s.phase).toBe("config_select");
+      expect(s.config).toBeNull();
+      expect(s.players).toEqual([]);
+      expect(s.pendingScores).toEqual({});
+      expect(s.scoreConfirmed).toEqual({});
+      expect(s.startedAt).toBeNull();
+      expect(s.endedAt).toBeNull();
     });
-    s = selectSeat(s, "A", "east");
-    s = backToConfig(s);
-    expect(s.phase).toBe("config_select");
-    expect(s.players).toHaveLength(0);
-    expect(s.config?.mode).toBe("4p");
   });
 
-  it("rejects config change outside config_select and lobby", () => {
-    let s = createInitialState();
-    s = setConfig(s, { mode: "4p", format: "hanchan" });
-    s = startSeatSelect(s);
-    s = addPlayer(s, {
-      userId: "A",
-      nickname: "A",
-      phone: null,
-      registered: true,
+  describe("setConfig", () => {
+    it("sets config in config_select phase", () => {
+      let s = engine.createInitialState();
+      s = engine.setConfig(s, makeStoreConfig());
+      expect(s.config).toEqual({
+        type: "store",
+        mode: "4p",
+        format: "hanchan",
+      });
     });
-    s = addPlayer(s, {
-      userId: "B",
-      nickname: "B",
-      phone: null,
-      registered: true,
+
+    it("forces 4p hanchan for tournament", () => {
+      let s = engine.createInitialState();
+      s = engine.setConfig(s, {
+        type: "tournament",
+        mode: "3p",
+        format: "tonpuu",
+      });
+      expect(s.config!.mode).toBe("4p");
+      expect(s.config!.format).toBe("hanchan");
+      expect(s.config!.type).toBe("tournament");
     });
-    s = addPlayer(s, {
-      userId: "C",
-      nickname: "C",
-      phone: null,
-      registered: true,
+
+    it("throws if not in config_select", () => {
+      let s = engine.createInitialState();
+      s = engine.setConfig(s, makeStoreConfig());
+      s = engine.startSeatSelect(s);
+      expect(() => engine.setConfig(s, makeStoreConfig())).toThrow();
     });
-    s = addPlayer(s, {
-      userId: "D",
-      nickname: "D",
-      phone: null,
-      registered: true,
+  });
+
+  describe("seat select flow", () => {
+    it("transitions config_select → seat_select → countdown", () => {
+      let s = engine.createInitialState();
+      s = engine.setConfig(s, makeStoreConfig());
+      expect(s.phase).toBe("config_select");
+
+      s = engine.startSeatSelect(s);
+      expect(s.phase).toBe("seat_select");
+
+      s = addFourPlayers(s);
+      s = seatFourPlayers(s);
+      expect(engine.allSeated(s)).toBe(true);
+
+      s = engine.startCountdown(s);
+      expect(s.phase).toBe("countdown");
     });
-    s = selectSeat(s, "A", "east");
-    s = selectSeat(s, "B", "south");
-    s = selectSeat(s, "C", "west");
-    s = selectSeat(s, "D", "north");
-    s = startMatch(s);
-    expect(() => setConfig(s, { mode: "3p", format: "tonpuu" })).toThrow();
-  });
 
-  it("resetKeepConfig preserves config and resets to config_select", () => {
-    let s = createInitialState();
-    s = setConfig(s, { mode: "4p", format: "hanchan" });
-    const reset = resetKeepConfig(s);
-    expect(reset.config?.mode).toBe("4p");
-    expect(reset.config?.format).toBe("hanchan");
-    expect(reset.phase).toBe("config_select");
-    expect(reset.players).toHaveLength(0);
-  });
-
-  it("rejects north seat in 3p mode", () => {
-    let s = createInitialState();
-    s = setConfig(s, { mode: "3p", format: "tonpuu" });
-    s = startSeatSelect(s);
-    s = addPlayer(s, {
-      userId: "A",
-      nickname: "Alice",
-      phone: "111",
-      registered: true,
+    it("backToConfig clears players", () => {
+      let s = engine.createInitialState();
+      s = engine.setConfig(s, makeStoreConfig());
+      s = engine.startSeatSelect(s);
+      s = engine.addPlayer(s, {
+        userId: "u1",
+        nickname: "P1",
+        phone: "111",
+        registered: true,
+      });
+      s = engine.backToConfig(s);
+      expect(s.phase).toBe("config_select");
+      expect(s.players).toEqual([]);
     });
-    expect(() => selectSeat(s, "A", "north")).toThrow("Invalid seat");
-  });
 
-  it("rejects duplicate seat selection", () => {
-    let s = createInitialState();
-    s = setConfig(s, { mode: "4p", format: "hanchan" });
-    s = startSeatSelect(s);
-    s = addPlayer(s, {
-      userId: "A",
-      nickname: "Alice",
-      phone: "111",
-      registered: true,
+    it("prevents duplicate player add", () => {
+      let s = engine.createInitialState();
+      s = engine.setConfig(s, makeStoreConfig());
+      s = engine.startSeatSelect(s);
+      s = engine.addPlayer(s, {
+        userId: "u1",
+        nickname: "P1",
+        phone: null,
+        registered: false,
+      });
+      const before = s.players.length;
+      s = engine.addPlayer(s, {
+        userId: "u1",
+        nickname: "P1",
+        phone: null,
+        registered: false,
+      });
+      expect(s.players.length).toBe(before);
     });
-    s = addPlayer(s, {
-      userId: "B",
-      nickname: "Bob",
-      phone: "222",
-      registered: true,
+
+    it("validates seat for mode", () => {
+      let s = engine.createInitialState();
+      s = engine.setConfig(s, make3pStoreConfig());
+      s = engine.startSeatSelect(s);
+      s = engine.addPlayer(s, {
+        userId: "u1",
+        nickname: "P1",
+        phone: null,
+        registered: false,
+      });
+      expect(() => engine.selectSeat(s, "u1", "north")).toThrow(/Invalid seat/);
     });
-    s = selectSeat(s, "A", "east");
-    expect(() => selectSeat(s, "B", "east")).toThrow("already taken");
   });
-});
 
-describe("engine - seating and start", () => {
-  it("detects all seated correctly", () => {
-    let s = createInitialState();
-    s = setConfig(s, { mode: "3p", format: "tonpuu" });
-    s = startSeatSelect(s);
-    s = addPlayer(s, {
-      userId: "A",
-      nickname: "Alice",
-      phone: "111",
-      registered: true,
+  describe("countdown → playing", () => {
+    it("sets startedAt on startMatch", () => {
+      let s = engine.createInitialState();
+      s = engine.setConfig(s, makeStoreConfig());
+      s = engine.startSeatSelect(s);
+      s = addFourPlayers(s);
+      s = seatFourPlayers(s);
+      s = engine.startCountdown(s);
+      expect(s.startedAt).toBeNull();
+
+      s = engine.startMatch(s);
+      expect(s.phase).toBe("playing");
+      expect(s.startedAt).toBeTypeOf("number");
     });
-    s = addPlayer(s, {
-      userId: "B",
-      nickname: "Bob",
-      phone: "222",
-      registered: true,
+
+    it("throws startMatch if not in countdown", () => {
+      const s = toPlaying();
+      expect(() => engine.startMatch(s)).toThrow();
     });
-    s = addPlayer(s, {
-      userId: "C",
-      nickname: "Carol",
-      phone: "333",
-      registered: true,
-    });
-    s = selectSeat(s, "A", "east");
-    s = selectSeat(s, "B", "south");
-    expect(allSeated(s)).toBe(false);
-    s = selectSeat(s, "C", "west");
-    expect(allSeated(s)).toBe(true);
   });
 
-  it("starts match with correct initial points", () => {
-    const s = make4pPlaying();
-    expect(s.phase).toBe("playing");
-    expect(s.players.every((p) => p.currentPoints === 25000)).toBe(true);
-    expect(s.currentRound.wind).toBe("east");
-    expect(s.currentRound.roundNumber).toBe(1);
-  });
+  describe("scoring flow", () => {
+    it("full scoring happy path: submit → confirm → finalize", () => {
+      let s = toPlaying();
+      s = engine.beginScoring(s);
+      expect(s.phase).toBe("scoring");
+      expect(s.pendingScores).toEqual({});
+      expect(s.scoreConfirmed).toEqual({});
 
-  it("3p starts with 35000 points", () => {
-    const s = make3pPlaying();
-    expect(s.players.every((p) => p.currentPoints === 35000)).toBe(true);
-  });
-});
+      s = engine.submitScore(s, "u1", 30000);
+      s = engine.submitScore(s, "u2", 25000);
+      s = engine.submitScore(s, "u3", 22000);
+      s = engine.submitScore(s, "u4", 23000);
+      expect(engine.allScoresSubmitted(s)).toBe(true);
 
-describe("engine - dealer rotation (4p)", () => {
-  it("連庄: dealer stays on dealer_win", () => {
-    let s = make4pPlaying();
-    const dealerBefore = getDealerUserId(s);
-    s = playRound(s, { A: 33000, B: 22000, C: 22000, D: 23000 }, "dealer_win");
-    expect(s.phase).toBe("playing");
-    expect(getDealerUserId(s)).toBe(dealerBefore);
-    expect(s.currentRound.honba).toBe(1);
-  });
+      s = engine.confirmScore(s, "u1");
+      s = engine.confirmScore(s, "u2");
+      s = engine.confirmScore(s, "u3");
+      expect(engine.allScoresConfirmed(s)).toBe(false);
 
-  it("連庄: dealer stays on draw", () => {
-    let s = make4pPlaying();
-    const dealerBefore = getDealerUserId(s);
-    s = playRound(s, { A: 25000, B: 25000, C: 25000, D: 25000 }, "draw");
-    expect(getDealerUserId(s)).toBe(dealerBefore);
-    expect(s.currentRound.honba).toBe(1);
-  });
+      s = engine.confirmScore(s, "u4");
+      expect(engine.allScoresConfirmed(s)).toBe(true);
 
-  it("輪庄: dealer rotates on non_dealer_win", () => {
-    let s = make4pPlaying();
-    expect(getDealerUserId(s)).toBe("A");
-    s = playRound(
-      s,
-      { A: 20000, B: 30000, C: 25000, D: 25000 },
-      "non_dealer_win",
-    );
-    expect(getDealerUserId(s)).toBe("B");
-    expect(s.currentRound.honba).toBe(0);
-    expect(s.currentRound.roundNumber).toBe(2);
-  });
-
-  it("full east round rotation (4p: 4 rotations)", () => {
-    let s = make4pPlaying();
-    s = playRound(
-      s,
-      { A: 20000, B: 30000, C: 25000, D: 25000 },
-      "non_dealer_win",
-    );
-    expect(getDealerUserId(s)).toBe("B");
-    s = playRound(
-      s,
-      { A: 25000, B: 25000, C: 30000, D: 20000 },
-      "non_dealer_win",
-    );
-    expect(getDealerUserId(s)).toBe("C");
-    s = playRound(
-      s,
-      { A: 25000, B: 25000, C: 20000, D: 30000 },
-      "non_dealer_win",
-    );
-    expect(getDealerUserId(s)).toBe("D");
-    expect(s.currentRound.wind).toBe("east");
-    expect(s.currentRound.roundNumber).toBe(4);
-  });
-});
-
-describe("engine - wind progression", () => {
-  it("4p hanchan: east → south after full rotation", () => {
-    let s = make4pPlaying();
-    s = playRound(
-      s,
-      { A: 20000, B: 30000, C: 25000, D: 25000 },
-      "non_dealer_win",
-    );
-    s = playRound(
-      s,
-      { A: 25000, B: 20000, C: 30000, D: 25000 },
-      "non_dealer_win",
-    );
-    s = playRound(
-      s,
-      { A: 25000, B: 25000, C: 20000, D: 30000 },
-      "non_dealer_win",
-    );
-    s = playRound(
-      s,
-      { A: 30000, B: 25000, C: 25000, D: 20000 },
-      "non_dealer_win",
-    );
-    expect(s.phase).toBe("playing");
-    expect(s.currentRound.wind).toBe("south");
-    expect(s.currentRound.roundNumber).toBe(1);
-    expect(getDealerUserId(s)).toBe("A");
-  });
-
-  it("4p hanchan: ends after south round completes", () => {
-    let s = make4pPlaying();
-    for (let i = 0; i < 4; i++) {
-      s = playRound(
-        s,
-        { A: 25000, B: 25000, C: 25000, D: 25000 },
-        "non_dealer_win",
+      s = engine.finalizeScoring(s);
+      expect(s.phase).toBe("ended");
+      expect(s.terminationReason).toBe("score_complete");
+      expect(s.endedAt).toBeTypeOf("number");
+      expect(s.players.find((p) => p.userId === "u1")!.currentPoints).toBe(
+        30000,
       );
-    }
-    expect(s.currentRound.wind).toBe("south");
-    for (let i = 0; i < 4; i++) {
-      s = playRound(
-        s,
-        { A: 25000, B: 25000, C: 25000, D: 25000 },
-        "non_dealer_win",
-      );
-    }
-    expect(s.phase).toBe("ended");
-    expect(s.terminationReason).toBe("format_complete");
+    });
+
+    it("allows cancel confirm before all confirmed", () => {
+      let s = toPlaying();
+      s = engine.beginScoring(s);
+      s = engine.submitScore(s, "u1", 30000);
+      s = engine.confirmScore(s, "u1");
+      expect(s.scoreConfirmed["u1"]).toBe(true);
+
+      s = engine.cancelConfirm(s, "u1");
+      expect(s.scoreConfirmed["u1"]).toBe(false);
+    });
+
+    it("prevents cancel confirm after all confirmed", () => {
+      let s = toPlaying();
+      s = engine.beginScoring(s);
+      for (const id of ["u1", "u2", "u3", "u4"]) {
+        s = engine.submitScore(s, id, 25000);
+        s = engine.confirmScore(s, id);
+      }
+      expect(() => engine.cancelConfirm(s, "u1")).toThrow(/Cannot cancel/);
+    });
+
+    it("prevents confirm without submitting score", () => {
+      let s = toPlaying();
+      s = engine.beginScoring(s);
+      expect(() => engine.confirmScore(s, "u1")).toThrow(/Must submit score/);
+    });
   });
 
-  it("3p tonpuu: ends after east round (3 rotations)", () => {
-    let s = make3pPlaying();
-    s = playRound(s, { A: 30000, B: 37500, C: 37500 }, "non_dealer_win");
-    s = playRound(s, { A: 35000, B: 30000, C: 40000 }, "non_dealer_win");
-    s = playRound(s, { A: 35000, B: 35000, C: 35000 }, "non_dealer_win");
-    expect(s.phase).toBe("ended");
-    expect(s.terminationReason).toBe("format_complete");
-  });
-});
+  describe("voting flow", () => {
+    it("vote pass ends match", () => {
+      let s = toPlaying();
+      s = engine.initiateVote(s);
+      expect(s.phase).toBe("voting");
 
-describe("engine - bust detection", () => {
-  it("ends match when a player reaches 0 points", () => {
-    let s = make4pPlaying();
-    s = playRound(s, { A: 0, B: 50000, C: 25000, D: 25000 }, "non_dealer_win");
-    expect(s.phase).toBe("ended");
-    expect(s.terminationReason).toBe("bust");
-  });
+      s = engine.castVote(s, "u1", true);
+      s = engine.castVote(s, "u2", true);
+      s = engine.castVote(s, "u3", true);
+      expect(engine.isVotePassed(s)).toBe(true);
 
-  it("ends match when a player goes negative", () => {
-    let s = make4pPlaying();
-    s = playRound(
-      s,
-      { A: -5000, B: 55000, C: 25000, D: 25000 },
-      "non_dealer_win",
-    );
-    expect(s.phase).toBe("ended");
-    expect(s.terminationReason).toBe("bust");
-  });
-});
+      s = engine.resolveVote(s);
+      expect(s.phase).toBe("ended");
+      expect(s.terminationReason).toBe("vote");
+    });
 
-describe("engine - voting", () => {
-  it("4p: 3/4 votes yes → match ends", () => {
-    let s = make4pPlaying();
-    s = initiateVote(s);
-    expect(s.phase).toBe("voting");
-    s = castVote(s, "A", true);
-    s = castVote(s, "B", true);
-    s = castVote(s, "C", true);
-    expect(isVotePassed(s)).toBe(true);
-    s = resolveVote(s);
-    expect(s.phase).toBe("ended");
-    expect(s.terminationReason).toBe("vote");
-  });
+    it("vote fail returns to playing", () => {
+      let s = toPlaying();
+      s = engine.initiateVote(s);
+      s = engine.castVote(s, "u1", false);
+      s = engine.castVote(s, "u2", false);
+      expect(engine.isVoteFailed(s)).toBe(true);
 
-  it("4p: 2/4 votes yes → vote fails", () => {
-    let s = make4pPlaying();
-    s = initiateVote(s);
-    s = castVote(s, "A", true);
-    s = castVote(s, "B", true);
-    s = castVote(s, "C", false);
-    s = castVote(s, "D", false);
-    expect(isVotePassed(s)).toBe(false);
-    expect(isVoteFailed(s)).toBe(true);
-    s = resolveVote(s);
-    expect(s.phase).toBe("playing");
-  });
+      s = engine.resolveVote(s);
+      expect(s.phase).toBe("playing");
+      expect(s.votes).toEqual([]);
+    });
 
-  it("3p: 2/3 votes yes → match ends", () => {
-    let s = make3pPlaying();
-    s = initiateVote(s);
-    s = castVote(s, "A", true);
-    s = castVote(s, "B", true);
-    expect(isVotePassed(s)).toBe(true);
-    s = resolveVote(s);
-    expect(s.phase).toBe("ended");
-    expect(s.terminationReason).toBe("vote");
+    it("vote timeout with yes majority ends match", () => {
+      let s = toPlaying();
+      s = engine.initiateVote(s);
+      s = engine.castVote(s, "u1", true);
+      s = engine.castVote(s, "u2", true);
+      s = engine.castVote(s, "u3", false);
+
+      s = engine.resolveVoteByTimeout(s);
+      expect(s.phase).toBe("ended");
+      expect(s.terminationReason).toBe("vote");
+    });
+
+    it("vote timeout with tie continues playing", () => {
+      let s = toPlaying();
+      s = engine.initiateVote(s);
+      s = engine.castVote(s, "u1", true);
+      s = engine.castVote(s, "u2", false);
+
+      s = engine.resolveVoteByTimeout(s);
+      expect(s.phase).toBe("playing");
+    });
+
+    it("vote timeout with no votes continues playing", () => {
+      let s = toPlaying();
+      s = engine.initiateVote(s);
+      s = engine.resolveVoteByTimeout(s);
+      expect(s.phase).toBe("playing");
+    });
   });
 
-  it("3p: 1/3 yes, 2/3 no → vote fails early", () => {
-    let s = make3pPlaying();
-    s = initiateVote(s);
-    s = castVote(s, "A", true);
-    s = castVote(s, "B", false);
-    expect(isVoteFailed(s)).toBe(false);
-    s = castVote(s, "C", false);
-    expect(isVoteFailed(s)).toBe(true);
+  describe("resetKeepConfig (auto-new-match)", () => {
+    it("resets to countdown with same config and players", () => {
+      let s = toPlaying();
+      s = engine.beginScoring(s);
+      for (const id of ["u1", "u2", "u3", "u4"]) {
+        s = engine.submitScore(s, id, 25000);
+        s = engine.confirmScore(s, id);
+      }
+      s = engine.finalizeScoring(s);
+      expect(s.phase).toBe("ended");
+
+      s = engine.resetKeepConfig(s);
+      expect(s.phase).toBe("countdown");
+      expect(s.config).toEqual(makeStoreConfig());
+      expect(s.players.length).toBe(4);
+      expect(s.players[0].currentPoints).toBe(25000);
+      expect(s.startedAt).toBeNull();
+      expect(s.endedAt).toBeNull();
+      expect(s.terminationReason).toBeNull();
+    });
   });
 
-  it("rejects duplicate vote", () => {
-    let s = make4pPlaying();
-    s = initiateVote(s);
-    s = castVote(s, "A", true);
-    expect(() => castVote(s, "A", false)).toThrow("Already voted");
+  describe("resetToConfig (after vote terminate)", () => {
+    it("resets to config_select with no players", () => {
+      let s = toPlaying();
+      s = engine.initiateVote(s);
+      s = engine.castVote(s, "u1", true);
+      s = engine.castVote(s, "u2", true);
+      s = engine.castVote(s, "u3", true);
+      s = engine.resolveVote(s);
+      expect(s.phase).toBe("ended");
+
+      s = engine.resetToConfig(s);
+      expect(s.phase).toBe("config_select");
+      expect(s.players).toEqual([]);
+      expect(s.config).toEqual(makeStoreConfig());
+    });
   });
 
-  it("initiateVote sets voteStartedAt", () => {
-    let s = make4pPlaying();
-    expect(s.voteStartedAt).toBeNull();
-    s = initiateVote(s);
-    expect(s.voteStartedAt).toBeGreaterThan(0);
+  describe("getRanking", () => {
+    it("sorts by currentPoints descending", () => {
+      let s = toPlaying();
+      s = engine.beginScoring(s);
+      s = engine.submitScore(s, "u1", 30000);
+      s = engine.submitScore(s, "u2", 20000);
+      s = engine.submitScore(s, "u3", 28000);
+      s = engine.submitScore(s, "u4", 22000);
+      for (const id of ["u1", "u2", "u3", "u4"]) {
+        s = engine.confirmScore(s, id);
+      }
+      s = engine.finalizeScoring(s);
+
+      const ranking = engine.getRanking(s);
+      expect(ranking[0].userId).toBe("u1");
+      expect(ranking[0].rank).toBe(1);
+      expect(ranking[1].userId).toBe("u3");
+      expect(ranking[3].userId).toBe("u2");
+    });
   });
 
-  it("resolveVote clears voteStartedAt", () => {
-    let s = make4pPlaying();
-    s = initiateVote(s);
-    s = castVote(s, "A", false);
-    s = castVote(s, "B", false);
-    s = castVote(s, "C", false);
-    s = castVote(s, "D", false);
-    s = resolveVote(s);
-    expect(s.voteStartedAt).toBeNull();
-    expect(s.phase).toBe("playing");
+  describe("abortMatch", () => {
+    it("ends match from any active phase", () => {
+      let s = toPlaying();
+      s = engine.abortMatch(s, "admin_abort");
+      expect(s.phase).toBe("ended");
+      expect(s.terminationReason).toBe("admin_abort");
+    });
+
+    it("does nothing if already ended", () => {
+      let s = toPlaying();
+      s = engine.abortMatch(s, "admin_abort");
+      const endedAt = s.endedAt;
+      s = engine.abortMatch(s, "order_invalid");
+      expect(s.terminationReason).toBe("admin_abort");
+      expect(s.endedAt).toBe(endedAt);
+    });
   });
 
-  it("resolveVoteByTimeout with majority yes ends match", () => {
-    let s = make4pPlaying();
-    s = initiateVote(s);
-    s = castVote(s, "A", true);
-    s = castVote(s, "B", true);
-    s = castVote(s, "C", false);
-    s = resolveVoteByTimeout(s);
-    expect(s.phase).toBe("ended");
-    expect(s.terminationReason).toBe("vote");
-    expect(s.voteStartedAt).toBeNull();
+  describe("serializeForDB", () => {
+    it("returns correct shape for ended match", () => {
+      let s = toPlaying();
+      s = engine.beginScoring(s);
+      for (const id of ["u1", "u2", "u3", "u4"]) {
+        s = engine.submitScore(s, id, 25000);
+        s = engine.confirmScore(s, id);
+      }
+      s = engine.finalizeScoring(s);
+
+      const result = engine.serializeForDB(s);
+      expect(result).not.toBeNull();
+      expect(result!.matchType).toBe("store");
+      expect(result!.mode).toBe("4p");
+      expect(result!.format).toBe("hanchan");
+      expect(result!.terminationReason).toBe("score_complete");
+      expect(result!.players.length).toBe(4);
+      expect(result!.config).toEqual(makeStoreConfig());
+    });
+
+    it("returns null for non-ended match", () => {
+      const s = toPlaying();
+      expect(engine.serializeForDB(s)).toBeNull();
+    });
   });
 
-  it("resolveVoteByTimeout with tie continues", () => {
-    let s = make4pPlaying();
-    s = initiateVote(s);
-    s = castVote(s, "A", true);
-    s = castVote(s, "B", false);
-    s = resolveVoteByTimeout(s);
-    expect(s.phase).toBe("playing");
-    expect(s.votes).toHaveLength(0);
-    expect(s.voteStartedAt).toBeNull();
+  describe("3p mode", () => {
+    it("works with 3 players", () => {
+      let s = engine.createInitialState();
+      s = engine.setConfig(s, make3pStoreConfig());
+      s = engine.startSeatSelect(s);
+      s = engine.addPlayer(s, {
+        userId: "u1",
+        nickname: "P1",
+        phone: null,
+        registered: false,
+      });
+      s = engine.addPlayer(s, {
+        userId: "u2",
+        nickname: "P2",
+        phone: null,
+        registered: false,
+      });
+      s = engine.addPlayer(s, {
+        userId: "u3",
+        nickname: "P3",
+        phone: null,
+        registered: false,
+      });
+      s = engine.selectSeat(s, "u1", "east");
+      s = engine.selectSeat(s, "u2", "south");
+      s = engine.selectSeat(s, "u3", "west");
+      expect(engine.allSeated(s)).toBe(true);
+
+      s = engine.startCountdown(s);
+      s = engine.startMatch(s);
+      expect(s.phase).toBe("playing");
+      expect(s.players[0].currentPoints).toBe(35000);
+    });
+
+    it("3p vote threshold is 2/3", () => {
+      let s = engine.createInitialState();
+      s = engine.setConfig(s, make3pStoreConfig());
+      s = engine.startSeatSelect(s);
+      s = engine.addPlayer(s, {
+        userId: "u1",
+        nickname: "P1",
+        phone: null,
+        registered: false,
+      });
+      s = engine.addPlayer(s, {
+        userId: "u2",
+        nickname: "P2",
+        phone: null,
+        registered: false,
+      });
+      s = engine.addPlayer(s, {
+        userId: "u3",
+        nickname: "P3",
+        phone: null,
+        registered: false,
+      });
+      s = engine.selectSeat(s, "u1", "east");
+      s = engine.selectSeat(s, "u2", "south");
+      s = engine.selectSeat(s, "u3", "west");
+      s = engine.startCountdown(s);
+      s = engine.startMatch(s);
+
+      s = engine.initiateVote(s);
+      s = engine.castVote(s, "u1", true);
+      s = engine.castVote(s, "u2", true);
+      expect(engine.isVotePassed(s)).toBe(true);
+    });
   });
 
-  it("resolveVoteByTimeout with majority no continues", () => {
-    let s = make4pPlaying();
-    s = initiateVote(s);
-    s = castVote(s, "A", true);
-    s = castVote(s, "B", false);
-    s = castVote(s, "C", false);
-    s = resolveVoteByTimeout(s);
-    expect(s.phase).toBe("playing");
-    expect(s.voteStartedAt).toBeNull();
-  });
-
-  it("resolveVoteByTimeout with no votes continues", () => {
-    let s = make4pPlaying();
-    s = initiateVote(s);
-    s = resolveVoteByTimeout(s);
-    expect(s.phase).toBe("playing");
-    expect(s.voteStartedAt).toBeNull();
-  });
-});
-
-describe("engine - score submission", () => {
-  it("tracks pending scores correctly", () => {
-    let s = make4pPlaying();
-    s = beginScoring(s);
-    s = submitScore(s, "A", 30000);
-    s = submitScore(s, "B", 20000);
-    expect(allScoresSubmitted(s)).toBe(false);
-    s = submitScore(s, "C", 25000);
-    s = submitScore(s, "D", 25000);
-    expect(allScoresSubmitted(s)).toBe(true);
-  });
-
-  it("rejects score submission outside scoring phase", () => {
-    const s = make4pPlaying();
-    expect(() => submitScore(s, "A", 30000)).toThrow();
-  });
-});
-
-describe("engine - ranking", () => {
-  it("returns players sorted by points descending", () => {
-    let s = make4pPlaying();
-    s = playRound(
-      s,
-      { A: 30000, B: 20000, C: 35000, D: 15000 },
-      "non_dealer_win",
-    );
-    const ranking = getRanking(s);
-    expect(ranking[0].userId).toBe("C");
-    expect(ranking[0].rank).toBe(1);
-    expect(ranking[1].userId).toBe("A");
-    expect(ranking[2].userId).toBe("B");
-    expect(ranking[3].userId).toBe("D");
-  });
-});
-
-describe("engine - phase transitions", () => {
-  it("rejects invalid phase transitions", () => {
-    const lobby = createInitialState();
-    expect(() => startMatch(lobby)).toThrow();
-    expect(() => beginScoring(lobby)).toThrow();
-    expect(() => initiateVote(lobby)).toThrow();
-  });
-
-  it("rejects scoring when not in playing phase", () => {
-    const s = make4pPlaying();
-    expect(() => confirmScores(s)).toThrow();
-  });
-});
-
-describe("engine - serialization", () => {
-  it("serializes ended match for DB", () => {
-    let s = make4pPlaying();
-    s = playRound(s, { A: 0, B: 50000, C: 25000, D: 25000 }, "non_dealer_win");
-    const result = serializeForDB(s);
-    expect(result).not.toBeNull();
-    expect(result!.mode).toBe("4p");
-    expect(result!.format).toBe("hanchan");
-    expect(result!.terminationReason).toBe("bust");
-    expect(result!.players).toHaveLength(4);
-    expect(result!.roundHistory).toHaveLength(1);
-    expect(result!.startedAt).toBeGreaterThan(0);
-  });
-
-  it("returns null for non-ended match", () => {
-    const s = make4pPlaying();
-    expect(serializeForDB(s)).toBeNull();
-  });
-});
-
-describe("engine - multi-round simulation", () => {
-  it("4p hanchan full game with mixed results", () => {
-    let s = make4pPlaying();
-
-    s = playRound(s, { A: 33000, B: 22000, C: 22000, D: 23000 }, "dealer_win");
-    expect(getDealerUserId(s)).toBe("A");
-    expect(s.currentRound.honba).toBe(1);
-
-    s = playRound(
-      s,
-      { A: 28000, B: 27000, C: 22000, D: 23000 },
-      "non_dealer_win",
-    );
-    expect(getDealerUserId(s)).toBe("B");
-    expect(s.currentRound.honba).toBe(0);
-
-    s = playRound(s, { A: 28000, B: 27000, C: 22000, D: 23000 }, "draw");
-    expect(getDealerUserId(s)).toBe("B");
-    expect(s.currentRound.honba).toBe(1);
-
-    s = playRound(
-      s,
-      { A: 28000, B: 22000, C: 27000, D: 23000 },
-      "non_dealer_win",
-    );
-    expect(getDealerUserId(s)).toBe("C");
-
-    s = playRound(
-      s,
-      { A: 28000, B: 22000, C: 27000, D: 23000 },
-      "non_dealer_win",
-    );
-    expect(getDealerUserId(s)).toBe("D");
-    expect(s.currentRound.wind).toBe("east");
-
-    s = playRound(
-      s,
-      { A: 28000, B: 22000, C: 27000, D: 23000 },
-      "non_dealer_win",
-    );
-    expect(s.currentRound.wind).toBe("south");
-    expect(getDealerUserId(s)).toBe("A");
-
-    expect(s.roundHistory).toHaveLength(6);
-    expect(s.phase).toBe("playing");
+  describe("store mode allows unregistered players", () => {
+    it("addPlayer works for unregistered (temp) users in store mode", () => {
+      let s = engine.createInitialState();
+      s = engine.setConfig(s, makeStoreConfig());
+      s = engine.startSeatSelect(s);
+      s = engine.addPlayer(s, {
+        userId: "temp1",
+        nickname: "Temp",
+        phone: null,
+        registered: false,
+      });
+      expect(s.players.length).toBe(1);
+      expect(s.players[0].registered).toBe(false);
+    });
   });
 });

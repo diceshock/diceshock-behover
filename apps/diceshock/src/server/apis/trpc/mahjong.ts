@@ -7,13 +7,13 @@ const saveMatch = protectedProcedure
   .input(
     z.object({
       tableId: z.string().optional(),
+      matchType: z.enum(["store", "tournament"]),
       mode: z.enum(["3p", "4p"]),
       format: z.enum(["tonpuu", "hanchan"]),
       startedAt: z.number(),
       endedAt: z.number(),
       terminationReason: z.enum([
-        "format_complete",
-        "bust",
+        "score_complete",
         "vote",
         "admin_abort",
         "order_invalid",
@@ -22,21 +22,12 @@ const saveMatch = protectedProcedure
         z.object({
           userId: z.string(),
           nickname: z.string(),
-          seat: z.string(),
+          seat: z.string().nullable(),
           finalScore: z.number(),
         }),
       ),
-      roundHistory: z.array(
-        z.object({
-          round: z.number(),
-          wind: z.string(),
-          honba: z.number(),
-          dealerUserId: z.string(),
-          scores: z.record(z.string(), z.number()),
-          result: z.string(),
-        }),
-      ),
       config: z.object({
+        type: z.string(),
         mode: z.string(),
         format: z.string(),
       }),
@@ -48,13 +39,13 @@ const saveMatch = protectedProcedure
       .insert(mahjongMatchesTable)
       .values({
         table_id: input.tableId ?? null,
+        match_type: input.matchType,
         mode: input.mode,
         format: input.format,
         started_at: new Date(input.startedAt),
         ended_at: new Date(input.endedAt),
         termination_reason: input.terminationReason,
         players: input.players,
-        round_history: input.roundHistory,
         config: input.config,
       })
       .returning();

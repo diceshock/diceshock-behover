@@ -521,7 +521,7 @@ function TableDetailPage() {
                       <span className="animate-ping absolute inline-flex size-full rounded-full bg-success opacity-75" />
                       <span className="relative inline-flex rounded-full size-2 bg-success" />
                     </span>
-                    公式战进行中
+                    立直麻将进行中
                   </div>
                   <div className="flex items-center gap-3 p-3 bg-base-200 rounded-lg">
                     <div className="flex-1 min-w-0">
@@ -543,15 +543,6 @@ function TableDetailPage() {
                           {GSZ_PHASE_LABELS[activeMatch.phase] ??
                             activeMatch.phase}
                         </span>
-                        {activeMatch.phase === "playing" && (
-                          <span className="text-xs text-base-content/50">
-                            {WIND_LABELS[activeMatch.currentWind as Wind] ??
-                              activeMatch.currentWind}
-                            {activeMatch.currentRoundNumber}局
-                            {activeMatch.roundCount > 0 &&
-                              ` · 已完成${activeMatch.roundCount}局`}
-                          </span>
-                        )}
                       </div>
                       <div className="text-xs text-base-content/50 mt-1 truncate">
                         {activeMatch.players.map((p) => p.nickname).join(", ")}

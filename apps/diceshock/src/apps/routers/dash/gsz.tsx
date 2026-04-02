@@ -11,8 +11,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
-import type { Wind } from "@/shared/mahjong/constants";
-import { WIND_LABELS } from "@/shared/mahjong/constants";
 import dayjs from "@/shared/utils/dayjs-config";
 import { trpcClientDash } from "@/shared/utils/trpc";
 
@@ -43,8 +41,7 @@ const FORMAT_LABELS: Record<string, string> = {
 };
 
 const TERMINATION_LABELS: Record<string, string> = {
-  format_complete: "场制完成",
-  bust: "飞人终局",
+  score_complete: "录分完成",
   vote: "投票结算",
   admin_abort: "管理员终止",
   order_invalid: "订单失效",
@@ -54,9 +51,8 @@ const PHASE_LABELS: Record<string, string> = {
   seat_select: "选座中",
   countdown: "倒计时",
   playing: "对局中",
-  scoring: "录入点数",
-  round_review: "本局总览",
-  voting: "投票结算中",
+  scoring: "录分中",
+  voting: "投票中",
 };
 
 const INCOMPLETE_REASONS = new Set(["admin_abort", "order_invalid"]);
@@ -368,7 +364,7 @@ function RouteComponent() {
                   startDate ||
                   endDate
                     ? "没有匹配的对局记录。"
-                    : "暂无公式战数据。"}
+                    : "暂无立直麻将数据。"}
                 </td>
               </tr>
             ) : (
@@ -558,13 +554,6 @@ function ActiveMatchesSection({
                 <span className="badge badge-xs badge-info">
                   {PHASE_LABELS[m.phase] ?? m.phase}
                 </span>
-                {m.phase === "playing" && (
-                  <span className="text-xs text-base-content/50">
-                    {WIND_LABELS[m.currentWind as Wind] ?? m.currentWind}
-                    {m.currentRoundNumber}局
-                    {m.roundCount > 0 && ` · 已完成${m.roundCount}局`}
-                  </span>
-                )}
               </div>
               <div className="text-xs text-base-content/50 mt-1 truncate">
                 {m.players.map((p) => p.nickname).join(", ")}
