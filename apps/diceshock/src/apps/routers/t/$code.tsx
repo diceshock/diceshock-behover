@@ -162,8 +162,11 @@ function SeatTimerPage() {
     void fetchTable();
   }, [fetchTable]);
 
+  const wsHydrated =
+    wsState != null && (wsState.table != null || wsState.step > 0);
+
   const table =
-    wsState?.table ??
+    (wsHydrated ? wsState.table : null) ??
     (tableData
       ? {
           id: tableData.id,
@@ -176,7 +179,8 @@ function SeatTimerPage() {
         }
       : null);
 
-  const occupancies = wsState?.occupancies ?? tableData?.occupancies ?? [];
+  const occupancies =
+    (wsHydrated ? wsState.occupancies : null) ?? tableData?.occupancies ?? [];
 
   const totalOccupied = occupancies.length;
 
@@ -203,15 +207,23 @@ function SeatTimerPage() {
     }
     if (!identityReady || !identity) return;
 
-    if (hadOccupancyRef.current && wsState) {
+    if (hadOccupancyRef.current && wsHydrated) {
       window.location.href = `/ready/${code}`;
       return;
     }
 
-    if (!loading && !hadOccupancyRef.current && (wsState || tableData)) {
+    if (!loading && !hadOccupancyRef.current && (wsHydrated || tableData)) {
       window.location.href = `/ready/${code}`;
     }
-  }, [myOccupancy, wsState, tableData, loading, identity, identityReady, code]);
+  }, [
+    myOccupancy,
+    wsHydrated,
+    tableData,
+    loading,
+    identity,
+    identityReady,
+    code,
+  ]);
 
   const isExpired =
     identity?.kind === "temp" && Date.now() > identity.expiresAt;

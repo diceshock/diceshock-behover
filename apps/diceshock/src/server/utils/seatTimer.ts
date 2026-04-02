@@ -19,6 +19,17 @@ interface TableInfo {
   code: string;
 }
 
+export async function fetchTableStateForDOByCode(
+  tdb: ReturnType<typeof db>,
+  code: string,
+): Promise<{ table: TableInfo; occupancies: OccupancyInfo[] } | null> {
+  const table = await tdb.query.tablesTable.findFirst({
+    where: (t, { eq }) => eq(t.code, code),
+  });
+  if (!table) return null;
+  return fetchTableStateForDO(tdb, table.id);
+}
+
 export async function fetchTableStateForDO(
   tdb: ReturnType<typeof db>,
   tableId: string,

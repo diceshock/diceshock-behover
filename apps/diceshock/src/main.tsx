@@ -43,6 +43,7 @@ app.get("/ws/seat/:code", async (c) => {
   const id = c.env.SOCKET.idFromName(code);
   const stub = c.env.SOCKET.get(id);
   const url = new URL(c.req.url);
+  url.searchParams.set("code", code);
   return stub.fetch(
     new Request(`${url.origin}/ws?${url.searchParams.toString()}`, {
       headers: c.req.raw.headers,

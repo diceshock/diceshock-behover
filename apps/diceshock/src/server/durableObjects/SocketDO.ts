@@ -1,5 +1,9 @@
 import { DurableObject } from "cloudflare:workers";
 import db, { mahjongMatchesTable } from "@lib/db";
+import {
+  fetchTableStateForDO,
+  fetchTableStateForDOByCode,
+} from "@/server/utils/seatTimer";
 import type { Seat } from "@/shared/mahjong/constants";
 import { COUNTDOWN_SECONDS } from "@/shared/mahjong/constants";
 import * as engine from "@/shared/mahjong/engine";
@@ -94,10 +98,24 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
     );
   }
 
+  private async hydrateIfNeeded(code: string): Promise<void> {
+    if (this.tableInfo) return;
+    try {
+      const tdb = db(this.env.DB);
+      const state = await fetchTableStateForDOByCode(tdb, code);
+      if (state) {
+        this.tableInfo = state.table as TableInfo;
+        this.occupancies = state.occupancies as OccupancyInfo[];
+      }
+    } catch {}
+  }
+
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname === "/ws") {
+      const code = url.searchParams.get("code");
+      if (code) await this.hydrateIfNeeded(code);
       return this.handleWebSocket(request);
     }
 
