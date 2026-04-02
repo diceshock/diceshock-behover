@@ -1,23 +1,76 @@
 import {
+  ArrowUUpLeftIcon,
+  HourglassIcon,
   KeyIcon,
   ScanIcon,
   SignOutIcon,
   UserIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import { ClientOnly, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { ClientOnly, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import useAuth from "@/client/hooks/useAuth";
+import useTempIdentity from "@/client/hooks/useTempIdentity";
+import trpcClientPublic from "@/shared/utils/trpc";
 import ThemeSwap from "../../ThemeSwap";
 import LoginDialog from "./LoginDialog";
 import QRScannerDialog from "./QRScannerDialog";
 
+interface ActiveOccupancy {
+  code: string;
+  name: string;
+}
+
+function useActiveOccupancy(): ActiveOccupancy | null {
+  const { userInfo } = useAuth();
+  const { tempIdentity } = useTempIdentity();
+  const [occupancy, setOccupancy] = useState<ActiveOccupancy | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const check = async () => {
+      try {
+        let active: { code: string; name: string } | null = null;
+
+        if (userInfo) {
+          active = await trpcClientPublic.tables.getMyActiveOccupancy.query();
+        } else if (tempIdentity) {
+          active = await trpcClientPublic.tempIdentity.getActiveOccupancy.query(
+            { tempId: tempIdentity.tempId },
+          );
+        }
+
+        if (!cancelled) {
+          setOccupancy(
+            active ? { code: active.code, name: active.name } : null,
+          );
+        }
+      } catch {
+        if (!cancelled) setOccupancy(null);
+      }
+    };
+
+    void check();
+    const interval = setInterval(check, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [userInfo, tempIdentity]);
+
+  return occupancy;
+}
+
 function AvatarMenuContent() {
   const { userInfo, signOut } = useAuth();
+  const navigate = useNavigate();
+  const activeOccupancy = useActiveOccupancy();
 
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
 
   const name = userInfo?.nickname ?? "Anonymous Shock";
+  const isTiming = !!activeOccupancy;
 
   return (
     <div className="dropdown dropdown-bottom dropdown-end">
@@ -26,11 +79,21 @@ function AvatarMenuContent() {
         role="button"
         className="btn btn-ghost rounded-full pl-1"
       >
-        <div className="avatar size-8 avatar-placeholder">
-          <div className="bg-primary text-gray-900 w-16 rounded-full overflow-hidden">
-            <span className="text-lg">{name.slice(0, 2)}</span>
+        {isTiming ? (
+          <div className="size-8 flex items-center justify-center">
+            <HourglassIcon
+              weight="duotone"
+              className="size-6 text-primary"
+              style={{ animation: "hourglass-flip 3s ease-in-out infinite" }}
+            />
           </div>
-        </div>
+        ) : (
+          <div className="avatar size-8 avatar-placeholder">
+            <div className="bg-primary text-gray-900 w-16 rounded-full overflow-hidden">
+              <span className="text-lg">{name.slice(0, 2)}</span>
+            </div>
+          </div>
+        )}
 
         <p className="max-w-20 truncate">{name}</p>
       </div>
@@ -40,6 +103,25 @@ function AvatarMenuContent() {
         className="dropdown-content bg-base-100 rounded-box z-1 p-2 shadow-sm"
       >
         <ul className="menu p-2 w-44">
+          {activeOccupancy && (
+            <li>
+              <button
+                onClick={() =>
+                  navigate({
+                    to: "/t/$code",
+                    params: { code: activeOccupancy.code },
+                    search: { from: "" },
+                  })
+                }
+                className="px-5 py-3 flex items-center justify-between"
+              >
+                <ArrowUUpLeftIcon weight="fill" className="size-5" />
+
+                <span>返回桌台</span>
+              </button>
+            </li>
+          )}
+
           {userInfo && (
             <>
               <li>
