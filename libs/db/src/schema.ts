@@ -518,6 +518,7 @@ export const mahjongMatchesTable = sqlite.sqliteTable("mahjong_matches", {
   id: sqlite.text().$defaultFn(createId).primaryKey(),
   table_id: sqlite.text().references(() => tablesTable.id),
   match_type: sqlite.text().$type<"store" | "tournament">(),
+  gsz_record_id: sqlite.integer("gsz_record_id"),
   mode: sqlite.text().$type<"3p" | "4p">().notNull(),
   format: sqlite.text().$type<"tonpuu" | "hanchan">().notNull(),
   started_at: sqlite.integer({ mode: "timestamp_ms" }).notNull(),
@@ -571,3 +572,67 @@ export const mahjongRegistrationsTable = sqlite.sqliteTable(
       .$defaultFn(() => new Date(Date.now())),
   },
 );
+
+// ─── Leaderboard ───────────────────────────────────────────────
+
+export const leaderboardSnapshotsTable = sqlite.sqliteTable(
+  "leaderboard_snapshots",
+  {
+    id: sqlite.text().$defaultFn(createId).primaryKey(),
+    category: sqlite
+      .text()
+      .$type<
+        | "tournament"
+        | "store_4p_hanchan"
+        | "store_4p_tonpuu"
+        | "store_3p_hanchan"
+        | "store_3p_tonpuu"
+      >()
+      .notNull(),
+    period: sqlite.text().$type<"day" | "week" | "month">().notNull(),
+    snapshot_date: sqlite.text("snapshot_date").notNull(),
+    data: sqlite.text({ mode: "json" }).$type<
+      Array<{
+        userId: string;
+        nickname: string;
+        totalPP: number;
+        matchCount: number;
+        rank: number;
+        prevRank: number | null;
+      }>
+    >(),
+    computed_at: sqlite.integer("computed_at", { mode: "timestamp_ms" }),
+    created_at: sqlite
+      .integer("created_at", { mode: "timestamp_ms" })
+      .$defaultFn(() => new Date(Date.now())),
+  },
+);
+
+export const userBadgesTable = sqlite.sqliteTable("user_badges", {
+  id: sqlite.text().$defaultFn(createId).primaryKey(),
+  user_id: sqlite
+    .text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  badge_type: sqlite
+    .text("badge_type")
+    .$type<"daily_top3" | "monthly_top3" | "yearly_top10">()
+    .notNull(),
+  badge_rank: sqlite.integer("badge_rank").notNull(),
+  category: sqlite
+    .text("category")
+    .$type<
+      | "tournament"
+      | "store_4p_hanchan"
+      | "store_4p_tonpuu"
+      | "store_3p_hanchan"
+      | "store_3p_tonpuu"
+    >()
+    .notNull(),
+  period_label: sqlite.text("period_label").notNull(),
+  title: sqlite.text("title").notNull(),
+  awarded_at: sqlite.integer("awarded_at", { mode: "timestamp_ms" }).notNull(),
+  created_at: sqlite
+    .integer("created_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date(Date.now())),
+});
