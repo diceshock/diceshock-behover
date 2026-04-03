@@ -7,6 +7,7 @@ import events from "./events";
 import eventsManagement from "./eventsManagement";
 import gsz from "./gsz";
 import gszManagement from "./gszManagement";
+import leaderboard from "./leaderboard";
 import mahjong from "./mahjong";
 import mediaManagement from "./mediaManagement";
 import membershipPlans from "./membershipPlans";
@@ -82,5 +83,15 @@ export const appRouterPublic = router({
     getMatchById: mahjong.getMatchById,
     checkRegistration: mahjong.checkRegistration,
     register: mahjong.register,
+  },
+  leaderboard: {
+    getLeaderboard: leaderboard.getLeaderboard,
+    getCategories: leaderboard.getCategories,
+    getMyRankings: leaderboard.getMyRankings,
+    getMyBadges: leaderboard.getMyBadges,
+    getUserBadges: leaderboard.getUserBadges,
+    getMyPPStats: leaderboard.getMyPPStats,
+    getMatchHistory: leaderboard.getMatchHistory,
+    getHeatmapData: leaderboard.getHeatmapData,
   },
 });

@@ -1,6 +1,9 @@
-import db from "@lib/db";
+import db, { mahjongMatchesTable, mahjongRegistrationsTable } from "@lib/db";
+import { eq, inArray } from "drizzle-orm";
+import z from "zod/v4";
 import type { MatchState } from "@/shared/mahjong/types";
 import { dashProcedure } from "./baseTRPC";
+import { gszFetch } from "./gszApi";
 
 type ModeFilter = "all" | "3p" | "4p";
 type FormatFilter = "all" | "tonpuu" | "hanchan";
@@ -165,6 +168,7 @@ const getById = dashProcedure
       id: match.id,
       table_id: match.table_id,
       match_type: match.match_type,
+      gsz_record_id: match.gsz_record_id ?? null,
       table,
       mode: match.mode,
       format: match.format,
@@ -293,4 +297,90 @@ const terminateMatch = dashProcedure
     return { success: true };
   });
 
-export default { list, getById, listTables, listActive, terminateMatch };
+const updateScore = dashProcedure
+  .input(
+    z.object({
+      matchId: z.string(),
+      players: z.array(
+        z.object({
+          userId: z.string(),
+          nickname: z.string(),
+          seat: z.string().nullable(),
+          finalScore: z.number(),
+        }),
+      ),
+    }),
+  )
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const match = await tdb.query.mahjongMatchesTable.findFirst({
+      where: (m, { eq }) => eq(m.id, input.matchId),
+    });
+    if (!match) throw new Error("对局不存在");
+
+    await tdb
+      .update(mahjongMatchesTable)
+      .set({ players: input.players })
+      .where(eq(mahjongMatchesTable.id, input.matchId));
+
+    if (match.match_type === "tournament" && match.gsz_record_id) {
+      const seatOrder = ["east", "south", "west", "north"];
+      const sorted = [...input.players].sort(
+        (a, b) =>
+          seatOrder.indexOf(a.seat ?? "") - seatOrder.indexOf(b.seat ?? ""),
+      );
+
+      if (sorted.length === 4) {
+        const endedAt =
+          match.ended_at instanceof Date
+            ? match.ended_at.getTime()
+            : Number(match.ended_at);
+        const pad = (n: number) => String(n).padStart(2, "0");
+        const d = new Date(endedAt);
+        const rateTime = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+
+        const userIds = sorted.map((p) => p.userId);
+        const registrations = await tdb
+          .select({
+            user_id: mahjongRegistrationsTable.user_id,
+            phone: mahjongRegistrationsTable.phone,
+          })
+          .from(mahjongRegistrationsTable)
+          .where(inArray(mahjongRegistrationsTable.user_id, userIds));
+        const phoneMap = new Map(
+          registrations.map((r) => [r.user_id, r.phone]),
+        );
+
+        const phones = sorted.map((p) => phoneMap.get(p.userId) ?? "");
+        const allHavePhones = phones.every(Boolean);
+
+        if (allHavePhones) {
+          await gszFetch(ctx.env, "/gszapi/open/score/update", {
+            params: {
+              recordId: match.gsz_record_id,
+              phone1: phones[0],
+              phone2: phones[1],
+              phone3: phones[2],
+              phone4: phones[3],
+              point1: String(sorted[0].finalScore),
+              point2: String(sorted[1].finalScore),
+              point3: String(sorted[2].finalScore),
+              point4: String(sorted[3].finalScore),
+              rateTime,
+            },
+          });
+        }
+      }
+    }
+
+    return { success: true };
+  });
+
+export default {
+  list,
+  getById,
+  listTables,
+  listActive,
+  terminateMatch,
+  updateScore,
+};
