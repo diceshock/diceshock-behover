@@ -1,5 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
 import db, { mahjongMatchesTable } from "@lib/db";
+import { eq } from "drizzle-orm";
+import { gszFetch } from "@/server/apis/trpc/gszApi";
 import {
   fetchTableStateForDO,
   fetchTableStateForDOByCode,
@@ -261,19 +263,75 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
 
     try {
       const tdb = db(this.env.DB);
-      await tdb.insert(mahjongMatchesTable).values({
-        table_id: this.tableInfo?.id ?? null,
-        match_type: result.matchType,
-        mode: result.mode,
-        format: result.format,
-        started_at: new Date(result.startedAt),
-        ended_at: new Date(result.endedAt),
-        termination_reason: result.terminationReason,
-        players: result.players,
-        config: result.config,
-      });
+      const [inserted] = await tdb
+        .insert(mahjongMatchesTable)
+        .values({
+          table_id: this.tableInfo?.id ?? null,
+          match_type: result.matchType,
+          mode: result.mode,
+          format: result.format,
+          started_at: new Date(result.startedAt),
+          ended_at: new Date(result.endedAt),
+          termination_reason: result.terminationReason,
+          players: result.players,
+          config: result.config,
+        })
+        .returning();
+
+      if (inserted && result.matchType === "tournament") {
+        await this.syncScoresToGsz(inserted.id);
+      }
     } catch {
       // noop
+    }
+  }
+
+  private async syncScoresToGsz(matchId: string): Promise<void> {
+    if (!this.mahjongState) return;
+    const players = this.mahjongState.players;
+    if (players.length !== 4) return;
+
+    const allHavePhones = players.every((p) => p.phone);
+    if (!allHavePhones) return;
+
+    const sorted = [...players].sort((a, b) => {
+      const seatOrder = ["east", "south", "west", "north"];
+      return seatOrder.indexOf(a.seat ?? "") - seatOrder.indexOf(b.seat ?? "");
+    });
+
+    const endedAt = this.mahjongState.endedAt ?? Date.now();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const d = new Date(endedAt);
+    const rateTime = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+
+    try {
+      const gszRecordId = await gszFetch<number>(
+        this.env,
+        "/gszapi/open/score/add",
+        {
+          params: {
+            phone1: sorted[0].phone!,
+            phone2: sorted[1].phone!,
+            phone3: sorted[2].phone!,
+            phone4: sorted[3].phone!,
+            point1: String(sorted[0].currentPoints),
+            point2: String(sorted[1].currentPoints),
+            point3: String(sorted[2].currentPoints),
+            point4: String(sorted[3].currentPoints),
+            rateTime,
+          },
+        },
+      );
+
+      if (gszRecordId) {
+        const tdb = db(this.env.DB);
+        await tdb
+          .update(mahjongMatchesTable)
+          .set({ gsz_record_id: gszRecordId })
+          .where(eq(mahjongMatchesTable.id, matchId));
+      }
+    } catch {
+      // noop — GSZ sync failure should not block the match flow
     }
   }
 

@@ -59,3 +59,6 @@ custom_domain = true
 [[routes]]
 pattern = "diceshock.com"
 custom_domain = true
+
+[triggers]
+crons = ["0 4-22 * * *"]

@@ -1,3 +1,4 @@
+import type { D1Database } from "@cloudflare/workers-types";
 import { authHandler } from "@hono/auth-js";
 import { Hono } from "hono";
 import apisRoot from "@/server/apis/apisRoot";
@@ -62,5 +63,14 @@ app.get("/apis/*", apisRoot);
 app.post("/apis/*", apisRoot);
 app.put("/apis/*", apisRoot);
 app.delete("/apis/*", apisRoot);
+
+export async function scheduled(
+  _event: ScheduledEvent,
+  env: HonoCtxEnv["Bindings"],
+  _ctx: ExecutionContext,
+) {
+  const { computeLeaderboards } = await import("./server/cron/leaderboard");
+  await computeLeaderboards({ DB: env.DB as unknown as D1Database });
+}
 
 export default app;
