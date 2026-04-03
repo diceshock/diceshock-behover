@@ -44,7 +44,9 @@ const smsCode = publicProcedure
     formData.append("secret", TURNSTILE_KEY);
     formData.append("response", botcheck ?? "");
 
-    if (import.meta.env.PROD) {
+    const captchaDisabled = await KV.get("settings:captcha_disabled_until");
+
+    if (import.meta.env.PROD && !captchaDisabled) {
       try {
         const response = await fetch(
           "https://challenges.cloudflare.com/turnstile/v0/siteverify",

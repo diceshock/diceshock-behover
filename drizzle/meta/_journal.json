@@ -253,6 +253,13 @@
       "when": 1775056206660,
       "tag": "0035_volatile_vampiro",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1775382400000,
+      "tag": "0036_gsz_registration_fields",
+      "breakpoints": true
     }
   ]
 }

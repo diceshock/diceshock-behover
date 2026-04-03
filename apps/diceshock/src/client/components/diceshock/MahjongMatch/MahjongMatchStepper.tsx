@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type useMahjongMatch from "@/client/hooks/useMahjongMatch";
 import type { Seat } from "@/shared/mahjong/constants";
 import {
@@ -17,6 +17,7 @@ import type {
   MatchType,
   PlayerState,
 } from "@/shared/mahjong/types";
+import GszRegistrationModal from "./GszRegistrationModal";
 
 type MahjongActions = ReturnType<typeof useMahjongMatch>["actions"];
 
@@ -29,6 +30,8 @@ interface Props {
   phone: string | null;
   isTemp: boolean;
   registered: boolean;
+  gszName: string | null;
+  onGszRegistered: (gszName: string) => void;
   isPending: (actionType: string) => boolean;
   connected: boolean;
 }
@@ -42,19 +45,19 @@ export default function MahjongMatchStepper({
   phone,
   isTemp,
   registered,
+  gszName,
+  onGszRegistered,
   isPending,
   connected,
 }: Props) {
+  const [showGszModal, setShowGszModal] = useState(false);
+
   if (isTemp && state?.config?.type === "tournament" && !import.meta.env.DEV) {
     return (
       <div className="alert alert-warning text-sm">
         <span>🔒 临时身份不支持公式战模式，请先登录。</span>
       </div>
     );
-  }
-
-  if (!registered && state?.config?.type === "tournament") {
-    return <RegistrationGate phone={phone} />;
   }
 
   if (!state || state.phase === "config_select") {
@@ -70,18 +73,34 @@ export default function MahjongMatchStepper({
   }
 
   if (state.phase === "seat_select") {
+    const isTournament = state.config?.type === "tournament";
+    const displayNickname = isTournament && gszName ? gszName : nickname;
     return (
-      <SeatSelectView
-        state={state}
-        myPlayer={myPlayer}
-        actions={actions}
-        userId={userId}
-        nickname={nickname}
-        phone={phone}
-        registered={registered}
-        isPending={isPending}
-        connected={connected}
-      />
+      <>
+        <GszRegistrationModal
+          isOpen={showGszModal}
+          onClose={() => setShowGszModal(false)}
+          onRegistered={(name) => {
+            setShowGszModal(false);
+            onGszRegistered(name);
+          }}
+          phone={phone}
+          nickname={nickname}
+        />
+        <SeatSelectView
+          state={state}
+          myPlayer={myPlayer}
+          actions={actions}
+          userId={userId}
+          nickname={displayNickname}
+          phone={phone}
+          registered={registered}
+          isTournament={isTournament}
+          onRequestGszRegister={() => setShowGszModal(true)}
+          isPending={isPending}
+          connected={connected}
+        />
+      </>
     );
   }
 
@@ -136,28 +155,6 @@ export default function MahjongMatchStepper({
   }
 
   return null;
-}
-
-function RegistrationGate({ phone }: { phone: string | null }) {
-  if (!phone) {
-    return (
-      <div className="bg-base-200 rounded-2xl p-6 sm:p-8 flex flex-col gap-3 items-center">
-        <span className="text-3xl">📱</span>
-        <p className="text-base text-base-content/70">
-          需要验证手机号才能参加公式战模式
-        </p>
-        <p className="text-sm text-base-content/50">请前往个人设置绑定手机号</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-base-200 rounded-2xl p-6 sm:p-8 flex flex-col gap-3 items-center">
-      <span className="text-3xl">🀄</span>
-      <p className="text-base text-base-content/70">尚未开通公式战模式</p>
-      <p className="text-sm text-base-content/50">请前往个人设置开通</p>
-    </div>
-  );
 }
 
 function ConfigSelectView({
@@ -323,6 +320,8 @@ function SeatSelectView({
   nickname,
   phone,
   registered,
+  isTournament,
+  onRequestGszRegister,
   isPending,
   connected,
 }: {
@@ -333,6 +332,8 @@ function SeatSelectView({
   nickname: string;
   phone: string | null;
   registered: boolean;
+  isTournament: boolean;
+  onRequestGszRegister: () => void;
   isPending: (a: string) => boolean;
   connected: boolean;
 }) {
@@ -353,6 +354,17 @@ function SeatSelectView({
   const typeBadge = state.config?.type
     ? MATCH_TYPE_LABELS[state.config.type]
     : "";
+
+  const handleSeatSelect = useCallback(
+    (seat: Seat) => {
+      if (isTournament && !registered) {
+        onRequestGszRegister();
+        return;
+      }
+      actions.selectSeat(seat);
+    },
+    [isTournament, registered, onRequestGszRegister, actions],
+  );
 
   return (
     <div className="flex flex-col gap-5 py-4">
@@ -381,7 +393,7 @@ function SeatSelectView({
                 state.players.find((p) => p.seat === seat)?.userId === userId
               }
               disabled={!hasJoined}
-              onSelect={() => actions.selectSeat(seat)}
+              onSelect={() => handleSeatSelect(seat)}
             />
           ))}
         </div>

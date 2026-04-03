@@ -14,6 +14,7 @@ import ordersManagement from "./ordersManagement";
 import owned from "./owned";
 import ownedManagement from "./ownedManagement";
 import pricingPlansManagement from "./pricingPlansManagement";
+import settingsManagement from "./settingsManagement";
 import tables from "./tables";
 import tablesManagement from "./tablesManagement";
 import tempIdentity from "./tempIdentity";
@@ -31,6 +32,9 @@ export const appRouterDash = router({
   pricingPlansManagement,
   gsz,
   gszManagement,
+  settingsManagement: {
+    setCaptchaEnabled: settingsManagement.setCaptchaEnabled,
+  },
 });
 
 export const appRouterPublic = router({
@@ -68,6 +72,9 @@ export const appRouterPublic = router({
   },
   pricing: {
     getPublished: pricingPlansManagement.getPublished,
+  },
+  settings: {
+    getCaptchaEnabled: settingsManagement.getCaptchaEnabled,
   },
   mahjong: {
     saveMatch: mahjong.saveMatch,

@@ -121,6 +121,10 @@ export function selectSeat(
   const existing = state.players.find((p) => p.userId === userId);
   if (!existing) throw new Error("Player not found");
 
+  if (state.config.type === "tournament" && !existing.registered) {
+    throw new Error("需要注册公式战才能选择座位");
+  }
+
   return {
     ...state,
     players: state.players.map((p) =>

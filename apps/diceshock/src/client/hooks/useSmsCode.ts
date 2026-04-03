@@ -159,7 +159,7 @@ export default function useSmsCode({
   const getSmsCode = useCallback(async () => {
     if (countdown > 0) return;
 
-    if (import.meta.env.PROD) {
+    if (import.meta.env.PROD && enabled) {
       if (!smsForm.botcheck) return setError("请先通过人机验证");
     }
 

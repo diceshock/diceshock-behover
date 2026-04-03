@@ -105,6 +105,10 @@ function SeatTimerPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"main" | "mahjong">("main");
 
+  const [gszRegistered, setGszRegistered] = useState(false);
+  const [gszName, setGszName] = useState<string | null>(null);
+  const gszCheckedRef = useRef(false);
+
   const [pricingSnapshot, setPricingSnapshot] = useState<SnapshotData | null>(
     pricingCache.snapshot,
   );
@@ -161,6 +165,23 @@ function SeatTimerPage() {
   useEffect(() => {
     void fetchTable();
   }, [fetchTable]);
+
+  useEffect(() => {
+    if (identity?.kind !== "real" || gszCheckedRef.current) return;
+    gszCheckedRef.current = true;
+    trpcClientPublic.mahjong.checkRegistration
+      .query()
+      .then((result) => {
+        setGszRegistered(result.registered);
+        setGszName(result.gszName ?? null);
+      })
+      .catch(() => {});
+  }, [identity]);
+
+  const handleGszRegistered = useCallback((name: string) => {
+    setGszRegistered(true);
+    setGszName(name);
+  }, []);
 
   const wsHydrated =
     wsState != null && (wsState.table != null || wsState.step > 0);
@@ -413,7 +434,9 @@ function SeatTimerPage() {
           nickname={identity?.nickname ?? ""}
           phone={identity?.kind === "real" ? identity.phone : null}
           isTemp={identity?.kind === "temp"}
-          registered={true}
+          registered={gszRegistered}
+          gszName={gszName}
+          onGszRegistered={handleGszRegistered}
           isPending={mahjong.isPending}
           connected={connected}
         />

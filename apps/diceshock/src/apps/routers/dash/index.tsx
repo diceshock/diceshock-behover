@@ -8,6 +8,7 @@ import {
   MegaphoneIcon,
   PackageIcon,
   ScanIcon,
+  ShieldCheckIcon,
   SwordIcon,
   TableIcon,
   UsersIcon,
@@ -18,7 +19,7 @@ import { DashNavMenuButton } from "@/client/components/diceshock/DashNavMenu";
 import DashQRScannerDialog from "@/client/components/diceshock/DashQRScannerDialog";
 import InventoryManagementCard from "@/client/components/diceshock/InventoryManagementCard";
 import dayjs from "@/shared/utils/dayjs-config";
-import { trpcClientDash } from "@/shared/utils/trpc";
+import trpcClientPublic, { trpcClientDash } from "@/shared/utils/trpc";
 
 export const Route = createFileRoute("/dash/")({
   component: RouteComponent,
@@ -47,6 +48,38 @@ function RouteComponent() {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [captchaEnabled, setCaptchaEnabled] = useState(true);
+  const [captchaDisabledUntil, setCaptchaDisabledUntil] = useState<
+    number | null
+  >(null);
+  const [captchaToggling, setCaptchaToggling] = useState(false);
+
+  useEffect(() => {
+    trpcClientPublic.settings.getCaptchaEnabled
+      .query()
+      .then((res) => {
+        setCaptchaEnabled(res.enabled);
+        setCaptchaDisabledUntil(res.disabledUntil);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleCaptchaToggle = useCallback(async (enabled: boolean) => {
+    setCaptchaToggling(true);
+    try {
+      const res =
+        await trpcClientDash.settingsManagement.setCaptchaEnabled.mutate({
+          enabled,
+        });
+      if (res.success) {
+        setCaptchaEnabled(res.enabled);
+        setCaptchaDisabledUntil(res.disabledUntil);
+      }
+    } catch {
+    } finally {
+      setCaptchaToggling(false);
+    }
+  }, []);
 
   const fetchRecent = useCallback(async () => {
     try {
@@ -250,6 +283,35 @@ function RouteComponent() {
           </Link>
         </div>
 
+        <div className="card bg-base-100 shadow-sm">
+          <div className="card-body p-4">
+            <h3 className="font-bold flex items-center gap-2 mb-3">
+              <ShieldCheckIcon className="size-5 text-warning" />
+              系统设置
+            </h3>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">人机校验 (Turnstile)</p>
+                <p className="text-xs text-base-content/60">
+                  {captchaEnabled
+                    ? "已开启，发送短信验证码前需通过人机校验"
+                    : "已关闭，跳过人机校验直接发送短信验证码"}
+                </p>
+                {!captchaEnabled && captchaDisabledUntil && (
+                  <CaptchaCountdown until={captchaDisabledUntil} />
+                )}
+              </div>
+              <input
+                type="checkbox"
+                className="toggle toggle-primary"
+                checked={captchaEnabled}
+                disabled={captchaToggling}
+                onChange={(e) => handleCaptchaToggle(e.target.checked)}
+              />
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="card bg-base-100 shadow-sm">
             <div className="card-body p-4">
@@ -385,5 +447,33 @@ function RouteComponent() {
         onClose={() => setIsScannerOpen(false)}
       />
     </main>
+  );
+}
+
+function CaptchaCountdown({ until }: { until: number }) {
+  const [remaining, setRemaining] = useState(() =>
+    Math.max(0, Math.floor((until - Date.now()) / 1000)),
+  );
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const left = Math.max(0, Math.floor((until - Date.now()) / 1000));
+      setRemaining(left);
+      if (left <= 0) clearInterval(id);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [until]);
+
+  if (remaining <= 0) return null;
+
+  const h = Math.floor(remaining / 3600);
+  const m = Math.floor((remaining % 3600) / 60);
+  const s = remaining % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  return (
+    <p className="text-xs text-warning mt-1">
+      {h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`} 后自动恢复
+    </p>
   );
 }

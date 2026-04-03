@@ -564,6 +564,8 @@ export const mahjongRegistrationsTable = sqlite.sqliteTable(
       .unique()
       .references(() => users.id, { onDelete: "cascade" }),
     phone: sqlite.text().notNull(),
+    gsz_id: sqlite.integer("gsz_id"),
+    gsz_name: sqlite.text("gsz_name"),
     registered_at: sqlite
       .integer("registered_at", { mode: "timestamp_ms" })
       .$defaultFn(() => new Date(Date.now())),

@@ -24,6 +24,15 @@ export default function LoginDialog({
   const [creatingTemp, setCreatingTemp] = useState(false);
   const { create: createTempIdentity } = useTempIdentity();
 
+  const [captchaEnabled, setCaptchaEnabled] = useState(true);
+
+  useEffect(() => {
+    trpcClientPublic.settings.getCaptchaEnabled
+      .query()
+      .then((res) => setCaptchaEnabled(res.enabled))
+      .catch(() => {});
+  }, []);
+
   const {
     smsForm,
     dispatchSmsForm,
@@ -35,7 +44,11 @@ export default function LoginDialog({
   } = useSmsCode({
     phone,
     containerId: "#turnstileIns-container",
-    enabled: isOpen && activeTab === "phonenumber" && import.meta.env.PROD,
+    enabled:
+      isOpen &&
+      activeTab === "phonenumber" &&
+      import.meta.env.PROD &&
+      captchaEnabled,
   });
 
   useEffect(() => {
@@ -180,7 +193,7 @@ export default function LoginDialog({
               </button>
             </label>
 
-            {import.meta.env.PROD && (
+            {import.meta.env.PROD && captchaEnabled && (
               <div className="flex justify-center">
                 <div id="turnstileIns-container" />
               </div>

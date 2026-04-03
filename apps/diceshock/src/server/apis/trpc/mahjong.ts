@@ -1,7 +1,14 @@
-import db, { mahjongMatchesTable, mahjongRegistrationsTable } from "@lib/db";
-import { like } from "drizzle-orm";
+import db, {
+  accounts,
+  mahjongMatchesTable,
+  mahjongRegistrationsTable,
+  userInfoTable,
+} from "@lib/db";
+import { eq, like } from "drizzle-orm";
 import z from "zod/v4";
+import { getSmsTmpCodeKey } from "@/server/utils/auth";
 import { protectedProcedure } from "./baseTRPC";
+import { type GszPageResult, gszFetch } from "./gszApi";
 
 const saveMatch = protectedProcedure
   .input(
@@ -75,7 +82,7 @@ const checkRegistration = protectedProcedure.query(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
   const userInfo = await tdb.query.userInfoTable.findFirst({
     where: (u, { eq }) => eq(u.id, ctx.userId),
-    columns: { phone: true },
+    columns: { phone: true, nickname: true },
   });
 
   const registration = await tdb.query.mahjongRegistrationsTable.findFirst({
@@ -85,37 +92,117 @@ const checkRegistration = protectedProcedure.query(async ({ ctx }) => {
   return {
     hasPhone: !!userInfo?.phone,
     phone: userInfo?.phone ?? null,
+    nickname: userInfo?.nickname ?? null,
     registered: !!registration,
+    gszName: registration?.gsz_name ?? null,
+    gszId: registration?.gsz_id ?? null,
   };
 });
 
-const register = protectedProcedure.mutation(async ({ ctx }) => {
-  const tdb = db(ctx.env.DB);
-  const userInfo = await tdb.query.userInfoTable.findFirst({
-    where: (u, { eq }) => eq(u.id, ctx.userId),
-    columns: { phone: true },
+const register = protectedProcedure
+  .input(
+    z.object({
+      phone: z.string().nonempty(),
+      smsCode: z.string().nonempty(),
+      gszName: z.string().nonempty(),
+    }),
+  )
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const { KV } = ctx.env;
+
+    const existing = await tdb.query.mahjongRegistrationsTable.findFirst({
+      where: (r, { eq }) => eq(r.user_id, ctx.userId),
+    });
+    if (existing) {
+      return {
+        registered: true,
+        gszName: existing.gsz_name,
+        gszId: existing.gsz_id,
+        alreadyExisted: true,
+      };
+    }
+
+    const userInfo = await tdb.query.userInfoTable.findFirst({
+      where: (u, { eq }) => eq(u.id, ctx.userId),
+      columns: { phone: true },
+    });
+
+    const hasPhone = !!userInfo?.phone;
+    if (!hasPhone) {
+      const devSmsCode = ctx.env.DEV_SMS_CODE;
+      const kvKey = getSmsTmpCodeKey(input.phone);
+      const storedCode = devSmsCode || (await KV.get(kvKey));
+      if (!storedCode || storedCode !== input.smsCode) {
+        throw new Error("验证码错误或已过期");
+      }
+      await KV.delete(kvKey);
+    }
+
+    const phoneToUse = hasPhone ? userInfo.phone! : input.phone;
+
+    const gszResult = await gszFetch<GszPageResult>(
+      ctx.env,
+      "/gszapi/open/customer/page",
+      { params: { phone: phoneToUse } },
+      { pageNo: 1, pageSize: 1 },
+    );
+
+    let gszId: number | null = null;
+    let gszName = input.gszName;
+
+    if (gszResult.records.length > 0) {
+      const record = gszResult.records[0];
+      gszId = record.id;
+      gszName = record.name;
+    } else {
+      gszId = await gszFetch<number>(ctx.env, "/gszapi/open/register", {
+        params: { username: input.gszName, phone: phoneToUse },
+      });
+    }
+
+    if (!hasPhone) {
+      await tdb
+        .update(userInfoTable)
+        .set({ phone: phoneToUse })
+        .where(eq(userInfoTable.id, ctx.userId));
+
+      const existingAccount = await tdb.query.accounts.findFirst({
+        where: (acc, { eq, and }) =>
+          and(eq(acc.userId, ctx.userId), eq(acc.provider, "SMS")),
+      });
+      if (existingAccount) {
+        await tdb
+          .update(accounts)
+          .set({ providerAccountId: phoneToUse })
+          .where(eq(accounts.userId, ctx.userId));
+      } else {
+        await tdb.insert(accounts).values({
+          userId: ctx.userId,
+          type: "credentials" as never,
+          provider: "SMS",
+          providerAccountId: phoneToUse,
+        });
+      }
+    }
+
+    const [reg] = await tdb
+      .insert(mahjongRegistrationsTable)
+      .values({
+        user_id: ctx.userId,
+        phone: phoneToUse,
+        gsz_id: gszId,
+        gsz_name: gszName,
+      })
+      .returning();
+
+    return {
+      registered: true,
+      gszName: reg.gsz_name,
+      gszId: reg.gsz_id,
+      alreadyExisted: false,
+    };
   });
-
-  if (!userInfo?.phone) {
-    throw new Error("需要先验证手机号");
-  }
-
-  const existing = await tdb.query.mahjongRegistrationsTable.findFirst({
-    where: (r, { eq }) => eq(r.user_id, ctx.userId),
-  });
-
-  if (existing) return existing;
-
-  const [reg] = await tdb
-    .insert(mahjongRegistrationsTable)
-    .values({
-      user_id: ctx.userId,
-      phone: userInfo.phone,
-    })
-    .returning();
-
-  return reg;
-});
 
 export default {
   saveMatch,

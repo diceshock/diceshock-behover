@@ -39,6 +39,14 @@ function RouteComponent() {
   const messages = useMessages();
 
   const [myPlans, setMyPlans] = useState<MembershipPlan[]>([]);
+  const [captchaEnabled, setCaptchaEnabled] = useState(true);
+
+  useEffect(() => {
+    trpcClientPublic.settings.getCaptchaEnabled
+      .query()
+      .then((res) => setCaptchaEnabled(res.enabled))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     trpcClientPublic.membershipPlans.getMyPlans
@@ -66,7 +74,7 @@ function RouteComponent() {
   } = useSmsCode({
     phone,
     containerId: "#phone-turnstile-container",
-    enabled: isEditingPhone && import.meta.env.PROD,
+    enabled: isEditingPhone && import.meta.env.PROD && captchaEnabled,
   });
 
   const handleEditClick = useCallback(() => {
@@ -546,7 +554,7 @@ function RouteComponent() {
               </button>
             </label>
 
-            {import.meta.env.PROD && (
+            {import.meta.env.PROD && captchaEnabled && (
               <div className="flex justify-center">
                 <div id="phone-turnstile-container" />
               </div>
