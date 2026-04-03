@@ -5,6 +5,8 @@ import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import type { Seat } from "@/shared/mahjong/constants";
 import { SEAT_LABELS } from "@/shared/mahjong/constants";
+import { formatPP, getMatchPPIfValid } from "@/shared/mahjong/pp";
+import type { MatchFormat, MatchMode, MatchType } from "@/shared/mahjong/types";
 import dayjs from "@/shared/utils/dayjs-config";
 import { trpcClientDash } from "@/shared/utils/trpc";
 
@@ -133,6 +135,11 @@ function MatchDetailPage() {
             </span>
           )}
           <span className="text-sm text-base-content/50">{durationStr}</span>
+          {match.gsz_record_id && (
+            <span className="badge badge-success badge-outline badge-sm">
+              GSZ #{match.gsz_record_id}
+            </span>
+          )}
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
@@ -156,58 +163,224 @@ function MatchDetailPage() {
           </div>
         </div>
 
-        <PlayersOverview players={sortedPlayers} />
+        <PlayersSection
+          matchId={match.id}
+          players={sortedPlayers}
+          mode={match.mode as MatchMode}
+          format={match.format as MatchFormat}
+          matchType={(match.match_type ?? "store") as MatchType}
+          terminationReason={match.termination_reason}
+          isTournament={match.match_type === "tournament"}
+          hasGszRecord={!!match.gsz_record_id}
+          onUpdated={fetchMatch}
+        />
       </div>
     </main>
   );
 }
 
-function PlayersOverview({ players }: { players: PlayerJSON[] }) {
+function PlayersSection({
+  matchId,
+  players,
+  mode,
+  format,
+  matchType,
+  terminationReason,
+  isTournament,
+  hasGszRecord,
+  onUpdated,
+}: {
+  matchId: string;
+  players: PlayerJSON[];
+  mode: MatchMode;
+  format: MatchFormat;
+  matchType: MatchType;
+  terminationReason: string;
+  isTournament: boolean;
+  hasGszRecord: boolean;
+  onUpdated: () => void;
+}) {
+  const msg = useMsg();
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editScores, setEditScores] = useState<Record<string, string>>({});
+
+  const ppResult = getMatchPPIfValid(
+    players,
+    mode,
+    format,
+    matchType,
+    terminationReason,
+  );
+  const ppMap = ppResult
+    ? new Map(ppResult.players.map((p) => [p.userId, p.totalPP]))
+    : new Map<string, number>();
+
+  const startEditing = useCallback(() => {
+    const scores: Record<string, string> = {};
+    for (const p of players) {
+      scores[p.userId] = String(p.finalScore);
+    }
+    setEditScores(scores);
+    setEditing(true);
+  }, [players]);
+
+  const handleSave = useCallback(async () => {
+    setSaving(true);
+    try {
+      const updatedPlayers = players.map((p) => ({
+        ...p,
+        finalScore: Number.parseInt(editScores[p.userId] ?? "0", 10),
+      }));
+      await trpcClientDash.gszManagement.updateScore.mutate({
+        matchId,
+        players: updatedPlayers,
+      });
+      msg.success(
+        isTournament && hasGszRecord
+          ? "分数已更新并同步到公式战"
+          : "分数已更新",
+      );
+      setEditing(false);
+      onUpdated();
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "保存失败");
+    } finally {
+      setSaving(false);
+    }
+  }, [
+    players,
+    editScores,
+    matchId,
+    isTournament,
+    hasGszRecord,
+    msg,
+    onUpdated,
+  ]);
+
   return (
     <div className="flex flex-col gap-3">
-      {players.map((p, i) => (
-        <div
-          key={p.userId}
-          className="flex items-center justify-between p-4 bg-base-200 rounded-lg"
-        >
-          <div className="flex items-center gap-3">
-            <span
-              className={clsx(
-                "badge badge-lg font-bold",
-                i === 0
-                  ? "badge-warning"
-                  : i === 1
-                    ? "badge-ghost"
-                    : "badge-ghost badge-outline",
-              )}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">玩家分数</h2>
+        {!editing ? (
+          <button
+            type="button"
+            className="btn btn-sm btn-outline"
+            onClick={startEditing}
+          >
+            ✏️ 修改分数
+          </button>
+        ) : (
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="btn btn-sm btn-ghost"
+              disabled={saving}
+              onClick={() => setEditing(false)}
             >
-              #{i + 1}
-            </span>
-            <div>
-              <div className="font-medium">{p.nickname}</div>
-              <div className="flex items-center gap-2 text-xs text-base-content/50">
-                {p.seat && <span>{SEAT_LABELS[p.seat as Seat] ?? p.seat}</span>}
-                <span className="font-mono">{p.userId.slice(0, 8)}</span>
+              取消
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm btn-primary"
+              disabled={saving}
+              onClick={handleSave}
+            >
+              {saving ? (
+                <span className="loading loading-spinner loading-xs" />
+              ) : (
+                "保存"
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {players.map((p, i) => {
+        const pp = ppMap.get(p.userId);
+        return (
+          <div
+            key={p.userId}
+            className="flex items-center justify-between p-4 bg-base-200 rounded-lg"
+          >
+            <div className="flex items-center gap-3">
+              <span
+                className={clsx(
+                  "badge badge-lg font-bold",
+                  i === 0
+                    ? "badge-warning"
+                    : i === 1
+                      ? "badge-ghost"
+                      : "badge-ghost badge-outline",
+                )}
+              >
+                #{i + 1}
+              </span>
+              <div>
+                <div className="font-medium">{p.nickname}</div>
+                <div className="flex items-center gap-2 text-xs text-base-content/50">
+                  {p.seat && (
+                    <span>{SEAT_LABELS[p.seat as Seat] ?? p.seat}</span>
+                  )}
+                  <span className="font-mono">{p.userId.slice(0, 8)}</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {!editing && pp != null && (
+                <span
+                  className={clsx(
+                    "font-mono text-sm font-semibold",
+                    pp > 0
+                      ? "text-success"
+                      : pp < 0
+                        ? "text-error"
+                        : "text-base-content/50",
+                  )}
+                >
+                  {formatPP(pp)}
+                  {isTournament ? " pp*" : " pp"}
+                </span>
+              )}
+              <div className="text-right">
+                {editing ? (
+                  <input
+                    type="number"
+                    className="input input-bordered input-sm w-28 text-right font-mono"
+                    value={editScores[p.userId] ?? ""}
+                    onChange={(e) =>
+                      setEditScores((prev) => ({
+                        ...prev,
+                        [p.userId]: e.target.value,
+                      }))
+                    }
+                  />
+                ) : (
+                  <div
+                    className={clsx(
+                      "text-xl font-mono font-bold",
+                      p.finalScore > 0
+                        ? "text-success"
+                        : p.finalScore < 0
+                          ? "text-error"
+                          : "",
+                    )}
+                  >
+                    {p.finalScore > 0 ? "+" : ""}
+                    {p.finalScore}
+                  </div>
+                )}
               </div>
             </div>
           </div>
-          <div className="text-right">
-            <div
-              className={clsx(
-                "text-xl font-mono font-bold",
-                p.finalScore > 0
-                  ? "text-success"
-                  : p.finalScore < 0
-                    ? "text-error"
-                    : "",
-              )}
-            >
-              {p.finalScore > 0 ? "+" : ""}
-              {p.finalScore}
-            </div>
-          </div>
+        );
+      })}
+
+      {isTournament && ppResult && (
+        <div className="text-xs text-base-content/40 text-center">
+          * 公式战 PP 为预估值
         </div>
-      ))}
+      )}
     </div>
   );
 }

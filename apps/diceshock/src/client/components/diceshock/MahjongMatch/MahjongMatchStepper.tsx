@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type useMahjongMatch from "@/client/hooks/useMahjongMatch";
 import type { Seat } from "@/shared/mahjong/constants";
 import {
@@ -10,6 +10,7 @@ import {
   SEATS_4P,
 } from "@/shared/mahjong/constants";
 import * as engine from "@/shared/mahjong/engine";
+import { formatPP, getMatchPPIfValid } from "@/shared/mahjong/pp";
 import type {
   MatchFormat,
   MatchMode,
@@ -894,6 +895,29 @@ function MatchResultView({
   const ranking = engine.getRanking(state);
   const RANK_EMOJIS = ["🥇", "🥈", "🥉", "4️⃣"];
 
+  const ppResult = useMemo(() => {
+    if (!state.config || !state.terminationReason) return null;
+    const players = state.players.map((p) => ({
+      userId: p.userId,
+      seat: p.seat,
+      finalScore: p.currentPoints,
+    }));
+    return getMatchPPIfValid(
+      players,
+      state.config.mode,
+      state.config.format,
+      state.config.type,
+      state.terminationReason,
+    );
+  }, [state.config, state.terminationReason, state.players]);
+
+  const ppMap = useMemo(() => {
+    if (!ppResult) return new Map<string, number>();
+    return new Map(ppResult.players.map((p) => [p.userId, p.totalPP]));
+  }, [ppResult]);
+
+  const isTournament = state.config?.type === "tournament";
+
   return (
     <div className="flex flex-col gap-5 py-4">
       <div className="bg-base-200 rounded-2xl p-4 sm:p-5 flex flex-col gap-4 items-center">
@@ -908,28 +932,54 @@ function MatchResultView({
         </div>
 
         <div className="flex flex-col gap-2.5 w-full">
-          {ranking.map((p) => (
-            <div
-              key={p.userId}
-              className={clsx(
-                "flex items-center justify-between px-4 py-3 rounded-xl",
-                p.rank === 1
-                  ? "bg-warning/10 ring-1 ring-warning/30"
-                  : "bg-base-300",
-              )}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-xl">
-                  {RANK_EMOJIS[p.rank - 1] ?? `#${p.rank}`}
-                </span>
-                <span className="text-base font-semibold">{p.nickname}</span>
+          {ranking.map((p) => {
+            const pp = ppMap.get(p.userId);
+            return (
+              <div
+                key={p.userId}
+                className={clsx(
+                  "flex items-center justify-between px-4 py-3 rounded-xl",
+                  p.rank === 1
+                    ? "bg-warning/10 ring-1 ring-warning/30"
+                    : "bg-base-300",
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">
+                    {RANK_EMOJIS[p.rank - 1] ?? `#${p.rank}`}
+                  </span>
+                  <span className="text-base font-semibold">{p.nickname}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-mono font-bold">
+                    {p.currentPoints}
+                  </span>
+                  {pp != null && (
+                    <span
+                      className={clsx(
+                        "text-xs font-mono font-semibold",
+                        pp > 0
+                          ? "text-success"
+                          : pp < 0
+                            ? "text-error"
+                            : "text-base-content/50",
+                      )}
+                    >
+                      {formatPP(pp)}
+                      {isTournament ? " pp*" : " pp"}
+                    </span>
+                  )}
+                </div>
               </div>
-              <span className="text-lg font-mono font-bold">
-                {p.currentPoints}
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
+
+        {isTournament && ppResult && (
+          <div className="text-xs text-base-content/40 text-center">
+            * 公式战 PP 为预估值
+          </div>
+        )}
       </div>
 
       <button

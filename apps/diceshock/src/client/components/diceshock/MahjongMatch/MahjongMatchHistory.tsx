@@ -1,6 +1,6 @@
 import { GameControllerIcon, XIcon } from "@phosphor-icons/react/dist/ssr";
 import clsx from "clsx";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Modal from "@/client/components/modal";
 import useAuth from "@/client/hooks/useAuth";
 import type { Seat } from "@/shared/mahjong/constants";
@@ -10,6 +10,15 @@ import {
   MODE_LABELS,
   SEAT_LABELS,
 } from "@/shared/mahjong/constants";
+import type { PPCategory } from "@/shared/mahjong/pp";
+import {
+  aggregatePP,
+  formatPP,
+  getMatchPPIfValid,
+  getPlayerPP,
+  PP_CATEGORY_LABELS,
+} from "@/shared/mahjong/pp";
+import type { MatchType } from "@/shared/mahjong/types";
 import dayjs from "@/shared/utils/dayjs-config";
 import trpcClientPublic from "@/shared/utils/trpc";
 
@@ -68,6 +77,10 @@ function getRankBadge(rank: number) {
   }
 }
 
+function getEffectiveMatchType(match: Match): MatchType {
+  return (match.match_type ?? match.config?.type ?? "store") as MatchType;
+}
+
 function MahjongMatchDetailModal({
   match,
   isOpen,
@@ -85,6 +98,19 @@ function MahjongMatchDetailModal({
   const sortedPlayers = [...players].sort(
     (a, b) => b.finalScore - a.finalScore,
   );
+
+  const matchType = getEffectiveMatchType(match);
+  const ppResult = getMatchPPIfValid(
+    players,
+    match.mode,
+    match.format,
+    matchType,
+    match.termination_reason,
+  );
+  const ppMap = ppResult
+    ? new Map(ppResult.players.map((p) => [p.userId, p.totalPP]))
+    : new Map<string, number>();
+  const isTournament = matchType === "tournament";
 
   return (
     <Modal
@@ -136,6 +162,7 @@ function MahjongMatchDetailModal({
                 const rank = idx + 1;
                 const badge = getRankBadge(rank);
                 const isMe = player.userId === currentUserId;
+                const pp = ppMap.get(player.userId);
                 return (
                   <div
                     key={player.userId}
@@ -161,10 +188,29 @@ function MahjongMatchDetailModal({
                     <span className="font-mono text-sm tabular-nums">
                       {player.finalScore.toLocaleString()}
                     </span>
+                    {pp != null && (
+                      <span
+                        className={clsx(
+                          "font-mono text-xs font-semibold tabular-nums",
+                          pp > 0
+                            ? "text-success"
+                            : pp < 0
+                              ? "text-error"
+                              : "text-base-content/50",
+                        )}
+                      >
+                        {formatPP(pp)}
+                      </span>
+                    )}
                   </div>
                 );
               })}
             </div>
+            {isTournament && ppResult && (
+              <div className="text-xs text-base-content/40 text-center mt-2">
+                公式战 PP 为预估值
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -186,6 +232,20 @@ export default function MahjongMatchHistory() {
       .catch(() => {})
       .finally(() => setIsLoading(false));
   }, []);
+
+  const ppStats = useMemo(() => {
+    if (!userId || matches.length === 0) return [];
+    const matchData = matches
+      .filter((m) => m.players && m.players.length > 0)
+      .map((m) => ({
+        players: m.players!,
+        mode: m.mode,
+        format: m.format,
+        matchType: getEffectiveMatchType(m),
+        terminationReason: m.termination_reason,
+      }));
+    return aggregatePP(matchData, userId);
+  }, [matches, userId]);
 
   const handleMatchClick = useCallback((match: Match) => {
     setSelectedMatch(match);
@@ -253,12 +313,64 @@ export default function MahjongMatchHistory() {
             </div>
           </div>
 
+          {ppStats.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {ppStats.map((stat) => {
+                const label =
+                  PP_CATEGORY_LABELS[stat.category as PPCategory] ??
+                  stat.category;
+                const isTournament = stat.category === "tournament";
+                return (
+                  <div
+                    key={stat.category}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-base-300/70 text-xs"
+                  >
+                    <span className="text-base-content/60">{label}</span>
+                    <span
+                      className={clsx(
+                        "font-mono font-bold tabular-nums",
+                        stat.totalPP > 0
+                          ? "text-success"
+                          : stat.totalPP < 0
+                            ? "text-error"
+                            : "text-base-content/50",
+                      )}
+                    >
+                      {formatPP(stat.totalPP)}
+                    </span>
+                    <span className="text-base-content/40">
+                      ({stat.matchCount}局)
+                    </span>
+                    {isTournament && (
+                      <span className="text-base-content/30">*</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           <div className="flex flex-col gap-2">
             {matches.map((match) => {
               const players = match.players ?? [];
               const me = players.find((p) => p.userId === userId);
               const rank = me ? getRank(players, me.userId) : null;
               const badge = rank ? getRankBadge(rank) : null;
+
+              const matchType = getEffectiveMatchType(match);
+              const myPP =
+                me && userId
+                  ? getPlayerPP(
+                      players,
+                      userId,
+                      match.mode,
+                      match.format,
+                      matchType,
+                    )
+                  : null;
+              const isValidPP =
+                match.termination_reason === "score_complete" ||
+                match.termination_reason === "vote";
 
               return (
                 <button
@@ -291,8 +403,25 @@ export default function MahjongMatchHistory() {
                     </span>
                   )}
 
+                  <span className="flex-1" />
+
+                  {me && myPP && isValidPP && (
+                    <span
+                      className={clsx(
+                        "font-mono text-xs font-semibold tabular-nums shrink-0",
+                        myPP.totalPP > 0
+                          ? "text-success"
+                          : myPP.totalPP < 0
+                            ? "text-error"
+                            : "text-base-content/50",
+                      )}
+                    >
+                      {formatPP(myPP.totalPP)}
+                    </span>
+                  )}
+
                   {me && (
-                    <span className="font-mono text-sm tabular-nums flex-1 text-right">
+                    <span className="font-mono text-sm tabular-nums shrink-0">
                       {me.finalScore.toLocaleString()}
                     </span>
                   )}
