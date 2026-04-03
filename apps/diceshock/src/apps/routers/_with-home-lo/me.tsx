@@ -11,7 +11,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import BusinessCardModal from "@/client/components/diceshock/BusinessCardModal";
-import MahjongMatchHistory from "@/client/components/diceshock/MahjongMatch/MahjongMatchHistory";
+import GszQuickCard from "@/client/components/diceshock/GszQuickCard";
 import {
   getPlanConfig,
   getStoredValueBalance,
@@ -32,7 +32,7 @@ export const Route = createFileRoute("/_with-home-lo/me")({
 });
 
 function RouteComponent() {
-  const { userInfo, setUserInfoIm, signOut } = useAuth();
+  const { userInfo, setUserInfoIm, signOut, session } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [nickname, setNickname] = useState(userInfo?.nickname ?? "");
   const [isLoading, setIsLoading] = useState(false);
@@ -333,7 +333,7 @@ function RouteComponent() {
 
             <TOTPCard />
 
-            <MahjongMatchHistory />
+            <GszQuickCard userId={session?.user?.id} />
 
             <button
               onClick={handleEditPhoneClick}

@@ -390,6 +390,20 @@ function SeatTimerPage() {
           <TOTPSection identity={identity} />
 
           <div className="grid grid-cols-2 gap-3">
+            {isMahjong && (
+              <button
+                type="button"
+                className="card bg-base-200 hover:bg-base-300 transition-colors cursor-pointer col-span-2"
+                onClick={() => setActiveTab("mahjong")}
+              >
+                <div className="card-body p-4 flex-row items-center gap-3">
+                  <span className="w-6 h-6 flex items-center justify-center text-primary font-bold text-base leading-none select-none">
+                    🀀
+                  </span>
+                  <span className="text-sm font-medium">公式战</span>
+                </div>
+              </button>
+            )}
             <Link
               to="/inventory"
               className="card bg-base-200 hover:bg-base-300 transition-colors cursor-pointer"
