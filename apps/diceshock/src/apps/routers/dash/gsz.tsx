@@ -1,4 +1,5 @@
 import {
+  ArrowsClockwiseIcon,
   CopyIcon,
   DotsThreeVerticalIcon,
   EyeIcon,
@@ -17,6 +18,7 @@ import { trpcClientDash } from "@/shared/utils/trpc";
 type ModeFilter = "all" | "3p" | "4p";
 type FormatFilter = "all" | "tonpuu" | "hanchan";
 type CompletionFilter = "all" | "completed" | "incomplete";
+type GszSyncFilter = "all" | "synced" | "unsynced";
 
 type MatchList = Awaited<
   ReturnType<typeof trpcClientDash.gszManagement.list.query>
@@ -86,6 +88,10 @@ function RouteComponent() {
   const [formatFilter, setFormatFilter] = useState<FormatFilter>("all");
   const [completionFilter, setCompletionFilter] =
     useState<CompletionFilter>("all");
+  const [gszSyncFilter, setGszSyncFilter] = useState<GszSyncFilter>("all");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchSyncing, setBatchSyncing] = useState(false);
+  const [syncingId, setSyncingId] = useState<string | null>(null);
   const [tableFilter, setTableFilter] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -105,6 +111,7 @@ function RouteComponent() {
         mode: modeFilter,
         format: formatFilter,
         completion: completionFilter,
+        gszSync: gszSyncFilter,
         tableId: tableFilter,
         startDate: startDate
           ? dayjs.tz(startDate, "Asia/Shanghai").startOf("day").valueOf()
@@ -125,6 +132,7 @@ function RouteComponent() {
     modeFilter,
     formatFilter,
     completionFilter,
+    gszSyncFilter,
     tableFilter,
     startDate,
     endDate,
@@ -186,6 +194,64 @@ function RouteComponent() {
       void fetchMatches();
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "终止失败");
+    }
+  };
+
+  const handleSync = async (matchId: string) => {
+    setSyncingId(matchId);
+    try {
+      const result = await trpcClientDash.gszManagement.syncToGsz.mutate({
+        matchId,
+      });
+      if (result.success) {
+        msg.success("同步成功");
+        void fetchMatches();
+      } else {
+        msg.error(result.error ?? "同步失败");
+      }
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "同步失败");
+    } finally {
+      setSyncingId(null);
+    }
+  };
+
+  const handleBatchSync = async () => {
+    if (selectedIds.size === 0) return;
+    setBatchSyncing(true);
+    try {
+      const result = await trpcClientDash.gszManagement.batchSyncToGsz.mutate({
+        matchIds: [...selectedIds],
+      });
+      msg.success(
+        `批量同步完成: ${result.successCount} 成功, ${result.failCount} 失败`,
+      );
+      setSelectedIds(new Set());
+      void fetchMatches();
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "批量同步失败");
+    } finally {
+      setBatchSyncing(false);
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const unsyncedItems = items.filter(
+      (m) => m.match_type === "tournament" && !m.gsz_synced,
+    );
+    if (unsyncedItems.every((m) => selectedIds.has(m.id))) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(unsyncedItems.map((m) => m.id)));
     }
   };
 
@@ -276,6 +342,44 @@ function RouteComponent() {
             </button>
           ))}
 
+          <span className="text-base-content/30 mx-1">|</span>
+
+          {(
+            [
+              ["all", "全部"],
+              ["synced", "已同步"],
+              ["unsynced", "未同步"],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              className={`btn btn-xs ${gszSyncFilter === key ? (key === "unsynced" ? "btn-warning" : "btn-success") : "btn-ghost"}`}
+              onClick={() => {
+                setGszSyncFilter(key);
+                setPage(1);
+              }}
+            >
+              {label}
+            </button>
+          ))}
+
+          {selectedIds.size > 0 && (
+            <button
+              type="button"
+              className="btn btn-xs btn-warning"
+              disabled={batchSyncing}
+              onClick={handleBatchSync}
+            >
+              {batchSyncing ? (
+                <span className="loading loading-spinner loading-xs" />
+              ) : (
+                <ArrowsClockwiseIcon className="size-3.5" />
+              )}
+              批量同步 ({selectedIds.size})
+            </button>
+          )}
+
           <div className="flex items-center gap-1 ml-auto shrink-0">
             {tableOptions.length > 0 && (
               <select
@@ -328,9 +432,26 @@ function RouteComponent() {
       )}
 
       <div className="w-full flex-1 min-h-0 overflow-auto">
-        <table className="table table-lg table-pin-rows table-pin-cols min-w-[1100px]">
+        <table className="table table-lg table-pin-rows table-pin-cols min-w-[1300px]">
           <thead>
             <tr className="z-20">
+              <td className="w-8">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-xs"
+                  onChange={toggleSelectAll}
+                  checked={
+                    items.filter(
+                      (m) => m.match_type === "tournament" && !m.gsz_synced,
+                    ).length > 0 &&
+                    items
+                      .filter(
+                        (m) => m.match_type === "tournament" && !m.gsz_synced,
+                      )
+                      .every((m) => selectedIds.has(m.id))
+                  }
+                />
+              </td>
               <td className="whitespace-nowrap">ID</td>
               <td className="whitespace-nowrap">桌台</td>
               <td className="whitespace-nowrap">模式</td>
@@ -339,6 +460,7 @@ function RouteComponent() {
               <td className="whitespace-nowrap">结束时间</td>
               <td className="whitespace-nowrap">玩家</td>
               <td className="whitespace-nowrap">终止原因</td>
+              <td className="whitespace-nowrap">同步</td>
               <th className="whitespace-nowrap">操作</th>
             </tr>
           </thead>
@@ -346,20 +468,21 @@ function RouteComponent() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={9} className="py-12 text-center">
+                <td colSpan={11} className="py-12 text-center">
                   <span className="loading loading-dots loading-md" />
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
                 <td
-                  colSpan={9}
+                  colSpan={11}
                   className="py-12 text-center text-base-content/60"
                 >
                   {searchText.trim() ||
                   modeFilter !== "all" ||
                   formatFilter !== "all" ||
                   completionFilter !== "all" ||
+                  gszSyncFilter !== "all" ||
                   tableFilter ||
                   startDate ||
                   endDate
@@ -377,6 +500,16 @@ function RouteComponent() {
                       : ""
                   }
                 >
+                  <td>
+                    {match.match_type === "tournament" && !match.gsz_synced && (
+                      <input
+                        type="checkbox"
+                        className="checkbox checkbox-xs"
+                        checked={selectedIds.has(match.id)}
+                        onChange={() => toggleSelect(match.id)}
+                      />
+                    )}
+                  </td>
                   <td className="font-mono">
                     <div className="relative group flex items-center gap-1">
                       <span className="cursor-default">
@@ -436,6 +569,39 @@ function RouteComponent() {
                       {TERMINATION_LABELS[match.termination_reason] ??
                         match.termination_reason}
                     </span>
+                  </td>
+                  <td className="whitespace-nowrap">
+                    {match.match_type === "tournament" ? (
+                      match.gsz_synced ? (
+                        <span className="badge badge-sm badge-success">
+                          已同步
+                        </span>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <span
+                            className="badge badge-sm badge-warning cursor-help"
+                            title={match.gsz_error ?? "未同步"}
+                          >
+                            未同步
+                          </span>
+                          <button
+                            type="button"
+                            className="btn btn-xs btn-ghost btn-square"
+                            disabled={syncingId === match.id}
+                            onClick={() => handleSync(match.id)}
+                            title="手动同步"
+                          >
+                            {syncingId === match.id ? (
+                              <span className="loading loading-spinner loading-xs" />
+                            ) : (
+                              <ArrowsClockwiseIcon className="size-3.5" />
+                            )}
+                          </button>
+                        </div>
+                      )
+                    ) : (
+                      <span className="badge badge-sm badge-ghost">—</span>
+                    )}
                   </td>
                   <th className="whitespace-nowrap">
                     {isMobile ? (

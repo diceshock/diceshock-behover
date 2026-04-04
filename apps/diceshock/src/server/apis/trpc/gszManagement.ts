@@ -8,6 +8,7 @@ import { gszFetch } from "./gszApi";
 type ModeFilter = "all" | "3p" | "4p";
 type FormatFilter = "all" | "tonpuu" | "hanchan";
 type CompletionFilter = "all" | "completed" | "incomplete";
+type GszSyncFilter = "all" | "synced" | "unsynced";
 
 const list = dashProcedure
   .input((v: unknown) => {
@@ -16,6 +17,7 @@ const list = dashProcedure
       mode?: ModeFilter;
       format?: FormatFilter;
       completion?: CompletionFilter;
+      gszSync?: GszSyncFilter;
       tableId?: string;
       startDate?: number;
       endDate?: number;
@@ -27,6 +29,7 @@ const list = dashProcedure
       mode: data.mode ?? "all",
       format: data.format ?? "all",
       completion: data.completion ?? "all",
+      gszSync: (data.gszSync ?? "all") as GszSyncFilter,
       tableId: data.tableId ?? "",
       startDate: data.startDate ?? null,
       endDate: data.endDate ?? null,
@@ -61,6 +64,7 @@ const list = dashProcedure
         id: m.id,
         table_id: m.table_id,
         table,
+        match_type: m.match_type,
         mode: m.mode,
         format: m.format,
         started_at:
@@ -75,6 +79,14 @@ const list = dashProcedure
         players,
         player_count: players.length,
         player_names: players.map((p) => p.nickname).join(", "),
+        gsz_record_id: m.gsz_record_id ?? null,
+        gsz_synced: !!m.gsz_synced,
+        gsz_error: m.gsz_error ?? null,
+        gsz_synced_at: m.gsz_synced_at
+          ? m.gsz_synced_at instanceof Date
+            ? m.gsz_synced_at.getTime()
+            : Number(m.gsz_synced_at)
+          : null,
         created_at:
           m.created_at instanceof Date
             ? m.created_at.getTime()
@@ -127,6 +139,14 @@ const list = dashProcedure
       );
     }
 
+    if (input.gszSync === "synced") {
+      filtered = filtered.filter((m) => m.gsz_synced);
+    } else if (input.gszSync === "unsynced") {
+      filtered = filtered.filter(
+        (m) => m.match_type === "tournament" && !m.gsz_synced,
+      );
+    }
+
     const total = filtered.length;
     const start = (input.page - 1) * input.pageSize;
     const items = filtered.slice(start, start + input.pageSize);
@@ -169,6 +189,13 @@ const getById = dashProcedure
       table_id: match.table_id,
       match_type: match.match_type,
       gsz_record_id: match.gsz_record_id ?? null,
+      gsz_synced: !!match.gsz_synced,
+      gsz_error: match.gsz_error ?? null,
+      gsz_synced_at: match.gsz_synced_at
+        ? match.gsz_synced_at instanceof Date
+          ? match.gsz_synced_at.getTime()
+          : Number(match.gsz_synced_at)
+        : null,
       table,
       mode: match.mode,
       format: match.format,
@@ -376,6 +403,136 @@ const updateScore = dashProcedure
     return { success: true };
   });
 
+async function performGszSync(
+  env: Cloudflare.Env,
+  matchId: string,
+): Promise<{ success: boolean; error?: string }> {
+  const tdb = db(env.DB);
+  const match = await tdb.query.mahjongMatchesTable.findFirst({
+    where: (m, { eq }) => eq(m.id, matchId),
+  });
+  if (!match) return { success: false, error: "对局不存在" };
+  if (match.match_type !== "tournament")
+    return { success: false, error: "仅公式战对局可同步" };
+
+  type PlayerJSON = {
+    userId: string;
+    nickname: string;
+    seat: string | null;
+    finalScore: number;
+  };
+  const players = (match.players ?? []) as PlayerJSON[];
+  if (players.length !== 4) return { success: false, error: "需要4名玩家" };
+
+  const seatOrder = ["east", "south", "west", "north"];
+  const sorted = [...players].sort(
+    (a, b) => seatOrder.indexOf(a.seat ?? "") - seatOrder.indexOf(b.seat ?? ""),
+  );
+
+  const userIds = sorted.map((p) => p.userId);
+  const registrations = await tdb
+    .select({
+      user_id: mahjongRegistrationsTable.user_id,
+      phone: mahjongRegistrationsTable.phone,
+    })
+    .from(mahjongRegistrationsTable)
+    .where(inArray(mahjongRegistrationsTable.user_id, userIds));
+  const phoneMap = new Map(registrations.map((r) => [r.user_id, r.phone]));
+  const phones = sorted.map((p) => phoneMap.get(p.userId) ?? "");
+  if (!phones.every(Boolean))
+    return { success: false, error: "部分玩家未绑定手机号" };
+
+  const endedAt =
+    match.ended_at instanceof Date
+      ? match.ended_at.getTime()
+      : Number(match.ended_at);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const d = new Date(endedAt);
+  const rateTime = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+
+  try {
+    if (match.gsz_record_id) {
+      await gszFetch(env, "/gszapi/open/score/update", {
+        params: {
+          recordId: match.gsz_record_id,
+          phone1: phones[0],
+          phone2: phones[1],
+          phone3: phones[2],
+          phone4: phones[3],
+          point1: String(sorted[0].finalScore),
+          point2: String(sorted[1].finalScore),
+          point3: String(sorted[2].finalScore),
+          point4: String(sorted[3].finalScore),
+          rateTime,
+        },
+      });
+    } else {
+      const gszRecordId = await gszFetch<number>(
+        env,
+        "/gszapi/open/score/add",
+        {
+          params: {
+            phone1: phones[0],
+            phone2: phones[1],
+            phone3: phones[2],
+            phone4: phones[3],
+            point1: String(sorted[0].finalScore),
+            point2: String(sorted[1].finalScore),
+            point3: String(sorted[2].finalScore),
+            point4: String(sorted[3].finalScore),
+            rateTime,
+          },
+        },
+      );
+      if (gszRecordId) {
+        await tdb
+          .update(mahjongMatchesTable)
+          .set({ gsz_record_id: gszRecordId })
+          .where(eq(mahjongMatchesTable.id, matchId));
+      }
+    }
+
+    await tdb
+      .update(mahjongMatchesTable)
+      .set({
+        gsz_synced: true,
+        gsz_error: null,
+        gsz_synced_at: new Date(),
+      })
+      .where(eq(mahjongMatchesTable.id, matchId));
+
+    return { success: true };
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : "公式战同步失败";
+    await tdb
+      .update(mahjongMatchesTable)
+      .set({ gsz_error: errorMsg })
+      .where(eq(mahjongMatchesTable.id, matchId));
+    return { success: false, error: errorMsg };
+  }
+}
+
+const syncToGsz = dashProcedure
+  .input(z.object({ matchId: z.string() }))
+  .mutation(async ({ input, ctx }) => {
+    return performGszSync(ctx.env, input.matchId);
+  });
+
+const batchSyncToGsz = dashProcedure
+  .input(z.object({ matchIds: z.array(z.string()).min(1).max(50) }))
+  .mutation(async ({ input, ctx }) => {
+    const results = await Promise.allSettled(
+      input.matchIds.map((id) => performGszSync(ctx.env, id)),
+    );
+    let successCount = 0;
+    let failCount = 0;
+    for (const r of results) {
+      if (r.status === "fulfilled" && r.value.success) successCount++;
+      else failCount++;
+    }
+    return { successCount, failCount, total: input.matchIds.length };
+  });
+
 export default {
   list,
   getById,
@@ -383,4 +540,6 @@ export default {
   listActive,
   terminateMatch,
   updateScore,
+  syncToGsz,
+  batchSyncToGsz,
 };

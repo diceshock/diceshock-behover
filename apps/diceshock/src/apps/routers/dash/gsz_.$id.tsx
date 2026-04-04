@@ -1,3 +1,4 @@
+import { ArrowsClockwiseIcon } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
@@ -57,6 +58,7 @@ function MatchDetailPage() {
 
   const [match, setMatch] = useState<MatchDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
 
   const fetchMatch = useCallback(async () => {
     setLoading(true);
@@ -69,6 +71,26 @@ function MatchDetailPage() {
       setLoading(false);
     }
   }, [id, msg]);
+
+  const handleSync = useCallback(async () => {
+    if (!match) return;
+    setSyncing(true);
+    try {
+      const result = await trpcClientDash.gszManagement.syncToGsz.mutate({
+        matchId: match.id,
+      });
+      if (result.success) {
+        msg.success("同步成功");
+        void fetchMatch();
+      } else {
+        msg.error(result.error ?? "同步失败");
+      }
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "同步失败");
+    } finally {
+      setSyncing(false);
+    }
+  }, [match, msg, fetchMatch]);
 
   useEffect(() => {
     void fetchMatch();
@@ -140,6 +162,32 @@ function MatchDetailPage() {
               GSZ #{match.gsz_record_id}
             </span>
           )}
+          {match.match_type === "tournament" &&
+            (match.gsz_synced ? (
+              <span className="badge badge-success badge-sm">已同步</span>
+            ) : (
+              <div className="flex items-center gap-1">
+                <span
+                  className="badge badge-warning badge-sm cursor-help"
+                  title={match.gsz_error ?? "未同步到公式战"}
+                >
+                  未同步
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-xs btn-warning btn-outline"
+                  disabled={syncing}
+                  onClick={handleSync}
+                >
+                  {syncing ? (
+                    <span className="loading loading-spinner loading-xs" />
+                  ) : (
+                    <ArrowsClockwiseIcon className="size-3.5" />
+                  )}
+                  同步
+                </button>
+              </div>
+            ))}
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
