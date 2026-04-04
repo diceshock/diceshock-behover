@@ -84,7 +84,22 @@ export function addPlayer(
   state: MatchState,
   player: Pick<PlayerState, "userId" | "nickname" | "phone" | "registered">,
 ): MatchState {
-  if (state.players.find((p) => p.userId === player.userId)) return state;
+  const existing = state.players.find((p) => p.userId === player.userId);
+  if (existing) {
+    if (
+      existing.registered === player.registered &&
+      existing.nickname === player.nickname
+    )
+      return state;
+    return {
+      ...state,
+      players: state.players.map((p) =>
+        p.userId === player.userId
+          ? { ...p, registered: player.registered, nickname: player.nickname }
+          : p,
+      ),
+    };
+  }
 
   const pts = state.config ? startingPoints(state.config.mode) : 0;
   return {
@@ -120,10 +135,6 @@ export function selectSeat(
 
   const existing = state.players.find((p) => p.userId === userId);
   if (!existing) throw new Error("Player not found");
-
-  if (state.config.type === "tournament" && !existing.registered) {
-    throw new Error("需要注册公式战才能选择座位");
-  }
 
   return {
     ...state,
