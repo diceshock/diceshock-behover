@@ -327,11 +327,24 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
         const tdb = db(this.env.DB);
         await tdb
           .update(mahjongMatchesTable)
-          .set({ gsz_record_id: gszRecordId })
+          .set({
+            gsz_record_id: gszRecordId,
+            gsz_synced: true,
+            gsz_error: null,
+            gsz_synced_at: new Date(),
+          })
           .where(eq(mahjongMatchesTable.id, matchId));
       }
-    } catch {
-      // noop — GSZ sync failure should not block the match flow
+    } catch (err) {
+      const tdb = db(this.env.DB);
+      await tdb
+        .update(mahjongMatchesTable)
+        .set({
+          gsz_synced: false,
+          gsz_error: err instanceof Error ? err.message : "公式战同步失败",
+        })
+        .where(eq(mahjongMatchesTable.id, matchId))
+        .catch(() => {});
     }
   }
 

@@ -4,6 +4,7 @@ import db, {
   mahjongRegistrationsTable,
   userInfoTable,
 } from "@lib/db";
+import { TRPCError } from "@trpc/server";
 import { eq, like } from "drizzle-orm";
 import z from "zod/v4";
 import { getSmsTmpCodeKey } from "@/server/utils/auth";
@@ -96,6 +97,8 @@ const checkRegistration = protectedProcedure.query(async ({ ctx }) => {
     registered: !!registration,
     gszName: registration?.gsz_name ?? null,
     gszId: registration?.gsz_id ?? null,
+    gszSynced: registration?.gsz_synced ?? false,
+    gszError: registration?.gsz_error ?? null,
   };
 });
 
@@ -119,6 +122,8 @@ const register = protectedProcedure
         registered: true,
         gszName: existing.gsz_name,
         gszId: existing.gsz_id,
+        gszSynced: existing.gsz_synced,
+        gszError: existing.gsz_error,
         alreadyExisted: true,
       };
     }
@@ -134,31 +139,41 @@ const register = protectedProcedure
       const kvKey = getSmsTmpCodeKey(input.phone);
       const storedCode = devSmsCode || (await KV.get(kvKey));
       if (!storedCode || storedCode !== input.smsCode) {
-        throw new Error("验证码错误或已过期");
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "验证码错误或已过期",
+        });
       }
       await KV.delete(kvKey);
     }
 
     const phoneToUse = hasPhone ? userInfo.phone! : input.phone;
 
-    const gszResult = await gszFetch<GszPageResult>(
-      ctx.env,
-      "/gszapi/open/customer/page",
-      { params: { phone: phoneToUse } },
-      { pageNo: 1, pageSize: 1 },
-    );
-
     let gszId: number | null = null;
     let gszName = input.gszName;
+    let gszSynced = false;
+    let gszError: string | null = null;
 
-    if (gszResult.records.length > 0) {
-      const record = gszResult.records[0];
-      gszId = record.id;
-      gszName = record.name;
-    } else {
-      gszId = await gszFetch<number>(ctx.env, "/gszapi/open/register", {
-        params: { username: input.gszName, phone: phoneToUse },
-      });
+    try {
+      const gszResult = await gszFetch<GszPageResult>(
+        ctx.env,
+        "/gszapi/open/customer/page",
+        { params: { phone: phoneToUse } },
+        { pageNo: 1, pageSize: 1 },
+      );
+
+      if (gszResult.records.length > 0) {
+        const record = gszResult.records[0];
+        gszId = record.id;
+        gszName = record.name;
+      } else {
+        gszId = await gszFetch<number>(ctx.env, "/gszapi/open/register", {
+          params: { username: input.gszName, phone: phoneToUse },
+        });
+      }
+      gszSynced = true;
+    } catch (err) {
+      gszError = err instanceof Error ? err.message : "公式战系统暂时不可用";
     }
 
     if (!hasPhone) {
@@ -193,6 +208,9 @@ const register = protectedProcedure
         phone: phoneToUse,
         gsz_id: gszId,
         gsz_name: gszName,
+        gsz_synced: gszSynced,
+        gsz_error: gszError,
+        gsz_synced_at: gszSynced ? new Date() : null,
       })
       .returning();
 
@@ -200,6 +218,8 @@ const register = protectedProcedure
       registered: true,
       gszName: reg.gsz_name,
       gszId: reg.gsz_id,
+      gszSynced: reg.gsz_synced,
+      gszError: reg.gsz_error,
       alreadyExisted: false,
     };
   });
