@@ -25,9 +25,20 @@ export async function gszFetch<T = unknown>(
   });
 
   if (!res.ok) {
+    let gszMessage = "";
+    try {
+      const errorBody = (await res.json()) as {
+        code?: number;
+        message?: string;
+      };
+      gszMessage = errorBody.message || "";
+    } catch {
+      /* non-JSON body */
+    }
     throw new TRPCError({
       code: "BAD_GATEWAY",
-      message: `GSZ API HTTP ${res.status}`,
+      message: gszMessage || `GSZ API HTTP ${res.status}`,
+      cause: { gszHttpStatus: res.status, gszMessage },
     });
   }
 
