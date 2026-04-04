@@ -52,6 +52,7 @@ export default function MahjongMatchStepper({
   connected,
 }: Props) {
   const [showGszModal, setShowGszModal] = useState(false);
+  const [gszSkipped, setGszSkipped] = useState(false);
 
   if (isTemp && state?.config?.type === "tournament" && !import.meta.env.DEV) {
     return (
@@ -85,6 +86,10 @@ export default function MahjongMatchStepper({
             setShowGszModal(false);
             onGszRegistered(name);
           }}
+          onSkip={() => {
+            setShowGszModal(false);
+            setGszSkipped(true);
+          }}
           phone={phone}
           nickname={nickname}
         />
@@ -96,6 +101,7 @@ export default function MahjongMatchStepper({
           nickname={displayNickname}
           phone={phone}
           registered={registered}
+          gszSkipped={gszSkipped}
           isTournament={isTournament}
           onRequestGszRegister={() => setShowGszModal(true)}
           isPending={isPending}
@@ -321,6 +327,7 @@ function SeatSelectView({
   nickname,
   phone,
   registered,
+  gszSkipped,
   isTournament,
   onRequestGszRegister,
   isPending,
@@ -333,6 +340,7 @@ function SeatSelectView({
   nickname: string;
   phone: string | null;
   registered: boolean;
+  gszSkipped: boolean;
   isTournament: boolean;
   onRequestGszRegister: () => void;
   isPending: (a: string) => boolean;
@@ -344,6 +352,7 @@ function SeatSelectView({
   const seatedCount = state.players.filter((p) => p.seat).length;
   const hasJoined = !!myPlayer;
   const joinedRef = useRef(false);
+  const prevRegisteredRef = useRef(registered);
 
   useEffect(() => {
     if (!hasJoined && !joinedRef.current) {
@@ -352,19 +361,26 @@ function SeatSelectView({
     }
   }, [hasJoined, actions, nickname, phone, registered]);
 
+  useEffect(() => {
+    if (prevRegisteredRef.current === false && registered && hasJoined) {
+      actions.join(nickname, phone, true);
+    }
+    prevRegisteredRef.current = registered;
+  }, [registered, hasJoined, actions, nickname, phone]);
+
   const typeBadge = state.config?.type
     ? MATCH_TYPE_LABELS[state.config.type]
     : "";
 
   const handleSeatSelect = useCallback(
     (seat: Seat) => {
-      if (isTournament && !registered) {
+      if (isTournament && !registered && !gszSkipped) {
         onRequestGszRegister();
         return;
       }
       actions.selectSeat(seat);
     },
-    [isTournament, registered, onRequestGszRegister, actions],
+    [isTournament, registered, gszSkipped, onRequestGszRegister, actions],
   );
 
   return (

@@ -7,6 +7,7 @@ interface GszRegistrationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onRegistered: (gszName: string, gszSynced: boolean) => void;
+  onSkip: () => void;
   phone: string | null;
   nickname: string;
 }
@@ -17,6 +18,7 @@ export default function GszRegistrationModal({
   isOpen,
   onClose,
   onRegistered,
+  onSkip,
   phone: existingPhone,
   nickname,
 }: GszRegistrationModalProps) {
@@ -270,6 +272,15 @@ export default function GszRegistrationModal({
                       onClick={() => setStep("phone_verify")}
                     >
                       返回修改手机号
+                    </button>
+                  )}
+                  {error && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm w-full text-base-content/50"
+                      onClick={onSkip}
+                    >
+                      跳过注册，继续游戏
                     </button>
                   )}
                 </>
