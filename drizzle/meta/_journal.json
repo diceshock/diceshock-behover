@@ -267,6 +267,13 @@
       "when": 1775382500000,
       "tag": "0037_gsz_match_record_id",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "6",
+      "when": 1775382600000,
+      "tag": "0038_gsz_sync_status",
+      "breakpoints": true
     }
   ]
 }

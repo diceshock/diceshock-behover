@@ -550,6 +550,12 @@ export const mahjongMatchesTable = sqlite.sqliteTable("mahjong_matches", {
     mode: string;
     format: string;
   }>(),
+  gsz_synced: sqlite
+    .integer("gsz_synced", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  gsz_error: sqlite.text("gsz_error"),
+  gsz_synced_at: sqlite.integer("gsz_synced_at", { mode: "timestamp_ms" }),
   created_at: sqlite
     .integer("created_at", { mode: "timestamp_ms" })
     .$defaultFn(() => new Date(Date.now())),
@@ -567,6 +573,12 @@ export const mahjongRegistrationsTable = sqlite.sqliteTable(
     phone: sqlite.text().notNull(),
     gsz_id: sqlite.integer("gsz_id"),
     gsz_name: sqlite.text("gsz_name"),
+    gsz_synced: sqlite
+      .integer("gsz_synced", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    gsz_error: sqlite.text("gsz_error"),
+    gsz_synced_at: sqlite.integer("gsz_synced_at", { mode: "timestamp_ms" }),
     registered_at: sqlite
       .integer("registered_at", { mode: "timestamp_ms" })
       .$defaultFn(() => new Date(Date.now())),
