@@ -81,7 +81,7 @@ export default function MahjongMatchStepper({
         <GszRegistrationModal
           isOpen={showGszModal}
           onClose={() => setShowGszModal(false)}
-          onRegistered={(name) => {
+          onRegistered={(name, _gszSynced) => {
             setShowGszModal(false);
             onGszRegistered(name);
           }}

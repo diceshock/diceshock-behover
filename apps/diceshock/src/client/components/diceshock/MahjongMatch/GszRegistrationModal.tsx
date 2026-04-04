@@ -6,7 +6,7 @@ import trpcClientPublic from "@/shared/utils/trpc";
 interface GszRegistrationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onRegistered: (gszName: string) => void;
+  onRegistered: (gszName: string, gszSynced: boolean) => void;
   phone: string | null;
   nickname: string;
 }
@@ -29,6 +29,7 @@ export default function GszRegistrationModal({
   const [gszName, setGszName] = useState(nickname);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [smsSending, setSmsSending] = useState(false);
   const [smsCooldown, setSmsCooldown] = useState(0);
 
@@ -39,6 +40,7 @@ export default function GszRegistrationModal({
       setSmsCode("");
       setGszName(nickname);
       setError(null);
+      setWarning(null);
       setLoading(false);
     }
   }, [isOpen, needsPhone, existingPhone, nickname]);
@@ -82,6 +84,7 @@ export default function GszRegistrationModal({
     }
     setLoading(true);
     setError(null);
+    setWarning(null);
     try {
       const result = await trpcClientPublic.mahjong.register.mutate({
         phone: phone.trim(),
@@ -89,7 +92,13 @@ export default function GszRegistrationModal({
         gszName: gszName.trim(),
       });
       if (result.registered) {
-        onRegistered(result.gszName ?? gszName.trim());
+        if (result.gszSynced === false && result.gszError) {
+          setWarning(`注册成功，但公式战账户暂时无法同步: ${result.gszError}`);
+        }
+        onRegistered(
+          result.gszName ?? gszName.trim(),
+          result.gszSynced ?? false,
+        );
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "注册失败");
@@ -124,6 +133,11 @@ export default function GszRegistrationModal({
           {error && (
             <div className="alert alert-error alert-soft text-sm py-2">
               <span>{error}</span>
+            </div>
+          )}
+          {warning && (
+            <div className="alert alert-warning alert-soft text-sm py-2">
+              <span>{warning}</span>
             </div>
           )}
 
