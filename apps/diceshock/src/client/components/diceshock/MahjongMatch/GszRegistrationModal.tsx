@@ -30,6 +30,10 @@ export default function GszRegistrationModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
+  const [pendingRegistration, setPendingRegistration] = useState<{
+    gszName: string;
+    gszSynced: boolean;
+  } | null>(null);
   const [smsSending, setSmsSending] = useState(false);
   const [smsCooldown, setSmsCooldown] = useState(0);
 
@@ -41,6 +45,7 @@ export default function GszRegistrationModal({
       setGszName(nickname);
       setError(null);
       setWarning(null);
+      setPendingRegistration(null);
       setLoading(false);
     }
   }, [isOpen, needsPhone, existingPhone, nickname]);
@@ -92,13 +97,17 @@ export default function GszRegistrationModal({
         gszName: gszName.trim(),
       });
       if (result.registered) {
-        if (result.gszSynced === false && result.gszError) {
-          setWarning(`注册成功，但公式战账户暂时无法同步: ${result.gszError}`);
+        if (result.gszSynced === false) {
+          setPendingRegistration({
+            gszName: result.gszName ?? gszName.trim(),
+            gszSynced: false,
+          });
+          setWarning(
+            "公式战账户暂时无法同步，不影响正常游戏。如需同步公式战成绩，请联系店员处理。",
+          );
+        } else {
+          onRegistered(result.gszName ?? gszName.trim(), true);
         }
-        onRegistered(
-          result.gszName ?? gszName.trim(),
-          result.gszSynced ?? false,
-        );
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "注册失败");
@@ -196,50 +205,74 @@ export default function GszRegistrationModal({
 
           {step === "confirm_register" && (
             <>
-              <p className="text-sm text-base-content/60">确认你的公式战昵称</p>
-              <label className="form-control">
-                <div className="label">
-                  <span className="label-text text-sm">公式战昵称</span>
-                </div>
-                <input
-                  type="text"
-                  className="input input-bordered w-full"
-                  placeholder="请输入昵称"
-                  value={gszName}
-                  onChange={(e) => setGszName(e.target.value)}
-                  maxLength={20}
-                />
-              </label>
-              {existingPhone && (
-                <div className="text-xs text-base-content/40">
-                  绑定手机号: {existingPhone}
-                </div>
-              )}
-              {!existingPhone && phone && (
-                <div className="text-xs text-base-content/40">
-                  绑定手机号: {phone}
-                </div>
-              )}
-              <button
-                type="button"
-                className="btn btn-primary w-full"
-                disabled={loading || !gszName.trim()}
-                onClick={handleRegister}
-              >
-                {loading ? (
-                  <span className="loading loading-spinner loading-xs" />
-                ) : (
-                  "确认注册"
-                )}
-              </button>
-              {needsPhone && (
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm w-full"
-                  onClick={() => setStep("phone_verify")}
-                >
-                  返回修改手机号
-                </button>
+              {pendingRegistration ? (
+                <>
+                  <p className="text-sm text-base-content/60">
+                    注册已完成，可以正常参加对局。
+                  </p>
+                  <button
+                    type="button"
+                    className="btn btn-primary w-full"
+                    onClick={() => {
+                      onRegistered(
+                        pendingRegistration.gszName,
+                        pendingRegistration.gszSynced,
+                      );
+                    }}
+                  >
+                    我知道了，继续游戏
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-base-content/60">
+                    确认你的公式战昵称
+                  </p>
+                  <label className="form-control">
+                    <div className="label">
+                      <span className="label-text text-sm">公式战昵称</span>
+                    </div>
+                    <input
+                      type="text"
+                      className="input input-bordered w-full"
+                      placeholder="请输入昵称"
+                      value={gszName}
+                      onChange={(e) => setGszName(e.target.value)}
+                      maxLength={20}
+                    />
+                  </label>
+                  {existingPhone && (
+                    <div className="text-xs text-base-content/40">
+                      绑定手机号: {existingPhone}
+                    </div>
+                  )}
+                  {!existingPhone && phone && (
+                    <div className="text-xs text-base-content/40">
+                      绑定手机号: {phone}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    className="btn btn-primary w-full"
+                    disabled={loading || !gszName.trim()}
+                    onClick={handleRegister}
+                  >
+                    {loading ? (
+                      <span className="loading loading-spinner loading-xs" />
+                    ) : (
+                      "确认注册"
+                    )}
+                  </button>
+                  {needsPhone && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm w-full"
+                      onClick={() => setStep("phone_verify")}
+                    >
+                      返回修改手机号
+                    </button>
+                  )}
+                </>
               )}
             </>
           )}
