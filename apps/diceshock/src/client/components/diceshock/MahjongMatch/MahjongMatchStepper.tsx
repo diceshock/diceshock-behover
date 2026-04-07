@@ -57,7 +57,7 @@ export default function MahjongMatchStepper({
   if (isTemp && state?.config?.type === "tournament" && !import.meta.env.DEV) {
     return (
       <div className="alert alert-warning text-sm">
-        <span>🔒 临时身份不支持立直麻将模式，请先登录。</span>
+        <span>🔒 临时身份不支持公式战模式，请先登录。</span>
       </div>
     );
   }
@@ -202,7 +202,7 @@ function ConfigSelectView({
             { value: "store" as MatchType, label: "🏠 店内", disabled: false },
             {
               value: "tournament" as MatchType,
-              label: "🏆 立直麻将",
+              label: "🏆 公式战",
               disabled: isTemp,
             },
           ].map((opt) => {
@@ -290,7 +290,7 @@ function ConfigSelectView({
 
         {isTournament && (
           <div className="text-xs text-center text-base-content/40">
-            🔒 立直麻将模式固定为四麻·半庄
+            🔒 公式战模式固定为四麻·半庄
           </div>
         )}
       </div>
@@ -993,7 +993,7 @@ function MatchResultView({
 
         {isTournament && ppResult && (
           <div className="text-xs text-base-content/40 text-center">
-            * 立直麻将 PP 为预估值
+            * 公式战 PP 为预估值
           </div>
         )}
       </div>

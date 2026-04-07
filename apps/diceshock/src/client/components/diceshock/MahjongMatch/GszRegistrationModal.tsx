@@ -116,7 +116,7 @@ export default function GszRegistrationModal({
               "nicknameSynced" in result ? result.nicknameSynced : false,
           });
           setWarning(
-            "立直麻将账户暂时无法同步，不影响正常游戏。如需同步立直麻将成绩，请联系店员处理。",
+            "公式战账户暂时无法同步，不影响正常游戏。如需同步公式战成绩，请联系店员处理。",
           );
         } else {
           onRegistered(
@@ -144,7 +144,7 @@ export default function GszRegistrationModal({
       >
         <div className="flex items-center justify-between px-4 pb-3 border-b border-base-content/10">
           <h3 className="text-lg font-bold">
-            {step === "phone_verify" ? "验证手机号" : "立直麻将注册"}
+            {step === "phone_verify" ? "验证手机号" : "公式战注册"}
           </h3>
           <button
             type="button"
@@ -170,7 +170,7 @@ export default function GszRegistrationModal({
           {step === "phone_verify" && (
             <>
               <p className="text-sm text-base-content/60">
-                参加立直麻将需要绑定手机号
+                参加公式战需要绑定手机号
               </p>
               <label className="form-control">
                 <div className="label">
@@ -244,11 +244,11 @@ export default function GszRegistrationModal({
               ) : (
                 <>
                   <p className="text-sm text-base-content/60">
-                    确认你的立直麻将昵称
+                    确认你的公式战昵称
                   </p>
                   <label className="form-control">
                     <div className="label">
-                      <span className="label-text text-sm">立直麻将昵称</span>
+                      <span className="label-text text-sm">公式战昵称</span>
                     </div>
                     <input
                       type="text"
@@ -267,7 +267,7 @@ export default function GszRegistrationModal({
                       onChange={(e) => setSyncNickname(e.target.checked)}
                     />
                     <span className="label-text text-sm">
-                      同步使用立直麻将昵称作为 Diceshock 昵称
+                      同步使用公式战昵称作为 Diceshock 昵称
                     </span>
                   </label>
                   {existingPhone && (

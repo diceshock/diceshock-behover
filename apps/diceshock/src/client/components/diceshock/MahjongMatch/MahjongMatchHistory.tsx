@@ -208,7 +208,7 @@ function MahjongMatchDetailModal({
             </div>
             {isTournament && ppResult && (
               <div className="text-xs text-base-content/40 text-center mt-2">
-                立直麻将 PP 为预估值
+                公式战 PP 为预估值
               </div>
             )}
           </div>

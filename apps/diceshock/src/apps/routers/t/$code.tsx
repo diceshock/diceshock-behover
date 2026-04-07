@@ -372,7 +372,7 @@ function SeatTimerPage() {
             className={clsx("tab", activeTab === "mahjong" && "tab-active")}
             onClick={() => setActiveTab("mahjong")}
           >
-            公式战
+            立直麻将
           </button>
         )}
       </div>
@@ -409,7 +409,7 @@ function SeatTimerPage() {
                   <span className="w-6 h-6 flex items-center justify-center text-primary font-bold text-base leading-none select-none">
                     🀀
                   </span>
-                  <span className="text-sm font-medium">公式战</span>
+                  <span className="text-sm font-medium">立直麻将</span>
                 </div>
               </button>
             )}
