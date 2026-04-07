@@ -770,7 +770,7 @@ function MyGszProfile() {
                       [
                         ["all", "全部"],
                         ["store", "店内"],
-                        ["tournament", "立直麻将"],
+                        ["tournament", "公式战"],
                       ] as const
                     ).map(([key, label]) => (
                       <button
