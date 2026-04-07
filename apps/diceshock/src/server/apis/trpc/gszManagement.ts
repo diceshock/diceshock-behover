@@ -493,7 +493,7 @@ async function performGszSync(
   });
   if (!match) return { success: false, error: "对局不存在" };
   if (match.match_type !== "tournament")
-    return { success: false, error: "仅立直麻将对局可同步" };
+    return { success: false, error: "仅公式战对局可同步" };
 
   type PlayerJSON = {
     userId: string;
@@ -625,7 +625,7 @@ async function performGszSync(
 
     return { success: true };
   } catch (err) {
-    const errorMsg = err instanceof Error ? err.message : "立直麻将同步失败";
+    const errorMsg = err instanceof Error ? err.message : "公式战同步失败";
     await tdb
       .update(mahjongMatchesTable)
       .set({ gsz_error: errorMsg })

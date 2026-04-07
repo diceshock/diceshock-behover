@@ -174,7 +174,7 @@ const register = protectedProcedure
       }
       gszSynced = true;
     } catch (err) {
-      gszError = err instanceof Error ? err.message : "立直麻将系统暂时不可用";
+      gszError = err instanceof Error ? err.message : "公式战系统暂时不可用";
     }
 
     if (!hasPhone) {
