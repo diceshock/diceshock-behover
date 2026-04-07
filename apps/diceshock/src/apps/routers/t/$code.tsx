@@ -96,6 +96,7 @@ function SeatTimerPage() {
   const { code } = Route.useParams();
   const { from } = Route.useSearch();
   const { identity, ready: identityReady } = useSeatIdentity();
+  const { setUserInfoIm } = useAuth();
   const [redirectedFrom, setRedirectedFrom] = useState(from || "");
 
   const [tableData, setTableData] = useState<Awaited<
@@ -178,10 +179,18 @@ function SeatTimerPage() {
       .catch(() => {});
   }, [identity]);
 
-  const handleGszRegistered = useCallback((name: string) => {
-    setGszRegistered(true);
-    setGszName(name);
-  }, []);
+  const handleGszRegistered = useCallback(
+    (name: string, nicknameSynced: boolean) => {
+      setGszRegistered(true);
+      setGszName(name);
+      if (nicknameSynced) {
+        setUserInfoIm((draft) => {
+          if (draft) draft.nickname = name;
+        });
+      }
+    },
+    [setUserInfoIm],
+  );
 
   const wsHydrated =
     wsState != null && (wsState.table != null || wsState.step > 0);

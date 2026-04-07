@@ -62,7 +62,7 @@ export type PPCategory =
   | "store_3p_tonpuu";
 
 export const PP_CATEGORY_LABELS: Record<PPCategory, string> = {
-  tournament: "公式战 PP",
+  tournament: "立直麻将 PP",
   store_4p_hanchan: "四麻半庄 PP",
   store_4p_tonpuu: "四麻东风 PP",
   store_3p_hanchan: "三麻半庄 PP",

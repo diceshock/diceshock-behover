@@ -11,14 +11,14 @@
 import { Route as rootRouteImport } from './routers/__root'
 import { Route as TRouteImport } from './routers/t'
 import { Route as ReadyRouteImport } from './routers/ready'
-import { Route as MyGszRouteImport } from './routers/my-gsz'
+import { Route as MyRiichiRouteImport } from './routers/my-riichi'
 import { Route as DashRouteImport } from './routers/dash'
 import { Route as WithHomeLoRouteImport } from './routers/_with-home-lo'
 import { Route as DashIndexRouteImport } from './routers/dash/index'
 import { Route as WithHomeLoIndexRouteImport } from './routers/_with-home-lo/index'
 import { Route as TCodeRouteImport } from './routers/t/$code'
 import { Route as ReadyCodeRouteImport } from './routers/ready/$code'
-import { Route as MyGszIdRouteImport } from './routers/my-gsz/$id'
+import { Route as MyRiichiIdRouteImport } from './routers/my-riichi/$id'
 import { Route as DashUsersRouteImport } from './routers/dash/users'
 import { Route as DashTablesRouteImport } from './routers/dash/tables'
 import { Route as DashPricingRouteImport } from './routers/dash/pricing'
@@ -27,9 +27,9 @@ import { Route as DashMediaRouteImport } from './routers/dash/media'
 import { Route as DashGszRouteImport } from './routers/dash/gsz'
 import { Route as DashEventsRouteImport } from './routers/dash/events'
 import { Route as DashActivesRouteImport } from './routers/dash/actives'
+import { Route as WithHomeLoRiichiRouteImport } from './routers/_with-home-lo/riichi'
 import { Route as WithHomeLoMeRouteImport } from './routers/_with-home-lo/me'
 import { Route as WithHomeLoInventoryRouteImport } from './routers/_with-home-lo/inventory'
-import { Route as WithHomeLoGszRouteImport } from './routers/_with-home-lo/gsz'
 import { Route as WithHomeLoExternalRedirectRouteImport } from './routers/_with-home-lo/external-redirect'
 import { Route as WithHomeLoDiceshockAgentsRouteImport } from './routers/_with-home-lo/diceshock-agents'
 import { Route as WithHomeLoContactUsRouteImport } from './routers/_with-home-lo/contact-us'
@@ -56,9 +56,9 @@ const ReadyRoute = ReadyRouteImport.update({
   path: '/ready',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MyGszRoute = MyGszRouteImport.update({
-  id: '/my-gsz',
-  path: '/my-gsz',
+const MyRiichiRoute = MyRiichiRouteImport.update({
+  id: '/my-riichi',
+  path: '/my-riichi',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashRoute = DashRouteImport.update({
@@ -90,10 +90,10 @@ const ReadyCodeRoute = ReadyCodeRouteImport.update({
   path: '/$code',
   getParentRoute: () => ReadyRoute,
 } as any)
-const MyGszIdRoute = MyGszIdRouteImport.update({
+const MyRiichiIdRoute = MyRiichiIdRouteImport.update({
   id: '/$id',
   path: '/$id',
-  getParentRoute: () => MyGszRoute,
+  getParentRoute: () => MyRiichiRoute,
 } as any)
 const DashUsersRoute = DashUsersRouteImport.update({
   id: '/users',
@@ -135,6 +135,11 @@ const DashActivesRoute = DashActivesRouteImport.update({
   path: '/actives',
   getParentRoute: () => DashRoute,
 } as any)
+const WithHomeLoRiichiRoute = WithHomeLoRiichiRouteImport.update({
+  id: '/riichi',
+  path: '/riichi',
+  getParentRoute: () => WithHomeLoRoute,
+} as any)
 const WithHomeLoMeRoute = WithHomeLoMeRouteImport.update({
   id: '/me',
   path: '/me',
@@ -143,11 +148,6 @@ const WithHomeLoMeRoute = WithHomeLoMeRouteImport.update({
 const WithHomeLoInventoryRoute = WithHomeLoInventoryRouteImport.update({
   id: '/inventory',
   path: '/inventory',
-  getParentRoute: () => WithHomeLoRoute,
-} as any)
-const WithHomeLoGszRoute = WithHomeLoGszRouteImport.update({
-  id: '/gsz',
-  path: '/gsz',
   getParentRoute: () => WithHomeLoRoute,
 } as any)
 const WithHomeLoExternalRedirectRoute =
@@ -231,16 +231,16 @@ const DashOrdersIdSettleRoute = DashOrdersIdSettleRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof WithHomeLoIndexRoute
   '/dash': typeof DashRouteWithChildren
-  '/my-gsz': typeof MyGszRouteWithChildren
+  '/my-riichi': typeof MyRiichiRouteWithChildren
   '/ready': typeof ReadyRouteWithChildren
   '/t': typeof TRouteWithChildren
   '/actives': typeof WithHomeLoActivesRoute
   '/contact-us': typeof WithHomeLoContactUsRoute
   '/diceshock-agents': typeof WithHomeLoDiceshockAgentsRoute
   '/external-redirect': typeof WithHomeLoExternalRedirectRoute
-  '/gsz': typeof WithHomeLoGszRoute
   '/inventory': typeof WithHomeLoInventoryRoute
   '/me': typeof WithHomeLoMeRoute
+  '/riichi': typeof WithHomeLoRiichiRoute
   '/dash/actives': typeof DashActivesRoute
   '/dash/events': typeof DashEventsRoute
   '/dash/gsz': typeof DashGszRoute
@@ -249,7 +249,7 @@ export interface FileRoutesByFullPath {
   '/dash/pricing': typeof DashPricingRoute
   '/dash/tables': typeof DashTablesRoute
   '/dash/users': typeof DashUsersRoute
-  '/my-gsz/$id': typeof MyGszIdRoute
+  '/my-riichi/$id': typeof MyRiichiIdRoute
   '/ready/$code': typeof ReadyCodeRoute
   '/t/$code': typeof TCodeRoute
   '/dash/': typeof DashIndexRoute
@@ -266,16 +266,16 @@ export interface FileRoutesByFullPath {
   '/dash/orders/$id/settle': typeof DashOrdersIdSettleRoute
 }
 export interface FileRoutesByTo {
-  '/my-gsz': typeof MyGszRouteWithChildren
+  '/my-riichi': typeof MyRiichiRouteWithChildren
   '/ready': typeof ReadyRouteWithChildren
   '/t': typeof TRouteWithChildren
   '/actives': typeof WithHomeLoActivesRoute
   '/contact-us': typeof WithHomeLoContactUsRoute
   '/diceshock-agents': typeof WithHomeLoDiceshockAgentsRoute
   '/external-redirect': typeof WithHomeLoExternalRedirectRoute
-  '/gsz': typeof WithHomeLoGszRoute
   '/inventory': typeof WithHomeLoInventoryRoute
   '/me': typeof WithHomeLoMeRoute
+  '/riichi': typeof WithHomeLoRiichiRoute
   '/dash/actives': typeof DashActivesRoute
   '/dash/events': typeof DashEventsRoute
   '/dash/gsz': typeof DashGszRoute
@@ -284,7 +284,7 @@ export interface FileRoutesByTo {
   '/dash/pricing': typeof DashPricingRoute
   '/dash/tables': typeof DashTablesRoute
   '/dash/users': typeof DashUsersRoute
-  '/my-gsz/$id': typeof MyGszIdRoute
+  '/my-riichi/$id': typeof MyRiichiIdRoute
   '/ready/$code': typeof ReadyCodeRoute
   '/t/$code': typeof TCodeRoute
   '/': typeof WithHomeLoIndexRoute
@@ -305,16 +305,16 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_with-home-lo': typeof WithHomeLoRouteWithChildren
   '/dash': typeof DashRouteWithChildren
-  '/my-gsz': typeof MyGszRouteWithChildren
+  '/my-riichi': typeof MyRiichiRouteWithChildren
   '/ready': typeof ReadyRouteWithChildren
   '/t': typeof TRouteWithChildren
   '/_with-home-lo/actives': typeof WithHomeLoActivesRoute
   '/_with-home-lo/contact-us': typeof WithHomeLoContactUsRoute
   '/_with-home-lo/diceshock-agents': typeof WithHomeLoDiceshockAgentsRoute
   '/_with-home-lo/external-redirect': typeof WithHomeLoExternalRedirectRoute
-  '/_with-home-lo/gsz': typeof WithHomeLoGszRoute
   '/_with-home-lo/inventory': typeof WithHomeLoInventoryRoute
   '/_with-home-lo/me': typeof WithHomeLoMeRoute
+  '/_with-home-lo/riichi': typeof WithHomeLoRiichiRoute
   '/dash/actives': typeof DashActivesRoute
   '/dash/events': typeof DashEventsRoute
   '/dash/gsz': typeof DashGszRoute
@@ -323,7 +323,7 @@ export interface FileRoutesById {
   '/dash/pricing': typeof DashPricingRoute
   '/dash/tables': typeof DashTablesRoute
   '/dash/users': typeof DashUsersRoute
-  '/my-gsz/$id': typeof MyGszIdRoute
+  '/my-riichi/$id': typeof MyRiichiIdRoute
   '/ready/$code': typeof ReadyCodeRoute
   '/t/$code': typeof TCodeRoute
   '/_with-home-lo/': typeof WithHomeLoIndexRoute
@@ -345,16 +345,16 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dash'
-    | '/my-gsz'
+    | '/my-riichi'
     | '/ready'
     | '/t'
     | '/actives'
     | '/contact-us'
     | '/diceshock-agents'
     | '/external-redirect'
-    | '/gsz'
     | '/inventory'
     | '/me'
+    | '/riichi'
     | '/dash/actives'
     | '/dash/events'
     | '/dash/gsz'
@@ -363,7 +363,7 @@ export interface FileRouteTypes {
     | '/dash/pricing'
     | '/dash/tables'
     | '/dash/users'
-    | '/my-gsz/$id'
+    | '/my-riichi/$id'
     | '/ready/$code'
     | '/t/$code'
     | '/dash/'
@@ -380,16 +380,16 @@ export interface FileRouteTypes {
     | '/dash/orders/$id/settle'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/my-gsz'
+    | '/my-riichi'
     | '/ready'
     | '/t'
     | '/actives'
     | '/contact-us'
     | '/diceshock-agents'
     | '/external-redirect'
-    | '/gsz'
     | '/inventory'
     | '/me'
+    | '/riichi'
     | '/dash/actives'
     | '/dash/events'
     | '/dash/gsz'
@@ -398,7 +398,7 @@ export interface FileRouteTypes {
     | '/dash/pricing'
     | '/dash/tables'
     | '/dash/users'
-    | '/my-gsz/$id'
+    | '/my-riichi/$id'
     | '/ready/$code'
     | '/t/$code'
     | '/'
@@ -418,16 +418,16 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_with-home-lo'
     | '/dash'
-    | '/my-gsz'
+    | '/my-riichi'
     | '/ready'
     | '/t'
     | '/_with-home-lo/actives'
     | '/_with-home-lo/contact-us'
     | '/_with-home-lo/diceshock-agents'
     | '/_with-home-lo/external-redirect'
-    | '/_with-home-lo/gsz'
     | '/_with-home-lo/inventory'
     | '/_with-home-lo/me'
+    | '/_with-home-lo/riichi'
     | '/dash/actives'
     | '/dash/events'
     | '/dash/gsz'
@@ -436,7 +436,7 @@ export interface FileRouteTypes {
     | '/dash/pricing'
     | '/dash/tables'
     | '/dash/users'
-    | '/my-gsz/$id'
+    | '/my-riichi/$id'
     | '/ready/$code'
     | '/t/$code'
     | '/_with-home-lo/'
@@ -457,7 +457,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   WithHomeLoRoute: typeof WithHomeLoRouteWithChildren
   DashRoute: typeof DashRouteWithChildren
-  MyGszRoute: typeof MyGszRouteWithChildren
+  MyRiichiRoute: typeof MyRiichiRouteWithChildren
   ReadyRoute: typeof ReadyRouteWithChildren
   TRoute: typeof TRouteWithChildren
 }
@@ -478,11 +478,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReadyRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/my-gsz': {
-      id: '/my-gsz'
-      path: '/my-gsz'
-      fullPath: '/my-gsz'
-      preLoaderRoute: typeof MyGszRouteImport
+    '/my-riichi': {
+      id: '/my-riichi'
+      path: '/my-riichi'
+      fullPath: '/my-riichi'
+      preLoaderRoute: typeof MyRiichiRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dash': {
@@ -527,12 +527,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReadyCodeRouteImport
       parentRoute: typeof ReadyRoute
     }
-    '/my-gsz/$id': {
-      id: '/my-gsz/$id'
+    '/my-riichi/$id': {
+      id: '/my-riichi/$id'
       path: '/$id'
-      fullPath: '/my-gsz/$id'
-      preLoaderRoute: typeof MyGszIdRouteImport
-      parentRoute: typeof MyGszRoute
+      fullPath: '/my-riichi/$id'
+      preLoaderRoute: typeof MyRiichiIdRouteImport
+      parentRoute: typeof MyRiichiRoute
     }
     '/dash/users': {
       id: '/dash/users'
@@ -590,6 +590,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashActivesRouteImport
       parentRoute: typeof DashRoute
     }
+    '/_with-home-lo/riichi': {
+      id: '/_with-home-lo/riichi'
+      path: '/riichi'
+      fullPath: '/riichi'
+      preLoaderRoute: typeof WithHomeLoRiichiRouteImport
+      parentRoute: typeof WithHomeLoRoute
+    }
     '/_with-home-lo/me': {
       id: '/_with-home-lo/me'
       path: '/me'
@@ -602,13 +609,6 @@ declare module '@tanstack/react-router' {
       path: '/inventory'
       fullPath: '/inventory'
       preLoaderRoute: typeof WithHomeLoInventoryRouteImport
-      parentRoute: typeof WithHomeLoRoute
-    }
-    '/_with-home-lo/gsz': {
-      id: '/_with-home-lo/gsz'
-      path: '/gsz'
-      fullPath: '/gsz'
-      preLoaderRoute: typeof WithHomeLoGszRouteImport
       parentRoute: typeof WithHomeLoRoute
     }
     '/_with-home-lo/external-redirect': {
@@ -724,9 +724,9 @@ interface WithHomeLoRouteChildren {
   WithHomeLoContactUsRoute: typeof WithHomeLoContactUsRoute
   WithHomeLoDiceshockAgentsRoute: typeof WithHomeLoDiceshockAgentsRoute
   WithHomeLoExternalRedirectRoute: typeof WithHomeLoExternalRedirectRoute
-  WithHomeLoGszRoute: typeof WithHomeLoGszRoute
   WithHomeLoInventoryRoute: typeof WithHomeLoInventoryRoute
   WithHomeLoMeRoute: typeof WithHomeLoMeRoute
+  WithHomeLoRiichiRoute: typeof WithHomeLoRiichiRoute
   WithHomeLoIndexRoute: typeof WithHomeLoIndexRoute
   WithHomeLoActivesIdRoute: typeof WithHomeLoActivesIdRoute
   WithHomeLoActivesNewRoute: typeof WithHomeLoActivesNewRoute
@@ -739,9 +739,9 @@ const WithHomeLoRouteChildren: WithHomeLoRouteChildren = {
   WithHomeLoContactUsRoute: WithHomeLoContactUsRoute,
   WithHomeLoDiceshockAgentsRoute: WithHomeLoDiceshockAgentsRoute,
   WithHomeLoExternalRedirectRoute: WithHomeLoExternalRedirectRoute,
-  WithHomeLoGszRoute: WithHomeLoGszRoute,
   WithHomeLoInventoryRoute: WithHomeLoInventoryRoute,
   WithHomeLoMeRoute: WithHomeLoMeRoute,
+  WithHomeLoRiichiRoute: WithHomeLoRiichiRoute,
   WithHomeLoIndexRoute: WithHomeLoIndexRoute,
   WithHomeLoActivesIdRoute: WithHomeLoActivesIdRoute,
   WithHomeLoActivesNewRoute: WithHomeLoActivesNewRoute,
@@ -793,15 +793,17 @@ const DashRouteChildren: DashRouteChildren = {
 
 const DashRouteWithChildren = DashRoute._addFileChildren(DashRouteChildren)
 
-interface MyGszRouteChildren {
-  MyGszIdRoute: typeof MyGszIdRoute
+interface MyRiichiRouteChildren {
+  MyRiichiIdRoute: typeof MyRiichiIdRoute
 }
 
-const MyGszRouteChildren: MyGszRouteChildren = {
-  MyGszIdRoute: MyGszIdRoute,
+const MyRiichiRouteChildren: MyRiichiRouteChildren = {
+  MyRiichiIdRoute: MyRiichiIdRoute,
 }
 
-const MyGszRouteWithChildren = MyGszRoute._addFileChildren(MyGszRouteChildren)
+const MyRiichiRouteWithChildren = MyRiichiRoute._addFileChildren(
+  MyRiichiRouteChildren,
+)
 
 interface ReadyRouteChildren {
   ReadyCodeRoute: typeof ReadyCodeRoute
@@ -826,7 +828,7 @@ const TRouteWithChildren = TRoute._addFileChildren(TRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   WithHomeLoRoute: WithHomeLoRouteWithChildren,
   DashRoute: DashRouteWithChildren,
-  MyGszRoute: MyGszRouteWithChildren,
+  MyRiichiRoute: MyRiichiRouteWithChildren,
   ReadyRoute: ReadyRouteWithChildren,
   TRoute: TRouteWithChildren,
 }

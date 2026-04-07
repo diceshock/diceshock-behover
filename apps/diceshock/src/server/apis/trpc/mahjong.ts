@@ -108,6 +108,7 @@ const register = protectedProcedure
       phone: z.string().nonempty(),
       smsCode: z.string().nonempty(),
       gszName: z.string().nonempty(),
+      syncNickname: z.boolean().optional(),
     }),
   )
   .mutation(async ({ input, ctx }) => {
@@ -173,7 +174,7 @@ const register = protectedProcedure
       }
       gszSynced = true;
     } catch (err) {
-      gszError = err instanceof Error ? err.message : "公式战系统暂时不可用";
+      gszError = err instanceof Error ? err.message : "立直麻将系统暂时不可用";
     }
 
     if (!hasPhone) {
@@ -214,6 +215,15 @@ const register = protectedProcedure
       })
       .returning();
 
+    let nicknameSynced = false;
+    if (input.syncNickname && gszName) {
+      await tdb
+        .update(userInfoTable)
+        .set({ nickname: gszName })
+        .where(eq(userInfoTable.id, ctx.userId));
+      nicknameSynced = true;
+    }
+
     return {
       registered: true,
       gszName: reg.gsz_name,
@@ -221,6 +231,7 @@ const register = protectedProcedure
       gszSynced: reg.gsz_synced,
       gszError: reg.gsz_error,
       alreadyExisted: false,
+      nicknameSynced,
     };
   });
 

@@ -13,8 +13,8 @@ type PageType = {
 
 const PAGES: PageType[] = [
   {
-    title: "公式战",
-    href: `/gsz`,
+    title: "立直麻将",
+    href: `/riichi`,
   },
   {
     title: "库存",

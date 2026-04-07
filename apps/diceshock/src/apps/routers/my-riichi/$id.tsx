@@ -30,7 +30,7 @@ import type { MatchType } from "@/shared/mahjong/types";
 import dayjs from "@/shared/utils/dayjs-config";
 import trpcClientPublic from "@/shared/utils/trpc";
 
-export const Route = createFileRoute("/my-gsz/$id")({
+export const Route = createFileRoute("/my-riichi/$id")({
   component: MyGszProfile,
 });
 
@@ -570,11 +570,11 @@ function MyGszProfile() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold">
-              {isOwnProfile ? "我的公式战" : "公式战成绩"}
+              {isOwnProfile ? "我的立直麻将" : "立直麻将成绩"}
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            <a href="/gsz" className="btn btn-ghost btn-sm">
+            <a href="/riichi" className="btn btn-ghost btn-sm">
               排行榜
             </a>
             <button
@@ -770,7 +770,7 @@ function MyGszProfile() {
                       [
                         ["all", "全部"],
                         ["store", "店内"],
-                        ["tournament", "公式战"],
+                        ["tournament", "立直麻将"],
                       ] as const
                     ).map(([key, label]) => (
                       <button

@@ -3,7 +3,7 @@ import Footer from "@/client/components/diceshock/Footer";
 import Header from "@/client/components/diceshock/Header";
 import Msg from "@/client/components/diceshock/Msg";
 
-export const Route = createFileRoute("/my-gsz")({
+export const Route = createFileRoute("/my-riichi")({
   component: MyGszLayout,
 });
 

@@ -5,6 +5,7 @@ import {
   EyeIcon,
   MagnifyingGlassIcon,
   StopIcon,
+  WarningCircleIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import clsx from "clsx";
@@ -97,6 +98,15 @@ function RouteComponent() {
   const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 50;
+
+  const unsyncableDialogRef = useRef<HTMLDialogElement>(null);
+  const [unsyncableReasons, setUnsyncableReasons] = useState<
+    Array<{
+      nickname: string;
+      userId: string;
+      reason: "no_phone" | "temp_user";
+    }>
+  >([]);
 
   const searchRef = useRef(searchText);
   useEffect(() => {
@@ -584,6 +594,19 @@ function RouteComponent() {
                           >
                             未同步
                           </span>
+                          {match.unsyncable_reasons.length > 0 && (
+                            <button
+                              type="button"
+                              className="btn btn-xs btn-ghost btn-square text-error"
+                              onClick={() => {
+                                setUnsyncableReasons(match.unsyncable_reasons);
+                                unsyncableDialogRef.current?.showModal();
+                              }}
+                              title="无法同步"
+                            >
+                              <WarningCircleIcon className="size-4" />
+                            </button>
+                          )}
                           <button
                             type="button"
                             className="btn btn-xs btn-ghost btn-square"
@@ -669,6 +692,36 @@ function RouteComponent() {
           </button>
         </div>
       )}
+
+      <dialog ref={unsyncableDialogRef} className="modal">
+        <div className="modal-box max-w-sm">
+          <h3 className="text-lg font-bold mb-3">无法同步原因</h3>
+          <div className="flex flex-col gap-2">
+            {unsyncableReasons.map((r) => (
+              <div
+                key={r.userId}
+                className="flex items-center gap-2 text-sm p-2 bg-base-200 rounded-lg"
+              >
+                <WarningCircleIcon className="size-4 text-error shrink-0" />
+                <span className="font-medium">{r.nickname}</span>
+                <span className="text-base-content/60">
+                  {r.reason === "temp_user" ? "临时用户" : "未绑定手机号"}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="modal-action">
+            <form method="dialog">
+              <button type="submit" className="btn btn-sm">
+                关闭
+              </button>
+            </form>
+          </div>
+        </div>
+        <form method="dialog" className="modal-backdrop">
+          <button type="submit">close</button>
+        </form>
+      </dialog>
     </main>
   );
 }

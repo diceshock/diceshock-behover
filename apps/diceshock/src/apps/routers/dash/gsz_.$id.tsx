@@ -28,7 +28,7 @@ const FORMAT_LABELS: Record<string, string> = {
 
 const MATCH_TYPE_LABELS: Record<string, string> = {
   store: "店内",
-  tournament: "公式战",
+  tournament: "立直麻将",
 };
 
 const TERMINATION_LABELS: Record<string, string> = {
@@ -169,7 +169,7 @@ function MatchDetailPage() {
               <div className="flex items-center gap-1">
                 <span
                   className="badge badge-warning badge-sm cursor-help"
-                  title={match.gsz_error ?? "未同步到公式战"}
+                  title={match.gsz_error ?? "未同步到立直麻将"}
                 >
                   未同步
                 </span>
@@ -286,7 +286,7 @@ function PlayersSection({
       });
       msg.success(
         isTournament && hasGszRecord
-          ? "分数已更新并同步到公式战"
+          ? "分数已更新并同步到立直麻将"
           : "分数已更新",
       );
       setEditing(false);
@@ -426,7 +426,7 @@ function PlayersSection({
 
       {isTournament && ppResult && (
         <div className="text-xs text-base-content/40 text-center">
-          * 公式战 PP 为预估值
+          * 立直麻将 PP 为预估值
         </div>
       )}
     </div>

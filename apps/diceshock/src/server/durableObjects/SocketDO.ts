@@ -341,7 +341,7 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
         .update(mahjongMatchesTable)
         .set({
           gsz_synced: false,
-          gsz_error: err instanceof Error ? err.message : "公式战同步失败",
+          gsz_error: err instanceof Error ? err.message : "立直麻将同步失败",
         })
         .where(eq(mahjongMatchesTable.id, matchId))
         .catch(() => {});

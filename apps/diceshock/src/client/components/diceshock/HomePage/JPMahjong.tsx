@@ -48,7 +48,7 @@ const JPMahjong = () => {
             <span className="text-primary">日麻机</span>上打日麻
           </p>
           <p>
-            <span className="text-primary">公式战</span>里鸣碰杀
+            <span className="text-primary">立直麻将</span>里鸣碰杀
           </p>
         </h2>
 

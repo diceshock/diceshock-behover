@@ -15,7 +15,7 @@ import type { PPCategory } from "@/shared/mahjong/pp";
 import { formatPP, PP_CATEGORY_LABELS } from "@/shared/mahjong/pp";
 import trpcClientPublic from "@/shared/utils/trpc";
 
-export const Route = createFileRoute("/_with-home-lo/gsz")({
+export const Route = createFileRoute("/_with-home-lo/riichi")({
   component: GszPage,
 });
 
@@ -323,7 +323,7 @@ function GszPage() {
                 className="inline size-8 sm:size-10 text-primary mr-2"
                 weight="fill"
               />
-              公式战
+              立直麻将
             </h1>
             <p className="text-sm text-base-content/50 mt-1">
               立直麻将 PP 排行榜 & 对局
@@ -332,11 +332,11 @@ function GszPage() {
 
           {isLoggedIn && session?.user?.id && (
             <a
-              href={`/my-gsz/${session.user.id}`}
+              href={`/my-riichi/${session.user.id}`}
               className="btn btn-primary btn-sm sm:btn-md gap-1"
             >
               <UserIcon className="size-4" weight="bold" />
-              我的公式战
+              我的立直麻将
             </a>
           )}
         </div>

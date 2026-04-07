@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import Modal from "@/client/components/modal";
@@ -6,7 +7,11 @@ import trpcClientPublic from "@/shared/utils/trpc";
 interface GszRegistrationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onRegistered: (gszName: string, gszSynced: boolean) => void;
+  onRegistered: (
+    gszName: string,
+    gszSynced: boolean,
+    nicknameSynced: boolean,
+  ) => void;
   onSkip: () => void;
   phone: string | null;
   nickname: string;
@@ -29,12 +34,14 @@ export default function GszRegistrationModal({
   const [phone, setPhone] = useState(existingPhone ?? "");
   const [smsCode, setSmsCode] = useState("");
   const [gszName, setGszName] = useState(nickname);
+  const [syncNickname, setSyncNickname] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [pendingRegistration, setPendingRegistration] = useState<{
     gszName: string;
     gszSynced: boolean;
+    nicknameSynced: boolean;
   } | null>(null);
   const [smsSending, setSmsSending] = useState(false);
   const [smsCooldown, setSmsCooldown] = useState(0);
@@ -45,6 +52,7 @@ export default function GszRegistrationModal({
       setPhone(existingPhone ?? "");
       setSmsCode("");
       setGszName(nickname);
+      setSyncNickname(true);
       setError(null);
       setWarning(null);
       setPendingRegistration(null);
@@ -97,18 +105,25 @@ export default function GszRegistrationModal({
         phone: phone.trim(),
         smsCode: needsPhone ? smsCode.trim() : "0",
         gszName: gszName.trim(),
+        syncNickname,
       });
       if (result.registered) {
         if (result.gszSynced === false) {
           setPendingRegistration({
             gszName: result.gszName ?? gszName.trim(),
             gszSynced: false,
+            nicknameSynced:
+              "nicknameSynced" in result ? result.nicknameSynced : false,
           });
           setWarning(
-            "公式战账户暂时无法同步，不影响正常游戏。如需同步公式战成绩，请联系店员处理。",
+            "立直麻将账户暂时无法同步，不影响正常游戏。如需同步立直麻将成绩，请联系店员处理。",
           );
         } else {
-          onRegistered(result.gszName ?? gszName.trim(), true);
+          onRegistered(
+            result.gszName ?? gszName.trim(),
+            true,
+            "nicknameSynced" in result ? result.nicknameSynced : false,
+          );
         }
       }
     } catch (err) {
@@ -116,7 +131,7 @@ export default function GszRegistrationModal({
     } finally {
       setLoading(false);
     }
-  }, [gszName, phone, smsCode, needsPhone, onRegistered]);
+  }, [gszName, phone, smsCode, needsPhone, syncNickname, onRegistered]);
 
   return (
     <Modal isCloseOnClick isOpen={isOpen} onToggle={() => onClose()}>
@@ -129,7 +144,7 @@ export default function GszRegistrationModal({
       >
         <div className="flex items-center justify-between px-4 pb-3 border-b border-base-content/10">
           <h3 className="text-lg font-bold">
-            {step === "phone_verify" ? "验证手机号" : "公式战注册"}
+            {step === "phone_verify" ? "验证手机号" : "立直麻将注册"}
           </h3>
           <button
             type="button"
@@ -155,7 +170,7 @@ export default function GszRegistrationModal({
           {step === "phone_verify" && (
             <>
               <p className="text-sm text-base-content/60">
-                参加公式战需要绑定手机号
+                参加立直麻将需要绑定手机号
               </p>
               <label className="form-control">
                 <div className="label">
@@ -219,6 +234,7 @@ export default function GszRegistrationModal({
                       onRegistered(
                         pendingRegistration.gszName,
                         pendingRegistration.gszSynced,
+                        pendingRegistration.nicknameSynced,
                       );
                     }}
                   >
@@ -228,11 +244,11 @@ export default function GszRegistrationModal({
               ) : (
                 <>
                   <p className="text-sm text-base-content/60">
-                    确认你的公式战昵称
+                    确认你的立直麻将昵称
                   </p>
                   <label className="form-control">
                     <div className="label">
-                      <span className="label-text text-sm">公式战昵称</span>
+                      <span className="label-text text-sm">立直麻将昵称</span>
                     </div>
                     <input
                       type="text"
@@ -242,6 +258,17 @@ export default function GszRegistrationModal({
                       onChange={(e) => setGszName(e.target.value)}
                       maxLength={20}
                     />
+                  </label>
+                  <label className="label cursor-pointer justify-start gap-2">
+                    <input
+                      type="checkbox"
+                      className="checkbox checkbox-sm"
+                      checked={syncNickname}
+                      onChange={(e) => setSyncNickname(e.target.checked)}
+                    />
+                    <span className="label-text text-sm">
+                      同步使用立直麻将昵称作为 Diceshock 昵称
+                    </span>
                   </label>
                   {existingPhone && (
                     <div className="text-xs text-base-content/40">
@@ -275,13 +302,26 @@ export default function GszRegistrationModal({
                     </button>
                   )}
                   {error && (
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm w-full text-base-content/50"
-                      onClick={onSkip}
-                    >
-                      跳过注册，继续游戏
-                    </button>
+                    <>
+                      <div className="text-xs text-base-content/50 text-center">
+                        你也可以稍后前往
+                        <Link
+                          to="/me"
+                          className="link link-primary mx-1"
+                          onClick={onClose}
+                        >
+                          个人中心
+                        </Link>
+                        完成绑定
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm w-full text-base-content/50"
+                        onClick={onSkip}
+                      >
+                        跳过注册，继续游戏
+                      </button>
+                    </>
                   )}
                 </>
               )}

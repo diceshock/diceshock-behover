@@ -37,7 +37,7 @@ export const WIND_LABELS: Record<Wind, string> = {
 
 export const MATCH_TYPE_LABELS: Record<string, string> = {
   store: "店内",
-  tournament: "公式战",
+  tournament: "立直麻将",
 };
 
 export const MODE_LABELS: Record<string, string> = {

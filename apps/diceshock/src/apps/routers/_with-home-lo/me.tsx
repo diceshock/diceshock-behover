@@ -1,6 +1,7 @@
 import {
   ChatsTeardropIcon,
   CopyIcon,
+  GameControllerIcon,
   PencilSimpleLineIcon,
   PhoneIcon,
   SignOutIcon,
@@ -12,6 +13,7 @@ import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import BusinessCardModal from "@/client/components/diceshock/BusinessCardModal";
 import GszQuickCard from "@/client/components/diceshock/GszQuickCard";
+import GszRegistrationModal from "@/client/components/diceshock/MahjongMatch/GszRegistrationModal";
 import {
   getPlanConfig,
   getStoredValueBalance,
@@ -62,6 +64,17 @@ function RouteComponent() {
 
   // 名片编辑相关状态
   const [isEditingBusinessCard, setIsEditingBusinessCard] = useState(false);
+
+  // 公式战绑定相关状态
+  const [gszRegistered, setGszRegistered] = useState<boolean | null>(null);
+  const [showGszModal, setShowGszModal] = useState(false);
+
+  useEffect(() => {
+    trpcClientPublic.mahjong.checkRegistration
+      .query()
+      .then((result) => setGszRegistered(result.registered))
+      .catch(() => {});
+  }, []);
 
   const {
     smsForm,
@@ -335,6 +348,29 @@ function RouteComponent() {
 
             <GszQuickCard userId={session?.user?.id} />
 
+            {gszRegistered === false && (
+              <button
+                onClick={() => setShowGszModal(true)}
+                className="card bg-base-200 hover:bg-base-300 transition-colors w-full cursor-pointer border border-base-content/10 hover:border-base-content/20 shadow-sm hover:shadow-md"
+              >
+                <div className="card-body p-4 sm:p-6 md:p-8">
+                  <div className="flex items-start gap-3 sm:gap-4">
+                    <div className="shrink-0 p-2 sm:p-2.5 bg-primary/10 rounded-lg">
+                      <GameControllerIcon className="size-5 sm:size-6 md:size-8 text-primary" />
+                    </div>
+                    <div className="flex flex-col items-start justify-start flex-1 min-w-0">
+                      <p className="text-base sm:text-lg font-bold mb-1">
+                        绑定立直麻将
+                      </p>
+                      <p className="text-xs sm:text-sm text-base-content/60 break-words">
+                        绑定后可参加公式战对局
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            )}
+
             <button
               onClick={handleEditPhoneClick}
               className="card bg-base-200 hover:bg-base-300 transition-colors w-full cursor-pointer border border-base-content/10 hover:border-base-content/20 shadow-sm hover:shadow-md"
@@ -590,6 +626,19 @@ function RouteComponent() {
       <BusinessCardModal
         isOpen={isEditingBusinessCard}
         onClose={() => setIsEditingBusinessCard(false)}
+      />
+
+      <GszRegistrationModal
+        isOpen={showGszModal}
+        onClose={() => setShowGszModal(false)}
+        onRegistered={() => {
+          setShowGszModal(false);
+          setGszRegistered(true);
+          messages.success("立直麻将绑定成功");
+        }}
+        onSkip={() => setShowGszModal(false)}
+        phone={userInfo?.phone ?? null}
+        nickname={userInfo?.nickname ?? ""}
       />
     </>
   );

@@ -44,7 +44,7 @@ const MahjongMatch = () => {
         <Lighting className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-primary/70 w-40" />
 
         <h3 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-8xl font-bold italic text-nowrap">
-          公式战
+          立直麻将
         </h3>
       </animated.div>
       <animated.p
@@ -53,7 +53,7 @@ const MahjongMatch = () => {
         }}
         className="text-xl mb-20 py-2 px-4"
       >
-        全国公式战参与道馆
+        全国立直麻将参与道馆
       </animated.p>
 
       <ul

@@ -1,14 +1,25 @@
-import db, { mahjongMatchesTable, mahjongRegistrationsTable } from "@lib/db";
+import db, {
+  mahjongMatchesTable,
+  mahjongRegistrationsTable,
+  tempIdentitiesTable,
+  users,
+} from "@lib/db";
 import { eq, inArray } from "drizzle-orm";
 import z from "zod/v4";
 import type { MatchState } from "@/shared/mahjong/types";
 import { dashProcedure } from "./baseTRPC";
-import { gszFetch } from "./gszApi";
+import { type GszPageResult, gszFetch } from "./gszApi";
 
 type ModeFilter = "all" | "3p" | "4p";
 type FormatFilter = "all" | "tonpuu" | "hanchan";
 type CompletionFilter = "all" | "completed" | "incomplete";
 type GszSyncFilter = "all" | "synced" | "unsynced";
+
+export type UnsyncableReason = {
+  nickname: string;
+  userId: string;
+  reason: "no_phone" | "temp_user";
+};
 
 const list = dashProcedure
   .input((v: unknown) => {
@@ -151,7 +162,76 @@ const list = dashProcedure
     const start = (input.page - 1) * input.pageSize;
     const items = filtered.slice(start, start + input.pageSize);
 
-    return { items, total, page: input.page, pageSize: input.pageSize };
+    const unsyncedTournaments = items.filter(
+      (m) => m.match_type === "tournament" && !m.gsz_synced,
+    );
+    const allPlayerIds = [
+      ...new Set(
+        unsyncedTournaments.flatMap((m) => m.players.map((p) => p.userId)),
+      ),
+    ];
+
+    let regSet = new Set<string>();
+    let tempSet = new Set<string>();
+    let realUserSet = new Set<string>();
+
+    if (allPlayerIds.length > 0) {
+      const regs = await tdb
+        .select({ user_id: mahjongRegistrationsTable.user_id })
+        .from(mahjongRegistrationsTable)
+        .where(inArray(mahjongRegistrationsTable.user_id, allPlayerIds));
+      regSet = new Set(regs.map((r) => r.user_id));
+
+      const unregisteredIds = allPlayerIds.filter((id) => !regSet.has(id));
+      if (unregisteredIds.length > 0) {
+        const realUsers = await tdb
+          .select({ id: users.id })
+          .from(users)
+          .where(inArray(users.id, unregisteredIds));
+        realUserSet = new Set(realUsers.map((u) => u.id));
+
+        const potentialTempIds = unregisteredIds.filter(
+          (id) => !realUserSet.has(id),
+        );
+        if (potentialTempIds.length > 0) {
+          const temps = await tdb
+            .select({ id: tempIdentitiesTable.id })
+            .from(tempIdentitiesTable)
+            .where(inArray(tempIdentitiesTable.id, potentialTempIds));
+          tempSet = new Set(temps.map((t) => t.id));
+        }
+      }
+    }
+
+    const enrichedItems = items.map((m) => {
+      if (m.match_type !== "tournament" || m.gsz_synced) {
+        return { ...m, unsyncable_reasons: [] as UnsyncableReason[] };
+      }
+      const reasons: UnsyncableReason[] = [];
+      for (const p of m.players) {
+        if (tempSet.has(p.userId)) {
+          reasons.push({
+            nickname: p.nickname,
+            userId: p.userId,
+            reason: "temp_user",
+          });
+        } else if (!regSet.has(p.userId)) {
+          reasons.push({
+            nickname: p.nickname,
+            userId: p.userId,
+            reason: "no_phone",
+          });
+        }
+      }
+      return { ...m, unsyncable_reasons: reasons };
+    });
+
+    return {
+      items: enrichedItems,
+      total,
+      page: input.page,
+      pageSize: input.pageSize,
+    };
   });
 
 const getById = dashProcedure
@@ -413,7 +493,7 @@ async function performGszSync(
   });
   if (!match) return { success: false, error: "对局不存在" };
   if (match.match_type !== "tournament")
-    return { success: false, error: "仅公式战对局可同步" };
+    return { success: false, error: "仅立直麻将对局可同步" };
 
   type PlayerJSON = {
     userId: string;
@@ -434,13 +514,55 @@ async function performGszSync(
     .select({
       user_id: mahjongRegistrationsTable.user_id,
       phone: mahjongRegistrationsTable.phone,
+      gsz_id: mahjongRegistrationsTable.gsz_id,
     })
     .from(mahjongRegistrationsTable)
     .where(inArray(mahjongRegistrationsTable.user_id, userIds));
-  const phoneMap = new Map(registrations.map((r) => [r.user_id, r.phone]));
-  const phones = sorted.map((p) => phoneMap.get(p.userId) ?? "");
+  const regMap = new Map(registrations.map((r) => [r.user_id, r]));
+  const phones = sorted.map((p) => regMap.get(p.userId)?.phone ?? "");
   if (!phones.every(Boolean))
     return { success: false, error: "部分玩家未绑定手机号" };
+
+  for (const p of sorted) {
+    const reg = regMap.get(p.userId);
+    if (reg && !reg.gsz_id) {
+      try {
+        const gszResult = await gszFetch<GszPageResult>(
+          env,
+          "/gszapi/open/customer/page",
+          { params: { phone: reg.phone } },
+          { pageNo: 1, pageSize: 1 },
+        );
+
+        let gszId: number | null = null;
+        if (gszResult.records.length > 0) {
+          gszId = gszResult.records[0].id;
+        } else {
+          gszId = await gszFetch<number>(env, "/gszapi/open/register", {
+            params: { username: p.nickname, phone: reg.phone },
+          });
+        }
+
+        if (gszId) {
+          await tdb
+            .update(mahjongRegistrationsTable)
+            .set({
+              gsz_id: gszId,
+              gsz_name: gszResult.records[0]?.name ?? p.nickname,
+              gsz_synced: true,
+              gsz_error: null,
+              gsz_synced_at: new Date(),
+            })
+            .where(eq(mahjongRegistrationsTable.user_id, p.userId));
+        }
+      } catch {
+        return {
+          success: false,
+          error: `无法为玩家 ${p.nickname} 创建公式战账户`,
+        };
+      }
+    }
+  }
 
   const endedAt =
     match.ended_at instanceof Date
@@ -503,7 +625,7 @@ async function performGszSync(
 
     return { success: true };
   } catch (err) {
-    const errorMsg = err instanceof Error ? err.message : "公式战同步失败";
+    const errorMsg = err instanceof Error ? err.message : "立直麻将同步失败";
     await tdb
       .update(mahjongMatchesTable)
       .set({ gsz_error: errorMsg })

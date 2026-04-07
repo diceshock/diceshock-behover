@@ -38,7 +38,7 @@ export default function GszQuickCard({
 
   return (
     <a
-      href={userId ? `/my-gsz/${userId}` : "/gsz"}
+      href={userId ? `/my-riichi/${userId}` : "/riichi"}
       className="card bg-base-200 hover:bg-base-300 transition-colors w-full cursor-pointer border border-base-content/10 hover:border-base-content/20 shadow-sm hover:shadow-md"
     >
       <div className="card-body p-4 sm:p-6 md:p-8">
@@ -47,9 +47,7 @@ export default function GszQuickCard({
             <GameControllerIcon className="size-5 sm:size-6 md:size-8 text-primary" />
           </div>
           <div className="flex flex-col items-start justify-start flex-1 min-w-0">
-            <p className="text-base sm:text-lg font-bold mb-1">
-              立直麻将 · 公式战
-            </p>
+            <p className="text-base sm:text-lg font-bold mb-1">立直麻将</p>
             {isLoading ? (
               <span className="loading loading-dots loading-xs" />
             ) : totalMatches === 0 ? (
