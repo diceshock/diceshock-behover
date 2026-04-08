@@ -187,23 +187,6 @@ export default function useMahjongMatch({
     [dispatch],
   );
 
-  const initiateVote = useCallback(
-    () =>
-      dispatch("mahjong_initiate_vote", { action: "mahjong_initiate_vote" }),
-    [dispatch],
-  );
-
-  const castVote = useCallback(
-    (vote: boolean) =>
-      dispatch("mahjong_cast_vote", { action: "mahjong_cast_vote", vote }),
-    [dispatch],
-  );
-
-  const resolveVote = useCallback(
-    () => dispatch("mahjong_resolve_vote", { action: "mahjong_resolve_vote" }),
-    [dispatch],
-  );
-
   const reset = useCallback(
     (mode: "keep_config" | "to_config") =>
       dispatch("mahjong_reset", { action: "mahjong_reset", mode }),
@@ -226,9 +209,6 @@ export default function useMahjongMatch({
       submitScore,
       confirmScore,
       cancelConfirm,
-      initiateVote,
-      castVote,
-      resolveVote,
       reset,
     },
   };

@@ -51,6 +51,9 @@ function ReadyPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [occupying, setOccupying] = useState(false);
+  const [existingOrders, setExistingOrders] = useState<
+    Array<{ code: string; name: string; status: string }>
+  >([]);
 
   const fetchTable = useCallback(async () => {
     setLoading(true);
@@ -68,6 +71,25 @@ function ReadyPage() {
   useEffect(() => {
     void fetchTable();
   }, [fetchTable]);
+
+  useEffect(() => {
+    if (!identity) return;
+    if (identity.kind === "real") {
+      trpcClientPublic.tables.getMyActiveOccupancy
+        .query()
+        .then((occs) => {
+          setExistingOrders(occs.filter((o) => o.code !== code));
+        })
+        .catch(() => {});
+    } else if (identity.kind === "temp") {
+      trpcClientPublic.tempIdentity.getActiveOccupancy
+        .query({ tempId: identity.tempId })
+        .then((occs) => {
+          setExistingOrders(occs.filter((o) => o.code !== code));
+        })
+        .catch(() => {});
+    }
+  }, [identity, code]);
 
   const table = tableData
     ? {
@@ -214,6 +236,18 @@ function ReadyPage() {
         </div>
       )}
 
+      {existingOrders.length > 0 && (
+        <div className="alert alert-warning alert-soft text-sm">
+          <span>
+            你在 {existingOrders.map((o) => o.name).join("、")} 有
+            {existingOrders.some((o) => o.status === "active")
+              ? "活跃"
+              : "暂停"}
+            订单，开始此桌将自动暂停之前的活跃订单。
+          </span>
+        </div>
+      )}
+
       <div className="flex flex-col gap-4 bg-base-200 rounded-xl p-5">
         <button
           className={clsx(
@@ -225,6 +259,8 @@ function ReadyPage() {
         >
           {occupying ? (
             <span className="loading loading-spinner loading-sm" />
+          ) : existingOrders.some((o) => o.status === "active") ? (
+            "暂停旧订单并开始"
           ) : (
             "开始记时"
           )}

@@ -4,12 +4,14 @@ import {
   CurrencyDollarIcon,
   HashIcon,
   PackageIcon,
+  QrCodeIcon,
   UserIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import clsx from "clsx";
 import QRCode from "qrcode";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import QRScannerDialog from "@/client/components/diceshock/Header/QRScannerDialog";
 import DisconnectionOverlay from "@/client/components/diceshock/DisconnectionOverlay";
 import MahjongMatchStepper from "@/client/components/diceshock/MahjongMatch/MahjongMatchStepper";
 import NetworkSignalIndicator from "@/client/components/diceshock/NetworkSignalIndicator";
@@ -105,6 +107,7 @@ function SeatTimerPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"main" | "mahjong">("main");
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   const [gszRegistered, setGszRegistered] = useState(false);
   const [gszName, setGszName] = useState<string | null>(null);
@@ -356,25 +359,35 @@ function SeatTimerPage() {
         </div>
       )}
 
-      <div role="tablist" className="tabs tabs-bordered">
-        <button
-          type="button"
-          role="tab"
-          className={clsx("tab", activeTab === "main" && "tab-active")}
-          onClick={() => setActiveTab("main")}
-        >
-          主页
-        </button>
-        {isMahjong && (
+      <div className="flex items-center justify-between">
+        <div role="tablist" className="tabs tabs-bordered flex-1">
           <button
             type="button"
             role="tab"
-            className={clsx("tab", activeTab === "mahjong" && "tab-active")}
-            onClick={() => setActiveTab("mahjong")}
+            className={clsx("tab", activeTab === "main" && "tab-active")}
+            onClick={() => setActiveTab("main")}
           >
-            立直麻将
+            主页
           </button>
-        )}
+          {isMahjong && (
+            <button
+              type="button"
+              role="tab"
+              className={clsx("tab", activeTab === "mahjong" && "tab-active")}
+              onClick={() => setActiveTab("mahjong")}
+            >
+              立直麻将
+            </button>
+          )}
+        </div>
+        <button
+          type="button"
+          className="btn btn-sm btn-ghost gap-1"
+          onClick={() => setScannerOpen(true)}
+        >
+          <QrCodeIcon className="size-4" weight="duotone" />
+          扫码
+        </button>
       </div>
 
       {activeTab === "main" && (
@@ -399,6 +412,16 @@ function SeatTimerPage() {
           <TOTPSection identity={identity} />
 
           <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              className="card bg-base-200 hover:bg-base-300 transition-colors cursor-pointer col-span-2"
+              onClick={() => setScannerOpen(true)}
+            >
+              <div className="card-body p-4 flex-row items-center gap-3">
+                <QrCodeIcon className="w-6 h-6 text-primary" weight="duotone" />
+                <span className="text-sm font-medium">扫码换桌</span>
+              </div>
+            </button>
             {isMahjong && (
               <button
                 type="button"
@@ -464,6 +487,7 @@ function SeatTimerPage() {
           connected={connected}
         />
       )}
+      <QRScannerDialog isOpen={scannerOpen} onClose={() => setScannerOpen(false)} />
     </div>
   );
 }

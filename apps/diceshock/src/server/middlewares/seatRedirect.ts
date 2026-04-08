@@ -13,21 +13,19 @@ const seatRedirect = FACTORY.createMiddleware(async (c, next) => {
 
   try {
     const tdb = db(c.env.DB);
-    const occ = await tdb.query.tableOccupancyTable.findFirst({
+
+    const table = await tdb.query.tablesTable.findFirst({
+      where: (t, { eq }) => eq(t.code, code),
+      columns: { id: true },
+    });
+    if (!table) return next();
+
+    const occHere = await tdb.query.tableOccupancyTable.findFirst({
       where: (o, { eq, ne, and }) =>
-        and(eq(o.user_id, userId), ne(o.status, "ended")),
-      with: { table: { columns: { code: true } } },
+        and(eq(o.user_id, userId), eq(o.table_id, table.id), ne(o.status, "ended")),
     });
 
-    if (occ) {
-      if (occ.table.code === code) {
-        return next();
-      }
-      return c.redirect(
-        `/t/${occ.table.code}?from=${encodeURIComponent(code)}`,
-      );
-    }
-
+    if (occHere) return next();
     return c.redirect(`/ready/${code}`);
   } catch {
     return next();

@@ -10,6 +10,7 @@ import { createId } from "@paralleldrive/cuid2";
 import z from "zod/v4";
 import { genNickname } from "@/server/utils/auth";
 import { fetchTableStateForDO, notifySocketDO } from "@/server/utils/seatTimer";
+import { pauseWithReason } from "@/server/utils/pauseOrder";
 import { calculatePrice, type SnapshotData } from "@/shared/utils/pricing";
 import { generateTotpSecret } from "@/shared/utils/totp";
 import { publicProcedure } from "./baseTRPC";
@@ -97,12 +98,15 @@ const occupy = publicProcedure
     const existingOccupancy = await tdb.query.tableOccupancyTable.findFirst({
       where: (o, { eq, ne, and }) =>
         and(eq(o.temp_id, input.tempId), ne(o.status, "ended")),
-      with: { table: { columns: { code: true, name: true } } },
+      with: { table: { columns: { code: true, name: true, id: true } } },
     });
-    if (existingOccupancy) {
-      throw new Error(
-        `ALREADY_OCCUPIED:${existingOccupancy.table.code}:${existingOccupancy.table.name}`,
-      );
+
+    if (existingOccupancy && existingOccupancy.table.code === input.code) {
+      throw new Error("你已经在此桌台使用中");
+    }
+
+    if (existingOccupancy && existingOccupancy.status === "active") {
+      await pauseWithReason(tdb, existingOccupancy.id, "auto_transfer", ctx.env);
     }
 
     const table = await tdb.query.tablesTable.findFirst({
@@ -268,13 +272,16 @@ const getActiveOccupancy = publicProcedure
   .input(z.object({ tempId: z.string() }))
   .query(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
-    const occ = await tdb.query.tableOccupancyTable.findFirst({
+    const occs = await tdb.query.tableOccupancyTable.findMany({
       where: (o, { eq, ne, and }) =>
         and(eq(o.temp_id, input.tempId), ne(o.status, "ended")),
       with: { table: { columns: { code: true, name: true } } },
     });
-    if (!occ) return null;
-    return { code: occ.table.code, name: occ.table.name };
+    return occs.map((occ) => ({
+      code: occ.table.code,
+      name: occ.table.name,
+      status: occ.status,
+    }));
   });
 
 export default {

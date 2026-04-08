@@ -52,7 +52,6 @@ export const FORMAT_LABELS: Record<string, string> = {
 
 export const TERMINATION_LABELS: Record<string, string> = {
   score_complete: "录分完成",
-  vote: "投票结算",
   admin_abort: "管理员终止",
   order_invalid: "订单失效",
 };
@@ -63,7 +62,6 @@ export const PHASE_LABELS: Record<string, string> = {
   countdown: "倒计时",
   playing: "对局中",
   scoring: "录分中",
-  voting: "投票中",
   ended: "已结束",
 };
 

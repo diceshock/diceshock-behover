@@ -1,0 +1,1 @@
+ALTER TABLE `order_pause_logs` ADD `pause_reason` text DEFAULT 'manual';

@@ -1,6 +1,7 @@
 import db, { drizzle, tableOccupancyTable, tablesTable } from "@lib/db";
 import { createId } from "@paralleldrive/cuid2";
 import { fetchTableStateForDO, notifySocketDO } from "@/server/utils/seatTimer";
+import { pauseWithReason } from "@/server/utils/pauseOrder";
 import { protectedProcedure, publicProcedure } from "./baseTRPC";
 
 const getByCode = publicProcedure
@@ -89,13 +90,18 @@ const occupy = protectedProcedure
       where: (o, { eq, ne, and }) =>
         and(eq(o.user_id, ctx.userId), ne(o.status, "ended")),
       with: {
-        table: { columns: { code: true, name: true } },
+        table: { columns: { code: true, name: true, id: true } },
       },
     });
-    if (existingOccupancy) {
-      throw new Error(
-        `ALREADY_OCCUPIED:${existingOccupancy.table.code}:${existingOccupancy.table.name}`,
-      );
+
+    // If user has an existing occupancy on THIS table, throw (can't double-occupy same table)
+    if (existingOccupancy && existingOccupancy.table.code === input.code) {
+      throw new Error("你已经在此桌台使用中");
+    }
+
+    // If user has an active occupancy on a DIFFERENT table, auto-pause it
+    if (existingOccupancy && existingOccupancy.status === "active") {
+      await pauseWithReason(tdb, existingOccupancy.id, "auto_transfer", ctx.env);
     }
 
     const table = await tdb.query.tablesTable.findFirst({
@@ -192,38 +198,23 @@ const pause = protectedProcedure
     if (occ.user_id !== ctx.userId) throw new Error("只能暂停自己的使用");
     if (occ.status !== "active") throw new Error("只能暂停进行中的使用");
 
-    await tdb
-      .update(tableOccupancyTable)
-      .set({ status: "paused" })
-      .where(drizzle.eq(tableOccupancyTable.id, input.occupancyId));
-
-    const table = await tdb.query.tablesTable.findFirst({
-      where: (t, { eq }) => eq(t.code, input.code),
-    });
-    if (table) {
-      const fresh = await fetchTableStateForDO(tdb, table.id);
-      if (fresh) {
-        await notifySocketDO(
-          ctx.env,
-          input.code,
-          fresh.table,
-          fresh.occupancies,
-        );
-      }
-    }
+    await pauseWithReason(tdb, input.occupancyId, "manual", ctx.env);
 
     return { success: true };
   });
 
 const getMyActiveOccupancy = protectedProcedure.query(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
-  const occ = await tdb.query.tableOccupancyTable.findFirst({
+  const occs = await tdb.query.tableOccupancyTable.findMany({
     where: (o, { eq, ne, and }) =>
       and(eq(o.user_id, ctx.userId), ne(o.status, "ended")),
     with: { table: { columns: { code: true, name: true } } },
   });
-  if (!occ) return null;
-  return { code: occ.table.code, name: occ.table.name };
+  return occs.map((occ) => ({
+    code: occ.table.code,
+    name: occ.table.name,
+    status: occ.status,
+  }));
 });
 
 export default {

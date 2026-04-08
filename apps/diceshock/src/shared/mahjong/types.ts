@@ -5,7 +5,6 @@ export type MatchMode = "3p" | "4p";
 export type MatchFormat = "tonpuu" | "hanchan";
 export type TerminationReason =
   | "score_complete"
-  | "vote"
   | "admin_abort"
   | "order_invalid";
 
@@ -15,7 +14,6 @@ export type MatchPhase =
   | "countdown"
   | "playing"
   | "scoring"
-  | "voting"
   | "ended";
 
 export interface MatchConfig {
@@ -33,24 +31,15 @@ export interface PlayerState {
   currentPoints: number;
 }
 
-export interface Vote {
-  userId: string;
-  vote: boolean;
-}
-
 export interface MatchState {
   config: MatchConfig | null;
   players: PlayerState[];
   phase: MatchPhase;
-  votes: Vote[];
-  voteStartedAt: number | null;
   pendingScores: Record<string, number>;
   scoreConfirmed: Record<string, boolean>;
   terminationReason: TerminationReason | null;
   startedAt: number | null;
   endedAt: number | null;
-  pausedAt: number | null;
-  pausedDuration: number;
   step: number;
 }
 

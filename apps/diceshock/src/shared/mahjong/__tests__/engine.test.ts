@@ -250,64 +250,6 @@ describe("engine", () => {
     });
   });
 
-  describe("voting flow", () => {
-    it("vote pass ends match", () => {
-      let s = toPlaying();
-      s = engine.initiateVote(s);
-      expect(s.phase).toBe("voting");
-
-      s = engine.castVote(s, "u1", true);
-      s = engine.castVote(s, "u2", true);
-      s = engine.castVote(s, "u3", true);
-      expect(engine.isVotePassed(s)).toBe(true);
-
-      s = engine.resolveVote(s);
-      expect(s.phase).toBe("ended");
-      expect(s.terminationReason).toBe("vote");
-    });
-
-    it("vote fail returns to playing", () => {
-      let s = toPlaying();
-      s = engine.initiateVote(s);
-      s = engine.castVote(s, "u1", false);
-      s = engine.castVote(s, "u2", false);
-      expect(engine.isVoteFailed(s)).toBe(true);
-
-      s = engine.resolveVote(s);
-      expect(s.phase).toBe("playing");
-      expect(s.votes).toEqual([]);
-    });
-
-    it("vote timeout with yes majority ends match", () => {
-      let s = toPlaying();
-      s = engine.initiateVote(s);
-      s = engine.castVote(s, "u1", true);
-      s = engine.castVote(s, "u2", true);
-      s = engine.castVote(s, "u3", false);
-
-      s = engine.resolveVoteByTimeout(s);
-      expect(s.phase).toBe("ended");
-      expect(s.terminationReason).toBe("vote");
-    });
-
-    it("vote timeout with tie continues playing", () => {
-      let s = toPlaying();
-      s = engine.initiateVote(s);
-      s = engine.castVote(s, "u1", true);
-      s = engine.castVote(s, "u2", false);
-
-      s = engine.resolveVoteByTimeout(s);
-      expect(s.phase).toBe("playing");
-    });
-
-    it("vote timeout with no votes continues playing", () => {
-      let s = toPlaying();
-      s = engine.initiateVote(s);
-      s = engine.resolveVoteByTimeout(s);
-      expect(s.phase).toBe("playing");
-    });
-  });
-
   describe("resetKeepConfig (auto-new-match)", () => {
     it("resets to countdown with same config and players", () => {
       let s = toPlaying();
@@ -330,14 +272,10 @@ describe("engine", () => {
     });
   });
 
-  describe("resetToConfig (after vote terminate)", () => {
+  describe("resetToConfig (after abort)", () => {
     it("resets to config_select with no players", () => {
       let s = toPlaying();
-      s = engine.initiateVote(s);
-      s = engine.castVote(s, "u1", true);
-      s = engine.castVote(s, "u2", true);
-      s = engine.castVote(s, "u3", true);
-      s = engine.resolveVote(s);
+      s = engine.abortMatch(s, "admin_abort");
       expect(s.phase).toBe("ended");
 
       s = engine.resetToConfig(s);
@@ -446,39 +384,6 @@ describe("engine", () => {
       expect(s.players[0].currentPoints).toBe(35000);
     });
 
-    it("3p vote threshold is 2/3", () => {
-      let s = engine.createInitialState();
-      s = engine.setConfig(s, make3pStoreConfig());
-      s = engine.startSeatSelect(s);
-      s = engine.addPlayer(s, {
-        userId: "u1",
-        nickname: "P1",
-        phone: null,
-        registered: false,
-      });
-      s = engine.addPlayer(s, {
-        userId: "u2",
-        nickname: "P2",
-        phone: null,
-        registered: false,
-      });
-      s = engine.addPlayer(s, {
-        userId: "u3",
-        nickname: "P3",
-        phone: null,
-        registered: false,
-      });
-      s = engine.selectSeat(s, "u1", "east");
-      s = engine.selectSeat(s, "u2", "south");
-      s = engine.selectSeat(s, "u3", "west");
-      s = engine.startCountdown(s);
-      s = engine.startMatch(s);
-
-      s = engine.initiateVote(s);
-      s = engine.castVote(s, "u1", true);
-      s = engine.castVote(s, "u2", true);
-      expect(engine.isVotePassed(s)).toBe(true);
-    });
   });
 
   describe("store mode allows unregistered players", () => {

@@ -92,7 +92,6 @@ const getById = dashProcedure
       where: (t, { eq }) => eq(t.id, input.id),
       with: {
         occupancies: {
-          where: (o, { ne }) => ne(o.status, "ended"),
           with: {
             user: {
               columns: { id: true, name: true },
@@ -304,7 +303,7 @@ const getOccupancyByUserId = dashProcedure
     const tdb = db(ctx.env.DB);
     const occupancies = await tdb.query.tableOccupancyTable.findMany({
       where: (o, { eq, ne, and }) =>
-        and(eq(o.user_id, input.userId), ne(o.status, "ended")),
+        and(eq(o.user_id, input.userId)),
       with: {
         table: { columns: { id: true, name: true, type: true, status: true } },
       },

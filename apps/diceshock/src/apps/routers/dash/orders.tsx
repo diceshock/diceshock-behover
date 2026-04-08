@@ -11,7 +11,7 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import clsx from "clsx";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
@@ -65,6 +65,7 @@ function RouteComponent() {
   const [groupBy, setGroupBy] = useState<GroupBy>("none");
   const [page, setPage] = useState(1);
   const pageSize = 50;
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const searchRef = useRef(searchText);
   useEffect(() => {
@@ -87,6 +88,7 @@ function RouteComponent() {
         trpcClientPublic.pricing.getPublished.query(),
       ]);
       setData(result);
+      setSelectedIds(new Set());
       setPricingSnapshot(published?.data ?? null);
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "获取订单列表失败");
@@ -169,6 +171,87 @@ function RouteComponent() {
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const visibleIds = items.map((o) => o.id);
+    const allSelected =
+      visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(visibleIds));
+    }
+  };
+
+  const selectAllByStatus = (status: "active" | "paused") => {
+    const matching = items.filter((o) => o.status === status).map((o) => o.id);
+    setSelectedIds(new Set(matching));
+  };
+
+  const selectedItems = items.filter((o) => selectedIds.has(o.id));
+  const hasActiveSelected = selectedItems.some((o) => o.status === "active");
+  const hasPausedSelected = selectedItems.some((o) => o.status === "paused");
+  const hasNonEndedSelected = selectedItems.some((o) => o.status !== "ended");
+
+  const handleBatchPause = async () => {
+    const activeIds = selectedItems
+      .filter((o) => o.status === "active")
+      .map((o) => o.id);
+    if (activeIds.length === 0) return;
+    setActionPending("batch");
+    try {
+      await trpcClientDash.ordersManagement.batchPause.mutate({
+        ids: activeIds,
+      });
+      msg.success(`已暂停 ${activeIds.length} 个订单`);
+      setSelectedIds(new Set());
+      await fetchOrders();
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "批量暂停失败");
+    } finally {
+      setActionPending(null);
+    }
+  };
+
+  const handleBatchResume = async () => {
+    const pausedIds = selectedItems
+      .filter((o) => o.status === "paused")
+      .map((o) => o.id);
+    if (pausedIds.length === 0) return;
+    setActionPending("batch");
+    try {
+      await trpcClientDash.ordersManagement.batchResume.mutate({
+        ids: pausedIds,
+      });
+      msg.success(`已继续 ${pausedIds.length} 个订单`);
+      setSelectedIds(new Set());
+      await fetchOrders();
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "批量继续失败");
+    } finally {
+      setActionPending(null);
+    }
+  };
+
+  const handleBatchSettle = () => {
+    const nonEndedIds = selectedItems
+      .filter((o) => o.status !== "ended")
+      .map((o) => o.id);
+    if (nonEndedIds.length === 0) return;
+    void navigate({
+      to: "/dash/orders/settle",
+      search: { ids: nonEndedIds.join(",") },
+    });
+  };
+
   const groupedItems = useMemo(() => {
     if (groupBy === "none") return [{ key: "", items }];
 
@@ -210,8 +293,8 @@ function RouteComponent() {
   };
 
   return (
-    <main className="size-full flex flex-col">
-      <div className="px-4 pt-4 flex flex-col gap-3">
+    <main className="size-full flex flex-col overflow-hidden relative">
+      <div className="px-4 pt-4 flex flex-col gap-3 shrink-0">
         <div className="flex items-center gap-3">
           <DashBackButton />
           <label className="input input-bordered input-sm flex items-center gap-2 flex-1 min-w-0">
@@ -248,6 +331,23 @@ function RouteComponent() {
               {label}
             </button>
           ))}
+
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              className="btn btn-xs btn-ghost"
+              onClick={() => selectAllByStatus("active")}
+            >
+              选全部活跃
+            </button>
+            <button
+              type="button"
+              className="btn btn-xs btn-ghost"
+              onClick={() => selectAllByStatus("paused")}
+            >
+              选全部暂停
+            </button>
+          </div>
 
           <div className="flex items-center gap-1 ml-auto shrink-0">
             <select
@@ -292,10 +392,21 @@ function RouteComponent() {
         </div>
       </div>
 
-      <div className="w-full flex-1 min-h-0 overflow-auto">
+      <div className="w-full flex-1 min-h-0 overflow-auto relative">
         <table className="table table-lg table-pin-rows table-pin-cols min-w-[1200px]">
           <thead>
             <tr className="z-20">
+              <td className="w-10">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-sm"
+                  checked={
+                    items.length > 0 &&
+                    items.every((o) => selectedIds.has(o.id))
+                  }
+                  onChange={toggleSelectAll}
+                />
+              </td>
               <td className="whitespace-nowrap">订单号</td>
               <td className="whitespace-nowrap">状态</td>
               <td className="whitespace-nowrap">开始时间</td>
@@ -310,14 +421,14 @@ function RouteComponent() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="py-12 text-center">
+                <td colSpan={9} className="py-12 text-center">
                   <span className="loading loading-dots loading-md" />
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={9}
                   className="py-12 text-center text-base-content/60"
                 >
                   {searchText.trim() || statusFilter !== "all"
@@ -327,9 +438,9 @@ function RouteComponent() {
               </tr>
             ) : (
               groupedItems.map((group) => (
-                <>
+                <Fragment key={group.key || "__ungrouped"}>
                   {group.key && (
-                    <tr key={`group-${group.key}`}>
+                    <tr>
                       <td
                         colSpan={9}
                         className="bg-base-200 font-semibold text-sm py-2"
@@ -340,6 +451,14 @@ function RouteComponent() {
                   )}
                   {group.items.map((order) => (
                     <tr key={order.id}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          className="checkbox checkbox-sm"
+                          checked={selectedIds.has(order.id)}
+                          onChange={() => toggleSelect(order.id)}
+                        />
+                      </td>
                       <td className="font-mono">
                         <div className="relative group flex items-center gap-1">
                           <span className="cursor-default">
@@ -616,15 +735,15 @@ function RouteComponent() {
                       </th>
                     </tr>
                   ))}
-                </>
+                </Fragment>
               ))
             )}
           </tbody>
         </table>
+        {total > pageSize && <div className="h-16" />}
       </div>
-
       {total > pageSize && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-base-300 rounded-box px-6 py-3 shadow-xl">
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 px-4 py-2.5 rounded-box border border-base-content/10 backdrop-blur-sm bg-base-100/80 shadow-lg">
           <button
             type="button"
             className="btn btn-sm btn-ghost"
@@ -643,6 +762,53 @@ function RouteComponent() {
             onClick={() => setPage((p) => p + 1)}
           >
             下一页
+          </button>
+        </div>
+      )}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2.5 rounded-box border border-base-content/10 backdrop-blur-sm bg-base-100/80 shadow-lg">
+          <span className="text-sm font-medium shrink-0">
+            已选择 {selectedIds.size} 个订单
+          </span>
+          {hasActiveSelected && (
+            <button
+              type="button"
+              className="btn btn-sm btn-ghost"
+              onClick={() => void handleBatchPause()}
+              disabled={actionPending === "batch"}
+            >
+              <PauseIcon className="size-4" />
+              批量暂停 ({selectedItems.filter((o) => o.status === "active").length})
+            </button>
+          )}
+          {hasPausedSelected && (
+            <button
+              type="button"
+              className="btn btn-sm btn-success"
+              onClick={() => void handleBatchResume()}
+              disabled={actionPending === "batch"}
+            >
+              <PlayIcon className="size-4" />
+              批量继续 ({selectedItems.filter((o) => o.status === "paused").length})
+            </button>
+          )}
+          {hasNonEndedSelected && (
+            <button
+              type="button"
+              className="btn btn-sm btn-primary"
+              onClick={handleBatchSettle}
+              disabled={actionPending === "batch"}
+            >
+              <StopIcon className="size-4" />
+              批量结算 ({selectedItems.filter((o) => o.status !== "ended").length})
+            </button>
+          )}
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost"
+            onClick={() => setSelectedIds(new Set())}
+          >
+            取消选择
           </button>
         </div>
       )}

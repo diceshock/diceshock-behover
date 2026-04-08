@@ -162,7 +162,7 @@ interface MatchDataForAggregate {
 }
 
 function isValidForPP(terminationReason: string): boolean {
-  return terminationReason === "score_complete" || terminationReason === "vote";
+  return terminationReason === "score_complete";
 }
 
 export function aggregatePP(

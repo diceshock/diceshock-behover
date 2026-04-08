@@ -69,9 +69,6 @@ type ClientMessage =
   | { action: "mahjong_confirm_score" }
   | { action: "mahjong_cancel_confirm" }
   | { action: "mahjong_finalize_scoring" }
-  | { action: "mahjong_initiate_vote" }
-  | { action: "mahjong_cast_vote"; vote: boolean }
-  | { action: "mahjong_resolve_vote" }
   | { action: "mahjong_reset"; mode: "keep_config" | "to_config" }
   | {
       action: "mahjong_admin_abort";
@@ -83,7 +80,7 @@ type ServerMessage =
   | { type: "error"; message: string }
   | { type: "app_pong"; ts: number; serverTime: number };
 
-type AlarmType = "countdown" | "vote_timeout";
+type AlarmType = "countdown";
 
 export class SocketDO extends DurableObject<Cloudflare.Env> {
   private tableInfo: TableInfo | null = null;
@@ -230,7 +227,6 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
       "countdown",
       "playing",
       "scoring",
-      "voting",
     ];
     if (!activePhases.includes(this.mahjongState.phase)) return;
 
@@ -240,7 +236,9 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
     );
 
     if (missingPlayer) {
-      void this.abortMatch("order_invalid");
+      this.mahjongState = null;
+      this.step++;
+      this.broadcastState();
     }
   }
 
@@ -469,38 +467,6 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
           );
           break;
         }
-        case "mahjong_initiate_vote": {
-          if (!this.mahjongState) return;
-          this.mahjongState = engine.initiateVote(this.mahjongState);
-          this.pendingAlarm = "vote_timeout";
-          await this.ctx.storage.setAlarm(Date.now() + 20_000);
-          break;
-        }
-        case "mahjong_cast_vote": {
-          if (!this.mahjongState) return;
-          this.mahjongState = engine.castVote(
-            this.mahjongState,
-            meta.userId,
-            data.vote,
-          );
-          if (
-            this.mahjongState.config &&
-            this.mahjongState.votes.length >=
-              (this.mahjongState.config.mode === "3p" ? 3 : 4)
-          ) {
-            this.mahjongState = engine.resolveVote(this.mahjongState);
-            await this.ctx.storage.deleteAlarm();
-            this.pendingAlarm = null;
-          }
-          break;
-        }
-        case "mahjong_resolve_vote": {
-          if (!this.mahjongState) return;
-          this.mahjongState = engine.resolveVote(this.mahjongState);
-          await this.ctx.storage.deleteAlarm();
-          this.pendingAlarm = null;
-          break;
-        }
         case "mahjong_admin_abort": {
           await this.abortMatch(data.reason ?? "admin_abort");
           return;
@@ -552,20 +518,6 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
         this.mahjongState = engine.startMatch(this.mahjongState);
         this.step++;
         this.broadcastState();
-      }
-      return;
-    }
-
-    if (this.pendingAlarm === "vote_timeout") {
-      this.pendingAlarm = null;
-      if (this.mahjongState?.phase !== "voting") return;
-
-      this.mahjongState = engine.resolveVoteByTimeout(this.mahjongState);
-      this.step++;
-      this.broadcastState();
-
-      if (this.mahjongState.phase === "ended") {
-        await this.saveMatchToDB();
       }
       return;
     }

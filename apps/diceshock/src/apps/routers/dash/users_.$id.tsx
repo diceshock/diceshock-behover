@@ -30,6 +30,7 @@ import { useMsg } from "@/client/components/diceshock/Msg";
 import type { Wind } from "@/shared/mahjong/constants";
 import { WIND_LABELS } from "@/shared/mahjong/constants";
 import dayjs from "@/shared/utils/dayjs-config";
+import { formatPrice } from "@/shared/utils/pricing";
 import { trpcClientDash } from "@/shared/utils/trpc";
 
 export const Route = createFileRoute("/dash/users_/$id")({
@@ -206,6 +207,62 @@ function UserDetailPage() {
     null,
   );
 
+  const [selectedOccIds, setSelectedOccIds] = useState<Set<string>>(new Set());
+
+  const toggleOccSelect = (occId: string) => {
+    setSelectedOccIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(occId)) next.delete(occId);
+      else next.add(occId);
+      return next;
+    });
+  };
+
+  const handleBatchSettleOcc = () => {
+    const ids = Array.from(selectedOccIds);
+    if (ids.length === 0) return;
+    void navigate({
+      to: "/dash/orders/settle",
+      search: { ids: ids.join(",") },
+    });
+  };
+
+  const handleBatchPauseOcc = async () => {
+    const activeIds = occupancies
+      .filter((o) => selectedOccIds.has(o.id) && o.status === "active")
+      .map((o) => o.id);
+    if (activeIds.length === 0) return;
+    setOrderActionPending("batch");
+    try {
+      await trpcClientDash.ordersManagement.batchPause.mutate({ ids: activeIds });
+      msg.success(`已暂停 ${activeIds.length} 个订单`);
+      setSelectedOccIds(new Set());
+      await fetchOccupancies();
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "批量暂停失败");
+    } finally {
+      setOrderActionPending(null);
+    }
+  };
+
+  const handleBatchResumeOcc = async () => {
+    const pausedIds = occupancies
+      .filter((o) => selectedOccIds.has(o.id) && o.status === "paused")
+      .map((o) => o.id);
+    if (pausedIds.length === 0) return;
+    setOrderActionPending("batch");
+    try {
+      await trpcClientDash.ordersManagement.batchResume.mutate({ ids: pausedIds });
+      msg.success(`已继续 ${pausedIds.length} 个订单`);
+      setSelectedOccIds(new Set());
+      await fetchOccupancies();
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "批量继续失败");
+    } finally {
+      setOrderActionPending(null);
+    }
+  };
+
   const [activeMatches, setActiveMatches] = useState<ActiveMatch[]>([]);
   const [activeMatchesLoading, setActiveMatchesLoading] = useState(false);
 
@@ -333,8 +390,8 @@ function UserDetailPage() {
         await trpcClientDash.ordersManagement.pauseOrder.mutate({ id: occId });
       }
       void navigate({
-        to: "/dash/orders/$id/settle",
-        params: { id: occId },
+        to: "/dash/orders/settle",
+        search: { ids: occId },
       });
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "操作失败");
@@ -661,7 +718,10 @@ function UserDetailPage() {
               className={clsx("tab", activeTab === "occupancy" && "tab-active")}
               onClick={() => setActiveTab("occupancy")}
             >
-              使用信息
+              订单 (
+              {occupancies.filter((o) => o.status === "active").length +
+                occupancies.filter((o) => o.status === "paused").length}
+              )
             </button>
           </div>
 
@@ -1053,7 +1113,13 @@ function UserDetailPage() {
             </div>
           )}
 
-          {activeTab === "occupancy" && (
+          {activeTab === "occupancy" && (() => {
+            const sortedOccupancies = [...occupancies].sort((a, b) => {
+              const order = { active: 0, paused: 1, ended: 2 };
+              return (order[a.status as keyof typeof order] ?? 3) - (order[b.status as keyof typeof order] ?? 3);
+            });
+
+            return (
             <div className="flex flex-col gap-4">
               {!activeMatchesLoading && activeMatches.length > 0 && (
                 <div className="flex flex-col gap-2">
@@ -1100,13 +1166,15 @@ function UserDetailPage() {
                 </div>
               )}
 
-              <h3 className="text-lg font-semibold">当前使用</h3>
-              <Link
-                to="/dash/orders"
-                className="btn btn-xs btn-ghost btn-primary"
-              >
-                查看全部订单
-              </Link>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">订单</h3>
+                <Link
+                  to="/dash/orders"
+                  className="btn btn-xs btn-ghost btn-primary"
+                >
+                  查看全部订单
+                </Link>
+              </div>
 
               {occupanciesLoading ? (
                 <div className="py-12 text-center">
@@ -1114,102 +1182,210 @@ function UserDetailPage() {
                 </div>
               ) : occupancies.length === 0 ? (
                 <div className="py-12 text-center text-base-content/60">
-                  该用户当前没有使用
+                  该用户暂无订单
                 </div>
               ) : (
-                <div className="flex flex-col gap-2">
-                  {occupancies.map((occ) => {
-                    const start = dayjs(occ.start_at);
-                    const diffMin = dayjs().diff(start, "minute");
-                    const hours = Math.floor(diffMin / 60);
-                    const minutes = diffMin % 60;
-                    const durationStr =
-                      hours > 0
-                        ? `${hours}小时${minutes}分钟`
-                        : `${minutes}分钟`;
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="table table-sm">
+                      <thead>
+                        <tr>
+                          <td className="w-10">
+                            <input
+                              type="checkbox"
+                              className="checkbox checkbox-sm"
+                              checked={
+                                sortedOccupancies.filter((o) => o.status !== "ended").length > 0 &&
+                                sortedOccupancies
+                                  .filter((o) => o.status !== "ended")
+                                  .every((o) => selectedOccIds.has(o.id))
+                              }
+                              onChange={() => {
+                                const nonEnded = sortedOccupancies
+                                  .filter((o) => o.status !== "ended")
+                                  .map((o) => o.id);
+                                if (nonEnded.every((oid) => selectedOccIds.has(oid))) {
+                                  setSelectedOccIds(new Set());
+                                } else {
+                                  setSelectedOccIds(new Set(nonEnded));
+                                }
+                              }}
+                            />
+                          </td>
+                          <td>状态</td>
+                          <td>桌台</td>
+                          <td>开始时间</td>
+                          <td>时长</td>
+                          <td>费用</td>
+                          <th>操作</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sortedOccupancies.map((occ) => {
+                          const start = dayjs(occ.start_at);
+                          const diffMin = dayjs().diff(start, "minute");
+                          const hours = Math.floor(diffMin / 60);
+                          const minutes = diffMin % 60;
+                          const durationStr =
+                            hours > 0 ? `${hours}h${minutes}m` : `${minutes}m`;
 
-                    return (
-                      <div
-                        key={occ.id}
-                        className="flex items-center justify-between bg-base-200 rounded-lg px-4 py-3"
-                      >
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-2">
-                            <Link
-                              to="/dash/tables/$id"
-                              params={{ id: occ.table_id }}
-                              className="font-medium link link-hover"
-                            >
-                              {occ.table?.name ?? occ.table_id}
-                            </Link>
-                            {occ.table && (
-                              <span
-                                className={`badge badge-sm ${occ.table.type === "solo" ? "badge-secondary" : "badge-info"}`}
-                              >
-                                {occ.table.type === "solo"
-                                  ? "散人桌"
-                                  : "固定桌"}
-                              </span>
-                            )}
-                            {occ.table?.status === "inactive" && (
-                              <span className="badge badge-ghost badge-sm">
-                                已下架
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-4 text-sm text-base-content/70">
-                            <span>{durationStr}</span>
-                            <span className="text-xs text-base-content/50">
-                              {start.isValid()
-                                ? start.format("MM/DD HH:mm")
-                                : "—"}{" "}
-                              开始
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {occ.status === "active" && (
-                            <button
-                              type="button"
-                              className="btn btn-xs btn-ghost"
-                              onClick={() => void handlePauseOccOrder(occ.id)}
-                              disabled={orderActionPending === occ.id}
-                            >
-                              <PauseIcon className="size-3.5" />
-                              暂停
-                            </button>
-                          )}
-                          {occ.status === "paused" && (
-                            <button
-                              type="button"
-                              className="btn btn-xs btn-ghost btn-success"
-                              onClick={() => void handleResumeOccOrder(occ.id)}
-                              disabled={orderActionPending === occ.id}
-                            >
-                              <PlayIcon className="size-3.5" />
-                              继续
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            className="btn btn-xs btn-ghost btn-error"
-                            onClick={() =>
-                              void handleEndOccOrder(occ.id, occ.status)
-                            }
-                            disabled={orderActionPending === occ.id}
-                          >
-                            <StopIcon className="size-3.5" />
-                            终止
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                          return (
+                            <tr key={occ.id}>
+                              <td>
+                                {occ.status !== "ended" && (
+                                  <input
+                                    type="checkbox"
+                                    className="checkbox checkbox-sm"
+                                    checked={selectedOccIds.has(occ.id)}
+                                    onChange={() => toggleOccSelect(occ.id)}
+                                  />
+                                )}
+                              </td>
+                              <td>
+                                {occ.status === "active" ? (
+                                  <span className="badge badge-success badge-sm">
+                                    进行中
+                                  </span>
+                                ) : occ.status === "paused" ? (
+                                  <span className="badge badge-neutral badge-sm">
+                                    已暂停
+                                  </span>
+                                ) : (
+                                  <span className="badge badge-ghost badge-sm">
+                                    已结束
+                                  </span>
+                                )}
+                              </td>
+                              <td>
+                                <Link
+                                  to="/dash/tables/$id"
+                                  params={{ id: occ.table_id }}
+                                  className="link link-hover"
+                                >
+                                  {occ.table?.name ?? occ.table_id}
+                                </Link>
+                              </td>
+                              <td className="text-sm">
+                                {start.isValid()
+                                  ? start.format("MM/DD HH:mm")
+                                  : "—"}
+                              </td>
+                              <td className="text-sm">{durationStr}</td>
+                              <td className="font-mono text-sm">
+                                {occ.final_price != null
+                                  ? formatPrice(occ.final_price)
+                                  : "—"}
+                              </td>
+                              <th>
+                                <div className="flex items-center gap-1">
+                                  {occ.status === "active" && (
+                                    <button
+                                      type="button"
+                                      className="btn btn-xs btn-ghost"
+                                      onClick={() =>
+                                        void handlePauseOccOrder(occ.id)
+                                      }
+                                      disabled={orderActionPending === occ.id}
+                                    >
+                                      <PauseIcon className="size-3.5" />
+                                      暂停
+                                    </button>
+                                  )}
+                                  {occ.status === "paused" && (
+                                    <button
+                                      type="button"
+                                      className="btn btn-xs btn-ghost btn-success"
+                                      onClick={() =>
+                                        void handleResumeOccOrder(occ.id)
+                                      }
+                                      disabled={orderActionPending === occ.id}
+                                    >
+                                      <PlayIcon className="size-3.5" />
+                                      继续
+                                    </button>
+                                  )}
+                                  {occ.status !== "ended" && (
+                                    <button
+                                      type="button"
+                                      className="btn btn-xs btn-ghost btn-error"
+                                      onClick={() =>
+                                        void handleEndOccOrder(occ.id, occ.status)
+                                      }
+                                      disabled={orderActionPending === occ.id}
+                                    >
+                                      <StopIcon className="size-3.5" />
+                                      终止
+                                    </button>
+                                  )}
+                                  {occ.status === "ended" && (
+                                    <Link
+                                      to="/dash/orders/settle"
+                                      search={{ ids: occ.id }}
+                                      className="btn btn-xs btn-ghost"
+                                    >
+                                      <EyeIcon className="size-3.5" />
+                                      详情
+                                    </Link>
+                                  )}
+                                </div>
+                              </th>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </div>
-          )}
+            );
+          })()}
         </div>
+
+        {selectedOccIds.size > 0 && (
+          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2.5 rounded-box border border-base-content/10 backdrop-blur-sm bg-base-100/80 shadow-lg">
+            <span className="text-sm font-medium shrink-0">
+              已选择 {selectedOccIds.size} 个订单
+            </span>
+            {occupancies.some((o) => selectedOccIds.has(o.id) && o.status === "active") && (
+              <button
+                type="button"
+                className="btn btn-sm btn-ghost"
+                onClick={() => void handleBatchPauseOcc()}
+                disabled={orderActionPending === "batch"}
+              >
+                <PauseIcon className="size-4" />
+                批量暂停
+              </button>
+            )}
+            {occupancies.some((o) => selectedOccIds.has(o.id) && o.status === "paused") && (
+              <button
+                type="button"
+                className="btn btn-sm btn-success"
+                onClick={() => void handleBatchResumeOcc()}
+                disabled={orderActionPending === "batch"}
+              >
+                <PlayIcon className="size-4" />
+                批量继续
+              </button>
+            )}
+            <button
+              type="button"
+              className="btn btn-sm btn-primary"
+              onClick={handleBatchSettleOcc}
+            >
+              <StopIcon className="size-4" />
+              批量结算
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm btn-ghost"
+              onClick={() => setSelectedOccIds(new Set())}
+            >
+              取消选择
+            </button>
+          </div>
+        )}
 
         <dialog ref={addDialogRef} className="modal">
           <form method="dialog" className="modal-box" onSubmit={handleAddPlan}>

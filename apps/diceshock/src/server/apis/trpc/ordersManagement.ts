@@ -9,6 +9,7 @@ import db, {
   users,
 } from "@lib/db";
 import { fetchTableStateForDO, notifySocketDO } from "@/server/utils/seatTimer";
+import { pauseWithReason } from "@/server/utils/pauseOrder";
 import { calculatePrice, type SnapshotData } from "@/shared/utils/pricing";
 import { dashProcedure } from "./baseTRPC";
 
@@ -828,16 +829,7 @@ const pauseOrder = dashProcedure
   })
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
-    const now = new Date();
-    await tdb
-      .update(tableOccupancyTable)
-      .set({ status: "paused" })
-      .where(drizzle.eq(tableOccupancyTable.id, input.id));
-    await tdb.insert(orderPauseLogsTable).values({
-      occupancy_id: input.id,
-      paused_at: now,
-    });
-    await notifyDOForOrder(tdb, ctx.env, input.id);
+    await pauseWithReason(tdb, input.id, "manual", ctx.env);
     return { success: true };
   });
 
@@ -869,6 +861,315 @@ const resumeOrder = dashProcedure
     return { success: true };
   });
 
+const batchPause = dashProcedure
+  .input((v: unknown) => {
+    const { ids } = v as { ids: string[] };
+    if (!ids?.length) throw new Error("ids is required");
+    return { ids };
+  })
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const results: Array<{ id: string; success: boolean; error?: string }> = [];
+    for (const id of input.ids) {
+      try {
+        const occ = await tdb.query.tableOccupancyTable.findFirst({
+          where: (o, { eq }) => eq(o.id, id),
+        });
+        if (!occ) { results.push({ id, success: false, error: "不存在" }); continue; }
+        if (occ.status !== "active") { results.push({ id, success: false, error: "非活跃状态" }); continue; }
+        await pauseWithReason(tdb, id, "manual", ctx.env);
+        results.push({ id, success: true });
+      } catch (err) {
+        results.push({ id, success: false, error: err instanceof Error ? err.message : "失败" });
+      }
+    }
+    return { results };
+  });
+
+const batchResume = dashProcedure
+  .input((v: unknown) => {
+    const { ids } = v as { ids: string[] };
+    if (!ids?.length) throw new Error("ids is required");
+    return { ids };
+  })
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const now = new Date();
+    const results: Array<{ id: string; success: boolean; error?: string }> = [];
+    for (const id of input.ids) {
+      try {
+        const occ = await tdb.query.tableOccupancyTable.findFirst({
+          where: (o, { eq }) => eq(o.id, id),
+        });
+        if (!occ) { results.push({ id, success: false, error: "不存在" }); continue; }
+        if (occ.status !== "paused") { results.push({ id, success: false, error: "非暂停状态" }); continue; }
+        await tdb
+          .update(tableOccupancyTable)
+          .set({ status: "active" })
+          .where(drizzle.eq(tableOccupancyTable.id, id));
+        const openLog = await tdb.query.orderPauseLogsTable.findFirst({
+          where: (l, { eq, and, isNull }) =>
+            and(eq(l.occupancy_id, id), isNull(l.resumed_at)),
+          orderBy: (l, { desc }) => desc(l.paused_at),
+        });
+        if (openLog) {
+          await tdb
+            .update(orderPauseLogsTable)
+            .set({ resumed_at: now })
+            .where(drizzle.eq(orderPauseLogsTable.id, openLog.id));
+        }
+        await notifyDOForOrder(tdb, ctx.env, id);
+        results.push({ id, success: true });
+      } catch (err) {
+        results.push({ id, success: false, error: err instanceof Error ? err.message : "失败" });
+      }
+    }
+    return { results };
+  });
+
+const batchSettlementPreview = dashProcedure
+  .input((v: unknown) => {
+    const { ids } = v as { ids: string[] };
+    if (!ids?.length) throw new Error("ids is required");
+    return { ids };
+  })
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    for (const id of input.ids) {
+      const occ = await tdb.query.tableOccupancyTable.findFirst({
+        where: (o, { eq }) => eq(o.id, id),
+      });
+      if (occ && occ.status === "active") {
+        await pauseWithReason(tdb, id, "settlement", ctx.env);
+      }
+    }
+    const previews = await Promise.all(
+      input.ids.map((id) => buildSettlementData(tdb, id)),
+    );
+    return { previews };
+  });
+
+const batchSettle = dashProcedure
+  .input((v: unknown) => {
+    const data = v as { ids: string[]; deductFromStoredValue?: boolean };
+    if (!data.ids?.length) throw new Error("ids is required");
+    return { ids: data.ids, deductFromStoredValue: data.deductFromStoredValue ?? false };
+  })
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const batchId = (await import("@paralleldrive/cuid2")).createId();
+    const results: Array<{ id: string; success: boolean; price?: number; error?: string }> = [];
+
+    const ordersByUser = new Map<string, string[]>();
+    for (const id of input.ids) {
+      const occ = await tdb.query.tableOccupancyTable.findFirst({
+        where: (o, { eq }) => eq(o.id, id),
+        columns: { user_id: true, temp_id: true },
+      });
+      if (occ) {
+        const userId = occ.user_id ?? occ.temp_id ?? "unknown";
+        if (!ordersByUser.has(userId)) ordersByUser.set(userId, []);
+        ordersByUser.get(userId)!.push(id);
+      }
+    }
+
+    for (const [userId, orderIds] of ordersByUser) {
+      let totalPriceForUser = 0;
+      const settledOrders: Array<{ id: string; price: number }> = [];
+
+      for (const id of orderIds) {
+        try {
+          const now = new Date();
+          const occ = await tdb.query.tableOccupancyTable.findFirst({
+            where: (o, { eq }) => eq(o.id, id),
+            with: { table: { columns: { id: true, name: true, type: true, scope: true, code: true } } },
+          });
+          if (!occ) { results.push({ id, success: false, error: "订单不存在" }); continue; }
+          if (occ.status === "ended") { results.push({ id, success: false, error: "订单已结束" }); continue; }
+
+          const pauseLogs = await tdb.query.orderPauseLogsTable.findMany({
+            where: (l, { eq }) => eq(l.occupancy_id, id),
+            orderBy: (l, { asc }) => asc(l.paused_at),
+          });
+          const openLog = pauseLogs.find((l) => !l.resumed_at);
+          if (openLog) {
+            await tdb
+              .update(orderPauseLogsTable)
+              .set({ resumed_at: now })
+              .where(drizzle.eq(orderPauseLogsTable.id, openLog.id));
+          }
+
+          const publishedSnapshot = await tdb.query.pricingSnapshotsTable.findFirst({
+            where: (s, { eq }) => eq(s.status, "published"),
+            orderBy: (s, { desc }) => desc(s.created_at),
+          });
+          const startAt = occ.start_at instanceof Date ? occ.start_at.getTime() : Number(occ.start_at);
+          const endAt = now.getTime();
+          const tableScope = occ.table?.scope ?? "boardgame";
+          const snapshotData = publishedSnapshot?.data as SnapshotData | null;
+
+          const allPauseLogs = openLog
+            ? pauseLogs.map((l) => l.id === openLog.id ? { ...l, resumed_at: now } : l)
+            : pauseLogs;
+          const pauseLogsMapped = allPauseLogs.map((l) => ({
+            pausedAt: l.paused_at instanceof Date ? l.paused_at.getTime() : Number(l.paused_at),
+            resumedAt: l.resumed_at
+              ? l.resumed_at instanceof Date ? l.resumed_at.getTime() : Number(l.resumed_at)
+              : endAt,
+          }));
+
+          const breakdown = calculatePrice(startAt, endAt, tableScope, snapshotData, pauseLogsMapped);
+          const finalPrice = breakdown?.finalPrice ?? 0;
+
+          let pausedMs = 0;
+          for (const log of pauseLogsMapped) {
+            const pStart = Math.max(log.pausedAt, startAt);
+            const pEnd = Math.min(log.resumedAt ?? endAt, endAt);
+            if (pEnd > pStart) pausedMs += pEnd - pStart;
+          }
+          const totalMinutes = Math.floor(Math.max(0, endAt - startAt) / 60000);
+          const pausedMinutes = Math.floor(pausedMs / 60000);
+
+          let nickname = "Anonymous";
+          let uid: string | null = null;
+          if (occ.user_id) {
+            const info = await tdb.query.userInfoTable.findFirst({
+              where: (i, { eq }) => eq(i.id, occ.user_id!),
+              columns: { nickname: true, uid: true },
+            });
+            nickname = info?.nickname ?? nickname;
+            uid = info?.uid ?? null;
+          }
+
+          const snapshot = {
+            orderId: occ.id,
+            batchId,
+            tableName: occ.table?.name ?? "未知",
+            tableType: tableScope,
+            nickname,
+            uid,
+            seats: occ.seats,
+            startAt,
+            endAt,
+            totalMinutes,
+            pausedMinutes,
+            billableMinutes: totalMinutes - pausedMinutes,
+            finalPrice,
+            priceBreakdown: breakdown,
+            pauseLogs: pauseLogsMapped,
+            createdAt: Date.now(),
+          };
+
+          await tdb
+            .update(tableOccupancyTable)
+            .set({
+              status: "ended",
+              end_at: now,
+              final_price: finalPrice,
+              pricing_snapshot_id: publishedSnapshot?.id ?? null,
+              price_breakdown: breakdown,
+              settlement_snapshot: snapshot,
+            })
+            .where(drizzle.eq(tableOccupancyTable.id, id));
+
+          await notifyDOForOrder(tdb, ctx.env, id);
+          totalPriceForUser += finalPrice;
+          settledOrders.push({ id, price: finalPrice });
+          results.push({ id, success: true, price: finalPrice });
+        } catch (err) {
+          results.push({ id, success: false, error: err instanceof Error ? err.message : "结算失败" });
+        }
+      }
+
+      if (input.deductFromStoredValue && userId !== "unknown" && !userId.startsWith("temp:") && totalPriceForUser > 0) {
+        try {
+          const plans = await tdb.query.userMembershipPlansTable.findMany({
+            where: (p, { eq }) => eq(p.user_id, userId),
+          });
+          const svBalance = plans
+            .filter((p) => p.plan_type === "stored_value")
+            .reduce((sum, p) => sum + (p.amount ?? 0), 0);
+
+          if (svBalance > 0) {
+            const deductAmount = Math.min(svBalance, totalPriceForUser);
+            const svPlans = plans
+              .filter((p) => p.plan_type === "stored_value" && (p.amount ?? 0) > 0)
+              .sort((a, b) => new Date(a.create_at ?? 0).getTime() - new Date(b.create_at ?? 0).getTime());
+
+            let remaining = deductAmount;
+            for (const plan of svPlans) {
+              if (remaining <= 0) break;
+              const available = plan.amount ?? 0;
+              if (available <= 0) continue;
+              const toDeduct = Math.min(available, remaining);
+              await tdb
+                .update(userMembershipPlansTable)
+                .set({ amount: available - toDeduct, update_at: new Date() })
+                .where(drizzle.eq(userMembershipPlansTable.id, plan.id));
+              remaining -= toDeduct;
+            }
+
+            const deductNote = `批量结算扣费 · ${new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })} · ${settledOrders.length}单`;
+            await tdb.insert(userMembershipPlansTable).values({
+              user_id: userId,
+              plan_type: "stored_value",
+              amount: -deductAmount,
+              note: deductNote,
+              start_date: new Date(),
+            });
+          }
+        } catch {}
+      }
+    }
+
+    return { batchId, results };
+  });
+
+const cancelBatchSettlement = dashProcedure
+  .input((v: unknown) => {
+    const { ids } = v as { ids: string[] };
+    if (!ids?.length) throw new Error("ids is required");
+    return { ids };
+  })
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const results: Array<{ id: string; success: boolean; restored: boolean; error?: string }> = [];
+
+    for (const id of input.ids) {
+      try {
+        const occ = await tdb.query.tableOccupancyTable.findFirst({
+          where: (o, { eq }) => eq(o.id, id),
+        });
+        if (!occ) { results.push({ id, success: false, restored: false, error: "不存在" }); continue; }
+        if (occ.status === "ended") { results.push({ id, success: false, restored: false, error: "已结束" }); continue; }
+
+        const latestOpenLog = await tdb.query.orderPauseLogsTable.findFirst({
+          where: (l, { eq, and, isNull }) =>
+            and(eq(l.occupancy_id, id), isNull(l.resumed_at)),
+          orderBy: (l, { desc }) => desc(l.paused_at),
+        });
+
+        if (latestOpenLog) {
+          await tdb
+            .delete(orderPauseLogsTable)
+            .where(drizzle.eq(orderPauseLogsTable.id, latestOpenLog.id));
+          await tdb
+            .update(tableOccupancyTable)
+            .set({ status: "active" })
+            .where(drizzle.eq(tableOccupancyTable.id, id));
+          await notifyDOForOrder(tdb, ctx.env, id);
+          results.push({ id, success: true, restored: true });
+        } else {
+          results.push({ id, success: true, restored: false });
+        }
+      } catch (err) {
+        results.push({ id, success: false, restored: false, error: err instanceof Error ? err.message : "失败" });
+      }
+    }
+
+    return { results };
+  });
+
 export default {
   list,
   getById,
@@ -877,4 +1178,9 @@ export default {
   resumeOrder,
   getSettlementPreview,
   settleOrder,
+  batchPause,
+  batchResume,
+  batchSettlementPreview,
+  batchSettle,
+  cancelBatchSettlement,
 };

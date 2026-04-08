@@ -138,18 +138,6 @@ export default function MahjongMatchStepper({
     );
   }
 
-  if (state.phase === "voting") {
-    return (
-      <VotePanelView
-        state={state}
-        actions={actions}
-        userId={userId}
-        isPending={isPending}
-        connected={connected}
-      />
-    );
-  }
-
   if (state.phase === "ended") {
     return (
       <MatchResultView
@@ -573,7 +561,7 @@ function PlayingView({
     if (!state.startedAt) return;
     const tick = () => {
       const raw = Date.now() - state.startedAt!;
-      const diff = Math.floor((raw - state.pausedDuration) / 1000);
+      const diff = Math.floor(raw / 1000);
       const m = Math.floor(diff / 60);
       const s = diff % 60;
       setElapsed(`${m}:${s.toString().padStart(2, "0")}`);
@@ -581,7 +569,7 @@ function PlayingView({
     tick();
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-  }, [state.startedAt, state.pausedDuration]);
+  }, [state.startedAt]);
 
   return (
     <div className="flex flex-col gap-5 py-4">
@@ -608,17 +596,6 @@ function PlayingView({
             "📝"
           )}
           录分
-        </button>
-        <button
-          type="button"
-          className="btn btn-ghost btn-md text-base-content/50 gap-1"
-          disabled={!connected || isPending("mahjong_initiate_vote")}
-          onClick={actions.initiateVote}
-        >
-          {isPending("mahjong_initiate_vote") && (
-            <span className="loading loading-spinner loading-xs" />
-          )}
-          🛑 终止本场
         </button>
       </div>
     </div>
@@ -787,116 +764,6 @@ function ScoringView({
   );
 }
 
-const VOTE_TIMEOUT_SECONDS = 20;
-
-function VotePanelView({
-  state,
-  actions,
-  userId,
-  isPending,
-  connected,
-}: {
-  state: MatchState;
-  actions: MahjongActions;
-  userId: string;
-  isPending: (a: string) => boolean;
-  connected: boolean;
-}) {
-  const hasVoted = state.votes.some((v) => v.userId === userId);
-  const yesCount = state.votes.filter((v) => v.vote).length;
-  const totalPlayers = state.config?.mode === "3p" ? 3 : 4;
-  const threshold = state.config?.mode === "3p" ? 2 : 3;
-
-  const [remaining, setRemaining] = useState(() => {
-    if (!state.voteStartedAt) return VOTE_TIMEOUT_SECONDS;
-    const elapsed = Math.floor((Date.now() - state.voteStartedAt) / 1000);
-    return Math.max(0, VOTE_TIMEOUT_SECONDS - elapsed);
-  });
-
-  useEffect(() => {
-    if (!state.voteStartedAt) return;
-    const tick = () => {
-      const elapsed = Math.floor((Date.now() - state.voteStartedAt!) / 1000);
-      setRemaining(Math.max(0, VOTE_TIMEOUT_SECONDS - elapsed));
-    };
-    tick();
-    const timer = setInterval(tick, 1000);
-    return () => clearInterval(timer);
-  }, [state.voteStartedAt]);
-
-  return (
-    <div className="flex flex-col gap-5 py-4">
-      <div className="bg-base-200 rounded-2xl p-4 sm:p-5 flex flex-col gap-4">
-        <h3 className="text-xl font-bold text-center">🗳️ 终止投票</h3>
-
-        <div className="flex flex-col items-center gap-1">
-          <div
-            className="radial-progress text-primary"
-            style={
-              {
-                "--value": (remaining / VOTE_TIMEOUT_SECONDS) * 100,
-                "--size": "4rem",
-                "--thickness": "4px",
-              } as React.CSSProperties
-            }
-            role="progressbar"
-          >
-            <span className="text-lg font-mono font-bold">{remaining}</span>
-          </div>
-          <span className="text-xs text-base-content/50">
-            ⏰ 倒计时结束将按当前票数决定
-          </span>
-        </div>
-
-        <div className="text-base text-base-content/70 text-center">
-          {yesCount}/{threshold} 同意（需要 {threshold}/{totalPlayers}）
-        </div>
-
-        <div className="flex flex-col gap-2.5">
-          {state.players.map((p) => {
-            const vote = state.votes.find((v) => v.userId === p.userId);
-            return (
-              <div
-                key={p.userId}
-                className="flex justify-between items-center px-4 py-3 bg-base-300 rounded-xl"
-              >
-                <span className="text-base font-semibold">{p.nickname}</span>
-                <span className="text-base">
-                  {vote ? (vote.vote ? "✅ 同意" : "❌ 反对") : "⏳ 等待"}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {!hasVoted && (
-        <div className="flex gap-3">
-          <button
-            type="button"
-            className="btn btn-success btn-lg flex-1"
-            disabled={!connected || isPending("mahjong_cast_vote")}
-            onClick={() => actions.castVote(true)}
-          >
-            {isPending("mahjong_cast_vote") && (
-              <span className="loading loading-spinner loading-xs" />
-            )}
-            ✅ 同意结算
-          </button>
-          <button
-            type="button"
-            className="btn btn-error btn-lg flex-1"
-            disabled={!connected || isPending("mahjong_cast_vote")}
-            onClick={() => actions.castVote(false)}
-          >
-            ❌ 继续对局
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function MatchResultView({
   state,
   actions,
@@ -940,11 +807,9 @@ function MatchResultView({
         <h3 className="text-xl font-bold">🏁 对局结束</h3>
 
         <div className="badge badge-lg gap-1">
-          {state.terminationReason === "vote"
-            ? "🗳️ 投票终止"
-            : state.terminationReason === "admin_abort"
-              ? "⚠️ 管理员终止"
-              : "✅ 对局结束"}
+          {state.terminationReason === "admin_abort"
+            ? "⚠️ 管理员终止"
+            : "✅ 对局结束"}
         </div>
 
         <div className="flex flex-col gap-2.5 w-full">

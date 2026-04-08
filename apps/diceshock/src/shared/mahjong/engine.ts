@@ -28,15 +28,11 @@ export function createInitialState(): MatchState {
     config: null,
     players: [],
     phase: "config_select",
-    votes: [],
-    voteStartedAt: null,
     pendingScores: {},
     scoreConfirmed: {},
     terminationReason: null,
     startedAt: null,
     endedAt: null,
-    pausedAt: null,
-    pausedDuration: 0,
     step: 0,
   };
 }
@@ -182,7 +178,6 @@ export function beginScoring(state: MatchState): MatchState {
     phase: "scoring",
     pendingScores: {},
     scoreConfirmed: {},
-    pausedAt: Date.now(),
   };
 }
 
@@ -190,14 +185,11 @@ export function cancelScoring(state: MatchState): MatchState {
   if (state.phase !== "scoring")
     throw new Error("Can only cancel scoring from scoring phase");
 
-  const elapsed = state.pausedAt ? Date.now() - state.pausedAt : 0;
   return {
     ...state,
     phase: "playing",
     pendingScores: {},
     scoreConfirmed: {},
-    pausedAt: null,
-    pausedDuration: state.pausedDuration + elapsed,
   };
 }
 
@@ -276,95 +268,6 @@ export function finalizeScoring(state: MatchState): MatchState {
   };
 }
 
-export function initiateVote(state: MatchState): MatchState {
-  if (state.phase !== "playing")
-    throw new Error("Can only vote during playing phase");
-  return { ...state, phase: "voting", votes: [], voteStartedAt: Date.now() };
-}
-
-export function castVote(
-  state: MatchState,
-  userId: string,
-  vote: boolean,
-): MatchState {
-  if (state.phase !== "voting")
-    throw new Error("Can only cast vote during voting phase");
-  if (!state.players.find((p) => p.userId === userId))
-    throw new Error("Player not found");
-  if (state.votes.find((v) => v.userId === userId))
-    throw new Error("Already voted");
-
-  return {
-    ...state,
-    votes: [...state.votes, { userId, vote }],
-  };
-}
-
-export function isVotePassed(state: MatchState): boolean {
-  if (!state.config) return false;
-  const count = playerCount(state.config.mode);
-  const threshold = count === 3 ? 2 : 3;
-  const yesVotes = state.votes.filter((v) => v.vote).length;
-  return yesVotes >= threshold;
-}
-
-export function isVoteFailed(state: MatchState): boolean {
-  if (!state.config) return false;
-  const count = playerCount(state.config.mode);
-  const threshold = count === 3 ? 2 : 3;
-  const noVotes = state.votes.filter((v) => !v.vote).length;
-  const maxPossibleYes = count - noVotes;
-  return maxPossibleYes < threshold;
-}
-
-export function resolveVote(state: MatchState): MatchState {
-  if (state.phase !== "voting")
-    throw new Error("Can only resolve vote during voting phase");
-
-  if (isVotePassed(state)) {
-    return {
-      ...state,
-      phase: "ended",
-      terminationReason: "vote",
-      endedAt: Date.now(),
-      voteStartedAt: null,
-    };
-  }
-
-  return {
-    ...state,
-    phase: "playing",
-    votes: [],
-    voteStartedAt: null,
-  };
-}
-
-export function resolveVoteByTimeout(state: MatchState): MatchState {
-  if (state.phase !== "voting")
-    throw new Error("Can only resolve vote during voting phase");
-
-  const yesVotes = state.votes.filter((v) => v.vote).length;
-  const noVotes = state.votes.filter((v) => !v.vote).length;
-  const hasVotes = state.votes.length > 0;
-
-  if (hasVotes && yesVotes > noVotes) {
-    return {
-      ...state,
-      phase: "ended",
-      terminationReason: "vote",
-      endedAt: Date.now(),
-      voteStartedAt: null,
-    };
-  }
-
-  return {
-    ...state,
-    phase: "playing",
-    votes: [],
-    voteStartedAt: null,
-  };
-}
-
 export function resetKeepConfig(prev: MatchState): MatchState {
   if (!prev.config) throw new Error("No config to keep");
 
@@ -376,15 +279,11 @@ export function resetKeepConfig(prev: MatchState): MatchState {
       currentPoints: pts,
     })),
     phase: "countdown",
-    votes: [],
-    voteStartedAt: null,
     pendingScores: {},
     scoreConfirmed: {},
     terminationReason: null,
     startedAt: null,
     endedAt: null,
-    pausedAt: null,
-    pausedDuration: 0,
     step: 0,
   };
 }
@@ -394,15 +293,11 @@ export function resetToConfig(prev: MatchState): MatchState {
     config: prev.config ? { ...prev.config } : null,
     players: [],
     phase: "config_select",
-    votes: [],
-    voteStartedAt: null,
     pendingScores: {},
     scoreConfirmed: {},
     terminationReason: null,
     startedAt: null,
     endedAt: null,
-    pausedAt: null,
-    pausedDuration: 0,
     step: 0,
   };
 }

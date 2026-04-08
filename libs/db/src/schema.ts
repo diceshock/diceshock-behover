@@ -405,6 +405,11 @@ export const orderPauseLogsTable = sqlite.sqliteTable("order_pause_logs", {
     .notNull()
     .$defaultFn(() => new Date(Date.now())),
   resumed_at: sqlite.integer("resumed_at", { mode: "timestamp_ms" }),
+  pause_reason: sqlite
+    .text("pause_reason", {
+      enum: ["manual", "settlement", "auto_transfer"],
+    })
+    .default("manual"),
 });
 
 export const tablesRelations = relations(tablesTable, ({ many }) => ({

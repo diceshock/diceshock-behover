@@ -274,6 +274,13 @@
       "when": 1775382600000,
       "tag": "0038_gsz_sync_status",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "6",
+      "when": 1775668613683,
+      "tag": "0039_yummy_spectrum",
+      "breakpoints": true
     }
   ]
 }

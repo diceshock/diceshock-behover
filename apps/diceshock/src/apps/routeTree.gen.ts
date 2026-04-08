@@ -37,6 +37,7 @@ import { Route as WithHomeLoActivesRouteImport } from './routers/_with-home-lo/a
 import { Route as DashUsersIdRouteImport } from './routers/dash/users_.$id'
 import { Route as DashTablesIdRouteImport } from './routers/dash/tables_.$id'
 import { Route as DashPricingIdRouteImport } from './routers/dash/pricing_.$id'
+import { Route as DashOrdersSettleRouteImport } from './routers/dash/orders_.settle'
 import { Route as DashGszIdRouteImport } from './routers/dash/gsz_.$id'
 import { Route as DashEventsIdRouteImport } from './routers/dash/events_.$id'
 import { Route as DashActivesIdRouteImport } from './routers/dash/actives_.$id'
@@ -187,6 +188,11 @@ const DashPricingIdRoute = DashPricingIdRouteImport.update({
   path: '/pricing/$id',
   getParentRoute: () => DashRoute,
 } as any)
+const DashOrdersSettleRoute = DashOrdersSettleRouteImport.update({
+  id: '/orders_/settle',
+  path: '/orders/settle',
+  getParentRoute: () => DashRoute,
+} as any)
 const DashGszIdRoute = DashGszIdRouteImport.update({
   id: '/gsz_/$id',
   path: '/gsz/$id',
@@ -260,6 +266,7 @@ export interface FileRoutesByFullPath {
   '/dash/actives/$id': typeof DashActivesIdRoute
   '/dash/events/$id': typeof DashEventsIdRoute
   '/dash/gsz/$id': typeof DashGszIdRoute
+  '/dash/orders/settle': typeof DashOrdersSettleRoute
   '/dash/pricing/$id': typeof DashPricingIdRoute
   '/dash/tables/$id': typeof DashTablesIdRoute
   '/dash/users/$id': typeof DashUsersIdRoute
@@ -296,6 +303,7 @@ export interface FileRoutesByTo {
   '/dash/actives/$id': typeof DashActivesIdRoute
   '/dash/events/$id': typeof DashEventsIdRoute
   '/dash/gsz/$id': typeof DashGszIdRoute
+  '/dash/orders/settle': typeof DashOrdersSettleRoute
   '/dash/pricing/$id': typeof DashPricingIdRoute
   '/dash/tables/$id': typeof DashTablesIdRoute
   '/dash/users/$id': typeof DashUsersIdRoute
@@ -335,6 +343,7 @@ export interface FileRoutesById {
   '/dash/actives_/$id': typeof DashActivesIdRoute
   '/dash/events_/$id': typeof DashEventsIdRoute
   '/dash/gsz_/$id': typeof DashGszIdRoute
+  '/dash/orders_/settle': typeof DashOrdersSettleRoute
   '/dash/pricing_/$id': typeof DashPricingIdRoute
   '/dash/tables_/$id': typeof DashTablesIdRoute
   '/dash/users_/$id': typeof DashUsersIdRoute
@@ -374,6 +383,7 @@ export interface FileRouteTypes {
     | '/dash/actives/$id'
     | '/dash/events/$id'
     | '/dash/gsz/$id'
+    | '/dash/orders/settle'
     | '/dash/pricing/$id'
     | '/dash/tables/$id'
     | '/dash/users/$id'
@@ -410,6 +420,7 @@ export interface FileRouteTypes {
     | '/dash/actives/$id'
     | '/dash/events/$id'
     | '/dash/gsz/$id'
+    | '/dash/orders/settle'
     | '/dash/pricing/$id'
     | '/dash/tables/$id'
     | '/dash/users/$id'
@@ -448,6 +459,7 @@ export interface FileRouteTypes {
     | '/dash/actives_/$id'
     | '/dash/events_/$id'
     | '/dash/gsz_/$id'
+    | '/dash/orders_/settle'
     | '/dash/pricing_/$id'
     | '/dash/tables_/$id'
     | '/dash/users_/$id'
@@ -660,6 +672,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashPricingIdRouteImport
       parentRoute: typeof DashRoute
     }
+    '/dash/orders_/settle': {
+      id: '/dash/orders_/settle'
+      path: '/orders/settle'
+      fullPath: '/dash/orders/settle'
+      preLoaderRoute: typeof DashOrdersSettleRouteImport
+      parentRoute: typeof DashRoute
+    }
     '/dash/gsz_/$id': {
       id: '/dash/gsz_/$id'
       path: '/gsz/$id'
@@ -766,6 +785,7 @@ interface DashRouteChildren {
   DashActivesIdRoute: typeof DashActivesIdRoute
   DashEventsIdRoute: typeof DashEventsIdRoute
   DashGszIdRoute: typeof DashGszIdRoute
+  DashOrdersSettleRoute: typeof DashOrdersSettleRoute
   DashPricingIdRoute: typeof DashPricingIdRoute
   DashTablesIdRoute: typeof DashTablesIdRoute
   DashUsersIdRoute: typeof DashUsersIdRoute
@@ -785,6 +805,7 @@ const DashRouteChildren: DashRouteChildren = {
   DashActivesIdRoute: DashActivesIdRoute,
   DashEventsIdRoute: DashEventsIdRoute,
   DashGszIdRoute: DashGszIdRoute,
+  DashOrdersSettleRoute: DashOrdersSettleRoute,
   DashPricingIdRoute: DashPricingIdRoute,
   DashTablesIdRoute: DashTablesIdRoute,
   DashUsersIdRoute: DashUsersIdRoute,
