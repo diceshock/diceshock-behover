@@ -29,6 +29,7 @@ export function createInitialState(): MatchState {
     players: [],
     phase: "config_select",
     pendingScores: {},
+    scoreSubmitters: {},
     scoreConfirmed: {},
     terminationReason: null,
     startedAt: null,
@@ -80,6 +81,10 @@ export function addPlayer(
   state: MatchState,
   player: Pick<PlayerState, "userId" | "nickname" | "phone" | "registered">,
 ): MatchState {
+  if (state.config?.type === "tournament" && !player.registered) {
+    throw new Error("公式战模式需要登录正式用户，临时用户不能参加");
+  }
+
   const existing = state.players.find((p) => p.userId === player.userId);
   if (existing) {
     if (
@@ -152,6 +157,15 @@ export function startCountdown(state: MatchState): MatchState {
     throw new Error("Can only start countdown from seat_select");
   if (!allSeated(state)) throw new Error("Not all players seated");
 
+  if (state.config?.type === "tournament") {
+    const unregistered = state.players.find((p) => !p.registered);
+    if (unregistered) {
+      throw new Error(
+        `公式战模式需要所有玩家登录正式用户，${unregistered.nickname} 未登录`,
+      );
+    }
+  }
+
   return {
     ...state,
     phase: "countdown",
@@ -177,6 +191,7 @@ export function beginScoring(state: MatchState): MatchState {
     ...state,
     phase: "scoring",
     pendingScores: {},
+    scoreSubmitters: {},
     scoreConfirmed: {},
   };
 }
@@ -189,23 +204,33 @@ export function cancelScoring(state: MatchState): MatchState {
     ...state,
     phase: "playing",
     pendingScores: {},
+    scoreSubmitters: {},
     scoreConfirmed: {},
   };
 }
 
 export function submitScore(
   state: MatchState,
-  userId: string,
+  submitterId: string,
+  targetUserId: string,
   points: number,
 ): MatchState {
   if (state.phase !== "scoring")
     throw new Error("Can only submit scores during scoring phase");
-  if (!state.players.find((p) => p.userId === userId))
-    throw new Error("Player not found");
+  if (!state.players.find((p) => p.userId === targetUserId))
+    throw new Error("Target player not found");
+
+  const isSelf = submitterId === targetUserId;
+  const existingSubmitter = state.scoreSubmitters[targetUserId];
+
+  if (!isSelf && existingSubmitter === targetUserId) {
+    return state;
+  }
 
   return {
     ...state,
-    pendingScores: { ...state.pendingScores, [userId]: points },
+    pendingScores: { ...state.pendingScores, [targetUserId]: points },
+    scoreSubmitters: { ...state.scoreSubmitters, [targetUserId]: submitterId },
   };
 }
 
@@ -227,9 +252,18 @@ export function cancelConfirm(state: MatchState, userId: string): MatchState {
   if (allScoresConfirmed(state))
     throw new Error("Cannot cancel after all players confirmed");
 
+  const newPendingScores = { ...state.pendingScores };
+  const newScoreSubmitters = { ...state.scoreSubmitters };
+  const newScoreConfirmed = { ...state.scoreConfirmed, [userId]: false };
+
+  delete newPendingScores[userId];
+  delete newScoreSubmitters[userId];
+
   return {
     ...state,
-    scoreConfirmed: { ...state.scoreConfirmed, [userId]: false },
+    pendingScores: newPendingScores,
+    scoreSubmitters: newScoreSubmitters,
+    scoreConfirmed: newScoreConfirmed,
   };
 }
 
@@ -264,6 +298,7 @@ export function finalizeScoring(state: MatchState): MatchState {
     terminationReason: "score_complete",
     endedAt: Date.now(),
     pendingScores: {},
+    scoreSubmitters: {},
     scoreConfirmed: {},
   };
 }
@@ -280,6 +315,7 @@ export function resetKeepConfig(prev: MatchState): MatchState {
     })),
     phase: "countdown",
     pendingScores: {},
+    scoreSubmitters: {},
     scoreConfirmed: {},
     terminationReason: null,
     startedAt: null,
@@ -294,6 +330,7 @@ export function resetToConfig(prev: MatchState): MatchState {
     players: [],
     phase: "config_select",
     pendingScores: {},
+    scoreSubmitters: {},
     scoreConfirmed: {},
     terminationReason: null,
     startedAt: null,

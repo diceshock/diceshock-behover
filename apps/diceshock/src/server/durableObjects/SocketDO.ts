@@ -65,7 +65,7 @@ type ClientMessage =
   | { action: "mahjong_start" }
   | { action: "mahjong_begin_scoring" }
   | { action: "mahjong_cancel_scoring" }
-  | { action: "mahjong_submit_score"; points: number }
+  | { action: "mahjong_submit_score"; targetUserId: string; points: number }
   | { action: "mahjong_confirm_score" }
   | { action: "mahjong_cancel_confirm" }
   | { action: "mahjong_finalize_scoring" }
@@ -427,6 +427,7 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
           this.mahjongState = engine.submitScore(
             this.mahjongState,
             meta.userId,
+            data.targetUserId,
             data.points,
           );
           break;

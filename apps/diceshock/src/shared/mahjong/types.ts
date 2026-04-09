@@ -36,6 +36,7 @@ export interface MatchState {
   players: PlayerState[];
   phase: MatchPhase;
   pendingScores: Record<string, number>;
+  scoreSubmitters: Record<string, string>;
   scoreConfirmed: Record<string, boolean>;
   terminationReason: TerminationReason | null;
   startedAt: number | null;

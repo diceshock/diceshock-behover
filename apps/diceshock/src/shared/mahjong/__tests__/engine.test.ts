@@ -199,10 +199,10 @@ describe("engine", () => {
       expect(s.pendingScores).toEqual({});
       expect(s.scoreConfirmed).toEqual({});
 
-      s = engine.submitScore(s, "u1", 30000);
-      s = engine.submitScore(s, "u2", 25000);
-      s = engine.submitScore(s, "u3", 22000);
-      s = engine.submitScore(s, "u4", 23000);
+      s = engine.submitScore(s, "u1", "u1", 30000);
+      s = engine.submitScore(s, "u2", "u2", 25000);
+      s = engine.submitScore(s, "u3", "u3", 22000);
+      s = engine.submitScore(s, "u4", "u4", 23000);
       expect(engine.allScoresSubmitted(s)).toBe(true);
 
       s = engine.confirmScore(s, "u1");
@@ -225,7 +225,7 @@ describe("engine", () => {
     it("allows cancel confirm before all confirmed", () => {
       let s = toPlaying();
       s = engine.beginScoring(s);
-      s = engine.submitScore(s, "u1", 30000);
+      s = engine.submitScore(s, "u1", "u1", 30000);
       s = engine.confirmScore(s, "u1");
       expect(s.scoreConfirmed["u1"]).toBe(true);
 
@@ -237,7 +237,7 @@ describe("engine", () => {
       let s = toPlaying();
       s = engine.beginScoring(s);
       for (const id of ["u1", "u2", "u3", "u4"]) {
-        s = engine.submitScore(s, id, 25000);
+        s = engine.submitScore(s, id, id, 25000);
         s = engine.confirmScore(s, id);
       }
       expect(() => engine.cancelConfirm(s, "u1")).toThrow(/Cannot cancel/);
@@ -255,7 +255,7 @@ describe("engine", () => {
       let s = toPlaying();
       s = engine.beginScoring(s);
       for (const id of ["u1", "u2", "u3", "u4"]) {
-        s = engine.submitScore(s, id, 25000);
+        s = engine.submitScore(s, id, id, 25000);
         s = engine.confirmScore(s, id);
       }
       s = engine.finalizeScoring(s);
@@ -289,10 +289,10 @@ describe("engine", () => {
     it("sorts by currentPoints descending", () => {
       let s = toPlaying();
       s = engine.beginScoring(s);
-      s = engine.submitScore(s, "u1", 30000);
-      s = engine.submitScore(s, "u2", 20000);
-      s = engine.submitScore(s, "u3", 28000);
-      s = engine.submitScore(s, "u4", 22000);
+      s = engine.submitScore(s, "u1", "u1", 30000);
+      s = engine.submitScore(s, "u2", "u2", 20000);
+      s = engine.submitScore(s, "u3", "u3", 28000);
+      s = engine.submitScore(s, "u4", "u4", 22000);
       for (const id of ["u1", "u2", "u3", "u4"]) {
         s = engine.confirmScore(s, id);
       }
@@ -329,7 +329,7 @@ describe("engine", () => {
       let s = toPlaying();
       s = engine.beginScoring(s);
       for (const id of ["u1", "u2", "u3", "u4"]) {
-        s = engine.submitScore(s, id, 25000);
+        s = engine.submitScore(s, id, id, 25000);
         s = engine.confirmScore(s, id);
       }
       s = engine.finalizeScoring(s);

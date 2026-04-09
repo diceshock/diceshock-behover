@@ -167,9 +167,10 @@ export default function useMahjongMatch({
   );
 
   const submitScore = useCallback(
-    (points: number) =>
+    (targetUserId: string, points: number) =>
       dispatch("mahjong_submit_score", {
         action: "mahjong_submit_score",
+        targetUserId,
         points,
       }),
     [dispatch],

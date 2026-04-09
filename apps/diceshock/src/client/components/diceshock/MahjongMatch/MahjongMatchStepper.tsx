@@ -8,6 +8,8 @@ import {
   SEAT_LABELS,
   SEATS_3P,
   SEATS_4P,
+  STARTING_POINTS_3P,
+  STARTING_POINTS_4P,
 } from "@/shared/mahjong/constants";
 import * as engine from "@/shared/mahjong/engine";
 import { formatPP, getMatchPPIfValid } from "@/shared/mahjong/pp";
@@ -615,139 +617,53 @@ function ScoringView({
   isPending: (a: string) => boolean;
   connected: boolean;
 }) {
-  const [score, setScore] = useState("");
-  const submitted = userId in state.pendingScores;
-  const confirmed = state.scoreConfirmed[userId] === true;
-  const allConfirmed = engine.allScoresConfirmed(state);
+  const mode = state.config?.mode ?? "4p";
+  const seats = mode === "3p" ? SEATS_3P : SEATS_4P;
+  const expectedTotal =
+    mode === "3p" ? STARTING_POINTS_3P * 3 : STARTING_POINTS_4P * 4;
+
+  const allSubmitted = engine.allScoresSubmitted(state);
+  const scoreSum = allSubmitted
+    ? Object.values(state.pendingScores).reduce((a, b) => a + b, 0)
+    : null;
+  const scoreSumValid = scoreSum === expectedTotal;
 
   return (
     <div className="flex flex-col gap-5 py-4">
-      <div className="bg-base-200 rounded-2xl p-4 sm:p-5 flex flex-col gap-4">
-        <h3 className="text-xl font-bold text-center">📝 录分</h3>
+      <h3 className="text-xl font-bold text-center">📝 录分</h3>
 
-        {!submitted ? (
-          <>
-            <input
-              type="number"
-              className="input input-bordered input-lg w-full text-center font-mono text-lg"
-              placeholder="输入当前点数"
-              value={score}
-              onChange={(e) => setScore(e.target.value)}
-            />
-            <button
-              type="button"
-              className="btn btn-primary btn-lg w-full"
-              disabled={
-                !score || !connected || isPending("mahjong_submit_score")
-              }
-              onClick={() => {
-                const pts = Number.parseInt(score, 10);
-                if (Number.isNaN(pts)) return;
-                actions.submitScore(pts);
-              }}
-            >
-              {isPending("mahjong_submit_score") && (
-                <span className="loading loading-spinner loading-xs" />
-              )}
-              📤 提交点数
-            </button>
-          </>
-        ) : !confirmed ? (
-          <div className="flex flex-col gap-3 items-center">
-            <div className="text-center text-lg font-semibold py-2">
-              📋 已提交:{" "}
-              <span className="font-mono text-primary">
-                {state.pendingScores[userId]}
-              </span>{" "}
-              点
-            </div>
-            <button
-              type="button"
-              className="btn btn-accent btn-lg w-full"
-              disabled={!connected || isPending("mahjong_confirm_score")}
-              onClick={actions.confirmScore}
-            >
-              {isPending("mahjong_confirm_score") && (
-                <span className="loading loading-spinner loading-xs" />
-              )}
-              ✅ 确认
-            </button>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3 items-center">
-            <div className="text-center text-success text-lg font-semibold py-2">
-              ✅ 已确认:{" "}
-              <span className="font-mono">{state.pendingScores[userId]}</span>{" "}
-              点
-            </div>
-            {!allConfirmed && (
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm text-base-content/50"
-                disabled={!connected || isPending("mahjong_cancel_confirm")}
-                onClick={actions.cancelConfirm}
-              >
-                ↩️ 取消确认
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="bg-base-200 rounded-2xl p-4 sm:p-5 flex flex-col gap-2.5">
-        <div className="text-xs text-base-content/40 text-center mb-1">
-          👥 录分进度
-        </div>
-        {state.players.map((p) => {
-          const hasScore = p.userId in state.pendingScores;
-          const isConfirmed = state.scoreConfirmed[p.userId] === true;
-          const isMe = p.userId === userId;
-          const playerScore = state.pendingScores[p.userId];
+      <div className="grid grid-cols-2 gap-3">
+        {seats.map((seat) => {
+          const player = state.players.find((p) => p.seat === seat) ?? null;
+          if (!player) return null;
           return (
-            <div
-              key={p.userId}
-              className={clsx(
-                "flex items-center justify-between px-4 py-3 rounded-xl",
-                isMe ? "bg-primary/10" : "bg-base-300",
-              )}
-            >
-              <div className="flex items-center gap-1.5">
-                {p.seat && (
-                  <span className="text-base">{SEAT_EMOJIS[p.seat]}</span>
-                )}
-                <span
-                  className={clsx(
-                    "text-base",
-                    hasScore ? "font-semibold" : "text-base-content/40",
-                  )}
-                >
-                  {p.nickname}
-                </span>
-                {isMe && <span className="text-xs text-primary">⭐</span>}
-              </div>
-              <div className="flex items-center gap-2">
-                {isConfirmed ? (
-                  <>
-                    <span className="font-mono text-sm font-bold">
-                      {playerScore}
-                    </span>
-                    <span className="text-sm text-success">✅</span>
-                  </>
-                ) : hasScore ? (
-                  <>
-                    <span className="font-mono text-sm font-bold text-base-content/70">
-                      {playerScore}
-                    </span>
-                    <span className="text-sm text-warning">⏳</span>
-                  </>
-                ) : (
-                  <span className="text-sm text-base-content/30">⬜ 等待</span>
-                )}
-              </div>
-            </div>
+            <ScoringCard
+              key={seat}
+              seat={seat}
+              player={player}
+              userId={userId}
+              state={state}
+              actions={actions}
+              isPending={isPending}
+              connected={connected}
+            />
           );
         })}
       </div>
+
+      {allSubmitted && (
+        <div
+          className={clsx(
+            "text-center text-sm font-semibold rounded-xl px-4 py-2",
+            scoreSumValid
+              ? "bg-success/10 text-success"
+              : "bg-error/10 text-error",
+          )}
+        >
+          点数合计: {scoreSum}
+          {scoreSumValid ? " ✅" : ` (应为 ${expectedTotal})`}
+        </div>
+      )}
 
       <button
         type="button"
@@ -760,6 +676,134 @@ function ScoringView({
         )}
         ↩️ 返回对局
       </button>
+    </div>
+  );
+}
+
+function ScoringCard({
+  seat,
+  player,
+  userId,
+  state,
+  actions,
+  isPending,
+  connected,
+}: {
+  seat: (typeof SEATS_4P)[number];
+  player: PlayerState;
+  userId: string;
+  state: MatchState;
+  actions: MahjongActions;
+  isPending: (a: string) => boolean;
+  connected: boolean;
+}) {
+  const [inputValue, setInputValue] = useState("");
+  const isMe = player.userId === userId;
+  const targetId = player.userId;
+  const hasScore = targetId in state.pendingScores;
+  const isConfirmed = state.scoreConfirmed[targetId] === true;
+  const playerScore = state.pendingScores[targetId];
+  const submitter = state.scoreSubmitters[targetId];
+  const submittedBySelf = submitter === targetId;
+  const allConfirmed = engine.allScoresConfirmed(state);
+
+  const canEdit = isMe ? !isConfirmed : !submittedBySelf && !isConfirmed;
+
+  return (
+    <div
+      className={clsx(
+        "flex flex-col gap-2 rounded-2xl p-3 sm:p-4 transition-colors",
+        isMe ? "bg-primary/10 ring-1 ring-primary" : "bg-base-200",
+      )}
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-2xl">{SEAT_EMOJIS[seat]}</span>
+        <div className="flex flex-col min-w-0">
+          <span className="text-lg font-bold leading-tight">
+            {SEAT_LABELS[seat]}
+          </span>
+          <span className="text-xs text-base-content/50 truncate">
+            {player.nickname}
+            {isMe && " ⭐"}
+          </span>
+        </div>
+      </div>
+
+      {isConfirmed ? (
+        <div className="flex flex-col gap-1 items-center">
+          <span className="font-mono text-lg font-bold text-success">
+            {playerScore}
+          </span>
+          <span className="text-xs text-success">✅ 已确认</span>
+          {isMe && !allConfirmed && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-xs text-base-content/40 mt-1"
+              disabled={!connected || isPending("mahjong_cancel_confirm")}
+              onClick={actions.cancelConfirm}
+            >
+              ↩️ 撤回
+            </button>
+          )}
+        </div>
+      ) : hasScore && !canEdit ? (
+        <div className="flex flex-col items-center gap-1 py-1">
+          <span className="font-mono text-lg font-bold text-base-content/70">
+            {playerScore}
+          </span>
+          <span className="text-xs text-warning">
+            {submittedBySelf ? "本人已录" : "⏳ 待确认"}
+          </span>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <input
+            type="number"
+            className="input input-bordered input-sm w-full text-center font-mono"
+            placeholder="点数"
+            value={
+              hasScore && canEdit
+                ? inputValue || String(playerScore)
+                : inputValue
+            }
+            onChange={(e) => setInputValue(e.target.value)}
+          />
+          <button
+            type="button"
+            className={clsx(
+              "btn btn-sm w-full",
+              isMe ? "btn-primary" : "btn-outline",
+            )}
+            disabled={
+              !inputValue || !connected || isPending("mahjong_submit_score")
+            }
+            onClick={() => {
+              const pts = Number.parseInt(inputValue, 10);
+              if (Number.isNaN(pts)) return;
+              actions.submitScore(targetId, pts);
+              setInputValue("");
+            }}
+          >
+            {isPending("mahjong_submit_score") && (
+              <span className="loading loading-spinner loading-xs" />
+            )}
+            提交
+          </button>
+          {isMe && hasScore && (
+            <button
+              type="button"
+              className="btn btn-accent btn-sm w-full"
+              disabled={!connected || isPending("mahjong_confirm_score")}
+              onClick={actions.confirmScore}
+            >
+              {isPending("mahjong_confirm_score") && (
+                <span className="loading loading-spinner loading-xs" />
+              )}
+              ✅ 确认
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
