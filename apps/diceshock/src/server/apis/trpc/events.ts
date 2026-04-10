@@ -1,5 +1,5 @@
 import db, { eventsTable } from "@lib/db";
-import { publicProcedure } from "./baseTRPC";
+import { publicProcedure, unwrapInput } from "./baseTRPC";
 
 const list = publicProcedure.query(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
@@ -12,7 +12,7 @@ const list = publicProcedure.query(async ({ ctx }) => {
 
 const getById = publicProcedure
   .input((v: unknown) => {
-    const { id } = v as { id: string };
+    const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
     return { id };
   })

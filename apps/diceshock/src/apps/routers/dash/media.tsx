@@ -11,16 +11,12 @@ import {
   UploadSimpleIcon,
   VideoCameraIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import dayjs from "@/shared/utils/dayjs-config";
 import { trpcClientDash } from "@/shared/utils/trpc";
-
-export const Route = createFileRoute("/dash/media")({
-  component: RouteComponent,
-});
 
 type MediaItem = {
   key: string;
@@ -38,6 +34,24 @@ type SortKey =
   | "name-desc"
   | "size-asc"
   | "size-desc";
+
+export const Route = createFileRoute("/dash/media")({
+  component: RouteComponent,
+  validateSearch: (search: Record<string, unknown>) => ({
+    q: (search.q as string) ?? "",
+    type: (search.type as string) ?? "",
+    sort: [
+      "uploaded-desc",
+      "uploaded-asc",
+      "name-asc",
+      "name-desc",
+      "size-asc",
+      "size-desc",
+    ].includes(search.sort as string)
+      ? (search.sort as SortKey)
+      : "uploaded-desc",
+  }),
+});
 
 const SORT_OPTIONS: { label: string; value: SortKey }[] = [
   { label: "最新上传", value: "uploaded-desc" },
@@ -115,10 +129,13 @@ function RouteComponent() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
 
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("uploaded-desc");
+  const { q, type, sort } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
+  const setSearch = useCallback(
+    (updates: Partial<{ q: string; type: string; sort: SortKey }>) =>
+      navigate({ search: (prev) => ({ ...prev, ...updates }), replace: true }),
+    [navigate],
+  );
 
   const [pendingRename, setPendingRename] = useState<MediaItem | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -128,11 +145,6 @@ function RouteComponent() {
   const [deletePending, setDeletePending] = useState(false);
 
   const [dragOver, setDragOver] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 300);
-    return () => clearTimeout(timer);
-  }, [search]);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -154,15 +166,15 @@ function RouteComponent() {
 
   const filteredItems = useMemo(() => {
     let result = allItems;
-    if (debouncedSearch) {
-      const q = debouncedSearch.toLowerCase();
-      result = result.filter((i) => i.name.toLowerCase().includes(q));
+    if (q) {
+      const lower = q.toLowerCase();
+      result = result.filter((i) => i.name.toLowerCase().includes(lower));
     }
-    if (typeFilter) {
-      result = result.filter((i) => i.contentType.startsWith(typeFilter));
+    if (type) {
+      result = result.filter((i) => i.contentType.startsWith(type));
     }
-    return sortItems(result, sortKey);
-  }, [allItems, debouncedSearch, typeFilter, sortKey]);
+    return sortItems(result, sort);
+  }, [allItems, q, type, sort]);
 
   const uploadFiles = useCallback(
     async (files: FileList | File[]) => {
@@ -341,15 +353,15 @@ function RouteComponent() {
             type="text"
             placeholder="搜索文件名..."
             className="grow w-32"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={q}
+            onChange={(e) => setSearch({ q: e.target.value })}
           />
         </label>
 
         <select
           className="select select-sm select-bordered"
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
+          value={type}
+          onChange={(e) => setSearch({ type: e.target.value })}
         >
           {TYPE_FILTERS.map((f) => (
             <option key={f.value} value={f.value}>
@@ -360,8 +372,8 @@ function RouteComponent() {
 
         <select
           className="select select-sm select-bordered"
-          value={sortKey}
-          onChange={(e) => setSortKey(e.target.value as SortKey)}
+          value={sort}
+          onChange={(e) => setSearch({ sort: e.target.value as SortKey })}
         >
           {SORT_OPTIONS.map((s) => (
             <option key={s.value} value={s.value}>

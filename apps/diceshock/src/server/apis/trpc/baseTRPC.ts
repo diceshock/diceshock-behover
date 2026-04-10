@@ -3,6 +3,19 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import type { UserInfo } from "@/server/middlewares/auth";
 import type { HonoCtxEnv } from "@/shared/types";
 
+export function unwrapInput<T>(v: unknown): T {
+  const obj = v as Record<string, unknown>;
+  if (
+    obj &&
+    typeof obj === "object" &&
+    "json" in obj &&
+    Object.keys(obj).length === 1
+  ) {
+    return obj.json as T;
+  }
+  return v as T;
+}
+
 const t = initTRPC
   .context<{
     env: HonoCtxEnv["Bindings"];

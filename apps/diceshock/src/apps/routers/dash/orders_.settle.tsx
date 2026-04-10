@@ -30,7 +30,11 @@ export const Route = createFileRoute("/dash/orders_/settle")({
         try {
           const parsed: unknown = JSON.parse(raw);
           if (Array.isArray(parsed))
-            return { ids: parsed.filter((v): v is string => typeof v === "string" && v.length > 0) };
+            return {
+              ids: parsed.filter(
+                (v): v is string => typeof v === "string" && v.length > 0,
+              ),
+            };
         } catch {}
       }
       return { ids: raw.split(",").filter(Boolean) };
@@ -72,19 +76,27 @@ function buildSegments(
   pauseLogs: Array<{ pausedAt: number; resumedAt: number | null }>,
 ) {
   const sorted = [...pauseLogs].sort((a, b) => a.pausedAt - b.pausedAt);
-  const segments: Array<{ type: "active" | "paused"; start: number; end: number }> = [];
+  const segments: Array<{
+    type: "active" | "paused";
+    start: number;
+    end: number;
+  }> = [];
   let cursor = startAt;
 
   for (const log of sorted) {
     const pStart = Math.max(log.pausedAt, startAt);
     const pEnd = Math.min(log.resumedAt ?? endAt, endAt);
-    if (pStart > cursor) segments.push({ type: "active", start: cursor, end: pStart });
-    if (pEnd > pStart) segments.push({ type: "paused", start: pStart, end: pEnd });
+    if (pStart > cursor)
+      segments.push({ type: "active", start: cursor, end: pStart });
+    if (pEnd > pStart)
+      segments.push({ type: "paused", start: pStart, end: pEnd });
     cursor = Math.max(cursor, pEnd);
   }
 
-  if (cursor < endAt) segments.push({ type: "active", start: cursor, end: endAt });
-  if (segments.length === 0) segments.push({ type: "active", start: startAt, end: endAt });
+  if (cursor < endAt)
+    segments.push({ type: "active", start: cursor, end: endAt });
+  if (segments.length === 0)
+    segments.push({ type: "active", start: startAt, end: endAt });
   return segments;
 }
 
@@ -191,11 +203,21 @@ function BatchSettlePage() {
       msg.success(`已取消 ${idsToCancel.length} 个订单的结算`);
       const remainingIds = ids.filter((id) => !cancelIds.has(id));
       if (remainingIds.length === 0) {
-        void navigate({ to: "/dash/orders" });
+        void navigate({
+          to: "/dash/orders",
+          search: {
+            q: "",
+            status: "all",
+            sortBy: "start_at",
+            sortOrder: "desc",
+            groupBy: "none",
+            page: 1,
+          },
+        });
       } else {
         void navigate({
           to: "/dash/orders/settle",
-          search: { ids: remainingIds.join(",") },
+          search: { ids: remainingIds },
         });
       }
     } catch (err) {
@@ -209,7 +231,17 @@ function BatchSettlePage() {
         ids,
       });
       msg.success("已取消全部结算");
-      void navigate({ to: "/dash/orders" });
+      void navigate({
+        to: "/dash/orders",
+        search: {
+          q: "",
+          status: "all",
+          sortBy: "start_at",
+          sortOrder: "desc",
+          groupBy: "none",
+          page: 1,
+        },
+      });
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "取消失败");
     }
@@ -219,7 +251,18 @@ function BatchSettlePage() {
     return (
       <main className="size-full flex flex-col items-center justify-center gap-4">
         <p className="text-base-content/60">未选择订单</p>
-        <Link to="/dash/orders" className="btn btn-primary btn-sm">
+        <Link
+          to="/dash/orders"
+          search={{
+            q: "",
+            status: "all",
+            sortBy: "start_at",
+            sortOrder: "desc",
+            groupBy: "none",
+            page: 1,
+          }}
+          className="btn btn-primary btn-sm"
+        >
           返回订单列表
         </Link>
       </main>
@@ -238,7 +281,18 @@ function BatchSettlePage() {
     return (
       <main className="size-full flex flex-col items-center justify-center gap-4">
         <p className="text-base-content/60">订单不存在</p>
-        <Link to="/dash/orders" className="btn btn-primary btn-sm">
+        <Link
+          to="/dash/orders"
+          search={{
+            q: "",
+            status: "all",
+            sortBy: "start_at",
+            sortOrder: "desc",
+            groupBy: "none",
+            page: 1,
+          }}
+          className="btn btn-primary btn-sm"
+        >
           返回订单列表
         </Link>
       </main>
@@ -320,7 +374,9 @@ function BatchSettlePage() {
                 disabled={settling || activeSettleIds.length === 0}
               >
                 <CheckCircleIcon className="size-4" />
-                {settling ? "结算中..." : `确认结算 (${activeSettleIds.length})`}
+                {settling
+                  ? "结算中..."
+                  : `确认结算 (${activeSettleIds.length})`}
               </button>
             </div>
           </div>
@@ -423,11 +479,7 @@ function CombinedPriceSection({
   );
 }
 
-function MultiOrderTimeline({
-  previews,
-}: {
-  previews: SettlementPreview[];
-}) {
+function MultiOrderTimeline({ previews }: { previews: SettlementPreview[] }) {
   const globalStart = Math.min(...previews.map((p) => p.order.start_at));
   const globalEnd = Math.max(
     ...previews.map((p) => p.order.end_at ?? Date.now()),
@@ -444,10 +496,8 @@ function MultiOrderTimeline({
         {previews.map((preview) => {
           const orderStart = preview.order.start_at;
           const orderEnd = preview.order.end_at ?? Date.now();
-          const leftPct =
-            ((orderStart - globalStart) / totalDuration) * 100;
-          const widthPct =
-            ((orderEnd - orderStart) / totalDuration) * 100;
+          const leftPct = ((orderStart - globalStart) / totalDuration) * 100;
+          const widthPct = ((orderEnd - orderStart) / totalDuration) * 100;
 
           const segments = buildSegments(
             orderStart,
@@ -542,7 +592,12 @@ function GroupedMembershipSection({
   const userGroups = useMemo(() => {
     const map = new Map<
       string,
-      { nickname: string; uid: string | null; membership: SettlementPreview["membership"]; totalPrice: number }
+      {
+        nickname: string;
+        uid: string | null;
+        membership: SettlementPreview["membership"];
+        totalPrice: number;
+      }
     >();
     for (const id of activeSettleIds) {
       const p = previewMap.get(id);
@@ -641,7 +696,8 @@ function GroupedMembershipSection({
                 {deductEnabled && balance > 0 && (
                   <div className="text-xs text-base-content/50">
                     可扣 {formatPrice(deductAmount)}
-                    {remaining > 0 && ` · 剩余 ${formatPrice(remaining)} 需另付`}
+                    {remaining > 0 &&
+                      ` · 剩余 ${formatPrice(remaining)} 需另付`}
                   </div>
                 )}
               </div>

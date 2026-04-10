@@ -5,7 +5,7 @@ import {
   MagnifyingGlassIcon,
   TrashIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
@@ -31,6 +31,12 @@ type ActiveItem = ActivesList[number];
 type StatusFilter = "all" | "active" | "expired";
 
 export const Route = createFileRoute("/dash/actives")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    q: (search.q as string) ?? "",
+    status: ["all", "active", "expired"].includes(search.status as string)
+      ? (search.status as StatusFilter)
+      : "all",
+  }),
   component: RouteComponent,
 });
 
@@ -40,8 +46,17 @@ function RouteComponent() {
   const [actives, setActives] = useState<ActiveItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [searchText, setSearchText] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const { q, status } = Route.useSearch();
+  const navigate = useNavigate();
+  const setSearch = useCallback(
+    (updates: Partial<{ q: string; status: StatusFilter }>) =>
+      navigate({
+        from: Route.fullPath,
+        search: (prev) => ({ ...prev, ...updates }),
+        replace: true,
+      }),
+    [navigate],
+  );
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const deleteDialogRef = useRef<HTMLDialogElement>(null);
@@ -81,14 +96,14 @@ function RouteComponent() {
   const filteredActives = useMemo(() => {
     let result = actives;
 
-    if (statusFilter === "active") {
+    if (status === "active") {
       result = result.filter((a) => a.date >= shanghaiToday);
-    } else if (statusFilter === "expired") {
+    } else if (status === "expired") {
       result = result.filter((a) => a.date < shanghaiToday);
     }
 
-    if (searchText.trim()) {
-      const q = searchText.trim().toLowerCase();
+    if (q.trim()) {
+      const lower = q.trim().toLowerCase();
       result = result.filter((a) => {
         const title = a.title.toLowerCase();
         const gameName = (
@@ -96,12 +111,12 @@ function RouteComponent() {
           a.boardGame?.eng_name ||
           ""
         ).toLowerCase();
-        return title.includes(q) || gameName.includes(q);
+        return title.includes(lower) || gameName.includes(lower);
       });
     }
 
     return result;
-  }, [actives, statusFilter, searchText, shanghaiToday]);
+  }, [actives, status, q, shanghaiToday]);
 
   const allVisibleSelected =
     filteredActives.length > 0 &&
@@ -190,8 +205,8 @@ function RouteComponent() {
             type="text"
             className="grow"
             placeholder="搜索标题/桌游..."
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
+            value={q}
+            onChange={(e) => setSearch({ q: e.target.value })}
           />
         </label>
 
@@ -207,8 +222,8 @@ function RouteComponent() {
             <button
               key={key}
               type="button"
-              className={`btn btn-xs ${statusFilter === key ? "btn-primary" : "btn-ghost"}`}
-              onClick={() => setStatusFilter(key)}
+              className={`btn btn-xs ${status === key ? "btn-primary" : "btn-ghost"}`}
+              onClick={() => setSearch({ status: key })}
             >
               {label}
             </button>
@@ -258,7 +273,7 @@ function RouteComponent() {
                   colSpan={14}
                   className="py-12 text-center text-base-content/60"
                 >
-                  {searchText.trim() || statusFilter !== "all"
+                  {q.trim() || status !== "all"
                     ? "没有匹配的约局。"
                     : "暂无约局数据。"}
                 </td>

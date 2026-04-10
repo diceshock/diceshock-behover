@@ -11,7 +11,14 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import clsx from "clsx";
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
@@ -35,6 +42,26 @@ type OrderItem = OrdersList["items"][number];
 
 export const Route = createFileRoute("/dash/orders")({
   component: RouteComponent,
+  validateSearch: (search: Record<string, unknown>) => ({
+    q: (search.q as string) ?? "",
+    status: ["all", "active", "paused", "ended"].includes(
+      search.status as string,
+    )
+      ? (search.status as StatusFilter)
+      : "all",
+    sortBy: ["start_at", "end_at"].includes(search.sortBy as string)
+      ? (search.sortBy as SortBy)
+      : "start_at",
+    sortOrder: ["asc", "desc"].includes(search.sortOrder as string)
+      ? (search.sortOrder as SortOrder)
+      : "desc",
+    groupBy: ["table", "user", "date", "none"].includes(
+      search.groupBy as string,
+    )
+      ? (search.groupBy as GroupBy)
+      : "none",
+    page: Number(search.page) > 0 ? Number(search.page) : 1,
+  }),
 });
 
 function formatTime(val: number | null | undefined): string {
@@ -58,19 +85,32 @@ function RouteComponent() {
   );
   const [, setTick] = useState(0);
 
-  const [searchText, setSearchText] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [sortBy, setSortBy] = useState<SortBy>("start_at");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
-  const [groupBy, setGroupBy] = useState<GroupBy>("none");
-  const [page, setPage] = useState(1);
+  const { q, status, sortBy, sortOrder, groupBy, page } = Route.useSearch();
+  const setSearch = useCallback(
+    (
+      updates: Partial<{
+        q: string;
+        status: StatusFilter;
+        sortBy: SortBy;
+        sortOrder: SortOrder;
+        groupBy: GroupBy;
+        page: number;
+      }>,
+    ) =>
+      navigate({
+        to: ".",
+        search: (prev) => ({ ...prev, ...updates }),
+        replace: true,
+      }),
+    [navigate],
+  );
   const pageSize = 50;
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const searchRef = useRef(searchText);
+  const searchRef = useRef(q);
   useEffect(() => {
-    searchRef.current = searchText;
-  }, [searchText]);
+    searchRef.current = q;
+  }, [q]);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
@@ -78,7 +118,7 @@ function RouteComponent() {
       const [result, published] = await Promise.all([
         trpcClientDash.ordersManagement.list.query({
           search: searchRef.current,
-          status: statusFilter,
+          status,
           sortBy,
           sortOrder,
           groupBy,
@@ -95,7 +135,7 @@ function RouteComponent() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, sortBy, sortOrder, groupBy, page, msg]);
+  }, [status, sortBy, sortOrder, groupBy, page, msg]);
 
   useEffect(() => {
     void fetchOrders();
@@ -107,7 +147,7 @@ function RouteComponent() {
   }, []);
 
   const handleSearch = () => {
-    setPage(1);
+    setSearch({ page: 1 });
     void fetchOrders();
   };
 
@@ -163,8 +203,7 @@ function RouteComponent() {
   };
 
   const toggleSortOrder = () => {
-    setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-    setPage(1);
+    setSearch({ sortOrder: sortOrder === "asc" ? "desc" : "asc", page: 1 });
   };
 
   const items = data?.items ?? [];
@@ -303,8 +342,8 @@ function RouteComponent() {
               type="text"
               className="grow min-w-0"
               placeholder="搜索订单号/桌台/用户..."
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
+              value={q}
+              onChange={(e) => setSearch({ q: e.target.value })}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             />
           </label>
@@ -322,10 +361,9 @@ function RouteComponent() {
             <button
               key={key}
               type="button"
-              className={`btn btn-xs ${statusFilter === key ? "btn-primary" : "btn-ghost"}`}
+              className={`btn btn-xs ${status === key ? "btn-primary" : "btn-ghost"}`}
               onClick={() => {
-                setStatusFilter(key);
-                setPage(1);
+                setSearch({ status: key, page: 1 });
               }}
             >
               {label}
@@ -354,8 +392,7 @@ function RouteComponent() {
               className="select select-bordered select-xs"
               value={sortBy}
               onChange={(e) => {
-                setSortBy(e.target.value as SortBy);
-                setPage(1);
+                setSearch({ sortBy: e.target.value as SortBy, page: 1 });
               }}
             >
               <option value="start_at">开始时间</option>
@@ -379,8 +416,7 @@ function RouteComponent() {
               className="select select-bordered select-xs"
               value={groupBy}
               onChange={(e) => {
-                setGroupBy(e.target.value as GroupBy);
-                setPage(1);
+                setSearch({ groupBy: e.target.value as GroupBy, page: 1 });
               }}
             >
               <option value="none">无分组</option>
@@ -431,7 +467,7 @@ function RouteComponent() {
                   colSpan={9}
                   className="py-12 text-center text-base-content/60"
                 >
-                  {searchText.trim() || statusFilter !== "all"
+                  {q.trim() || status !== "all"
                     ? "没有匹配的订单。"
                     : "暂无订单数据。"}
                 </td>
@@ -748,7 +784,7 @@ function RouteComponent() {
             type="button"
             className="btn btn-sm btn-ghost"
             disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
+            onClick={() => setSearch({ page: page - 1 })}
           >
             上一页
           </button>
@@ -759,7 +795,7 @@ function RouteComponent() {
             type="button"
             className="btn btn-sm btn-ghost"
             disabled={page >= totalPages}
-            onClick={() => setPage((p) => p + 1)}
+            onClick={() => setSearch({ page: page + 1 })}
           >
             下一页
           </button>
@@ -778,7 +814,8 @@ function RouteComponent() {
               disabled={actionPending === "batch"}
             >
               <PauseIcon className="size-4" />
-              批量暂停 ({selectedItems.filter((o) => o.status === "active").length})
+              批量暂停 (
+              {selectedItems.filter((o) => o.status === "active").length})
             </button>
           )}
           {hasPausedSelected && (
@@ -789,7 +826,8 @@ function RouteComponent() {
               disabled={actionPending === "batch"}
             >
               <PlayIcon className="size-4" />
-              批量继续 ({selectedItems.filter((o) => o.status === "paused").length})
+              批量继续 (
+              {selectedItems.filter((o) => o.status === "paused").length})
             </button>
           )}
           {hasNonEndedSelected && (
@@ -800,7 +838,8 @@ function RouteComponent() {
               disabled={actionPending === "batch"}
             >
               <StopIcon className="size-4" />
-              批量结算 ({selectedItems.filter((o) => o.status !== "ended").length})
+              批量结算 (
+              {selectedItems.filter((o) => o.status !== "ended").length})
             </button>
           )}
           <button

@@ -7,7 +7,7 @@ import {
   TrashIcon,
   XIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
@@ -36,18 +36,30 @@ const SCOPE_LABELS: Record<string, string> = {
 };
 
 export const Route = createFileRoute("/dash/tables")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    q: (search.q as string) ?? "",
+    type: ["all", "fixed", "solo"].includes(search.type as string)
+      ? (search.type as TypeFilter)
+      : "all",
+    status: ["all", "active", "inactive"].includes(search.status as string)
+      ? (search.status as StatusFilter)
+      : "all",
+  }),
   component: RouteComponent,
 });
 
 function RouteComponent() {
   const msg = useMsg();
   const isMobile = useIsMobile();
+  const { q, type, status } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
+  const setSearch = useCallback(
+    (updates: Partial<{ q: string; type: TypeFilter; status: StatusFilter }>) =>
+      navigate({ search: (prev) => ({ ...prev, ...updates }), replace: true }),
+    [navigate],
+  );
   const [tables, setTables] = useState<TableItem[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const [searchText, setSearchText] = useState("");
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   const createDialogRef = useRef<HTMLDialogElement>(null);
   const [createForm, setCreateForm] = useState({
@@ -81,21 +93,21 @@ function RouteComponent() {
   const filteredTables = useMemo(() => {
     let result = tables;
 
-    if (typeFilter !== "all") {
-      result = result.filter((t) => t.type === typeFilter);
+    if (type !== "all") {
+      result = result.filter((t) => t.type === type);
     }
 
-    if (statusFilter !== "all") {
-      result = result.filter((t) => t.status === statusFilter);
+    if (status !== "all") {
+      result = result.filter((t) => t.status === status);
     }
 
-    if (searchText.trim()) {
-      const q = searchText.trim().toLowerCase();
-      result = result.filter((t) => t.name.toLowerCase().includes(q));
+    if (q.trim()) {
+      const search = q.trim().toLowerCase();
+      result = result.filter((t) => t.name.toLowerCase().includes(search));
     }
 
     return result;
-  }, [tables, typeFilter, statusFilter, searchText]);
+  }, [tables, type, status, q]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -185,8 +197,8 @@ function RouteComponent() {
               type="text"
               className="grow min-w-0"
               placeholder="搜索桌台名称..."
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
+              value={q}
+              onChange={(e) => setSearch({ q: e.target.value })}
             />
           </label>
           <button
@@ -210,8 +222,8 @@ function RouteComponent() {
             <button
               key={key}
               type="button"
-              className={`btn btn-xs ${typeFilter === key ? "btn-primary" : "btn-ghost"}`}
-              onClick={() => setTypeFilter(key)}
+              className={`btn btn-xs ${type === key ? "btn-primary" : "btn-ghost"}`}
+              onClick={() => setSearch({ type: key })}
             >
               {label}
             </button>
@@ -228,8 +240,8 @@ function RouteComponent() {
               <button
                 key={key}
                 type="button"
-                className={`btn btn-xs ${statusFilter === key ? "btn-secondary" : "btn-ghost"}`}
-                onClick={() => setStatusFilter(key)}
+                className={`btn btn-xs ${status === key ? "btn-secondary" : "btn-ghost"}`}
+                onClick={() => setSearch({ status: key })}
               >
                 {label}
               </button>
@@ -265,9 +277,7 @@ function RouteComponent() {
                   colSpan={7}
                   className="py-12 text-center text-base-content/60"
                 >
-                  {searchText.trim() ||
-                  typeFilter !== "all" ||
-                  statusFilter !== "all"
+                  {q.trim() || type !== "all" || status !== "all"
                     ? "没有匹配的桌台。"
                     : "暂无桌台数据。"}
                 </td>

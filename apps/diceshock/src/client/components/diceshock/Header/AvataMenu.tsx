@@ -30,20 +30,19 @@ function useActiveOccupancy(): ActiveOccupancy | null {
 
     const check = async () => {
       try {
-        let active: { code: string; name: string } | null = null;
+        let occs: Array<{ code: string; name: string }> = [];
 
         if (userInfo) {
-          active = await trpcClientPublic.tables.getMyActiveOccupancy.query();
+          occs = await trpcClientPublic.tables.getMyActiveOccupancy.query();
         } else if (tempIdentity) {
-          active = await trpcClientPublic.tempIdentity.getActiveOccupancy.query(
-            { tempId: tempIdentity.tempId },
-          );
+          occs = await trpcClientPublic.tempIdentity.getActiveOccupancy.query({
+            tempId: tempIdentity.tempId,
+          });
         }
 
         if (!cancelled) {
-          setOccupancy(
-            active ? { code: active.code, name: active.name } : null,
-          );
+          const first = occs[0] ?? null;
+          setOccupancy(first ? { code: first.code, name: first.name } : null);
         }
       } catch {
         if (!cancelled) setOccupancy(null);

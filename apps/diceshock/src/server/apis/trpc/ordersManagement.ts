@@ -8,10 +8,10 @@ import db, {
   userMembershipPlansTable,
   users,
 } from "@lib/db";
-import { fetchTableStateForDO, notifySocketDO } from "@/server/utils/seatTimer";
 import { pauseWithReason } from "@/server/utils/pauseOrder";
+import { fetchTableStateForDO, notifySocketDO } from "@/server/utils/seatTimer";
 import { calculatePrice, type SnapshotData } from "@/shared/utils/pricing";
-import { dashProcedure } from "./baseTRPC";
+import { dashProcedure, unwrapInput } from "./baseTRPC";
 
 type StatusFilter = "all" | "active" | "paused" | "ended";
 type SortBy = "start_at" | "end_at";
@@ -20,15 +20,13 @@ type GroupBy = "table" | "user" | "date" | "none";
 
 const list = dashProcedure
   .input((v: unknown) => {
-    const data = v as {
-      search?: string;
-      status?: StatusFilter;
-      sortBy?: SortBy;
-      sortOrder?: SortOrder;
-      groupBy?: GroupBy;
-      page?: number;
-      pageSize?: number;
-    };
+    const data = unwrapInput<{ search?: string;
+    status?: StatusFilter;
+    sortBy?: SortBy;
+    sortOrder?: SortOrder;
+    groupBy?: GroupBy;
+    page?: number;
+    pageSize?: number; }>(v);
     return {
       search: data.search ?? "",
       status: data.status ?? "all",
@@ -151,7 +149,7 @@ const list = dashProcedure
 
 const getById = dashProcedure
   .input((v: unknown) => {
-    const { id } = v as { id: string };
+    const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
     return { id };
   })
@@ -247,7 +245,7 @@ async function notifyDOForOrder(
 
 const endOrder = dashProcedure
   .input((v: unknown) => {
-    const { id } = v as { id: string };
+    const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
     return { id };
   })
@@ -520,7 +518,7 @@ async function buildSettlementData(
 
 const getSettlementPreview = dashProcedure
   .input((v: unknown) => {
-    const { id } = v as { id: string };
+    const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
     return { id };
   })
@@ -531,10 +529,8 @@ const getSettlementPreview = dashProcedure
 
 const settleOrder = dashProcedure
   .input((v: unknown) => {
-    const data = v as {
-      id: string;
-      deductFromStoredValue?: boolean;
-    };
+    const data = unwrapInput<{ id: string;
+    deductFromStoredValue?: boolean; }>(v);
     if (!data.id) throw new Error("id is required");
     return {
       id: data.id,
@@ -823,7 +819,7 @@ const settleOrder = dashProcedure
 
 const pauseOrder = dashProcedure
   .input((v: unknown) => {
-    const { id } = v as { id: string };
+    const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
     return { id };
   })
@@ -835,7 +831,7 @@ const pauseOrder = dashProcedure
 
 const resumeOrder = dashProcedure
   .input((v: unknown) => {
-    const { id } = v as { id: string };
+    const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
     return { id };
   })
@@ -863,7 +859,7 @@ const resumeOrder = dashProcedure
 
 const batchPause = dashProcedure
   .input((v: unknown) => {
-    const { ids } = v as { ids: string[] };
+    const { ids } = unwrapInput<{ ids: string[] }>(v);
     if (!ids?.length) throw new Error("ids is required");
     return { ids };
   })
@@ -875,12 +871,22 @@ const batchPause = dashProcedure
         const occ = await tdb.query.tableOccupancyTable.findFirst({
           where: (o, { eq }) => eq(o.id, id),
         });
-        if (!occ) { results.push({ id, success: false, error: "不存在" }); continue; }
-        if (occ.status !== "active") { results.push({ id, success: false, error: "非活跃状态" }); continue; }
+        if (!occ) {
+          results.push({ id, success: false, error: "不存在" });
+          continue;
+        }
+        if (occ.status !== "active") {
+          results.push({ id, success: false, error: "非活跃状态" });
+          continue;
+        }
         await pauseWithReason(tdb, id, "manual", ctx.env);
         results.push({ id, success: true });
       } catch (err) {
-        results.push({ id, success: false, error: err instanceof Error ? err.message : "失败" });
+        results.push({
+          id,
+          success: false,
+          error: err instanceof Error ? err.message : "失败",
+        });
       }
     }
     return { results };
@@ -888,7 +894,7 @@ const batchPause = dashProcedure
 
 const batchResume = dashProcedure
   .input((v: unknown) => {
-    const { ids } = v as { ids: string[] };
+    const { ids } = unwrapInput<{ ids: string[] }>(v);
     if (!ids?.length) throw new Error("ids is required");
     return { ids };
   })
@@ -901,8 +907,14 @@ const batchResume = dashProcedure
         const occ = await tdb.query.tableOccupancyTable.findFirst({
           where: (o, { eq }) => eq(o.id, id),
         });
-        if (!occ) { results.push({ id, success: false, error: "不存在" }); continue; }
-        if (occ.status !== "paused") { results.push({ id, success: false, error: "非暂停状态" }); continue; }
+        if (!occ) {
+          results.push({ id, success: false, error: "不存在" });
+          continue;
+        }
+        if (occ.status !== "paused") {
+          results.push({ id, success: false, error: "非暂停状态" });
+          continue;
+        }
         await tdb
           .update(tableOccupancyTable)
           .set({ status: "active" })
@@ -921,7 +933,11 @@ const batchResume = dashProcedure
         await notifyDOForOrder(tdb, ctx.env, id);
         results.push({ id, success: true });
       } catch (err) {
-        results.push({ id, success: false, error: err instanceof Error ? err.message : "失败" });
+        results.push({
+          id,
+          success: false,
+          error: err instanceof Error ? err.message : "失败",
+        });
       }
     }
     return { results };
@@ -929,7 +945,7 @@ const batchResume = dashProcedure
 
 const batchSettlementPreview = dashProcedure
   .input((v: unknown) => {
-    const { ids } = v as { ids: string[] };
+    const { ids } = unwrapInput<{ ids: string[] }>(v);
     if (!ids?.length) throw new Error("ids is required");
     return { ids };
   })
@@ -951,14 +967,22 @@ const batchSettlementPreview = dashProcedure
 
 const batchSettle = dashProcedure
   .input((v: unknown) => {
-    const data = v as { ids: string[]; deductFromStoredValue?: boolean };
+    const data = unwrapInput<{ ids: string[]; deductFromStoredValue?: boolean }>(v);
     if (!data.ids?.length) throw new Error("ids is required");
-    return { ids: data.ids, deductFromStoredValue: data.deductFromStoredValue ?? false };
+    return {
+      ids: data.ids,
+      deductFromStoredValue: data.deductFromStoredValue ?? false,
+    };
   })
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
     const batchId = (await import("@paralleldrive/cuid2")).createId();
-    const results: Array<{ id: string; success: boolean; price?: number; error?: string }> = [];
+    const results: Array<{
+      id: string;
+      success: boolean;
+      price?: number;
+      error?: string;
+    }> = [];
 
     const ordersByUser = new Map<string, string[]>();
     for (const id of input.ids) {
@@ -982,10 +1006,26 @@ const batchSettle = dashProcedure
           const now = new Date();
           const occ = await tdb.query.tableOccupancyTable.findFirst({
             where: (o, { eq }) => eq(o.id, id),
-            with: { table: { columns: { id: true, name: true, type: true, scope: true, code: true } } },
+            with: {
+              table: {
+                columns: {
+                  id: true,
+                  name: true,
+                  type: true,
+                  scope: true,
+                  code: true,
+                },
+              },
+            },
           });
-          if (!occ) { results.push({ id, success: false, error: "订单不存在" }); continue; }
-          if (occ.status === "ended") { results.push({ id, success: false, error: "订单已结束" }); continue; }
+          if (!occ) {
+            results.push({ id, success: false, error: "订单不存在" });
+            continue;
+          }
+          if (occ.status === "ended") {
+            results.push({ id, success: false, error: "订单已结束" });
+            continue;
+          }
 
           const pauseLogs = await tdb.query.orderPauseLogsTable.findMany({
             where: (l, { eq }) => eq(l.occupancy_id, id),
@@ -999,26 +1039,43 @@ const batchSettle = dashProcedure
               .where(drizzle.eq(orderPauseLogsTable.id, openLog.id));
           }
 
-          const publishedSnapshot = await tdb.query.pricingSnapshotsTable.findFirst({
-            where: (s, { eq }) => eq(s.status, "published"),
-            orderBy: (s, { desc }) => desc(s.created_at),
-          });
-          const startAt = occ.start_at instanceof Date ? occ.start_at.getTime() : Number(occ.start_at);
+          const publishedSnapshot =
+            await tdb.query.pricingSnapshotsTable.findFirst({
+              where: (s, { eq }) => eq(s.status, "published"),
+              orderBy: (s, { desc }) => desc(s.created_at),
+            });
+          const startAt =
+            occ.start_at instanceof Date
+              ? occ.start_at.getTime()
+              : Number(occ.start_at);
           const endAt = now.getTime();
           const tableScope = occ.table?.scope ?? "boardgame";
           const snapshotData = publishedSnapshot?.data as SnapshotData | null;
 
           const allPauseLogs = openLog
-            ? pauseLogs.map((l) => l.id === openLog.id ? { ...l, resumed_at: now } : l)
+            ? pauseLogs.map((l) =>
+                l.id === openLog.id ? { ...l, resumed_at: now } : l,
+              )
             : pauseLogs;
           const pauseLogsMapped = allPauseLogs.map((l) => ({
-            pausedAt: l.paused_at instanceof Date ? l.paused_at.getTime() : Number(l.paused_at),
+            pausedAt:
+              l.paused_at instanceof Date
+                ? l.paused_at.getTime()
+                : Number(l.paused_at),
             resumedAt: l.resumed_at
-              ? l.resumed_at instanceof Date ? l.resumed_at.getTime() : Number(l.resumed_at)
+              ? l.resumed_at instanceof Date
+                ? l.resumed_at.getTime()
+                : Number(l.resumed_at)
               : endAt,
           }));
 
-          const breakdown = calculatePrice(startAt, endAt, tableScope, snapshotData, pauseLogsMapped);
+          const breakdown = calculatePrice(
+            startAt,
+            endAt,
+            tableScope,
+            snapshotData,
+            pauseLogsMapped,
+          );
           const finalPrice = breakdown?.finalPrice ?? 0;
 
           let pausedMs = 0;
@@ -1077,11 +1134,20 @@ const batchSettle = dashProcedure
           settledOrders.push({ id, price: finalPrice });
           results.push({ id, success: true, price: finalPrice });
         } catch (err) {
-          results.push({ id, success: false, error: err instanceof Error ? err.message : "结算失败" });
+          results.push({
+            id,
+            success: false,
+            error: err instanceof Error ? err.message : "结算失败",
+          });
         }
       }
 
-      if (input.deductFromStoredValue && userId !== "unknown" && !userId.startsWith("temp:") && totalPriceForUser > 0) {
+      if (
+        input.deductFromStoredValue &&
+        userId !== "unknown" &&
+        !userId.startsWith("temp:") &&
+        totalPriceForUser > 0
+      ) {
         try {
           const plans = await tdb.query.userMembershipPlansTable.findMany({
             where: (p, { eq }) => eq(p.user_id, userId),
@@ -1093,8 +1159,14 @@ const batchSettle = dashProcedure
           if (svBalance > 0) {
             const deductAmount = Math.min(svBalance, totalPriceForUser);
             const svPlans = plans
-              .filter((p) => p.plan_type === "stored_value" && (p.amount ?? 0) > 0)
-              .sort((a, b) => new Date(a.create_at ?? 0).getTime() - new Date(b.create_at ?? 0).getTime());
+              .filter(
+                (p) => p.plan_type === "stored_value" && (p.amount ?? 0) > 0,
+              )
+              .sort(
+                (a, b) =>
+                  new Date(a.create_at ?? 0).getTime() -
+                  new Date(b.create_at ?? 0).getTime(),
+              );
 
             let remaining = deductAmount;
             for (const plan of svPlans) {
@@ -1127,21 +1199,42 @@ const batchSettle = dashProcedure
 
 const cancelBatchSettlement = dashProcedure
   .input((v: unknown) => {
-    const { ids } = v as { ids: string[] };
+    const { ids } = unwrapInput<{ ids: string[] }>(v);
     if (!ids?.length) throw new Error("ids is required");
     return { ids };
   })
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
-    const results: Array<{ id: string; success: boolean; restored: boolean; error?: string }> = [];
+    const results: Array<{
+      id: string;
+      success: boolean;
+      restored: boolean;
+      error?: string;
+    }> = [];
 
     for (const id of input.ids) {
       try {
         const occ = await tdb.query.tableOccupancyTable.findFirst({
           where: (o, { eq }) => eq(o.id, id),
         });
-        if (!occ) { results.push({ id, success: false, restored: false, error: "不存在" }); continue; }
-        if (occ.status === "ended") { results.push({ id, success: false, restored: false, error: "已结束" }); continue; }
+        if (!occ) {
+          results.push({
+            id,
+            success: false,
+            restored: false,
+            error: "不存在",
+          });
+          continue;
+        }
+        if (occ.status === "ended") {
+          results.push({
+            id,
+            success: false,
+            restored: false,
+            error: "已结束",
+          });
+          continue;
+        }
 
         const latestOpenLog = await tdb.query.orderPauseLogsTable.findFirst({
           where: (l, { eq, and, isNull }) =>
@@ -1163,7 +1256,12 @@ const cancelBatchSettlement = dashProcedure
           results.push({ id, success: true, restored: false });
         }
       } catch (err) {
-        results.push({ id, success: false, restored: false, error: err instanceof Error ? err.message : "失败" });
+        results.push({
+          id,
+          success: false,
+          restored: false,
+          error: err instanceof Error ? err.message : "失败",
+        });
       }
     }
 

@@ -1,6 +1,6 @@
 import db, { drizzle, pricingSnapshotsTable } from "@lib/db";
 import { customAlphabet } from "nanoid/non-secure";
-import { dashProcedure, publicProcedure } from "./baseTRPC";
+import { dashProcedure, publicProcedure, unwrapInput } from "./baseTRPC";
 
 type SnapshotData = NonNullable<typeof pricingSnapshotsTable.$inferSelect.data>;
 
@@ -37,7 +37,7 @@ const load = dashProcedure.query(async ({ ctx }) => {
 
 const save = dashProcedure
   .input((v: unknown) => {
-    const { data, name } = v as { data: SnapshotData; name: string };
+    const { data, name } = unwrapInput<{ data: SnapshotData; name: string }>(v);
     if (!data?.config || !Array.isArray(data.plans))
       throw new Error("invalid snapshot data");
     if (!name?.trim()) throw new Error("name is required");
@@ -110,7 +110,7 @@ const listSnapshots = dashProcedure.query(async ({ ctx }) => {
 
 const restoreSnapshot = dashProcedure
   .input((v: unknown) => {
-    const { id } = v as { id: string };
+    const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
     return { id };
   })
@@ -150,7 +150,7 @@ const getPublished = publicProcedure.query(async ({ ctx }) => {
 
 const getSnapshotDetail = dashProcedure
   .input((v: unknown) => {
-    const { id } = v as { id: string };
+    const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
     return { id };
   })

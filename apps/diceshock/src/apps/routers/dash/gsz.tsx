@@ -7,7 +7,7 @@ import {
   StopIcon,
   WarningCircleIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useEffect, useRef, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
@@ -61,6 +61,27 @@ const PHASE_LABELS: Record<string, string> = {
 const INCOMPLETE_REASONS = new Set(["admin_abort", "order_invalid"]);
 
 export const Route = createFileRoute("/dash/gsz")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    q: (search.q as string) ?? "",
+    mode: ["all", "3p", "4p"].includes(search.mode as string)
+      ? (search.mode as ModeFilter)
+      : "all",
+    format: ["all", "tonpuu", "hanchan"].includes(search.format as string)
+      ? (search.format as FormatFilter)
+      : "all",
+    completion: ["all", "completed", "incomplete"].includes(
+      search.completion as string,
+    )
+      ? (search.completion as CompletionFilter)
+      : "all",
+    gszSync: ["all", "synced", "unsynced"].includes(search.gszSync as string)
+      ? (search.gszSync as GszSyncFilter)
+      : "all",
+    table: (search.table as string) ?? "",
+    startDate: (search.startDate as string) ?? "",
+    endDate: (search.endDate as string) ?? "",
+    page: Number(search.page) > 0 ? Number(search.page) : 1,
+  }),
   component: RouteComponent,
 });
 
@@ -77,6 +98,37 @@ function formatTime(val: number | null | undefined): string {
 function RouteComponent() {
   const msg = useMsg();
   const isMobile = useIsMobile();
+  const {
+    q,
+    mode,
+    format,
+    completion,
+    gszSync,
+    table,
+    startDate,
+    endDate,
+    page,
+  } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
+
+  const setSearch = useCallback(
+    (
+      updates: Partial<{
+        q: string;
+        mode: ModeFilter;
+        format: FormatFilter;
+        completion: CompletionFilter;
+        gszSync: GszSyncFilter;
+        table: string;
+        startDate: string;
+        endDate: string;
+        page: number;
+      }>,
+    ) =>
+      navigate({ search: (prev) => ({ ...prev, ...updates }), replace: true }),
+    [navigate],
+  );
+
   const [data, setData] = useState<MatchList | null>(null);
   const [loading, setLoading] = useState(true);
   const [tableOptions, setTableOptions] = useState<TableOption[]>([]);
@@ -84,19 +136,9 @@ function RouteComponent() {
   const [activeMatches, setActiveMatches] = useState<ActiveMatch[]>([]);
   const [activeLoading, setActiveLoading] = useState(true);
 
-  const [searchText, setSearchText] = useState("");
-  const [modeFilter, setModeFilter] = useState<ModeFilter>("all");
-  const [formatFilter, setFormatFilter] = useState<FormatFilter>("all");
-  const [completionFilter, setCompletionFilter] =
-    useState<CompletionFilter>("all");
-  const [gszSyncFilter, setGszSyncFilter] = useState<GszSyncFilter>("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchSyncing, setBatchSyncing] = useState(false);
   const [syncingId, setSyncingId] = useState<string | null>(null);
-  const [tableFilter, setTableFilter] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [page, setPage] = useState(1);
   const pageSize = 50;
 
   const unsyncableDialogRef = useRef<HTMLDialogElement>(null);
@@ -108,21 +150,21 @@ function RouteComponent() {
     }>
   >([]);
 
-  const searchRef = useRef(searchText);
+  const searchRef = useRef(q);
   useEffect(() => {
-    searchRef.current = searchText;
-  }, [searchText]);
+    searchRef.current = q;
+  }, [q]);
 
   const fetchMatches = useCallback(async () => {
     setLoading(true);
     try {
       const result = await trpcClientDash.gszManagement.list.query({
         search: searchRef.current,
-        mode: modeFilter,
-        format: formatFilter,
-        completion: completionFilter,
-        gszSync: gszSyncFilter,
-        tableId: tableFilter,
+        mode,
+        format,
+        completion,
+        gszSync,
+        tableId: table,
         startDate: startDate
           ? dayjs.tz(startDate, "Asia/Shanghai").startOf("day").valueOf()
           : null,
@@ -138,17 +180,7 @@ function RouteComponent() {
     } finally {
       setLoading(false);
     }
-  }, [
-    modeFilter,
-    formatFilter,
-    completionFilter,
-    gszSyncFilter,
-    tableFilter,
-    startDate,
-    endDate,
-    page,
-    msg,
-  ]);
+  }, [mode, format, completion, gszSync, table, startDate, endDate, page, msg]);
 
   const fetchActive = useCallback(async () => {
     setActiveLoading(true);
@@ -180,8 +212,7 @@ function RouteComponent() {
   }, []);
 
   const handleSearch = () => {
-    setPage(1);
-    void fetchMatches();
+    setSearch({ page: 1 });
   };
 
   const handleCopy = (text: string) => {
@@ -280,8 +311,8 @@ function RouteComponent() {
               type="text"
               className="grow min-w-0"
               placeholder="搜索ID/玩家昵称/玩家ID/桌台..."
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
+              value={q}
+              onChange={(e) => setSearch({ q: e.target.value })}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             />
           </label>
@@ -298,10 +329,9 @@ function RouteComponent() {
             <button
               key={key}
               type="button"
-              className={`btn btn-xs ${modeFilter === key ? "btn-primary" : "btn-ghost"}`}
+              className={`btn btn-xs ${mode === key ? "btn-primary" : "btn-ghost"}`}
               onClick={() => {
-                setModeFilter(key);
-                setPage(1);
+                setSearch({ mode: key, page: 1 });
               }}
             >
               {label}
@@ -320,10 +350,9 @@ function RouteComponent() {
             <button
               key={key}
               type="button"
-              className={`btn btn-xs ${formatFilter === key ? "btn-secondary" : "btn-ghost"}`}
+              className={`btn btn-xs ${format === key ? "btn-secondary" : "btn-ghost"}`}
               onClick={() => {
-                setFormatFilter(key);
-                setPage(1);
+                setSearch({ format: key, page: 1 });
               }}
             >
               {label}
@@ -342,10 +371,9 @@ function RouteComponent() {
             <button
               key={key}
               type="button"
-              className={`btn btn-xs ${completionFilter === key ? "btn-accent" : "btn-ghost"}`}
+              className={`btn btn-xs ${completion === key ? "btn-accent" : "btn-ghost"}`}
               onClick={() => {
-                setCompletionFilter(key);
-                setPage(1);
+                setSearch({ completion: key, page: 1 });
               }}
             >
               {label}
@@ -364,10 +392,9 @@ function RouteComponent() {
             <button
               key={key}
               type="button"
-              className={`btn btn-xs ${gszSyncFilter === key ? (key === "unsynced" ? "btn-warning" : "btn-success") : "btn-ghost"}`}
+              className={`btn btn-xs ${gszSync === key ? (key === "unsynced" ? "btn-warning" : "btn-success") : "btn-ghost"}`}
               onClick={() => {
-                setGszSyncFilter(key);
-                setPage(1);
+                setSearch({ gszSync: key, page: 1 });
               }}
             >
               {label}
@@ -394,10 +421,9 @@ function RouteComponent() {
             {tableOptions.length > 0 && (
               <select
                 className="select select-bordered select-xs"
-                value={tableFilter}
+                value={table}
                 onChange={(e) => {
-                  setTableFilter(e.target.value);
-                  setPage(1);
+                  setSearch({ table: e.target.value, page: 1 });
                 }}
               >
                 <option value="">全部桌台</option>
@@ -414,8 +440,7 @@ function RouteComponent() {
               className="input input-bordered input-xs"
               value={startDate}
               onChange={(e) => {
-                setStartDate(e.target.value);
-                setPage(1);
+                setSearch({ startDate: e.target.value, page: 1 });
               }}
               title="开始日期"
             />
@@ -425,8 +450,7 @@ function RouteComponent() {
               className="input input-bordered input-xs"
               value={endDate}
               onChange={(e) => {
-                setEndDate(e.target.value);
-                setPage(1);
+                setSearch({ endDate: e.target.value, page: 1 });
               }}
               title="结束日期"
             />
@@ -488,12 +512,12 @@ function RouteComponent() {
                   colSpan={11}
                   className="py-12 text-center text-base-content/60"
                 >
-                  {searchText.trim() ||
-                  modeFilter !== "all" ||
-                  formatFilter !== "all" ||
-                  completionFilter !== "all" ||
-                  gszSyncFilter !== "all" ||
-                  tableFilter ||
+                  {q.trim() ||
+                  mode !== "all" ||
+                  format !== "all" ||
+                  completion !== "all" ||
+                  gszSync !== "all" ||
+                  table ||
                   startDate ||
                   endDate
                     ? "没有匹配的对局记录。"
@@ -675,7 +699,7 @@ function RouteComponent() {
             type="button"
             className="btn btn-sm btn-ghost"
             disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
+            onClick={() => setSearch({ page: page - 1 })}
           >
             上一页
           </button>
@@ -686,7 +710,7 @@ function RouteComponent() {
             type="button"
             className="btn btn-sm btn-ghost"
             disabled={page >= totalPages}
-            onClick={() => setPage((p) => p + 1)}
+            onClick={() => setSearch({ page: page + 1 })}
           >
             下一页
           </button>

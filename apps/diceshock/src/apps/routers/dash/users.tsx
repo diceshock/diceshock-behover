@@ -4,7 +4,7 @@ import {
   EyeIcon,
   UserMinusIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import {
@@ -24,24 +24,31 @@ type UserItem = UserList[number];
 const PAGE_SIZE = 30;
 
 export const Route = createFileRoute("/dash/users")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    q: (search.q as string) ?? "",
+    page: Number(search.page) > 0 ? Number(search.page) : 1,
+  }),
   component: RouteComponent,
 });
 
 function RouteComponent() {
   const msg = useMsg();
   const isMobile = useIsMobile();
-  const [searchWords, setSearchWords] = useState("");
-  const [page, setPage] = useState(1);
+  const { q, page } = Route.useSearch();
+  const navigate = useNavigate();
+  const setSearch = useCallback(
+    (updates: Partial<{ q: string; page: number }>) =>
+      navigate({
+        from: "/dash/users",
+        search: (prev) => ({ ...prev, ...updates }),
+        replace: true,
+      }),
+    [navigate],
+  );
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const disableDialogRef = useRef<HTMLDialogElement>(null);
-
-  const searchWordsRef = useRef(searchWords);
-
-  useEffect(() => {
-    searchWordsRef.current = searchWords;
-  }, [searchWords]);
 
   const [pendingDisable, setPendingDisable] = useState<UserItem | null>(null);
   const [disablePending, setDisablePending] = useState(false);
@@ -58,14 +65,12 @@ function RouteComponent() {
   const refreshUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const currentSearchWords = searchWordsRef.current;
-
       const params: {
         searchWords?: string;
       } = {};
 
-      if (currentSearchWords.trim()) {
-        params.searchWords = currentSearchWords.trim();
+      if (q.trim()) {
+        params.searchWords = q.trim();
       }
 
       const data = await trpcClientDash.users.get.query({
@@ -80,7 +85,7 @@ function RouteComponent() {
     } finally {
       setLoading(false);
     }
-  }, [page, msg]);
+  }, [q, page, msg]);
 
   useEffect(() => {
     void refreshUsers();
@@ -114,14 +119,16 @@ function RouteComponent() {
       <div className="px-4 pt-4">
         <DashBackButton />
       </div>
-      <form className="w-full flex flex-col items-center gap-6 px-4 pt-4 bg-base-100 z-10">
+      <form
+        onSubmit={(e) => e.preventDefault()}
+        className="w-full flex flex-col items-center gap-6 px-4 pt-4 bg-base-100 z-10"
+      >
         <div className="flex flex-col sm:flex-row gap-4 w-full">
           <input
             type="text"
-            value={searchWords}
+            value={q}
             onChange={(evt) => {
-              setSearchWords(evt.target.value);
-              setPage(1);
+              setSearch({ q: evt.target.value, page: 1 });
             }}
             placeholder="搜索用户 ID、手机号、UID、邮箱、昵称..."
             className="input input-lg w-full"

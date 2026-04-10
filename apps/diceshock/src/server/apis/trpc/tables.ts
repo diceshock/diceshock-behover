@@ -1,12 +1,12 @@
 import db, { drizzle, tableOccupancyTable, tablesTable } from "@lib/db";
 import { createId } from "@paralleldrive/cuid2";
-import { fetchTableStateForDO, notifySocketDO } from "@/server/utils/seatTimer";
 import { pauseWithReason } from "@/server/utils/pauseOrder";
-import { protectedProcedure, publicProcedure } from "./baseTRPC";
+import { fetchTableStateForDO, notifySocketDO } from "@/server/utils/seatTimer";
+import { protectedProcedure, publicProcedure, unwrapInput } from "./baseTRPC";
 
 const getByCode = publicProcedure
   .input((v: unknown) => {
-    const { code } = v as { code: string };
+    const { code } = unwrapInput<{ code: string }>(v);
     if (!code) throw new Error("code is required");
     return { code };
   })
@@ -79,7 +79,7 @@ const getByCode = publicProcedure
 
 const occupy = protectedProcedure
   .input((v: unknown) => {
-    const data = v as { code: string };
+    const data = unwrapInput<{ code: string }>(v);
     if (!data.code) throw new Error("code is required");
     return data;
   })
@@ -101,7 +101,12 @@ const occupy = protectedProcedure
 
     // If user has an active occupancy on a DIFFERENT table, auto-pause it
     if (existingOccupancy && existingOccupancy.status === "active") {
-      await pauseWithReason(tdb, existingOccupancy.id, "auto_transfer", ctx.env);
+      await pauseWithReason(
+        tdb,
+        existingOccupancy.id,
+        "auto_transfer",
+        ctx.env,
+      );
     }
 
     const table = await tdb.query.tablesTable.findFirst({
@@ -144,7 +149,7 @@ const occupy = protectedProcedure
 
 const leave = protectedProcedure
   .input((v: unknown) => {
-    const data = v as { occupancyId: string; code: string };
+    const data = unwrapInput<{ occupancyId: string; code: string }>(v);
     if (!data.occupancyId) throw new Error("occupancyId is required");
     if (!data.code) throw new Error("code is required");
     return data;
@@ -183,7 +188,7 @@ const leave = protectedProcedure
 
 const pause = protectedProcedure
   .input((v: unknown) => {
-    const data = v as { occupancyId: string; code: string };
+    const data = unwrapInput<{ occupancyId: string; code: string }>(v);
     if (!data.occupancyId) throw new Error("occupancyId is required");
     if (!data.code) throw new Error("code is required");
     return data;

@@ -352,11 +352,11 @@ function SeatSelectView({
   }, [hasJoined, actions, nickname, phone, registered]);
 
   useEffect(() => {
-    if (prevRegisteredRef.current === false && registered && hasJoined) {
+    if (prevRegisteredRef.current === false && registered) {
       actions.join(nickname, phone, true);
     }
     prevRegisteredRef.current = registered;
-  }, [registered, hasJoined, actions, nickname, phone]);
+  }, [registered, actions, nickname, phone]);
 
   const typeBadge = state.config?.type
     ? MATCH_TYPE_LABELS[state.config.type]

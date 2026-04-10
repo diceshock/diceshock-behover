@@ -1,6 +1,6 @@
 import db, { drizzle, eventsTable } from "@lib/db";
 import { z } from "zod/v4";
-import { dashProcedure } from "./baseTRPC";
+import { dashProcedure, unwrapInput } from "./baseTRPC";
 
 const list = dashProcedure.query(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
@@ -62,7 +62,7 @@ const update = dashProcedure
 
 const remove = dashProcedure
   .input((v: unknown) => {
-    const { id } = v as { id: string };
+    const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
     return { id };
   })
@@ -74,7 +74,7 @@ const remove = dashProcedure
 
 const togglePublish = dashProcedure
   .input((v: unknown) => {
-    const { id } = v as { id: string };
+    const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
     return { id };
   })
@@ -97,7 +97,7 @@ const togglePublish = dashProcedure
 
 const getById = dashProcedure
   .input((v: unknown) => {
-    const { id } = v as { id: string };
+    const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
     return { id };
   })

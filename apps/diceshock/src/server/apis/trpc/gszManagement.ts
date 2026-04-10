@@ -7,7 +7,7 @@ import db, {
 import { eq, inArray } from "drizzle-orm";
 import z from "zod/v4";
 import type { MatchState } from "@/shared/mahjong/types";
-import { dashProcedure } from "./baseTRPC";
+import { dashProcedure, unwrapInput } from "./baseTRPC";
 import { type GszPageResult, gszFetch } from "./gszApi";
 
 type ModeFilter = "all" | "3p" | "4p";
@@ -23,7 +23,7 @@ export type UnsyncableReason = {
 
 const list = dashProcedure
   .input((v: unknown) => {
-    const data = v as {
+    const data = unwrapInput<{
       search?: string;
       mode?: ModeFilter;
       format?: FormatFilter;
@@ -34,7 +34,7 @@ const list = dashProcedure
       endDate?: number;
       page?: number;
       pageSize?: number;
-    };
+    }>(v);
     return {
       search: data.search ?? "",
       mode: data.mode ?? "all",
@@ -236,7 +236,7 @@ const list = dashProcedure
 
 const getById = dashProcedure
   .input((v: unknown) => {
-    const { id } = v as { id: string };
+    const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
     return { id };
   })
@@ -383,7 +383,7 @@ const listActive = dashProcedure.query(async ({ ctx }) => {
 
 const terminateMatch = dashProcedure
   .input((v: unknown) => {
-    const data = v as { tableCode: string; reason?: string };
+    const data = unwrapInput<{ tableCode: string; reason?: string }>(v);
     if (!data.tableCode) throw new Error("tableCode is required");
     return {
       tableCode: data.tableCode,

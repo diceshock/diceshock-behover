@@ -81,10 +81,6 @@ export function addPlayer(
   state: MatchState,
   player: Pick<PlayerState, "userId" | "nickname" | "phone" | "registered">,
 ): MatchState {
-  if (state.config?.type === "tournament" && !player.registered) {
-    throw new Error("公式战模式需要登录正式用户，临时用户不能参加");
-  }
-
   const existing = state.players.find((p) => p.userId === player.userId);
   if (existing) {
     if (

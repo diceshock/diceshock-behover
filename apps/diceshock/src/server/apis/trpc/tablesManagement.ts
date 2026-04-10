@@ -1,7 +1,7 @@
 import db, { drizzle, tableOccupancyTable, tablesTable } from "@lib/db";
 import { createId } from "@paralleldrive/cuid2";
 import { fetchTableStateForDO, notifySocketDO } from "@/server/utils/seatTimer";
-import { dashProcedure } from "./baseTRPC";
+import { dashProcedure, unwrapInput } from "./baseTRPC";
 
 const SHORT_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -46,13 +46,13 @@ const list = dashProcedure.query(async ({ ctx }) => {
 
 const create = dashProcedure
   .input((v: unknown) => {
-    const data = v as {
+    const data = unwrapInput<{
       name: string;
       type: "fixed" | "solo";
       scope: "trpg" | "boardgame" | "console" | "mahjong";
       capacity?: number;
       description?: string;
-    };
+    }>(v);
     if (!data.name?.trim()) throw new Error("name is required");
     if (!data.type) throw new Error("type is required");
     if (!data.scope) throw new Error("scope is required");
@@ -82,7 +82,7 @@ const create = dashProcedure
 
 const getById = dashProcedure
   .input((v: unknown) => {
-    const { id } = v as { id: string };
+    const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
     return { id };
   })
@@ -141,14 +141,14 @@ const getById = dashProcedure
 
 const update = dashProcedure
   .input((v: unknown) => {
-    const data = v as {
+    const data = unwrapInput<{
       id: string;
       name?: string;
       type?: "fixed" | "solo";
       scope?: "trpg" | "boardgame" | "console" | "mahjong";
       capacity?: number;
       description?: string | null;
-    };
+    }>(v);
     if (!data.id) throw new Error("id is required");
     return data;
   })
@@ -171,7 +171,7 @@ const update = dashProcedure
 
 const toggleStatus = dashProcedure
   .input((v: unknown) => {
-    const { id } = v as { id: string };
+    const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
     return { id };
   })
@@ -192,7 +192,7 @@ const toggleStatus = dashProcedure
 
 const remove = dashProcedure
   .input((v: unknown) => {
-    const { id } = v as { id: string };
+    const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
     return { id };
   })
@@ -207,7 +207,7 @@ const remove = dashProcedure
 
 const regenerateCode = dashProcedure
   .input((v: unknown) => {
-    const { id } = v as { id: string };
+    const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
     return { id };
   })
@@ -223,7 +223,7 @@ const regenerateCode = dashProcedure
 
 const addOccupancy = dashProcedure
   .input((v: unknown) => {
-    const data = v as { table_id: string; user_id: string };
+    const data = unwrapInput<{ table_id: string; user_id: string }>(v);
     if (!data.table_id) throw new Error("table_id is required");
     if (!data.user_id) throw new Error("user_id is required");
     return data;
@@ -255,7 +255,7 @@ const addOccupancy = dashProcedure
 
 const removeOccupancy = dashProcedure
   .input((v: unknown) => {
-    const { id } = v as { id: string };
+    const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
     return { id };
   })
@@ -295,15 +295,14 @@ const removeOccupancy = dashProcedure
 
 const getOccupancyByUserId = dashProcedure
   .input((v: unknown) => {
-    const { userId } = v as { userId: string };
+    const { userId } = unwrapInput<{ userId: string }>(v);
     if (!userId) throw new Error("userId is required");
     return { userId };
   })
   .query(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
     const occupancies = await tdb.query.tableOccupancyTable.findMany({
-      where: (o, { eq, ne, and }) =>
-        and(eq(o.user_id, input.userId)),
+      where: (o, { eq, ne, and }) => and(eq(o.user_id, input.userId)),
       with: {
         table: { columns: { id: true, name: true, type: true, status: true } },
       },
@@ -313,7 +312,7 @@ const getOccupancyByUserId = dashProcedure
 
 const getByCode = dashProcedure
   .input((v: unknown) => {
-    const { code } = v as { code: string };
+    const { code } = unwrapInput<{ code: string }>(v);
     if (!code) throw new Error("code is required");
     return { code };
   })

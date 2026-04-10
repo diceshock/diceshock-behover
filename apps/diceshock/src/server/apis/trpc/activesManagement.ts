@@ -1,5 +1,5 @@
 import db, { activeRegistrationsTable, activesTable, drizzle } from "@lib/db";
-import { dashProcedure } from "./baseTRPC";
+import { dashProcedure, unwrapInput } from "./baseTRPC";
 
 const list = dashProcedure.query(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
@@ -18,7 +18,7 @@ const list = dashProcedure.query(async ({ ctx }) => {
 
 const getById = dashProcedure
   .input((v: unknown) => {
-    const { id } = v as { id: string };
+    const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
     return { id };
   })
@@ -54,7 +54,7 @@ const getById = dashProcedure
 
 const update = dashProcedure
   .input((v: unknown) => {
-    const data = v as {
+    const data = unwrapInput<{
       id: string;
       title?: string;
       date?: string;
@@ -63,7 +63,7 @@ const update = dashProcedure
       board_game_id?: string | null;
       content?: string | null;
       is_game?: boolean;
-    };
+    }>(v);
     if (!data.id) throw new Error("id is required");
     return data;
   })
@@ -79,7 +79,7 @@ const update = dashProcedure
 
 const remove = dashProcedure
   .input((v: unknown) => {
-    const { id } = v as { id: string };
+    const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
     return { id };
   })
@@ -94,7 +94,7 @@ const remove = dashProcedure
 
 const removeRegistration = dashProcedure
   .input((v: unknown) => {
-    const { registrationId } = v as { registrationId: string };
+    const { registrationId } = unwrapInput<{ registrationId: string }>(v);
     if (!registrationId) throw new Error("registrationId is required");
     return { registrationId };
   })
@@ -108,7 +108,7 @@ const removeRegistration = dashProcedure
 
 const batchRemove = dashProcedure
   .input((v: unknown) => {
-    const { ids } = v as { ids: string[] };
+    const { ids } = unwrapInput<{ ids: string[] }>(v);
     if (!ids || !Array.isArray(ids) || ids.length === 0)
       throw new Error("ids is required");
     return { ids };
