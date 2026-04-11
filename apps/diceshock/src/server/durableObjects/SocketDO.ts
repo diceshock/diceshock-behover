@@ -18,6 +18,7 @@ import type {
 interface SessionMeta {
   userId: string;
   role: "user" | "dash";
+  sessionId: string;
 }
 
 interface OccupancyInfo {
@@ -82,6 +83,14 @@ type ServerMessage =
 
 type AlarmType = "countdown";
 
+interface SSEClient {
+  controller: ReadableStreamDefaultController;
+  meta: SessionMeta;
+}
+
+const HEARTBEAT_INTERVAL = 15_000;
+const encoder = new TextEncoder();
+
 export class SocketDO extends DurableObject<Cloudflare.Env> {
   private tableInfo: TableInfo | null = null;
   private occupancies: OccupancyInfo[] = [];
@@ -89,12 +98,29 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
   private step = 0;
   private pendingAlarm: AlarmType | null = null;
 
+  private sseClients = new Map<string, SSEClient>();
+  private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+
   constructor(ctx: DurableObjectState, env: Cloudflare.Env) {
     super(ctx, env);
+  }
 
-    this.ctx.setWebSocketAutoResponse(
-      new WebSocketRequestResponsePair("ping", "pong"),
-    );
+  private ensureHeartbeat(): void {
+    if (this.heartbeatInterval) return;
+    this.heartbeatInterval = setInterval(() => {
+      const heartbeat = encoder.encode(": heartbeat\n\n");
+      for (const [sessionId, client] of this.sseClients) {
+        try {
+          client.controller.enqueue(heartbeat);
+        } catch {
+          this.sseClients.delete(sessionId);
+        }
+      }
+      if (this.sseClients.size === 0 && this.heartbeatInterval) {
+        clearInterval(this.heartbeatInterval);
+        this.heartbeatInterval = null;
+      }
+    }, HEARTBEAT_INTERVAL);
   }
 
   private async hydrateIfNeeded(code: string): Promise<void> {
@@ -112,10 +138,14 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
 
-    if (url.pathname === "/ws") {
+    if (url.pathname === "/sse") {
       const code = url.searchParams.get("code");
       if (code) await this.hydrateIfNeeded(code);
-      return this.handleWebSocket(request);
+      return this.handleSSE(request);
+    }
+
+    if (url.pathname === "/action" && request.method === "POST") {
+      return this.handleAction(request);
     }
 
     if (url.pathname === "/update-state" && request.method === "POST") {
@@ -153,39 +183,55 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
     return new Response("Not found", { status: 404 });
   }
 
-  private handleWebSocket(request: Request): Response {
-    if (request.headers.get("Upgrade") !== "websocket") {
-      return new Response("Expected WebSocket upgrade", { status: 426 });
-    }
-
+  private handleSSE(request: Request): Response {
     const url = new URL(request.url);
     const userId = url.searchParams.get("userId") ?? "anonymous";
     const role = (url.searchParams.get("role") ?? "user") as "user" | "dash";
+    const sessionId = url.searchParams.get("sessionId") ?? crypto.randomUUID();
 
-    const pair = new WebSocketPair();
-    const [client, server] = Object.values(pair);
+    const meta: SessionMeta = { userId, role, sessionId };
+    const initialPayload = this.formatSSE(this.buildStateMessage());
 
-    this.ctx.acceptWebSocket(server, [`userId:${userId}`, `role:${role}`]);
-    server.serializeAttachment({ userId, role } satisfies SessionMeta);
-    server.send(JSON.stringify(this.buildStateMessage()));
+    const stream = new ReadableStream({
+      start: (controller) => {
+        controller.enqueue(initialPayload);
+        this.sseClients.set(sessionId, { controller, meta });
+        this.ensureHeartbeat();
+      },
+      cancel: () => {
+        this.sseClients.delete(sessionId);
+      },
+    });
 
-    return new Response(null, { status: 101, webSocket: client });
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+        "X-Session-Id": sessionId,
+      },
+    });
   }
 
-  async webSocketMessage(
-    ws: WebSocket,
-    message: string | ArrayBuffer,
-  ): Promise<void> {
-    try {
-      const meta = ws.deserializeAttachment() as SessionMeta | null;
-      if (!meta) return;
+  private async handleAction(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+    const userId = url.searchParams.get("userId") ?? "anonymous";
+    const role = (url.searchParams.get("role") ?? "user") as "user" | "dash";
+    const sessionId = url.searchParams.get("sessionId") ?? "";
 
-      const data = JSON.parse(message as string) as ClientMessage;
+    const meta: SessionMeta = { userId, role, sessionId };
+
+    try {
+      const data = (await request.json()) as ClientMessage;
 
       switch (data.action) {
-        case "sync":
-          ws.send(JSON.stringify(this.buildStateMessage()));
-          break;
+        case "sync": {
+          const client = this.sseClients.get(sessionId);
+          if (client) {
+            this.sendToClient(client, this.buildStateMessage());
+          }
+          return Response.json({ ok: true });
+        }
 
         case "update_state":
           this.tableInfo = data.table;
@@ -193,30 +239,39 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
           this.checkOrderValidity();
           this.step++;
           this.broadcastState();
-          break;
+          return Response.json({ ok: true });
 
-        case "app_ping":
-          ws.send(
-            JSON.stringify({
-              type: "app_pong",
-              ts: data.ts,
-              serverTime: Date.now(),
-            } satisfies ServerMessage),
-          );
-          break;
+        case "app_ping": {
+          const pongMsg: ServerMessage = {
+            type: "app_pong",
+            ts: data.ts,
+            serverTime: Date.now(),
+          };
+          const client = this.sseClients.get(sessionId);
+          if (client) {
+            this.sendToClient(client, pongMsg);
+          }
+          return Response.json({ ok: true });
+        }
 
         default:
           if (data.action.startsWith("mahjong_")) {
             await this.handleMahjongAction(meta, data);
           }
-          break;
+          return Response.json({ ok: true });
       }
     } catch (err) {
-      ws.send(
-        JSON.stringify({
-          type: "error",
-          message: err instanceof Error ? err.message : "Unknown error",
-        } satisfies ServerMessage),
+      const errorMsg: ServerMessage = {
+        type: "error",
+        message: err instanceof Error ? err.message : "Unknown error",
+      };
+      const client = this.sseClients.get(sessionId);
+      if (client) {
+        this.sendToClient(client, errorMsg);
+      }
+      return Response.json(
+        { ok: false, error: errorMsg.message },
+        { status: 400 },
       );
     }
   }
@@ -499,19 +554,6 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
     }
   }
 
-  async webSocketClose(
-    ws: WebSocket,
-    code: number,
-    reason: string,
-    _wasClean: boolean,
-  ): Promise<void> {
-    ws.close(code, reason);
-  }
-
-  async webSocketError(ws: WebSocket, _error: unknown): Promise<void> {
-    ws.close(1011, "WebSocket error");
-  }
-
   async alarm(): Promise<void> {
     if (this.pendingAlarm === "countdown") {
       this.pendingAlarm = null;
@@ -538,27 +580,39 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
     return { type: "state", data: this.buildState() };
   }
 
+  private formatSSE(msg: ServerMessage): Uint8Array {
+    return encoder.encode(`data: ${JSON.stringify(msg)}\n\n`);
+  }
+
+  private sendToClient(client: SSEClient, msg: ServerMessage): void {
+    try {
+      client.controller.enqueue(this.formatSSE(msg));
+    } catch {
+      this.sseClients.delete(client.meta.sessionId);
+    }
+  }
+
   private broadcastState(): void {
-    const payload = JSON.stringify(this.buildStateMessage());
-    for (const ws of this.ctx.getWebSockets()) {
+    const payload = this.formatSSE(this.buildStateMessage());
+    for (const [sessionId, client] of this.sseClients) {
       try {
-        ws.send(payload);
+        client.controller.enqueue(payload);
       } catch {
-        // noop
+        this.sseClients.delete(sessionId);
       }
     }
   }
 
   private broadcastError(message: string): void {
-    const payload = JSON.stringify({
+    const payload = this.formatSSE({
       type: "error",
       message,
     } satisfies ServerMessage);
-    for (const ws of this.ctx.getWebSockets()) {
+    for (const [sessionId, client] of this.sseClients) {
       try {
-        ws.send(payload);
+        client.controller.enqueue(payload);
       } catch {
-        // noop
+        this.sseClients.delete(sessionId);
       }
     }
   }

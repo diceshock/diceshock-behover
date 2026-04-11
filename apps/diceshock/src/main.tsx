@@ -39,15 +39,30 @@ app.use("/api/auth/*", authHandler());
 
 app.get("/sitemap.xml", sitemap);
 
-app.get("/ws/seat/:code", async (c) => {
+app.get("/sse/seat/:code", async (c) => {
   const code = c.req.param("code");
   const id = c.env.SOCKET.idFromName(code);
   const stub = c.env.SOCKET.get(id);
   const url = new URL(c.req.url);
   url.searchParams.set("code", code);
   return stub.fetch(
-    new Request(`${url.origin}/ws?${url.searchParams.toString()}`, {
+    new Request(`${url.origin}/sse?${url.searchParams.toString()}`, {
       headers: c.req.raw.headers,
+    }),
+  );
+});
+
+app.post("/action/seat/:code", async (c) => {
+  const code = c.req.param("code");
+  const id = c.env.SOCKET.idFromName(code);
+  const stub = c.env.SOCKET.get(id);
+  const url = new URL(c.req.url);
+  url.searchParams.set("code", code);
+  return stub.fetch(
+    new Request(`${url.origin}/action?${url.searchParams.toString()}`, {
+      method: "POST",
+      headers: c.req.raw.headers,
+      body: c.req.raw.body,
     }),
   );
 });

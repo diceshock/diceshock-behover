@@ -11,8 +11,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import clsx from "clsx";
 import QRCode from "qrcode";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import QRScannerDialog from "@/client/components/diceshock/Header/QRScannerDialog";
 import DisconnectionOverlay from "@/client/components/diceshock/DisconnectionOverlay";
+import QRScannerDialog from "@/client/components/diceshock/Header/QRScannerDialog";
 import MahjongMatchStepper from "@/client/components/diceshock/MahjongMatch/MahjongMatchStepper";
 import NetworkSignalIndicator from "@/client/components/diceshock/NetworkSignalIndicator";
 import useAuth from "@/client/hooks/useAuth";
@@ -107,6 +107,7 @@ function SeatTimerPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"main" | "mahjong">("main");
+  const activeTabInitRef = useRef(false);
   const [scannerOpen, setScannerOpen] = useState(false);
 
   const [gszRegistered, setGszRegistered] = useState(false);
@@ -261,6 +262,14 @@ function SeatTimerPage() {
   const isExpired =
     identity?.kind === "temp" && Date.now() > identity.expiresAt;
 
+  const isMahjong = table?.scope === "mahjong";
+  useEffect(() => {
+    if (isMahjong && !activeTabInitRef.current) {
+      activeTabInitRef.current = true;
+      setActiveTab("mahjong");
+    }
+  }, [isMahjong]);
+
   if (loading && !wsState) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -315,8 +324,6 @@ function SeatTimerPage() {
       </div>
     );
   }
-
-  const isMahjong = table?.scope === "mahjong";
 
   return (
     <div className="mx-auto w-full max-w-lg px-4 py-6 flex flex-col gap-5">
@@ -487,7 +494,10 @@ function SeatTimerPage() {
           connected={connected}
         />
       )}
-      <QRScannerDialog isOpen={scannerOpen} onClose={() => setScannerOpen(false)} />
+      <QRScannerDialog
+        isOpen={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+      />
     </div>
   );
 }
