@@ -168,11 +168,10 @@ function RouteComponent() {
       if (status === "active") {
         await trpcClientDash.ordersManagement.pauseOrder.mutate({ id });
       }
-      void navigate({ to: "/dash/orders/$id/settle", params: { id } });
-    } catch (err) {
-      msg.error(err instanceof Error ? err.message : "操作失败");
+    } catch {
     } finally {
       setActionPending(null);
+      void navigate({ to: "/dash/orders/$id/settle", params: { id } });
     }
   };
 
@@ -287,7 +286,7 @@ function RouteComponent() {
     if (nonEndedIds.length === 0) return;
     void navigate({
       to: "/dash/orders/settle",
-      search: { ids: nonEndedIds.join(",") },
+      search: { ids: nonEndedIds },
     });
   };
 
@@ -537,7 +536,7 @@ function RouteComponent() {
                         {formatTime(order.end_at)}
                       </td>
                       <td className="whitespace-nowrap">
-                        {order.table ? (
+                        {order.table && order.table.code !== "DELETED" ? (
                           <Link
                             to="/dash/tables/$id"
                             params={{ id: order.table_id }}
@@ -546,7 +545,9 @@ function RouteComponent() {
                             {order.table.name}
                           </Link>
                         ) : (
-                          "—"
+                          <span className="text-base-content/40">
+                            {order.table?.name ?? "—"}
+                          </span>
                         )}
                       </td>
                       <td className="max-w-[120px]">

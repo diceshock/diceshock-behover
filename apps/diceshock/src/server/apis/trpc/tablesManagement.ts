@@ -1,4 +1,9 @@
-import db, { drizzle, tableOccupancyTable, tablesTable } from "@lib/db";
+import db, {
+  drizzle,
+  orderPauseLogsTable,
+  tableOccupancyTable,
+  tablesTable,
+} from "@lib/db";
 import { createId } from "@paralleldrive/cuid2";
 import { fetchTableStateForDO, notifySocketDO } from "@/server/utils/seatTimer";
 import { dashProcedure, unwrapInput } from "./baseTRPC";
@@ -198,9 +203,29 @@ const remove = dashProcedure
   })
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
-    await tdb
-      .delete(tableOccupancyTable)
-      .where(drizzle.eq(tableOccupancyTable.table_id, input.id));
+    const now = new Date();
+    const activeOccs = await tdb.query.tableOccupancyTable.findMany({
+      where: (o, { eq, ne, and }) =>
+        and(eq(o.table_id, input.id), ne(o.status, "ended")),
+      columns: { id: true },
+    });
+    for (const occ of activeOccs) {
+      const openLog = await tdb.query.orderPauseLogsTable.findFirst({
+        where: (l, { eq, and, isNull }) =>
+          and(eq(l.occupancy_id, occ.id), isNull(l.resumed_at)),
+        orderBy: (l, { desc }) => desc(l.paused_at),
+      });
+      if (openLog) {
+        await tdb
+          .update(orderPauseLogsTable)
+          .set({ resumed_at: now })
+          .where(drizzle.eq(orderPauseLogsTable.id, openLog.id));
+      }
+      await tdb
+        .update(tableOccupancyTable)
+        .set({ status: "ended", end_at: now })
+        .where(drizzle.eq(tableOccupancyTable.id, occ.id));
+    }
     await tdb.delete(tablesTable).where(drizzle.eq(tablesTable.id, input.id));
     return { success: true };
   });

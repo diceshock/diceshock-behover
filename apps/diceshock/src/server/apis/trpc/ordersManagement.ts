@@ -20,13 +20,15 @@ type GroupBy = "table" | "user" | "date" | "none";
 
 const list = dashProcedure
   .input((v: unknown) => {
-    const data = unwrapInput<{ search?: string;
-    status?: StatusFilter;
-    sortBy?: SortBy;
-    sortOrder?: SortOrder;
-    groupBy?: GroupBy;
-    page?: number;
-    pageSize?: number; }>(v);
+    const data = unwrapInput<{
+      search?: string;
+      status?: StatusFilter;
+      sortBy?: SortBy;
+      sortOrder?: SortOrder;
+      groupBy?: GroupBy;
+      page?: number;
+      pageSize?: number;
+    }>(v);
     return {
       search: data.search ?? "",
       status: data.status ?? "all",
@@ -68,6 +70,14 @@ const list = dashProcedure
 
     const enriched = await Promise.all(
       allOccupancies.map(async (occ) => {
+        const tableInfo = occ.table ?? {
+          id: occ.table_id,
+          name: "已删除桌台",
+          type: "fixed" as const,
+          scope: "boardgame" as const,
+          code: "DELETED",
+        };
+
         let nickname = "Anonymous";
         let uid: string | null = null;
 
@@ -107,7 +117,7 @@ const list = dashProcedure
           final_price: occ.final_price ?? null,
           pricing_snapshot_id: occ.pricing_snapshot_id ?? null,
           price_breakdown: occ.price_breakdown ?? null,
-          table: occ.table,
+          table: tableInfo,
           user: occ.user,
           nickname,
           uid,
@@ -125,8 +135,8 @@ const list = dashProcedure
       filtered = filtered.filter((o) => {
         return (
           o.id.toLowerCase().includes(q) ||
-          (o.table?.name ?? "").toLowerCase().includes(q) ||
-          (o.table?.code ?? "").toLowerCase().includes(q) ||
+          o.table.name.toLowerCase().includes(q) ||
+          o.table.code.toLowerCase().includes(q) ||
           (o.user?.name ?? "").toLowerCase().includes(q) ||
           o.nickname.toLowerCase().includes(q) ||
           (o.uid ?? "").toLowerCase().includes(q)
@@ -176,6 +186,14 @@ const getById = dashProcedure
 
     if (!occ) throw new Error("订单不存在");
 
+    const tableInfo = occ.table ?? {
+      id: occ.table_id,
+      name: "已删除桌台",
+      type: "fixed" as const,
+      scope: "boardgame" as const,
+      code: "DELETED",
+    };
+
     let nickname = "Anonymous";
     let uid: string | null = null;
 
@@ -215,7 +233,7 @@ const getById = dashProcedure
       final_price: occ.final_price ?? null,
       pricing_snapshot_id: occ.pricing_snapshot_id ?? null,
       price_breakdown: occ.price_breakdown ?? null,
-      table: occ.table,
+      table: tableInfo,
       user: occ.user,
       nickname,
       uid,
@@ -335,6 +353,14 @@ async function buildSettlementData(
   });
   if (!occ) throw new Error("订单不存在");
 
+  const tableInfo = occ.table ?? {
+    id: occ.table_id,
+    name: "已删除桌台",
+    type: "fixed" as const,
+    scope: "boardgame" as const,
+    code: "DELETED",
+  };
+
   let nickname = "Anonymous";
   let uid: string | null = null;
   if (occ.user_id) {
@@ -369,7 +395,7 @@ async function buildSettlementData(
       ? occ.end_at.getTime()
       : Number(occ.end_at)
     : Date.now();
-  const tableScope = occ.table?.scope ?? "boardgame";
+  const tableScope = tableInfo.scope;
 
   const pauseLogsMapped = pauseLogs.map((l) => ({
     pausedAt:
@@ -500,7 +526,7 @@ async function buildSettlementData(
       start_at: startAt,
       end_at: occ.end_at ? endAt : null,
       final_price: occ.final_price ?? null,
-      table: occ.table,
+      table: tableInfo,
       nickname,
       uid,
     },
@@ -529,8 +555,9 @@ const getSettlementPreview = dashProcedure
 
 const settleOrder = dashProcedure
   .input((v: unknown) => {
-    const data = unwrapInput<{ id: string;
-    deductFromStoredValue?: boolean; }>(v);
+    const data = unwrapInput<{ id: string; deductFromStoredValue?: boolean }>(
+      v,
+    );
     if (!data.id) throw new Error("id is required");
     return {
       id: data.id,
@@ -558,6 +585,14 @@ const settleOrder = dashProcedure
     if (!occ) throw new Error("订单不存在");
     if (occ.status === "ended") throw new Error("订单已结束");
 
+    const tableInfo = occ.table ?? {
+      id: occ.table_id,
+      name: "已删除桌台",
+      type: "fixed" as const,
+      scope: "boardgame" as const,
+      code: "DELETED",
+    };
+
     const pauseLogs = await tdb.query.orderPauseLogsTable.findMany({
       where: (l, { eq }) => eq(l.occupancy_id, input.id),
       orderBy: (l, { asc }) => asc(l.paused_at),
@@ -580,7 +615,7 @@ const settleOrder = dashProcedure
         ? occ.start_at.getTime()
         : Number(occ.start_at);
     const endAt = now.getTime();
-    const tableScope = occ.table?.scope ?? "boardgame";
+    const tableScope = tableInfo.scope;
     const snapshotData = publishedSnapshot?.data as SnapshotData | null;
 
     const allPauseLogs = openLog
@@ -684,7 +719,7 @@ const settleOrder = dashProcedure
 
       if (input.deductFromStoredValue && svBalance > 0 && finalPrice > 0) {
         const deductAmount = Math.min(svBalance, finalPrice);
-        const tableName = occ.table?.name ?? "未知桌台";
+        const tableName = tableInfo.name;
         const deductNote = `自动扣费 · ${new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })} · ${tableName}`;
 
         const svPlans = plans
@@ -781,7 +816,7 @@ const settleOrder = dashProcedure
 
     const snapshot: SettlementSnapshot = {
       orderId: occ.id,
-      tableName: occ.table?.name ?? "未知",
+      tableName: tableInfo.name,
       tableType: tableScope,
       nickname,
       uid,
@@ -959,15 +994,19 @@ const batchSettlementPreview = dashProcedure
         await pauseWithReason(tdb, id, "settlement", ctx.env);
       }
     }
-    const previews = await Promise.all(
-      input.ids.map((id) => buildSettlementData(tdb, id)),
+    const raw = await Promise.all(
+      input.ids.map((id) => buildSettlementData(tdb, id).catch(() => null)),
     );
+    const previews = raw.filter((p): p is NonNullable<typeof p> => p !== null);
     return { previews };
   });
 
 const batchSettle = dashProcedure
   .input((v: unknown) => {
-    const data = unwrapInput<{ ids: string[]; deductFromStoredValue?: boolean }>(v);
+    const data = unwrapInput<{
+      ids: string[];
+      deductFromStoredValue?: boolean;
+    }>(v);
     if (!data.ids?.length) throw new Error("ids is required");
     return {
       ids: data.ids,
@@ -1027,6 +1066,14 @@ const batchSettle = dashProcedure
             continue;
           }
 
+          const tableInfo = occ.table ?? {
+            id: occ.table_id,
+            name: "已删除桌台",
+            type: "fixed" as const,
+            scope: "boardgame" as const,
+            code: "DELETED",
+          };
+
           const pauseLogs = await tdb.query.orderPauseLogsTable.findMany({
             where: (l, { eq }) => eq(l.occupancy_id, id),
             orderBy: (l, { asc }) => asc(l.paused_at),
@@ -1049,7 +1096,7 @@ const batchSettle = dashProcedure
               ? occ.start_at.getTime()
               : Number(occ.start_at);
           const endAt = now.getTime();
-          const tableScope = occ.table?.scope ?? "boardgame";
+          const tableScope = tableInfo.scope;
           const snapshotData = publishedSnapshot?.data as SnapshotData | null;
 
           const allPauseLogs = openLog
@@ -1100,8 +1147,7 @@ const batchSettle = dashProcedure
 
           const snapshot = {
             orderId: occ.id,
-            batchId,
-            tableName: occ.table?.name ?? "未知",
+            tableName: tableInfo.name,
             tableType: tableScope,
             nickname,
             uid,
@@ -1113,7 +1159,30 @@ const batchSettle = dashProcedure
             billableMinutes: totalMinutes - pausedMinutes,
             finalPrice,
             priceBreakdown: breakdown,
+            membership: {
+              hasTimePlan: false,
+              timePlanActive: false,
+              timePlanType: null as string | null,
+              timePlanEndDate: null as number | null,
+              storedValueBalance: 0,
+            },
+            storedValueDeduction: null,
             pauseLogs: pauseLogsMapped,
+            pricingPlans: [] as Array<{
+              name: string;
+              planType: "fallback" | "conditional";
+              billingType: "hourly" | "fixed";
+              price: number;
+              matched: boolean;
+            }>,
+            recentOrders: [] as Array<{
+              id: string;
+              tableName: string;
+              startAt: number;
+              endAt: number | null;
+              finalPrice: number | null;
+              status: string;
+            }>,
             createdAt: Date.now(),
           };
 
@@ -1268,6 +1337,117 @@ const cancelBatchSettlement = dashProcedure
     return { results };
   });
 
+const cleanupOrphanedData = dashProcedure
+  .input((v: unknown) => {
+    const data = unwrapInput<{ dryRun?: boolean }>(v);
+    return { dryRun: data.dryRun ?? true };
+  })
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const now = new Date();
+
+    const allOccupancies = await tdb.query.tableOccupancyTable.findMany({
+      with: {
+        table: { columns: { id: true } },
+      },
+    });
+
+    const orphanedOccupancies = allOccupancies.filter((occ) => !occ.table);
+    const activeOrphans = orphanedOccupancies.filter(
+      (occ) => occ.status !== "ended",
+    );
+    const endedOrphans = orphanedOccupancies.filter(
+      (occ) => occ.status === "ended",
+    );
+
+    const allPauseLogs = await tdb.query.orderPauseLogsTable.findMany();
+    const occupancyIds = new Set(allOccupancies.map((o) => o.id));
+    const orphanedPauseLogs = allPauseLogs.filter(
+      (log) => !occupancyIds.has(log.occupancy_id),
+    );
+
+    const endedOccIds = new Set(
+      allOccupancies.filter((o) => o.status === "ended").map((o) => o.id),
+    );
+    const danglingPauseLogs = allPauseLogs.filter(
+      (log) => !log.resumed_at && endedOccIds.has(log.occupancy_id),
+    );
+
+    if (input.dryRun) {
+      return {
+        dryRun: true,
+        totalOccupancies: allOccupancies.length,
+        orphanedOccupancies: orphanedOccupancies.length,
+        activeOrphans: activeOrphans.map((o) => ({
+          id: o.id,
+          table_id: o.table_id,
+          status: o.status,
+          user_id: o.user_id,
+          temp_id: o.temp_id,
+        })),
+        endedOrphans: endedOrphans.length,
+        orphanedPauseLogs: orphanedPauseLogs.length,
+        danglingPauseLogs: danglingPauseLogs.length,
+        actions: [] as string[],
+      };
+    }
+
+    const actions: string[] = [];
+
+    for (const occ of activeOrphans) {
+      const openLogs = allPauseLogs.filter(
+        (l) => l.occupancy_id === occ.id && !l.resumed_at,
+      );
+      for (const log of openLogs) {
+        await tdb
+          .update(orderPauseLogsTable)
+          .set({ resumed_at: now })
+          .where(drizzle.eq(orderPauseLogsTable.id, log.id));
+      }
+      await tdb
+        .update(tableOccupancyTable)
+        .set({ status: "ended", end_at: now })
+        .where(drizzle.eq(tableOccupancyTable.id, occ.id));
+      actions.push(`强制结束孤立订单 ${occ.id} (table_id: ${occ.table_id})`);
+    }
+
+    for (const log of orphanedPauseLogs) {
+      await tdb
+        .delete(orderPauseLogsTable)
+        .where(drizzle.eq(orderPauseLogsTable.id, log.id));
+      actions.push(
+        `删除孤立暂停日志 ${log.id} (occupancy_id: ${log.occupancy_id})`,
+      );
+    }
+
+    for (const log of danglingPauseLogs) {
+      await tdb
+        .update(orderPauseLogsTable)
+        .set({ resumed_at: now })
+        .where(drizzle.eq(orderPauseLogsTable.id, log.id));
+      actions.push(
+        `关闭悬挂暂停日志 ${log.id} (occupancy_id: ${log.occupancy_id})`,
+      );
+    }
+
+    return {
+      dryRun: false,
+      totalOccupancies: allOccupancies.length,
+      orphanedOccupancies: orphanedOccupancies.length,
+      activeOrphans: activeOrphans.map((o) => ({
+        id: o.id,
+        table_id: o.table_id,
+        status: o.status,
+        user_id: o.user_id,
+        temp_id: o.temp_id,
+      })),
+      endedOrphans: endedOrphans.length,
+      orphanedPauseLogs: orphanedPauseLogs.length,
+      danglingPauseLogs: danglingPauseLogs.length,
+      actions,
+    };
+  });
+
 export default {
   list,
   getById,
@@ -1281,4 +1461,5 @@ export default {
   batchSettlementPreview,
   batchSettle,
   cancelBatchSettlement,
+  cleanupOrphanedData,
 };
