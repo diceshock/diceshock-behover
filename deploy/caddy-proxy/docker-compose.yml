@@ -1,0 +1,21 @@
+services:
+  caddy:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      CF_API_TOKEN: "${CF_API_TOKEN}"
+    dns:
+      - 223.5.5.5
+      - 223.6.6.6
+
+volumes:
+  caddy_data:
+  caddy_config:

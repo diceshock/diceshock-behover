@@ -25,8 +25,16 @@ const Footer = () => {
             Wuhan DiceShock Culture Co., Ltd.
             <br />
             位于光谷总部国际2栋 203 室
-            <br />
-            This page is powered by Vercel.
+          </p>
+          <p>
+            <a
+              href="https://beian.miit.gov.cn/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="link link-hover"
+            >
+              鄂ICP备2026020241号-1
+            </a>
           </p>
         </aside>
         <nav>

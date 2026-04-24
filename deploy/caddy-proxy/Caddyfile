@@ -1,0 +1,40 @@
+{
+	acme_dns cloudflare {env.CF_API_TOKEN}
+	email admin@diceshock.com
+}
+
+www.diceshock.com {
+	redir https://diceshock.com{uri} permanent
+}
+
+diceshock.com {
+	reverse_proxy https://origin.diceshock.com {
+		header_up X-Real-Client-IP {client_ip}
+
+		transport http {
+			dial_timeout 10s
+			response_header_timeout 0
+			read_timeout 0
+			keepalive 2m
+			keepalive_idle_conns 10
+		}
+
+		fail_duration 30s
+		max_fails 5
+		unhealthy_status 502 503 504
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		-Server
+	}
+
+	log {
+		output file /data/access.log {
+			roll_size 100MiB
+			roll_keep 5
+		}
+		format json
+	}
+}
