@@ -7,6 +7,7 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
@@ -416,30 +417,23 @@ function RouteComponent() {
             )}
           </tbody>
         </table>
+        {selectedIds.size > 0 && <div className="h-24" />}
       </div>
 
-      {/* Batch action bar */}
       {selectedIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-base-300 rounded-box px-6 py-3 shadow-xl">
-          <span className="text-sm font-medium">
-            已选择 {selectedIds.size} 项
-          </span>
-          <button
-            type="button"
-            className="btn btn-sm btn-ghost"
-            onClick={() => setSelectedIds(new Set())}
-          >
-            取消选择
-          </button>
-          <button
-            type="button"
-            className="btn btn-sm btn-error"
-            onClick={openBatchDeleteDialog}
-          >
-            <TrashIcon className="size-4" />
-            批量删除
-          </button>
-        </div>
+        <BatchActionBar
+          count={selectedIds.size}
+          onClear={() => setSelectedIds(new Set())}
+          actions={[
+            {
+              key: "delete",
+              label: "批量删除",
+              icon: <TrashIcon className="size-4" />,
+              className: "btn-error",
+              onClick: openBatchDeleteDialog,
+            },
+          ]}
+        />
       )}
 
       {/* Single delete dialog */}

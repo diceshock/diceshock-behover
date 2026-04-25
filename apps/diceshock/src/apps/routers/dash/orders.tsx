@@ -19,6 +19,8 @@ import {
   useRef,
   useState,
 } from "react";
+import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
+import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
@@ -778,6 +780,7 @@ function RouteComponent() {
           </tbody>
         </table>
         {total > pageSize && <div className="h-16" />}
+        {selectedIds.size > 0 && <div className="h-24" />}
       </div>
       {total > pageSize && (
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 px-4 py-2.5 rounded-box border border-base-content/10 backdrop-blur-sm bg-base-100/80 shadow-lg">
@@ -803,54 +806,49 @@ function RouteComponent() {
         </div>
       )}
       {selectedIds.size > 0 && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2.5 rounded-box border border-base-content/10 backdrop-blur-sm bg-base-100/80 shadow-lg">
-          <span className="text-sm font-medium shrink-0">
-            已选择 {selectedIds.size} 个订单
-          </span>
-          {hasActiveSelected && (
-            <button
-              type="button"
-              className="btn btn-sm btn-ghost"
-              onClick={() => void handleBatchPause()}
-              disabled={actionPending === "batch"}
-            >
-              <PauseIcon className="size-4" />
-              批量暂停 (
-              {selectedItems.filter((o) => o.status === "active").length})
-            </button>
-          )}
-          {hasPausedSelected && (
-            <button
-              type="button"
-              className="btn btn-sm btn-success"
-              onClick={() => void handleBatchResume()}
-              disabled={actionPending === "batch"}
-            >
-              <PlayIcon className="size-4" />
-              批量继续 (
-              {selectedItems.filter((o) => o.status === "paused").length})
-            </button>
-          )}
-          {hasNonEndedSelected && (
-            <button
-              type="button"
-              className="btn btn-sm btn-primary"
-              onClick={handleBatchSettle}
-              disabled={actionPending === "batch"}
-            >
-              <StopIcon className="size-4" />
-              批量结算 (
-              {selectedItems.filter((o) => o.status !== "ended").length})
-            </button>
-          )}
-          <button
-            type="button"
-            className="btn btn-sm btn-ghost"
-            onClick={() => setSelectedIds(new Set())}
-          >
-            取消选择
-          </button>
-        </div>
+        <BatchActionBar
+          count={selectedIds.size}
+          unit="个订单"
+          onClear={() => setSelectedIds(new Set())}
+          actions={[
+            ...(hasActiveSelected
+              ? [
+                  {
+                    key: "pause",
+                    label: `批量暂停 (${selectedItems.filter((o) => o.status === "active").length})`,
+                    icon: <PauseIcon className="size-4" />,
+                    className: "btn-ghost",
+                    disabled: actionPending === "batch",
+                    onClick: () => void handleBatchPause(),
+                  } satisfies BatchAction,
+                ]
+              : []),
+            ...(hasPausedSelected
+              ? [
+                  {
+                    key: "resume",
+                    label: `批量继续 (${selectedItems.filter((o) => o.status === "paused").length})`,
+                    icon: <PlayIcon className="size-4" />,
+                    className: "btn-success",
+                    disabled: actionPending === "batch",
+                    onClick: () => void handleBatchResume(),
+                  } satisfies BatchAction,
+                ]
+              : []),
+            ...(hasNonEndedSelected
+              ? [
+                  {
+                    key: "settle",
+                    label: `批量结算 (${selectedItems.filter((o) => o.status !== "ended").length})`,
+                    icon: <StopIcon className="size-4" />,
+                    className: "btn-primary",
+                    disabled: actionPending === "batch",
+                    onClick: handleBatchSettle,
+                  } satisfies BatchAction,
+                ]
+              : []),
+          ]}
+        />
       )}
     </main>
   );

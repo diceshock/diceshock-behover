@@ -21,6 +21,8 @@ import {
 import clsx from "clsx";
 import QRCode from "qrcode";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
+import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import useSeatTimer from "@/client/hooks/useSeatTimer";
@@ -386,7 +388,7 @@ function TableDetailPage() {
           <DashBackButton to="/dash/tables" />
         </div>
 
-        <div className="mx-auto w-full max-w-3xl px-4 pb-20">
+        <div className="mx-auto w-full max-w-3xl px-4 pb-24">
           <div className="flex items-center gap-4 mb-6">
             <div>
               <h1 className="text-2xl font-bold">{table.name}</h1>
@@ -839,52 +841,48 @@ function TableDetailPage() {
         </div>
 
         {selectedOccIds.size > 0 && (
-          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2.5 rounded-box border border-base-content/10 backdrop-blur-sm bg-base-100/80 shadow-lg">
-            <span className="text-sm font-medium shrink-0">
-              已选择 {selectedOccIds.size} 个订单
-            </span>
-            {(table?.occupancies ?? []).some(
-              (o) => selectedOccIds.has(o.id) && o.status === "active",
-            ) && (
-              <button
-                type="button"
-                className="btn btn-sm btn-ghost"
-                onClick={() => void handleBatchPauseOcc()}
-                disabled={orderActionPending}
-              >
-                <PauseIcon className="size-4" />
-                批量暂停
-              </button>
-            )}
-            {(table?.occupancies ?? []).some(
-              (o) => selectedOccIds.has(o.id) && o.status === "paused",
-            ) && (
-              <button
-                type="button"
-                className="btn btn-sm btn-success"
-                onClick={() => void handleBatchResumeOcc()}
-                disabled={orderActionPending}
-              >
-                <PlayIcon className="size-4" />
-                批量继续
-              </button>
-            )}
-            <button
-              type="button"
-              className="btn btn-sm btn-primary"
-              onClick={handleBatchSettleOcc}
-            >
-              <StopIcon className="size-4" />
-              批量结算
-            </button>
-            <button
-              type="button"
-              className="btn btn-sm btn-ghost"
-              onClick={() => setSelectedOccIds(new Set())}
-            >
-              取消选择
-            </button>
-          </div>
+          <BatchActionBar
+            count={selectedOccIds.size}
+            unit="个订单"
+            onClear={() => setSelectedOccIds(new Set())}
+            actions={[
+              ...((table?.occupancies ?? []).some(
+                (o) => selectedOccIds.has(o.id) && o.status === "active",
+              )
+                ? [
+                    {
+                      key: "pause",
+                      label: "批量暂停",
+                      icon: <PauseIcon className="size-4" />,
+                      className: "btn-ghost",
+                      disabled: orderActionPending,
+                      onClick: () => void handleBatchPauseOcc(),
+                    } satisfies BatchAction,
+                  ]
+                : []),
+              ...((table?.occupancies ?? []).some(
+                (o) => selectedOccIds.has(o.id) && o.status === "paused",
+              )
+                ? [
+                    {
+                      key: "resume",
+                      label: "批量继续",
+                      icon: <PlayIcon className="size-4" />,
+                      className: "btn-success",
+                      disabled: orderActionPending,
+                      onClick: () => void handleBatchResumeOcc(),
+                    } satisfies BatchAction,
+                  ]
+                : []),
+              {
+                key: "settle",
+                label: "批量结算",
+                icon: <StopIcon className="size-4" />,
+                className: "btn-primary",
+                onClick: handleBatchSettleOcc,
+              },
+            ]}
+          />
         )}
 
         <dialog ref={regenerateDialogRef} className="modal">

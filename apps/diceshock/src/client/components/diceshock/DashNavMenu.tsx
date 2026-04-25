@@ -134,40 +134,30 @@ export default function DashNavDrawer({
 
   return (
     <>
-      {/* Desktop: placeholder + absolute sidebar */}
-      <div className="hidden lg:flex min-h-screen">
-        <div className="w-16 shrink-0" />
-
-        <div
-          className={clsx(
-            "fixed top-0 left-0 h-full z-40",
-            "w-16 hover:w-56 transition-[width] duration-200 overflow-hidden",
-            "bg-base-200 flex flex-col",
-          )}
-        >
-          <SidebarContent
-            currentPath={currentPath}
-            close={close}
-            onScanClick={onScanClick}
-            className="p-0"
-          />
-        </div>
-
-        <div className="flex-1 min-h-screen">{children}</div>
+      <div
+        className={clsx(
+          "hidden lg:flex fixed top-0 left-0 h-full z-40",
+          "w-16 hover:w-56 transition-[width] duration-200 overflow-hidden",
+          "bg-base-200 flex-col",
+        )}
+      >
+        <SidebarContent
+          currentPath={currentPath}
+          close={close}
+          onScanClick={onScanClick}
+          className="p-0"
+        />
       </div>
 
-      {/* Mobile: DaisyUI drawer */}
-      <div className="drawer lg:hidden">
+      <div className="drawer drawer-end lg:hidden fixed inset-0 z-50 pointer-events-none">
         <input
           id="dash-nav-drawer"
           type="checkbox"
           className="drawer-toggle"
           ref={checkboxRef}
         />
-
-        <div className="drawer-content flex min-h-screen">{children}</div>
-
-        <div className="drawer-side z-50">
+        <div className="drawer-content" />
+        <div className="drawer-side pointer-events-auto">
           <label
             htmlFor="dash-nav-drawer"
             aria-label="close sidebar"
@@ -184,7 +174,6 @@ export default function DashNavDrawer({
                 <XIcon className="size-5" />
               </button>
             </div>
-
             <SidebarContent
               currentPath={currentPath}
               close={close}
@@ -193,6 +182,8 @@ export default function DashNavDrawer({
           </div>
         </div>
       </div>
+
+      <div className="lg:pl-16 h-screen overflow-hidden">{children}</div>
 
       <DashQRScannerDialog
         isOpen={isScannerOpen}
