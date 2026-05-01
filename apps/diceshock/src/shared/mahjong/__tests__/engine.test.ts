@@ -205,12 +205,9 @@ describe("engine", () => {
       s = engine.submitScore(s, "u4", "u4", 23000);
       expect(engine.allScoresSubmitted(s)).toBe(true);
 
-      s = engine.confirmScore(s, "u1");
-      s = engine.confirmScore(s, "u2");
-      s = engine.confirmScore(s, "u3");
       expect(engine.allScoresConfirmed(s)).toBe(false);
 
-      s = engine.confirmScore(s, "u4");
+      s = engine.confirmScore(s, "u1");
       expect(engine.allScoresConfirmed(s)).toBe(true);
 
       s = engine.finalizeScoring(s);
@@ -222,10 +219,12 @@ describe("engine", () => {
       );
     });
 
-    it("allows cancel confirm before all confirmed", () => {
+    it("allows cancel confirm before scoring is confirmed", () => {
       let s = toPlaying();
       s = engine.beginScoring(s);
       s = engine.submitScore(s, "u1", "u1", 30000);
+      s = engine.submitScore(s, "u2", "u2", 25000);
+      s = engine.submitScore(s, "u3", "u3", 22000);
       s = engine.confirmScore(s, "u1");
       expect(s.scoreConfirmed["u1"]).toBe(true);
 
@@ -233,13 +232,13 @@ describe("engine", () => {
       expect(s.scoreConfirmed["u1"]).toBe(false);
     });
 
-    it("prevents cancel confirm after all confirmed", () => {
+    it("prevents cancel confirm after scoring is confirmed", () => {
       let s = toPlaying();
       s = engine.beginScoring(s);
       for (const id of ["u1", "u2", "u3", "u4"]) {
         s = engine.submitScore(s, id, id, 25000);
-        s = engine.confirmScore(s, id);
       }
+      s = engine.confirmScore(s, "u1");
       expect(() => engine.cancelConfirm(s, "u1")).toThrow(/Cannot cancel/);
     });
 
@@ -256,8 +255,8 @@ describe("engine", () => {
       s = engine.beginScoring(s);
       for (const id of ["u1", "u2", "u3", "u4"]) {
         s = engine.submitScore(s, id, id, 25000);
-        s = engine.confirmScore(s, id);
       }
+      s = engine.confirmScore(s, "u1");
       s = engine.finalizeScoring(s);
       expect(s.phase).toBe("ended");
 

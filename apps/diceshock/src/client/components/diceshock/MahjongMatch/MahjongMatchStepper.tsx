@@ -665,6 +665,20 @@ function ScoringView({
         </div>
       )}
 
+      {allSubmitted && scoreSumValid && (
+        <button
+          type="button"
+          className="btn btn-accent btn-md w-full"
+          disabled={!connected || isPending("mahjong_confirm_score")}
+          onClick={actions.confirmScore}
+        >
+          {isPending("mahjong_confirm_score") && (
+            <span className="loading loading-spinner loading-xs" />
+          )}
+          ✅ 确认并继续
+        </button>
+      )}
+
       <button
         type="button"
         className="btn btn-outline btn-md w-full"
@@ -701,13 +715,12 @@ function ScoringCard({
   const isMe = player.userId === userId;
   const targetId = player.userId;
   const hasScore = targetId in state.pendingScores;
-  const isConfirmed = state.scoreConfirmed[targetId] === true;
   const playerScore = state.pendingScores[targetId];
   const submitter = state.scoreSubmitters[targetId];
   const submittedBySelf = submitter === targetId;
-  const allConfirmed = engine.allScoresConfirmed(state);
+  const allSubmitted = engine.allScoresSubmitted(state);
 
-  const canEdit = isMe ? !isConfirmed : !submittedBySelf && !isConfirmed;
+  const canEdit = !hasScore || (isMe ? true : !submittedBySelf);
 
   return (
     <div
@@ -729,30 +742,13 @@ function ScoringCard({
         </div>
       </div>
 
-      {isConfirmed ? (
-        <div className="flex flex-col gap-1 items-center">
+      {hasScore && !canEdit ? (
+        <div className="flex flex-col items-center gap-1 py-1">
           <span className="font-mono text-lg font-bold text-success">
             {playerScore}
           </span>
-          <span className="text-xs text-success">✅ 已确认</span>
-          {isMe && !allConfirmed && (
-            <button
-              type="button"
-              className="btn btn-ghost btn-xs text-base-content/40 mt-1"
-              disabled={!connected || isPending("mahjong_cancel_confirm")}
-              onClick={actions.cancelConfirm}
-            >
-              ↩️ 撤回
-            </button>
-          )}
-        </div>
-      ) : hasScore && !canEdit ? (
-        <div className="flex flex-col items-center gap-1 py-1">
-          <span className="font-mono text-lg font-bold text-base-content/70">
-            {playerScore}
-          </span>
-          <span className="text-xs text-warning">
-            {submittedBySelf ? "本人已录" : "⏳ 待确认"}
+          <span className="text-xs text-base-content/70">
+            {submittedBySelf ? "本人已录" : "已录入"}
           </span>
         </div>
       ) : (
@@ -789,19 +785,8 @@ function ScoringCard({
             )}
             提交
           </button>
-          {isMe && hasScore && (
-            <button
-              type="button"
-              className="btn btn-accent btn-sm w-full"
-              disabled={!connected || isPending("mahjong_confirm_score")}
-              onClick={actions.confirmScore}
-            >
-              {isPending("mahjong_confirm_score") && (
-                <span className="loading loading-spinner loading-xs" />
-              )}
-              ✅ 确认
-            </button>
-          )}
+        </div>
+      )}
         </div>
       )}
     </div>

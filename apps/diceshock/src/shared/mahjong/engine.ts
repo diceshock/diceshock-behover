@@ -246,7 +246,7 @@ export function cancelConfirm(state: MatchState, userId: string): MatchState {
   if (state.phase !== "scoring")
     throw new Error("Can only cancel confirm during scoring phase");
   if (allScoresConfirmed(state))
-    throw new Error("Cannot cancel after all players confirmed");
+    throw new Error("Cannot cancel after scoring is confirmed");
 
   const newPendingScores = { ...state.pendingScores };
   const newScoreSubmitters = { ...state.scoreSubmitters };
@@ -272,9 +272,8 @@ export function allScoresSubmitted(state: MatchState): boolean {
 export function allScoresConfirmed(state: MatchState): boolean {
   if (!state.config) return false;
   if (!allScoresSubmitted(state)) return false;
-  const needed = playerCount(state.config.mode);
   const confirmed = Object.values(state.scoreConfirmed).filter(Boolean).length;
-  return confirmed >= needed;
+  return confirmed >= 1;
 }
 
 export function finalizeScoring(state: MatchState): MatchState {
