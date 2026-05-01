@@ -55,7 +55,7 @@ export default async function fireRouter(c: Context<HonoCtxEnv>) {
             <link
               rel="icon"
               type="image/svg+xml"
-              href="https://assets.diceshock.com/images/diceshock.favicon.svg"
+              href="https://assets.runespark.fun/images/diceshock.favicon.svg"
             />
           </head>
 

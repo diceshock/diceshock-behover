@@ -3,7 +3,7 @@ import type { Context } from "hono";
 import type { HonoCtxEnv } from "@/shared/types";
 
 const UPLOAD_PREFIX = "up/";
-const CDN_BASE = "https://assets.diceshock.com/";
+const CDN_BASE = "https://assets.runespark.fun/";
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
 export default async function mediaUpload(c: Context<HonoCtxEnv>) {

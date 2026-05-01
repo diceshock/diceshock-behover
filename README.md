@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://assets.diceshock.com/images/diceshock.favicon.svg" alt="Diceshock Logo" width="120" height="120">
+  <img src="https://assets.runespark.fun/images/diceshock.favicon.svg" alt="Diceshock Logo" width="120" height="120">
   <h1>Diceshock Behover</h1>
   <p>A full-stack monorepo built on Cloudflare Workers using Hono, React, GraphQL, and Drizzle ORM.</p>
 </div>

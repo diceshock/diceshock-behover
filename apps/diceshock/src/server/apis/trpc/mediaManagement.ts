@@ -2,7 +2,7 @@ import { z } from "zod/v4";
 import { dashProcedure } from "./baseTRPC";
 
 const UPLOAD_PREFIX = "up/";
-const CDN_BASE = "https://assets.diceshock.com/";
+const CDN_BASE = "https://assets.runespark.fun/";
 
 const listInputZ = z.object({
   search: z.string().optional(),
