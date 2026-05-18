@@ -127,22 +127,34 @@ function RouteComponent() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Link to="/" className="btn btn-sm btn-ghost gap-1.5">
+          <a
+            href="https://diceshock.com/"
+            className="btn btn-sm btn-ghost gap-1.5"
+          >
             <HouseIcon className="size-4 text-primary" />
             主页
-          </Link>
-          <Link to="/inventory" className="btn btn-sm btn-ghost gap-1.5">
+          </a>
+          <a
+            href="https://diceshock.com/inventory"
+            className="btn btn-sm btn-ghost gap-1.5"
+          >
             <PackageIcon className="size-4 text-info" />
             库存查看
-          </Link>
-          <Link to="/contact-us" className="btn btn-sm btn-ghost gap-1.5">
+          </a>
+          <a
+            href="https://diceshock.com/contact-us"
+            className="btn btn-sm btn-ghost gap-1.5"
+          >
             <EnvelopeIcon className="size-4 text-success" />
             联系我们
-          </Link>
-          <Link to="/actives" className="btn btn-sm btn-ghost gap-1.5">
+          </a>
+          <a
+            href="https://diceshock.com/actives"
+            className="btn btn-sm btn-ghost gap-1.5"
+          >
             <CalendarDotsIcon className="size-4 text-error" />
             活动&约局
-          </Link>
+          </a>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
