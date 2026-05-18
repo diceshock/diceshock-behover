@@ -17,7 +17,7 @@ interface GszRegistrationModalProps {
   nickname: string;
 }
 
-type Step = "phone_verify" | "confirm_register";
+type Step = "phone_verify" | "confirm_register" | "final_confirm";
 
 export default function GszRegistrationModal({
   isOpen,
