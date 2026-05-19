@@ -787,8 +787,6 @@ function ScoringCard({
           </button>
         </div>
       )}
-        </div>
-      )}
     </div>
   );
 }
