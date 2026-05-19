@@ -54,14 +54,6 @@ new_sqlite_classes = ["SocketDO"]
 deleted_classes = ["SeatTimerDO"]
 
 [[routes]]
-pattern = "www.diceshock.com"
-custom_domain = true
-
-[[routes]]
-pattern = "diceshock.com"
-custom_domain = true
-
-[[routes]]
 pattern = "origin.runespark.fun"
 custom_domain = true
 
