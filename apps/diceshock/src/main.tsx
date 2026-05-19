@@ -79,13 +79,14 @@ app.post("/apis/*", apisRoot);
 app.put("/apis/*", apisRoot);
 app.delete("/apis/*", apisRoot);
 
-export async function scheduled(
-  _event: ScheduledEvent,
-  env: HonoCtxEnv["Bindings"],
-  _ctx: ExecutionContext,
-) {
-  const { computeLeaderboards } = await import("./server/cron/leaderboard");
-  await computeLeaderboards({ DB: env.DB as unknown as D1Database });
-}
-
-export default app;
+export default {
+  fetch: app.fetch,
+  scheduled: async (
+    _event: ScheduledEvent,
+    env: HonoCtxEnv["Bindings"],
+    _ctx: ExecutionContext,
+  ) => {
+    const { computeLeaderboards } = await import("./server/cron/leaderboard");
+    await computeLeaderboards({ DB: env.DB as unknown as D1Database });
+  },
+};
