@@ -1067,7 +1067,7 @@ async function renderStickerCanvas(
   ctx.font = `600 22px ${FONT}`;
   ctx.fillText(`#${code}`, STICKER_W / 2, 98);
 
-  const qrUrl = `${window.location.origin}/t/${code}`;
+  const qrUrl = `https://diceshock.com/t/${code}`;
   const qrDataUrl = await QRCode.toDataURL(qrUrl, {
     width: 440,
     margin: 1,
@@ -1140,7 +1140,7 @@ async function renderStickerCanvas(
 
 function TableLinkDisplay({ code }: { code: string }) {
   const msg = useMsg();
-  const url = `${window.location.origin}/t/${code}`;
+  const url = `https://diceshock.com/t/${code}`;
 
   const handleCopy = () => {
     try {
