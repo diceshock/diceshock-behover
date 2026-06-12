@@ -49,7 +49,7 @@ const RawList: React.FC<{ games: GameWithDbId[] | null }> = ({ games }) => {
             </div>
 
             <div className="absolute top-3 -left-2 transform-[translateZ(1rem)]">
-              <h5 className="max-w-32 sm:max-w-48 text-sm lg:text-xl sm:text-md shadow-lg text-nowrap overflow-hidden text-ellipsis bg-primary text-black font-bold px-2 py-1">
+              <h5 className="max-w-32 sm:max-w-48 text-sm lg:text-xl sm:text-md shadow-lg text-nowrap overflow-hidden text-ellipsis bg-primary text-primary-content font-bold px-2 py-1">
                 {sch_name || eng_name}
               </h5>
             </div>
@@ -59,7 +59,7 @@ const RawList: React.FC<{ games: GameWithDbId[] | null }> = ({ games }) => {
                 ({ sch_domain_value, eng_domain_value }) => (
                   <span
                     key={eng_domain_value}
-                    className="bg-accent text-black text-sm lg:text-md font-bold px-1 shadow-lg mr-1"
+                    className="bg-accent text-accent-content text-sm lg:text-md font-bold px-1 shadow-lg mr-1"
                   >
                     {sch_domain_value || eng_domain_value}
                   </span>
@@ -70,7 +70,7 @@ const RawList: React.FC<{ games: GameWithDbId[] | null }> = ({ games }) => {
                 .map(({ sch_domain_value, eng_domain_value }) => (
                   <span
                     key={eng_domain_value}
-                    className="bg-primary text-black text-sm lg:text-md font-bold px-1 shadow-lg mr-1"
+                    className="bg-primary text-primary-content text-sm lg:text-md font-bold px-1 shadow-lg mr-1"
                   >
                     {sch_domain_value}
                   </span>

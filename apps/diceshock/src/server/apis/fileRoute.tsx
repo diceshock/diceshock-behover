@@ -25,7 +25,7 @@ export default async function fileRoute(c: Context<HonoCtxEnv>) {
 
   c.header("Content-Type", "text/html");
 
-  const [themeEl, theme] = themeGet(c);
+  const [themeEl, theme, store] = themeGet(c);
 
   const res = handler(({ request, responseHeaders, router }) => {
     router.history.replace(c.req.url);
@@ -37,6 +37,7 @@ export default async function fileRoute(c: Context<HonoCtxEnv>) {
       children: (
         <html
           lang="zh-CN-Hans"
+          data-theme={`${store}-${theme}`}
           className={clsx({ dark: theme === "dark" }, "antialiased")}
         >
           <head>

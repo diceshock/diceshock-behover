@@ -27,12 +27,20 @@ const ZdogIllustration: React.FC<{ className?: string }> = ({ className }) => {
   const ROOT5 = Math.sqrt(5);
   const PHI = (1 + ROOT5) / 2;
 
+  function getCSSColor(varName: string, fallback: string): string {
+    if (typeof window === "undefined") return fallback;
+    const value = getComputedStyle(document.documentElement)
+      .getPropertyValue(varName)
+      .trim();
+    return value || fallback;
+  }
+
   const colors = {
-    eggplant: "#9f7ff6",
-    garnet: "#859fe1",
-    orange: "#69becc",
-    gold: "#4bdfb9",
-    yellow: "#28ffa5",
+    eggplant: getCSSColor("--color-accent", "#9f7ff6"),
+    garnet: getCSSColor("--color-info", "#859fe1"),
+    orange: getCSSColor("--color-secondary", "#69becc"),
+    gold: getCSSColor("--color-success", "#4bdfb9"),
+    yellow: getCSSColor("--color-primary", "#28ffa5"),
   };
 
   useEffect(() => {

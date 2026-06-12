@@ -1,20 +1,28 @@
 import db, { activeRegistrationsTable, activesTable, drizzle } from "@lib/db";
+import { getStoreFilter, storeInputZ } from "@/shared/store";
 import { dashProcedure, unwrapInput } from "./baseTRPC";
 
-const list = dashProcedure.query(async ({ ctx }) => {
-  const tdb = db(ctx.env.DB);
-  const actives = await tdb.query.activesTable.findMany({
-    orderBy: (a, { desc }) => desc(a.create_at),
-    with: {
-      creator: { columns: { id: true, name: true } },
-      registrations: {
-        columns: { id: true, user_id: true, is_watching: true },
+const list = dashProcedure
+  .input((v: unknown) => {
+    const data = unwrapInput<{ store?: string }>(v);
+    const store = storeInputZ.parse(data.store ?? "jiedaokou");
+    return { store };
+  })
+  .query(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const actives = await tdb.query.activesTable.findMany({
+      where: (a, { inArray }) => inArray(a.store, getStoreFilter(input.store)),
+      orderBy: (a, { desc }) => desc(a.create_at),
+      with: {
+        creator: { columns: { id: true, name: true } },
+        registrations: {
+          columns: { id: true, user_id: true, is_watching: true },
+        },
+        boardGame: { columns: { id: true, sch_name: true, eng_name: true } },
       },
-      boardGame: { columns: { id: true, sch_name: true, eng_name: true } },
-    },
+    });
+    return actives;
   });
-  return actives;
-});
 
 const getById = dashProcedure
   .input((v: unknown) => {

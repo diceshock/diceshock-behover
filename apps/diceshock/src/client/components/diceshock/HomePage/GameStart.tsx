@@ -15,7 +15,7 @@ const GameStart = () => {
   const { ref, progress } = useSticky();
 
   return (
-    <div ref={ref} className="w-full h-[400vh] [&]:text-white">
+    <div ref={ref} className="w-full h-[400vh] [&]:text-base-content">
       <animated.div
         style={{
           opacity: progress.to((p) =>
@@ -28,7 +28,7 @@ const GameStart = () => {
             Math.min(reRange(p, 16, COUNT) * 100, 50),
           ),
         }}
-        className="sticky top-0 w-full h-screen bg-black"
+        className="sticky top-0 w-full h-screen bg-neutral"
       >
         <animated.div
           style={{
@@ -36,7 +36,7 @@ const GameStart = () => {
               Math.min(reRange(p, 4, COUNT), 1 - reRange(p, 6, COUNT)),
             ),
           }}
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 text-2xl text-white text-nowrap"
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 text-2xl text-neutral-content text-nowrap"
         >
           DiceShock© 巨献
         </animated.div>
@@ -47,7 +47,7 @@ const GameStart = () => {
               Math.min(reRange(p, 7, COUNT), 1 - reRange(p, 9, COUNT)),
             ),
           }}
-          className="absolute left-1/2 top-[40vh] -translate-x-1/2 text-2xl text-white"
+          className="absolute left-1/2 top-[40vh] -translate-x-1/2 text-2xl text-neutral-content"
         >
           <XboxGraph className="size-40" />
         </animated.div>
@@ -57,7 +57,7 @@ const GameStart = () => {
               Math.min(reRange(p, 8, COUNT), 1 - reRange(p, 9, COUNT)),
             ),
           }}
-          className="absolute left-1/2 top-[calc(40vh+5rem)] -translate-x-1/2 text-2xl text-white"
+          className="absolute left-1/2 top-[calc(40vh+5rem)] -translate-x-1/2 text-2xl text-neutral-content"
         >
           <SeriesX className="size-52 pl-2" />
         </animated.div>
@@ -68,7 +68,7 @@ const GameStart = () => {
               Math.min(reRange(p, 10, COUNT), 1 - reRange(p, 12, COUNT)),
             ),
           }}
-          className="absolute left-[calc(50vw-4.5rem)] top-[45vh] -translate-x-1/2 text-2xl text-white"
+          className="absolute left-[calc(50vw-4.5rem)] top-[45vh] -translate-x-1/2 text-2xl text-neutral-content"
         >
           <GamePass className="size-32" />
         </animated.div>
@@ -78,7 +78,7 @@ const GameStart = () => {
               Math.min(reRange(p, 11, COUNT), 1 - reRange(p, 12, COUNT)),
             ),
           }}
-          className="absolute left-[calc(50vw+4.5rem)] top-[calc(45vh-1rem)] -translate-x-1/2 text-2xl text-white"
+          className="absolute left-[calc(50vw+4.5rem)] top-[calc(45vh-1rem)] -translate-x-1/2 text-2xl text-neutral-content"
         >
           <Ultimate className="size-40" />
         </animated.div>
@@ -87,7 +87,7 @@ const GameStart = () => {
           style={{
             opacity: progress.to((p) => reRange(p, 13, COUNT)),
           }}
-          className="absolute left-[calc(50vw-2rem)] top-[40vh] -translate-x-1/2 text-2xl text-white"
+          className="absolute left-[calc(50vw-2rem)] top-[40vh] -translate-x-1/2 text-2xl text-neutral-content"
         >
           <SwitchL className="size-32" />
         </animated.div>
@@ -95,7 +95,7 @@ const GameStart = () => {
           style={{
             opacity: progress.to((p) => reRange(p, 13, COUNT)),
           }}
-          className="absolute left-[calc(50vw+2rem)] top-[40vh] -translate-x-1/2 text-2xl text-white"
+          className="absolute left-[calc(50vw+2rem)] top-[40vh] -translate-x-1/2 text-2xl text-neutral-content"
         >
           <animated.div
             style={{
@@ -111,7 +111,7 @@ const GameStart = () => {
           style={{
             opacity: progress.to((p) => reRange(p, 14, COUNT)),
           }}
-          className="absolute left-[calc(50vw)] top-[calc(40vh+6rem)] -translate-x-1/2 text-2xl text-white"
+          className="absolute left-[calc(50vw)] top-[calc(40vh+6rem)] -translate-x-1/2 text-2xl text-neutral-content"
         >
           <SwitchText className="size-40" />
         </animated.div>

@@ -1,14 +1,25 @@
 import db, { eventsTable } from "@lib/db";
+import { getStoreFilter, storeInputZ } from "@/shared/store";
 import { publicProcedure, unwrapInput } from "./baseTRPC";
 
-const list = publicProcedure.query(async ({ ctx }) => {
-  const tdb = db(ctx.env.DB);
-  const events = await tdb.query.eventsTable.findMany({
-    where: (e, { eq }) => eq(e.is_published, true),
-    orderBy: (e, { desc }) => desc(e.create_at),
+const list = publicProcedure
+  .input((v: unknown) => {
+    const data = unwrapInput<{ store?: string }>(v);
+    const store = storeInputZ.parse(data.store ?? "jiedaokou");
+    return { store };
+  })
+  .query(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const events = await tdb.query.eventsTable.findMany({
+      where: (e, { eq, and, inArray }) =>
+        and(
+          eq(e.is_published, true),
+          inArray(e.store, getStoreFilter(input.store)),
+        ),
+      orderBy: (e, { desc }) => desc(e.create_at),
+    });
+    return events;
   });
-  return events;
-});
 
 const getById = publicProcedure
   .input((v: unknown) => {

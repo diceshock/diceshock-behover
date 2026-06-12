@@ -13,28 +13,32 @@ import {
   UsersIcon,
   XIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import { Link, useMatches } from "@tanstack/react-router";
+import { Link, useMatches, useNavigate } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useRef, useState } from "react";
 import ThemeSwap from "@/client/components/ThemeSwap";
+import { useCurrentStore } from "@/client/hooks/useStore";
+import type { StoreId } from "@/shared/store";
+import { STORE_LABELS, STORES } from "@/shared/store";
 import DashQRScannerDialog from "./DashQRScannerDialog";
 
-const NAV_ITEMS: ReadonlyArray<{
-  to: string;
-  icon: typeof GaugeIcon;
-  label: string;
-  exact?: boolean;
-}> = [
-  { to: "/dash", icon: GaugeIcon, label: "仪表盘", exact: true },
-  { to: "/dash/users", icon: UsersIcon, label: "用户" },
-  { to: "/dash/actives", icon: CalendarDotsIcon, label: "约局管理" },
-  { to: "/dash/events", icon: MegaphoneIcon, label: "活动管理" },
-  { to: "/dash/tables", icon: TableIcon, label: "桌台管理" },
-  { to: "/dash/orders", icon: ClipboardTextIcon, label: "订单管理" },
-  { to: "/dash/gsz", icon: SwordIcon, label: "立直麻将" },
-  { to: "/dash/pricing", icon: CurrencyDollarIcon, label: "价格计划" },
-  { to: "/dash/media", icon: ImageSquareIcon, label: "媒体库" },
-];
+function getNavItems(store: StoreId) {
+  return [
+    { to: `/dash/${store}`, icon: GaugeIcon, label: "仪表盘", exact: true },
+    { to: `/dash/${store}/users`, icon: UsersIcon, label: "用户" },
+    { to: `/dash/${store}/actives`, icon: CalendarDotsIcon, label: "约局管理" },
+    { to: `/dash/${store}/events`, icon: MegaphoneIcon, label: "活动管理" },
+    { to: `/dash/${store}/tables`, icon: TableIcon, label: "桌台管理" },
+    { to: `/dash/${store}/orders`, icon: ClipboardTextIcon, label: "订单管理" },
+    { to: `/dash/${store}/gsz`, icon: SwordIcon, label: "立直麻将" },
+    {
+      to: `/dash/${store}/pricing`,
+      icon: CurrencyDollarIcon,
+      label: "价格计划",
+    },
+    { to: `/dash/${store}/media`, icon: ImageSquareIcon, label: "媒体库" },
+  ] as const;
+}
 
 export function DashNavMenuButton() {
   return (
@@ -45,6 +49,36 @@ export function DashNavMenuButton() {
     >
       <ListIcon className="size-5" />
     </label>
+  );
+}
+
+function StoreSelector() {
+  const store = useCurrentStore();
+  const navigate = useNavigate();
+
+  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newStore = e.target.value as StoreId;
+    const currentPath = window.location.pathname;
+    // 替换 /dash/{currentStore}/ 为 /dash/{newStore}/
+    const newPath = currentPath.replace(`/dash/${store}`, `/dash/${newStore}`);
+    void navigate({ to: newPath });
+  };
+
+  return (
+    <div className="px-4 py-2 border-b border-base-300">
+      <select
+        className="select select-sm select-bordered w-full"
+        value={store}
+        onChange={handleChange}
+        aria-label="选择店铺"
+      >
+        {STORES.map((s) => (
+          <option key={s} value={s}>
+            {STORE_LABELS[s]}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }
 
@@ -59,6 +93,9 @@ function SidebarContent({
   onScanClick: () => void;
   className?: string;
 }) {
+  const store = useCurrentStore();
+  const navItems = getNavItems(store);
+
   const isActive = (to: string, exact?: boolean) => {
     if (exact) return currentPath === to || currentPath === `${to}/`;
     return currentPath.startsWith(to);
@@ -66,7 +103,7 @@ function SidebarContent({
 
   return (
     <ul className={clsx("menu menu-xl flex-1 rounded-none", className)}>
-      {NAV_ITEMS.map((item) => (
+      {navItems.map((item) => (
         <li key={item.to}>
           <Link
             to={item.to}
@@ -141,6 +178,7 @@ export default function DashNavDrawer({
           "bg-base-200 flex-col",
         )}
       >
+        <StoreSelector />
         <SidebarContent
           currentPath={currentPath}
           close={close}
@@ -174,6 +212,7 @@ export default function DashNavDrawer({
                 <XIcon className="size-5" />
               </button>
             </div>
+            <StoreSelector />
             <SidebarContent
               currentPath={currentPath}
               close={close}

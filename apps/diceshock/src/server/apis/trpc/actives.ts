@@ -5,6 +5,7 @@ import db, {
   drizzle,
 } from "@lib/db";
 import { z } from "zod/v4";
+import { getStoreFilter, storeInputZ } from "@/shared/store";
 import dayjs from "@/shared/utils/dayjs-config";
 import { protectedProcedure, publicProcedure } from "./baseTRPC";
 
@@ -25,6 +26,7 @@ async function resolveBoardGames(
 }
 
 const createActiveZ = z.object({
+  store: storeInputZ,
   title: z.string().min(1).max(100),
   board_game_id: z.string().optional(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -44,6 +46,7 @@ const create = protectedProcedure
     const [active] = await tdb
       .insert(activesTable)
       .values({
+        store: input.store,
         creator_id: ctx.userId,
         title: input.title,
         board_game_id: input.board_game_id ?? null,
@@ -62,6 +65,7 @@ const dateRangeZ = z.enum(["today", "week", "month", "year"]).optional();
 const list = publicProcedure
   .input(
     z.object({
+      store: storeInputZ,
       cursor: z.string().optional(),
       limit: z.number().int().min(1).max(50).default(20),
       showExpired: z.boolean().default(false),
@@ -98,9 +102,12 @@ const list = publicProcedure
       }
     }
 
+    const storeFilter = getStoreFilter(input.store);
+
     const actives = await tdb.query.activesTable.findMany({
-      where: (a, { gte, lte, lt, and }) => {
+      where: (a, { gte, lte, lt, and, inArray }) => {
         const conditions = [];
+        conditions.push(inArray(a.store, storeFilter));
         if (showExpired) {
           conditions.push(lt(a.date, today));
         } else if (!dateRange) {

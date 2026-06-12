@@ -22,6 +22,7 @@ import useNetworkQuality from "@/client/hooks/useNetworkQuality";
 import useSeatTimer from "@/client/hooks/useSeatTimer";
 import useTempIdentity from "@/client/hooks/useTempIdentity";
 import { getLoginTime } from "@/client/hooks/useTOTP";
+import { DEFAULT_STORE } from "@/shared/store";
 import type { SeatIdentity } from "@/shared/types";
 import {
   calculatePrice,
@@ -444,7 +445,8 @@ function SeatTimerPage() {
               </button>
             )}
             <Link
-              to="/inventory"
+              to="/$store/inventory"
+              params={{ store: DEFAULT_STORE }}
               className="card bg-base-200 hover:bg-base-300 transition-colors cursor-pointer"
             >
               <div className="card-body p-4 flex-row items-center gap-3">
@@ -456,7 +458,8 @@ function SeatTimerPage() {
               </div>
             </Link>
             <Link
-              to="/actives"
+              to="/$store/actives"
+              params={{ store: DEFAULT_STORE }}
               className="card bg-base-200 hover:bg-base-300 transition-colors cursor-pointer"
             >
               <div className="card-body p-4 flex-row items-center gap-3">

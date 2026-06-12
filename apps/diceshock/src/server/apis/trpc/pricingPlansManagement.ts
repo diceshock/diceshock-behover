@@ -1,5 +1,6 @@
 import db, { drizzle, pricingSnapshotsTable } from "@lib/db";
 import { customAlphabet } from "nanoid/non-secure";
+import { getStoreFilter, storeInputZ } from "@/shared/store";
 import { dashProcedure, publicProcedure, unwrapInput } from "./baseTRPC";
 
 type SnapshotData = NonNullable<typeof pricingSnapshotsTable.$inferSelect.data>;
@@ -22,26 +23,42 @@ async function deduplicateName(
   return existing ? `${name}-${nanoid()}` : name;
 }
 
-const load = dashProcedure.query(async ({ ctx }) => {
-  const tdb = db(ctx.env.DB);
-  const latest = await tdb.query.pricingSnapshotsTable.findFirst({
-    orderBy: (s, { desc }) => desc(s.created_at),
+const load = dashProcedure
+  .input((v: unknown) => {
+    const data = unwrapInput<{ store?: string }>(v);
+    const store = storeInputZ.parse(data.store ?? "jiedaokou");
+    return { store };
+  })
+  .query(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const latest = await tdb.query.pricingSnapshotsTable.findFirst({
+      where: (s, { inArray }) => inArray(s.store, getStoreFilter(input.store)),
+      orderBy: (s, { desc }) => desc(s.created_at),
+    });
+    return {
+      data: (latest?.data as SnapshotData | null) ?? EMPTY_DATA,
+      snapshotId: latest?.id ?? null,
+      snapshotName: latest?.name ?? null,
+      status: latest?.status ?? null,
+    };
   });
-  return {
-    data: (latest?.data as SnapshotData | null) ?? EMPTY_DATA,
-    snapshotId: latest?.id ?? null,
-    snapshotName: latest?.name ?? null,
-    status: latest?.status ?? null,
-  };
-});
 
 const save = dashProcedure
   .input((v: unknown) => {
-    const { data, name } = unwrapInput<{ data: SnapshotData; name: string }>(v);
+    const {
+      data,
+      name,
+      store: rawStore,
+    } = unwrapInput<{
+      data: SnapshotData;
+      name: string;
+      store?: string;
+    }>(v);
     if (!data?.config || !Array.isArray(data.plans))
       throw new Error("invalid snapshot data");
     if (!name?.trim()) throw new Error("name is required");
-    return { data, name: name.trim() };
+    const store = storeInputZ.parse(rawStore ?? "jiedaokou");
+    return { data, name: name.trim(), store };
   })
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
@@ -49,6 +66,7 @@ const save = dashProcedure
     const [row] = await tdb
       .insert(pricingSnapshotsTable)
       .values({
+        store: input.store,
         name: finalName,
         data: input.data,
         status: "draft",
@@ -58,22 +76,32 @@ const save = dashProcedure
     return { id: row.id, name: finalName };
   });
 
-const publish = dashProcedure.mutation(async ({ ctx }) => {
-  const tdb = db(ctx.env.DB);
+const publish = dashProcedure
+  .input((v: unknown) => {
+    const data = unwrapInput<{ store?: string }>(v);
+    const store = storeInputZ.parse(data.store ?? "jiedaokou");
+    return { store };
+  })
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
 
-  const latestDraft = await tdb.query.pricingSnapshotsTable.findFirst({
-    where: (s, { eq }) => eq(s.status, "draft"),
-    orderBy: (s, { desc }) => desc(s.created_at),
+    const latestDraft = await tdb.query.pricingSnapshotsTable.findFirst({
+      where: (s, { eq, and, inArray }) =>
+        and(
+          eq(s.status, "draft"),
+          inArray(s.store, getStoreFilter(input.store)),
+        ),
+      orderBy: (s, { desc }) => desc(s.created_at),
+    });
+    if (!latestDraft) throw new Error("没有可发布的草稿，请先保存");
+
+    await tdb
+      .update(pricingSnapshotsTable)
+      .set({ status: "published", published_at: new Date() })
+      .where(drizzle.eq(pricingSnapshotsTable.id, latestDraft.id));
+
+    return { id: latestDraft.id };
   });
-  if (!latestDraft) throw new Error("没有可发布的草稿，请先保存");
-
-  await tdb
-    .update(pricingSnapshotsTable)
-    .set({ status: "published", published_at: new Date() })
-    .where(drizzle.eq(pricingSnapshotsTable.id, latestDraft.id));
-
-  return { id: latestDraft.id };
-});
 
 function buildSummary(d: SnapshotData | null): string {
   if (!d) return "空快照";
@@ -93,20 +121,27 @@ function buildSummary(d: SnapshotData | null): string {
   return parts.join(" · ") || "空快照";
 }
 
-const listSnapshots = dashProcedure.query(async ({ ctx }) => {
-  const tdb = db(ctx.env.DB);
-  const rows = await tdb.query.pricingSnapshotsTable.findMany({
-    orderBy: (s, { desc }) => desc(s.created_at),
+const listSnapshots = dashProcedure
+  .input((v: unknown) => {
+    const data = unwrapInput<{ store?: string }>(v);
+    const store = storeInputZ.parse(data.store ?? "jiedaokou");
+    return { store };
+  })
+  .query(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const rows = await tdb.query.pricingSnapshotsTable.findMany({
+      where: (s, { inArray }) => inArray(s.store, getStoreFilter(input.store)),
+      orderBy: (s, { desc }) => desc(s.created_at),
+    });
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      status: row.status,
+      created_at: row.created_at,
+      published_at: row.published_at,
+      summary: buildSummary(row.data as SnapshotData | null),
+    }));
   });
-  return rows.map((row) => ({
-    id: row.id,
-    name: row.name,
-    status: row.status,
-    created_at: row.created_at,
-    published_at: row.published_at,
-    summary: buildSummary(row.data as SnapshotData | null),
-  }));
-});
 
 const restoreSnapshot = dashProcedure
   .input((v: unknown) => {
@@ -135,18 +170,28 @@ const restoreSnapshot = dashProcedure
     return { id: row.id, name: finalName, data: snapshot.data as SnapshotData };
   });
 
-const getPublished = publicProcedure.query(async ({ ctx }) => {
-  const tdb = db(ctx.env.DB);
-  const published = await tdb.query.pricingSnapshotsTable.findFirst({
-    where: (s, { eq }) => eq(s.status, "published"),
-    orderBy: (s, { desc }) => desc(s.created_at),
+const getPublished = publicProcedure
+  .input((v: unknown) => {
+    const data = unwrapInput<{ store?: string }>(v);
+    const store = storeInputZ.parse(data.store ?? "jiedaokou");
+    return { store };
+  })
+  .query(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const published = await tdb.query.pricingSnapshotsTable.findFirst({
+      where: (s, { eq, and, inArray }) =>
+        and(
+          eq(s.status, "published"),
+          inArray(s.store, getStoreFilter(input.store)),
+        ),
+      orderBy: (s, { desc }) => desc(s.created_at),
+    });
+    if (!published) return null;
+    return {
+      id: published.id,
+      data: published.data as SnapshotData,
+    };
   });
-  if (!published) return null;
-  return {
-    id: published.id,
-    data: published.data as SnapshotData,
-  };
-});
 
 const getSnapshotDetail = dashProcedure
   .input((v: unknown) => {

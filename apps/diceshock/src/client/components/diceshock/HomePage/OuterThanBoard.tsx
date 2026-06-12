@@ -12,7 +12,13 @@ const texts = [
   "想玩什么和我们说, 能解决的都解决",
 ];
 
-const colors = ["#36ffa1", "#4fdfb8", "#6abecd", "#849fe4", "#9d7efa"];
+const colors = [
+  "var(--color-primary)",
+  "var(--color-secondary)",
+  "var(--color-accent)",
+  "var(--color-info)",
+  "var(--color-success)",
+];
 
 const OuterThanBoard = () => {
   const { ref, progress } = useSticky();
@@ -43,7 +49,7 @@ const OuterThanBoard = () => {
                 ),
                 opacity: progress.to((p) => reRange(p, idx, texts.length)),
               }}
-              className="chat-bubble text-xl mb-5 rounded-lg font-bold text-base-100 px-4 py-5 origin-left"
+              className="chat-bubble text-xl mb-5 rounded-lg font-bold text-neutral px-4 py-5 origin-left"
             >
               {tx}
             </animated.p>

@@ -1,8 +1,10 @@
 import { Link } from "@tanstack/react-router";
+import { useCurrentStore } from "@/client/hooks/useStore";
 import Footer from "./diceshock/Footer";
 import Header from "./diceshock/Header";
 
 export default function GlobalNotFound() {
+  const store = useCurrentStore();
   return (
     <>
       <Header />
@@ -26,7 +28,11 @@ export default function GlobalNotFound() {
               返回主页
             </Link>
 
-            <Link to="/contact-us" className="btn btn-ghost">
+            <Link
+              to="/$store/contact-us"
+              params={{ store }}
+              className="btn btn-ghost"
+            >
               联系我们
             </Link>
           </div>

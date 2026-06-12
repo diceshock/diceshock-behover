@@ -9,9 +9,11 @@ import TablePassCC from "@/client/assets/svg/agents/DiceshockItems_table-pass-cc
 import TablePass from "@/client/assets/svg/agents/DiceshockItems_table-pass-icon.svg?react";
 import TablePassLTS from "@/client/assets/svg/agents/DiceshockItems_table-pass-lts-icon.svg?react";
 import AgentsChannel from "@/client/assets/svg/agents_channel.svg?react";
+import { useCurrentStore } from "@/client/hooks/useStore";
 import Swing from "./Swing";
 
 const Agents: React.FC<{ className?: string }> = ({ className }) => {
+  const store = useCurrentStore();
   const [ref, inView] = useInView();
 
   const opacity1 = useSpringValue(0.1, {
@@ -89,8 +91,9 @@ const Agents: React.FC<{ className?: string }> = ({ className }) => {
                   <p>充值福利, 付费折扣.</p>
                   <div className="card-actions justify-end">
                     <Link
-                      to="/contact-us"
-                      className="btn bg-black text-primary"
+                      to="/$store/contact-us"
+                      params={{ store }}
+                      className="btn btn-neutral text-primary"
                     >
                       联系我们
                     </Link>
@@ -121,8 +124,9 @@ const Agents: React.FC<{ className?: string }> = ({ className }) => {
                   <p>超低廉价格, 办理20个工作日畅玩.</p>
                   <div className="card-actions justify-end">
                     <Link
-                      to="/contact-us"
-                      className="btn bg-black text-primary"
+                      to="/$store/contact-us"
+                      params={{ store }}
+                      className="btn btn-neutral text-primary"
                     >
                       联系我们
                     </Link>
@@ -155,8 +159,9 @@ const Agents: React.FC<{ className?: string }> = ({ className }) => {
                   <p>办理30天畅玩无限!</p>
                   <div className="card-actions justify-end">
                     <Link
-                      to="/contact-us"
-                      className="btn bg-black text-primary"
+                      to="/$store/contact-us"
+                      params={{ store }}
+                      className="btn btn-neutral text-primary"
                     >
                       联系我们
                     </Link>
@@ -187,8 +192,9 @@ const Agents: React.FC<{ className?: string }> = ({ className }) => {
                   <p>办理365天畅玩无限</p>
                   <div className="card-actions justify-end">
                     <Link
-                      to="/contact-us"
-                      className="btn bg-black text-primary"
+                      to="/$store/contact-us"
+                      params={{ store }}
+                      className="btn btn-neutral text-primary"
                     >
                       联系我们
                     </Link>

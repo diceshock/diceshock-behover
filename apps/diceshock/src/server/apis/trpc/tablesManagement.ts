@@ -6,6 +6,7 @@ import db, {
 } from "@lib/db";
 import { createId } from "@paralleldrive/cuid2";
 import { fetchTableStateForDO, notifySocketDO } from "@/server/utils/seatTimer";
+import { getStoreFilter, storeInputZ } from "@/shared/store";
 import { dashProcedure, unwrapInput } from "./baseTRPC";
 
 const SHORT_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -35,23 +36,31 @@ async function generateUniqueCode(
   throw new Error("编号生成失败，请重试");
 }
 
-const list = dashProcedure.query(async ({ ctx }) => {
-  const tdb = db(ctx.env.DB);
-  const tables = await tdb.query.tablesTable.findMany({
-    orderBy: (t, { desc }) => desc(t.create_at),
-    with: {
-      occupancies: {
-        where: (o, { ne }) => ne(o.status, "ended"),
-        columns: { id: true, user_id: true, start_at: true },
+const list = dashProcedure
+  .input((v: unknown) => {
+    const data = unwrapInput<{ store?: string }>(v);
+    const store = storeInputZ.parse(data.store ?? "jiedaokou");
+    return { store };
+  })
+  .query(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const tables = await tdb.query.tablesTable.findMany({
+      where: (t, { inArray }) => inArray(t.store, getStoreFilter(input.store)),
+      orderBy: (t, { desc }) => desc(t.create_at),
+      with: {
+        occupancies: {
+          where: (o, { ne }) => ne(o.status, "ended"),
+          columns: { id: true, user_id: true, start_at: true },
+        },
       },
-    },
+    });
+    return tables;
   });
-  return tables;
-});
 
 const create = dashProcedure
   .input((v: unknown) => {
     const data = unwrapInput<{
+      store?: string;
       name: string;
       type: "fixed" | "solo";
       scope: "trpg" | "boardgame" | "console" | "mahjong";
@@ -63,7 +72,8 @@ const create = dashProcedure
     if (!data.scope) throw new Error("scope is required");
     if (data.type !== "solo" && (!data.capacity || data.capacity < 1))
       throw new Error("capacity must be >= 1");
-    return data;
+    const store = storeInputZ.parse(data.store ?? "jiedaokou");
+    return { ...data, store };
   })
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
@@ -72,6 +82,7 @@ const create = dashProcedure
     const code = await generateUniqueCode(tdb);
     await tdb.insert(tablesTable).values({
       id,
+      store: input.store,
       name: input.name.trim(),
       type: input.type,
       scope: input.scope,

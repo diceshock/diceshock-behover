@@ -10,6 +10,7 @@ import db, {
 } from "@lib/db";
 import { pauseWithReason } from "@/server/utils/pauseOrder";
 import { fetchTableStateForDO, notifySocketDO } from "@/server/utils/seatTimer";
+import { getStoreFilter, storeInputZ } from "@/shared/store";
 import { calculatePrice, type SnapshotData } from "@/shared/utils/pricing";
 import { dashProcedure, unwrapInput } from "./baseTRPC";
 
@@ -21,6 +22,7 @@ type GroupBy = "table" | "user" | "date" | "none";
 const list = dashProcedure
   .input((v: unknown) => {
     const data = unwrapInput<{
+      store?: string;
       search?: string;
       status?: StatusFilter;
       sortBy?: SortBy;
@@ -29,7 +31,9 @@ const list = dashProcedure
       page?: number;
       pageSize?: number;
     }>(v);
+    const store = storeInputZ.parse(data.store ?? "jiedaokou");
     return {
+      store,
       search: data.search ?? "",
       status: data.status ?? "all",
       sortBy: data.sortBy ?? "start_at",
@@ -43,6 +47,7 @@ const list = dashProcedure
     const tdb = db(ctx.env.DB);
 
     const allOccupancies = await tdb.query.tableOccupancyTable.findMany({
+      where: (o, { inArray }) => inArray(o.store, getStoreFilter(input.store)),
       with: {
         table: {
           columns: {

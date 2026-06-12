@@ -1,9 +1,11 @@
 import { ArrowUpIcon } from "@phosphor-icons/react/dist/ssr";
 import { Link } from "@tanstack/react-router";
 import Logo from "@/client/assets/svg/black-simplify-with-text-logo.svg?react";
+import { useCurrentStore } from "@/client/hooks/useStore";
 import Gradient from "./Gradient";
 
 const Footer = () => {
+  const store = useCurrentStore();
   return (
     <>
       <Gradient
@@ -51,7 +53,11 @@ const Footer = () => {
         </nav>
         <nav>
           <h6 className="footer-title">关于我们</h6>
-          <Link to="/contact-us" className="link link-hover">
+          <Link
+            to="/$store/contact-us"
+            params={{ store }}
+            className="link link-hover"
+          >
             联系我们
           </Link>
           <Link to="/" className="link link-hover">

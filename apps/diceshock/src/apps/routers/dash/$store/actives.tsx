@@ -1,0 +1,527 @@
+import {
+  CopyIcon,
+  DotsThreeVerticalIcon,
+  EyeIcon,
+  MagnifyingGlassIcon,
+  TrashIcon,
+} from "@phosphor-icons/react/dist/ssr";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
+import DashBackButton from "@/client/components/diceshock/DashBackButton";
+import { useMsg } from "@/client/components/diceshock/Msg";
+import { useIsMobile } from "@/client/hooks/useIsMobile";
+import { useCurrentStore } from "@/client/hooks/useStore";
+import dayjs from "@/shared/utils/dayjs-config";
+import { trpcClientDash } from "@/shared/utils/trpc";
+
+function formatCreateAt(val: unknown): string {
+  if (!val) return "—";
+  try {
+    const d = dayjs.tz(val as string | number | Date, "Asia/Shanghai");
+    return d.isValid() ? d.format("YYYY/MM/DD HH:mm") : "—";
+  } catch {
+    return "—";
+  }
+}
+
+type ActivesList = Awaited<
+  ReturnType<typeof trpcClientDash.activesManagement.list.query>
+>;
+type ActiveItem = ActivesList[number];
+
+type StatusFilter = "all" | "active" | "expired";
+
+export const Route = createFileRoute("/dash/$store/actives")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    q: (search.q as string) ?? "",
+    status: ["all", "active", "expired"].includes(search.status as string)
+      ? (search.status as StatusFilter)
+      : "all",
+  }),
+  component: RouteComponent,
+});
+
+function RouteComponent() {
+  const store = useCurrentStore();
+  const msg = useMsg();
+  const isMobile = useIsMobile();
+  const [actives, setActives] = useState<ActiveItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const { q, status } = Route.useSearch();
+  const navigate = useNavigate();
+  const setSearch = useCallback(
+    (updates: Partial<{ q: string; status: StatusFilter }>) =>
+      navigate({
+        from: Route.fullPath,
+        search: (prev) => ({ ...prev, ...updates }),
+        replace: true,
+      }),
+    [navigate],
+  );
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const deleteDialogRef = useRef<HTMLDialogElement>(null);
+  const [pendingDelete, setPendingDelete] = useState<ActiveItem | null>(null);
+  const [deletePending, setDeletePending] = useState(false);
+
+  const batchDeleteDialogRef = useRef<HTMLDialogElement>(null);
+  const [batchDeletePending, setBatchDeletePending] = useState(false);
+
+  const handleCopy = (text: string) => {
+    try {
+      navigator.clipboard.writeText(text);
+      msg.success("已复制");
+    } catch {
+      msg.error("没有剪贴板访问权限");
+    }
+  };
+
+  const shanghaiToday = dayjs().tz("Asia/Shanghai").format("YYYY-MM-DD");
+
+  const refreshActives = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await trpcClientDash.activesManagement.list.query();
+      setActives(data);
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "获取约局列表失败");
+    } finally {
+      setLoading(false);
+    }
+  }, [msg]);
+
+  useEffect(() => {
+    void refreshActives();
+  }, [refreshActives]);
+
+  const filteredActives = useMemo(() => {
+    let result = actives;
+
+    if (status === "active") {
+      result = result.filter((a) => a.date >= shanghaiToday);
+    } else if (status === "expired") {
+      result = result.filter((a) => a.date < shanghaiToday);
+    }
+
+    if (q.trim()) {
+      const lower = q.trim().toLowerCase();
+      result = result.filter((a) => {
+        const title = a.title.toLowerCase();
+        const gameName = (
+          a.boardGame?.sch_name ||
+          a.boardGame?.eng_name ||
+          ""
+        ).toLowerCase();
+        return title.includes(lower) || gameName.includes(lower);
+      });
+    }
+
+    return result;
+  }, [actives, status, q, shanghaiToday]);
+
+  const allVisibleSelected =
+    filteredActives.length > 0 &&
+    filteredActives.every((a) => selectedIds.has(a.id));
+
+  const toggleSelectAll = () => {
+    if (allVisibleSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredActives.map((a) => a.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const openDeleteDialog = (active: ActiveItem) => {
+    setPendingDelete(active);
+    setTimeout(() => deleteDialogRef.current?.showModal(), 0);
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    setDeletePending(true);
+    try {
+      await trpcClientDash.activesManagement.remove.mutate({
+        id: pendingDelete.id,
+      });
+      msg.success("约局已删除");
+      deleteDialogRef.current?.close();
+      setPendingDelete(null);
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(pendingDelete.id);
+        return next;
+      });
+      await refreshActives();
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "删除失败");
+    } finally {
+      setDeletePending(false);
+    }
+  };
+
+  const openBatchDeleteDialog = () => {
+    setTimeout(() => batchDeleteDialogRef.current?.showModal(), 0);
+  };
+
+  const confirmBatchDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setBatchDeletePending(true);
+    try {
+      await trpcClientDash.activesManagement.batchRemove.mutate({
+        ids: [...selectedIds],
+      });
+      msg.success(`已删除 ${selectedIds.size} 条约局`);
+      batchDeleteDialogRef.current?.close();
+      setSelectedIds(new Set());
+      await refreshActives();
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "批量删除失败");
+    } finally {
+      setBatchDeletePending(false);
+    }
+  };
+
+  return (
+    <main className="size-full flex flex-col">
+      {/* Header */}
+      <div className="px-4 pt-4 flex items-center justify-between gap-3">
+        <DashBackButton />
+
+        {/* Search */}
+        <label className="input input-bordered input-sm flex items-center gap-2 flex-1 max-w-xs">
+          <MagnifyingGlassIcon className="size-4 opacity-50" />
+          <input
+            type="text"
+            className="grow"
+            placeholder="搜索标题/桌游..."
+            value={q}
+            onChange={(e) => setSearch({ q: e.target.value })}
+          />
+        </label>
+
+        {/* Status filter */}
+        <div className="flex gap-1">
+          {(
+            [
+              ["all", "全部"],
+              ["active", "进行中"],
+              ["expired", "已过期"],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              className={`btn btn-xs ${status === key ? "btn-primary" : "btn-ghost"}`}
+              onClick={() => setSearch({ status: key })}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="w-full flex-1 min-h-0 overflow-auto">
+        <table className="table table-lg table-pin-rows table-pin-cols min-w-[1400px]">
+          <thead>
+            <tr className="z-20">
+              <th>
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-sm"
+                  checked={allVisibleSelected}
+                  onChange={toggleSelectAll}
+                  disabled={filteredActives.length === 0}
+                />
+              </th>
+              <td className="whitespace-nowrap">ID</td>
+              <td className="whitespace-nowrap">标题</td>
+              <td className="whitespace-nowrap">桌游</td>
+              <td className="whitespace-nowrap">日期</td>
+              <td className="whitespace-nowrap">时间</td>
+              <td className="whitespace-nowrap">人数</td>
+              <td className="whitespace-nowrap">已报名</td>
+              <td className="whitespace-nowrap">观望</td>
+              <td className="whitespace-nowrap">发起人</td>
+              <td className="whitespace-nowrap">创建时间</td>
+              <td className="whitespace-nowrap">状态</td>
+              <th className="whitespace-nowrap">操作</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={14} className="py-12 text-center">
+                  <span className="loading loading-dots loading-md" />
+                </td>
+              </tr>
+            ) : filteredActives.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={14}
+                  className="py-12 text-center text-base-content/60"
+                >
+                  {q.trim() || status !== "all"
+                    ? "没有匹配的约局。"
+                    : "暂无约局数据。"}
+                </td>
+              </tr>
+            ) : (
+              filteredActives.map((active) => {
+                const joinedCount = active.registrations.filter(
+                  (r) => !r.is_watching,
+                ).length;
+                const watchingCount = active.registrations.filter(
+                  (r) => r.is_watching,
+                ).length;
+                const isExpired = active.date < shanghaiToday;
+
+                return (
+                  <tr
+                    key={active.id}
+                    className={selectedIds.has(active.id) ? "active" : ""}
+                  >
+                    <th className="z-10">
+                      <input
+                        type="checkbox"
+                        className="checkbox checkbox-sm"
+                        checked={selectedIds.has(active.id)}
+                        onChange={() => toggleSelect(active.id)}
+                      />
+                    </th>
+                    <td className="font-mono">
+                      <div className="relative group flex items-center gap-1">
+                        <span className="cursor-default">
+                          {active.id.slice(0, 5)}
+                        </span>
+                        <button
+                          type="button"
+                          className="btn btn-xs btn-ghost btn-square shrink-0"
+                          onClick={() => handleCopy(active.id)}
+                          title="复制ID"
+                        >
+                          <CopyIcon className="size-3.5" />
+                        </button>
+                        <div className="absolute right-0 top-full z-30 hidden group-hover:block pt-1">
+                          <div className="bg-base-200 shadow-lg rounded-lg px-3 py-1.5 text-xs font-mono whitespace-nowrap">
+                            {active.id}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="font-semibold max-w-40 truncate">
+                      {active.title}
+                    </td>
+                    <td className="whitespace-nowrap">
+                      {active.boardGame
+                        ? active.boardGame.sch_name || active.boardGame.eng_name
+                        : "—"}
+                    </td>
+                    <td className="whitespace-nowrap">{active.date}</td>
+                    <td className="whitespace-nowrap">{active.time ?? "—"}</td>
+                    <td className="whitespace-nowrap">{active.max_players}</td>
+                    <td className="whitespace-nowrap">{joinedCount}</td>
+                    <td className="whitespace-nowrap">{watchingCount}</td>
+                    <td className="whitespace-nowrap">
+                      {active.creator?.name ?? "—"}
+                    </td>
+                    <td className="whitespace-nowrap">
+                      {formatCreateAt(active.create_at)}
+                    </td>
+                    <td className="whitespace-nowrap">
+                      {isExpired ? (
+                        <span className="badge badge-ghost badge-sm">
+                          已过期
+                        </span>
+                      ) : (
+                        <span className="badge badge-success badge-sm">
+                          进行中
+                        </span>
+                      )}
+                    </td>
+                    <th className="whitespace-nowrap">
+                      {isMobile ? (
+                        <div className="dropdown dropdown-end">
+                          <div
+                            tabIndex={0}
+                            role="button"
+                            className="btn btn-xs btn-ghost btn-square"
+                          >
+                            <DotsThreeVerticalIcon
+                              className="size-4"
+                              weight="bold"
+                            />
+                          </div>
+                          <ul
+                            tabIndex={0}
+                            className="dropdown-content menu bg-base-200 rounded-box z-50 w-32 p-2 shadow-lg"
+                          >
+                            <li>
+                              <Link
+                                to="/dash/$store/actives/$id"
+                                params={{ store, id: active.id }}
+                              >
+                                <EyeIcon className="size-4" />
+                                详情
+                              </Link>
+                            </li>
+                            <li>
+                              <button
+                                type="button"
+                                className="text-error"
+                                onClick={() => openDeleteDialog(active)}
+                              >
+                                <TrashIcon className="size-4" />
+                                删除
+                              </button>
+                            </li>
+                          </ul>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <Link
+                            to="/dash/$store/actives/$id"
+                            params={{ store, id: active.id }}
+                            className="btn btn-xs btn-ghost"
+                          >
+                            <EyeIcon className="size-4" />
+                            详情
+                          </Link>
+                          <button
+                            type="button"
+                            className="btn btn-xs btn-ghost btn-error"
+                            onClick={() => openDeleteDialog(active)}
+                          >
+                            删除
+                            <TrashIcon />
+                          </button>
+                        </div>
+                      )}
+                    </th>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+        {selectedIds.size > 0 && <div className="h-24" />}
+      </div>
+
+      {selectedIds.size > 0 && (
+        <BatchActionBar
+          count={selectedIds.size}
+          onClear={() => setSelectedIds(new Set())}
+          actions={[
+            {
+              key: "delete",
+              label: "批量删除",
+              icon: <TrashIcon className="size-4" />,
+              className: "btn-error",
+              onClick: openBatchDeleteDialog,
+            },
+          ]}
+        />
+      )}
+
+      {/* Single delete dialog */}
+      <dialog ref={deleteDialogRef} className="modal">
+        {pendingDelete && (
+          <div className="modal-box">
+            <h3 className="font-bold text-lg mb-4">确认删除约局</h3>
+            <p>删除后将同时清除所有报名记录，此操作不可撤销。</p>
+            <div className="mt-4 p-4 bg-base-200 rounded-lg">
+              <p className="text-sm">
+                <strong>标题:</strong> {pendingDelete.title}
+              </p>
+              <p className="text-sm">
+                <strong>日期:</strong> {pendingDelete.date}
+              </p>
+              <p className="text-sm">
+                <strong>ID:</strong> {pendingDelete.id}
+              </p>
+            </div>
+            <div className="modal-action mt-6">
+              <button
+                type="button"
+                className="btn"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  deleteDialogRef.current?.close();
+                  setTimeout(() => setPendingDelete(null), 100);
+                }}
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                className="btn btn-error"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  void confirmDelete();
+                }}
+                disabled={deletePending}
+              >
+                {deletePending ? "删除中..." : "确认删除"}
+              </button>
+            </div>
+          </div>
+        )}
+      </dialog>
+
+      {/* Batch delete dialog */}
+      <dialog ref={batchDeleteDialogRef} className="modal">
+        <div className="modal-box">
+          <h3 className="font-bold text-lg mb-4">确认批量删除</h3>
+          <p>
+            即将删除 <strong>{selectedIds.size}</strong>{" "}
+            条约局及其所有报名记录，此操作不可撤销。
+          </p>
+          <div className="modal-action mt-6">
+            <button
+              type="button"
+              className="btn"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                batchDeleteDialogRef.current?.close();
+              }}
+            >
+              取消
+            </button>
+            <button
+              type="button"
+              className="btn btn-error"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                void confirmBatchDelete();
+              }}
+              disabled={batchDeletePending}
+            >
+              {batchDeletePending
+                ? "删除中..."
+                : `确认删除 ${selectedIds.size} 项`}
+            </button>
+          </div>
+        </div>
+      </dialog>
+    </main>
+  );
+}

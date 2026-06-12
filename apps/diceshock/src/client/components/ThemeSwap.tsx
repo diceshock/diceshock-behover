@@ -3,8 +3,21 @@ import clsx from "clsx";
 import { atom, useAtom } from "jotai";
 import Cookie from "js-cookie";
 import { useEffect } from "react";
+import { useCurrentStore } from "@/client/hooks/useStore";
+import type { StoreId } from "@/shared/store";
 
 export const themeA = atom(null as "light" | "dark" | null);
+
+function getThemeName(store: StoreId, mode: "light" | "dark") {
+  return `${store}-${mode}`;
+}
+
+function applyTheme(store: StoreId, mode: "light" | "dark") {
+  if (typeof document === "undefined") return;
+  const themeName = getThemeName(store, mode);
+  document.documentElement.setAttribute("data-theme", themeName);
+  document.documentElement.classList.toggle("dark", mode === "dark");
+}
 
 export default function ThemeSwap({
   className,
@@ -12,47 +25,26 @@ export default function ThemeSwap({
   className?: { outer?: string; icon?: string };
 }) {
   const [theme, setTheme] = useAtom(themeA);
+  const store = useCurrentStore();
 
   useEffect(() => {
     if (typeof window === "undefined" || theme !== null) return;
 
-    const input = document.getElementById(
-      "syft-theme-controller",
-    ) as HTMLInputElement;
-
-    if (!input) return;
-
-    setTheme(input.checked ? "light" : "dark");
+    const saved = Cookie.get("syft-theme") as "light" | "dark" | undefined;
+    setTheme(saved || "dark");
   }, [theme, setTheme]);
 
   useEffect(() => {
     if (typeof window === "undefined" || theme === null) return;
 
-    const input = document.getElementById(
-      "syft-theme-controller",
-    ) as HTMLInputElement;
-
-    if (!input) return;
-
-    if (theme === "dark") {
-      document.documentElement.classList.toggle("dark", true);
-      input.checked = false;
-    }
-
-    if (theme === "light") {
-      document.documentElement.classList.toggle("dark", false);
-      input.checked = true;
-    }
-
+    applyTheme(store, theme);
     Cookie.set("syft-theme", theme);
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-  }, [theme]);
+  }, [theme, store]);
 
   return (
     <label className={clsx("swap swap-rotate", className?.outer)}>
       <input
         type="checkbox"
-        value="light"
         checked={theme === "light"}
         onChange={(evt) => {
           setTheme(evt.target.checked ? "light" : "dark");

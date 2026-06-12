@@ -13,39 +13,43 @@ import { Route as TRouteImport } from './routers/t'
 import { Route as ReadyRouteImport } from './routers/ready'
 import { Route as MyRiichiRouteImport } from './routers/my-riichi'
 import { Route as DashRouteImport } from './routers/dash'
-import { Route as WithHomeLoRouteImport } from './routers/_with-home-lo'
+import { Route as StoreRouteImport } from './routers/$store'
+import { Route as IndexRouteImport } from './routers/index'
 import { Route as DashIndexRouteImport } from './routers/dash/index'
-import { Route as WithHomeLoIndexRouteImport } from './routers/_with-home-lo/index'
 import { Route as TCodeRouteImport } from './routers/t/$code'
 import { Route as ReadyCodeRouteImport } from './routers/ready/$code'
 import { Route as MyRiichiIdRouteImport } from './routers/my-riichi/$id'
-import { Route as DashUsersRouteImport } from './routers/dash/users'
-import { Route as DashTablesRouteImport } from './routers/dash/tables'
-import { Route as DashPricingRouteImport } from './routers/dash/pricing'
-import { Route as DashOrdersRouteImport } from './routers/dash/orders'
-import { Route as DashMediaRouteImport } from './routers/dash/media'
-import { Route as DashGszRouteImport } from './routers/dash/gsz'
-import { Route as DashEventsRouteImport } from './routers/dash/events'
-import { Route as DashActivesRouteImport } from './routers/dash/actives'
-import { Route as WithHomeLoRiichiRouteImport } from './routers/_with-home-lo/riichi'
-import { Route as WithHomeLoMeRouteImport } from './routers/_with-home-lo/me'
-import { Route as WithHomeLoInventoryRouteImport } from './routers/_with-home-lo/inventory'
-import { Route as WithHomeLoExternalRedirectRouteImport } from './routers/_with-home-lo/external-redirect'
-import { Route as WithHomeLoDiceshockAgentsRouteImport } from './routers/_with-home-lo/diceshock-agents'
-import { Route as WithHomeLoContactUsRouteImport } from './routers/_with-home-lo/contact-us'
-import { Route as WithHomeLoActivesRouteImport } from './routers/_with-home-lo/actives'
-import { Route as DashUsersIdRouteImport } from './routers/dash/users_.$id'
-import { Route as DashTablesIdRouteImport } from './routers/dash/tables_.$id'
-import { Route as DashPricingIdRouteImport } from './routers/dash/pricing_.$id'
-import { Route as DashOrdersSettleRouteImport } from './routers/dash/orders_.settle'
-import { Route as DashGszIdRouteImport } from './routers/dash/gsz_.$id'
-import { Route as DashEventsIdRouteImport } from './routers/dash/events_.$id'
-import { Route as DashActivesIdRouteImport } from './routers/dash/actives_.$id'
-import { Route as WithHomeLoInventoryIdRouteImport } from './routers/_with-home-lo/inventory_.$id'
-import { Route as WithHomeLoEventsIdRouteImport } from './routers/_with-home-lo/events_.$id'
-import { Route as WithHomeLoActivesNewRouteImport } from './routers/_with-home-lo/actives_.new'
-import { Route as WithHomeLoActivesIdRouteImport } from './routers/_with-home-lo/actives_.$id'
-import { Route as DashOrdersIdSettleRouteImport } from './routers/dash/orders_.$id.settle'
+import { Route as DashStoreRouteImport } from './routers/dash/$store'
+import { Route as StoreWithHomeLoRouteImport } from './routers/$store/_with-home-lo'
+import { Route as DashStoreIndexRouteImport } from './routers/dash/$store/index'
+import { Route as StoreWithHomeLoIndexRouteImport } from './routers/$store/_with-home-lo/index'
+import { Route as DashStoreUsersRouteImport } from './routers/dash/$store/users'
+import { Route as DashStoreTablesRouteImport } from './routers/dash/$store/tables'
+import { Route as DashStorePricingRouteImport } from './routers/dash/$store/pricing'
+import { Route as DashStoreOrdersRouteImport } from './routers/dash/$store/orders'
+import { Route as DashStoreMediaRouteImport } from './routers/dash/$store/media'
+import { Route as DashStoreGszRouteImport } from './routers/dash/$store/gsz'
+import { Route as DashStoreEventsRouteImport } from './routers/dash/$store/events'
+import { Route as DashStoreActivesRouteImport } from './routers/dash/$store/actives'
+import { Route as StoreWithHomeLoRiichiRouteImport } from './routers/$store/_with-home-lo/riichi'
+import { Route as StoreWithHomeLoMeRouteImport } from './routers/$store/_with-home-lo/me'
+import { Route as StoreWithHomeLoInventoryRouteImport } from './routers/$store/_with-home-lo/inventory'
+import { Route as StoreWithHomeLoExternalRedirectRouteImport } from './routers/$store/_with-home-lo/external-redirect'
+import { Route as StoreWithHomeLoDiceshockAgentsRouteImport } from './routers/$store/_with-home-lo/diceshock-agents'
+import { Route as StoreWithHomeLoContactUsRouteImport } from './routers/$store/_with-home-lo/contact-us'
+import { Route as StoreWithHomeLoActivesRouteImport } from './routers/$store/_with-home-lo/actives'
+import { Route as DashStoreUsersIdRouteImport } from './routers/dash/$store/users_.$id'
+import { Route as DashStoreTablesIdRouteImport } from './routers/dash/$store/tables_.$id'
+import { Route as DashStorePricingIdRouteImport } from './routers/dash/$store/pricing_.$id'
+import { Route as DashStoreOrdersSettleRouteImport } from './routers/dash/$store/orders_.settle'
+import { Route as DashStoreGszIdRouteImport } from './routers/dash/$store/gsz_.$id'
+import { Route as DashStoreEventsIdRouteImport } from './routers/dash/$store/events_.$id'
+import { Route as DashStoreActivesIdRouteImport } from './routers/dash/$store/actives_.$id'
+import { Route as StoreWithHomeLoInventoryIdRouteImport } from './routers/$store/_with-home-lo/inventory_.$id'
+import { Route as StoreWithHomeLoEventsIdRouteImport } from './routers/$store/_with-home-lo/events_.$id'
+import { Route as StoreWithHomeLoActivesNewRouteImport } from './routers/$store/_with-home-lo/actives_.new'
+import { Route as StoreWithHomeLoActivesIdRouteImport } from './routers/$store/_with-home-lo/actives_.$id'
+import { Route as DashStoreOrdersIdSettleRouteImport } from './routers/dash/$store/orders_.$id.settle'
 
 const TRoute = TRouteImport.update({
   id: '/t',
@@ -67,19 +71,20 @@ const DashRoute = DashRouteImport.update({
   path: '/dash',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WithHomeLoRoute = WithHomeLoRouteImport.update({
-  id: '/_with-home-lo',
+const StoreRoute = StoreRouteImport.update({
+  id: '/$store',
+  path: '/$store',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashIndexRoute = DashIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => DashRoute,
-} as any)
-const WithHomeLoIndexRoute = WithHomeLoIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => WithHomeLoRoute,
 } as any)
 const TCodeRoute = TCodeRouteImport.update({
   id: '/$code',
@@ -96,378 +101,423 @@ const MyRiichiIdRoute = MyRiichiIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => MyRiichiRoute,
 } as any)
-const DashUsersRoute = DashUsersRouteImport.update({
+const DashStoreRoute = DashStoreRouteImport.update({
+  id: '/$store',
+  path: '/$store',
+  getParentRoute: () => DashRoute,
+} as any)
+const StoreWithHomeLoRoute = StoreWithHomeLoRouteImport.update({
+  id: '/_with-home-lo',
+  getParentRoute: () => StoreRoute,
+} as any)
+const DashStoreIndexRoute = DashStoreIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DashStoreRoute,
+} as any)
+const StoreWithHomeLoIndexRoute = StoreWithHomeLoIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => StoreWithHomeLoRoute,
+} as any)
+const DashStoreUsersRoute = DashStoreUsersRouteImport.update({
   id: '/users',
   path: '/users',
-  getParentRoute: () => DashRoute,
+  getParentRoute: () => DashStoreRoute,
 } as any)
-const DashTablesRoute = DashTablesRouteImport.update({
+const DashStoreTablesRoute = DashStoreTablesRouteImport.update({
   id: '/tables',
   path: '/tables',
-  getParentRoute: () => DashRoute,
+  getParentRoute: () => DashStoreRoute,
 } as any)
-const DashPricingRoute = DashPricingRouteImport.update({
+const DashStorePricingRoute = DashStorePricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
-  getParentRoute: () => DashRoute,
+  getParentRoute: () => DashStoreRoute,
 } as any)
-const DashOrdersRoute = DashOrdersRouteImport.update({
+const DashStoreOrdersRoute = DashStoreOrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
-  getParentRoute: () => DashRoute,
+  getParentRoute: () => DashStoreRoute,
 } as any)
-const DashMediaRoute = DashMediaRouteImport.update({
+const DashStoreMediaRoute = DashStoreMediaRouteImport.update({
   id: '/media',
   path: '/media',
-  getParentRoute: () => DashRoute,
+  getParentRoute: () => DashStoreRoute,
 } as any)
-const DashGszRoute = DashGszRouteImport.update({
+const DashStoreGszRoute = DashStoreGszRouteImport.update({
   id: '/gsz',
   path: '/gsz',
-  getParentRoute: () => DashRoute,
+  getParentRoute: () => DashStoreRoute,
 } as any)
-const DashEventsRoute = DashEventsRouteImport.update({
+const DashStoreEventsRoute = DashStoreEventsRouteImport.update({
   id: '/events',
   path: '/events',
-  getParentRoute: () => DashRoute,
+  getParentRoute: () => DashStoreRoute,
 } as any)
-const DashActivesRoute = DashActivesRouteImport.update({
+const DashStoreActivesRoute = DashStoreActivesRouteImport.update({
   id: '/actives',
   path: '/actives',
-  getParentRoute: () => DashRoute,
+  getParentRoute: () => DashStoreRoute,
 } as any)
-const WithHomeLoRiichiRoute = WithHomeLoRiichiRouteImport.update({
+const StoreWithHomeLoRiichiRoute = StoreWithHomeLoRiichiRouteImport.update({
   id: '/riichi',
   path: '/riichi',
-  getParentRoute: () => WithHomeLoRoute,
+  getParentRoute: () => StoreWithHomeLoRoute,
 } as any)
-const WithHomeLoMeRoute = WithHomeLoMeRouteImport.update({
+const StoreWithHomeLoMeRoute = StoreWithHomeLoMeRouteImport.update({
   id: '/me',
   path: '/me',
-  getParentRoute: () => WithHomeLoRoute,
+  getParentRoute: () => StoreWithHomeLoRoute,
 } as any)
-const WithHomeLoInventoryRoute = WithHomeLoInventoryRouteImport.update({
-  id: '/inventory',
-  path: '/inventory',
-  getParentRoute: () => WithHomeLoRoute,
-} as any)
-const WithHomeLoExternalRedirectRoute =
-  WithHomeLoExternalRedirectRouteImport.update({
+const StoreWithHomeLoInventoryRoute =
+  StoreWithHomeLoInventoryRouteImport.update({
+    id: '/inventory',
+    path: '/inventory',
+    getParentRoute: () => StoreWithHomeLoRoute,
+  } as any)
+const StoreWithHomeLoExternalRedirectRoute =
+  StoreWithHomeLoExternalRedirectRouteImport.update({
     id: '/external-redirect',
     path: '/external-redirect',
-    getParentRoute: () => WithHomeLoRoute,
+    getParentRoute: () => StoreWithHomeLoRoute,
   } as any)
-const WithHomeLoDiceshockAgentsRoute =
-  WithHomeLoDiceshockAgentsRouteImport.update({
+const StoreWithHomeLoDiceshockAgentsRoute =
+  StoreWithHomeLoDiceshockAgentsRouteImport.update({
     id: '/diceshock-agents',
     path: '/diceshock-agents',
-    getParentRoute: () => WithHomeLoRoute,
+    getParentRoute: () => StoreWithHomeLoRoute,
   } as any)
-const WithHomeLoContactUsRoute = WithHomeLoContactUsRouteImport.update({
-  id: '/contact-us',
-  path: '/contact-us',
-  getParentRoute: () => WithHomeLoRoute,
-} as any)
-const WithHomeLoActivesRoute = WithHomeLoActivesRouteImport.update({
+const StoreWithHomeLoContactUsRoute =
+  StoreWithHomeLoContactUsRouteImport.update({
+    id: '/contact-us',
+    path: '/contact-us',
+    getParentRoute: () => StoreWithHomeLoRoute,
+  } as any)
+const StoreWithHomeLoActivesRoute = StoreWithHomeLoActivesRouteImport.update({
   id: '/actives',
   path: '/actives',
-  getParentRoute: () => WithHomeLoRoute,
+  getParentRoute: () => StoreWithHomeLoRoute,
 } as any)
-const DashUsersIdRoute = DashUsersIdRouteImport.update({
+const DashStoreUsersIdRoute = DashStoreUsersIdRouteImport.update({
   id: '/users_/$id',
   path: '/users/$id',
-  getParentRoute: () => DashRoute,
+  getParentRoute: () => DashStoreRoute,
 } as any)
-const DashTablesIdRoute = DashTablesIdRouteImport.update({
+const DashStoreTablesIdRoute = DashStoreTablesIdRouteImport.update({
   id: '/tables_/$id',
   path: '/tables/$id',
-  getParentRoute: () => DashRoute,
+  getParentRoute: () => DashStoreRoute,
 } as any)
-const DashPricingIdRoute = DashPricingIdRouteImport.update({
+const DashStorePricingIdRoute = DashStorePricingIdRouteImport.update({
   id: '/pricing_/$id',
   path: '/pricing/$id',
-  getParentRoute: () => DashRoute,
+  getParentRoute: () => DashStoreRoute,
 } as any)
-const DashOrdersSettleRoute = DashOrdersSettleRouteImport.update({
+const DashStoreOrdersSettleRoute = DashStoreOrdersSettleRouteImport.update({
   id: '/orders_/settle',
   path: '/orders/settle',
-  getParentRoute: () => DashRoute,
+  getParentRoute: () => DashStoreRoute,
 } as any)
-const DashGszIdRoute = DashGszIdRouteImport.update({
+const DashStoreGszIdRoute = DashStoreGszIdRouteImport.update({
   id: '/gsz_/$id',
   path: '/gsz/$id',
-  getParentRoute: () => DashRoute,
+  getParentRoute: () => DashStoreRoute,
 } as any)
-const DashEventsIdRoute = DashEventsIdRouteImport.update({
+const DashStoreEventsIdRoute = DashStoreEventsIdRouteImport.update({
   id: '/events_/$id',
   path: '/events/$id',
-  getParentRoute: () => DashRoute,
+  getParentRoute: () => DashStoreRoute,
 } as any)
-const DashActivesIdRoute = DashActivesIdRouteImport.update({
+const DashStoreActivesIdRoute = DashStoreActivesIdRouteImport.update({
   id: '/actives_/$id',
   path: '/actives/$id',
-  getParentRoute: () => DashRoute,
+  getParentRoute: () => DashStoreRoute,
 } as any)
-const WithHomeLoInventoryIdRoute = WithHomeLoInventoryIdRouteImport.update({
-  id: '/inventory_/$id',
-  path: '/inventory/$id',
-  getParentRoute: () => WithHomeLoRoute,
-} as any)
-const WithHomeLoEventsIdRoute = WithHomeLoEventsIdRouteImport.update({
+const StoreWithHomeLoInventoryIdRoute =
+  StoreWithHomeLoInventoryIdRouteImport.update({
+    id: '/inventory_/$id',
+    path: '/inventory/$id',
+    getParentRoute: () => StoreWithHomeLoRoute,
+  } as any)
+const StoreWithHomeLoEventsIdRoute = StoreWithHomeLoEventsIdRouteImport.update({
   id: '/events_/$id',
   path: '/events/$id',
-  getParentRoute: () => WithHomeLoRoute,
+  getParentRoute: () => StoreWithHomeLoRoute,
 } as any)
-const WithHomeLoActivesNewRoute = WithHomeLoActivesNewRouteImport.update({
-  id: '/actives_/new',
-  path: '/actives/new',
-  getParentRoute: () => WithHomeLoRoute,
-} as any)
-const WithHomeLoActivesIdRoute = WithHomeLoActivesIdRouteImport.update({
-  id: '/actives_/$id',
-  path: '/actives/$id',
-  getParentRoute: () => WithHomeLoRoute,
-} as any)
-const DashOrdersIdSettleRoute = DashOrdersIdSettleRouteImport.update({
+const StoreWithHomeLoActivesNewRoute =
+  StoreWithHomeLoActivesNewRouteImport.update({
+    id: '/actives_/new',
+    path: '/actives/new',
+    getParentRoute: () => StoreWithHomeLoRoute,
+  } as any)
+const StoreWithHomeLoActivesIdRoute =
+  StoreWithHomeLoActivesIdRouteImport.update({
+    id: '/actives_/$id',
+    path: '/actives/$id',
+    getParentRoute: () => StoreWithHomeLoRoute,
+  } as any)
+const DashStoreOrdersIdSettleRoute = DashStoreOrdersIdSettleRouteImport.update({
   id: '/orders_/$id/settle',
   path: '/orders/$id/settle',
-  getParentRoute: () => DashRoute,
+  getParentRoute: () => DashStoreRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof WithHomeLoIndexRoute
+  '/': typeof IndexRoute
+  '/$store': typeof StoreWithHomeLoRouteWithChildren
   '/dash': typeof DashRouteWithChildren
   '/my-riichi': typeof MyRiichiRouteWithChildren
   '/ready': typeof ReadyRouteWithChildren
   '/t': typeof TRouteWithChildren
-  '/actives': typeof WithHomeLoActivesRoute
-  '/contact-us': typeof WithHomeLoContactUsRoute
-  '/diceshock-agents': typeof WithHomeLoDiceshockAgentsRoute
-  '/external-redirect': typeof WithHomeLoExternalRedirectRoute
-  '/inventory': typeof WithHomeLoInventoryRoute
-  '/me': typeof WithHomeLoMeRoute
-  '/riichi': typeof WithHomeLoRiichiRoute
-  '/dash/actives': typeof DashActivesRoute
-  '/dash/events': typeof DashEventsRoute
-  '/dash/gsz': typeof DashGszRoute
-  '/dash/media': typeof DashMediaRoute
-  '/dash/orders': typeof DashOrdersRoute
-  '/dash/pricing': typeof DashPricingRoute
-  '/dash/tables': typeof DashTablesRoute
-  '/dash/users': typeof DashUsersRoute
+  '/dash/$store': typeof DashStoreRouteWithChildren
   '/my-riichi/$id': typeof MyRiichiIdRoute
   '/ready/$code': typeof ReadyCodeRoute
   '/t/$code': typeof TCodeRoute
   '/dash/': typeof DashIndexRoute
-  '/actives/$id': typeof WithHomeLoActivesIdRoute
-  '/actives/new': typeof WithHomeLoActivesNewRoute
-  '/events/$id': typeof WithHomeLoEventsIdRoute
-  '/inventory/$id': typeof WithHomeLoInventoryIdRoute
-  '/dash/actives/$id': typeof DashActivesIdRoute
-  '/dash/events/$id': typeof DashEventsIdRoute
-  '/dash/gsz/$id': typeof DashGszIdRoute
-  '/dash/orders/settle': typeof DashOrdersSettleRoute
-  '/dash/pricing/$id': typeof DashPricingIdRoute
-  '/dash/tables/$id': typeof DashTablesIdRoute
-  '/dash/users/$id': typeof DashUsersIdRoute
-  '/dash/orders/$id/settle': typeof DashOrdersIdSettleRoute
+  '/$store/actives': typeof StoreWithHomeLoActivesRoute
+  '/$store/contact-us': typeof StoreWithHomeLoContactUsRoute
+  '/$store/diceshock-agents': typeof StoreWithHomeLoDiceshockAgentsRoute
+  '/$store/external-redirect': typeof StoreWithHomeLoExternalRedirectRoute
+  '/$store/inventory': typeof StoreWithHomeLoInventoryRoute
+  '/$store/me': typeof StoreWithHomeLoMeRoute
+  '/$store/riichi': typeof StoreWithHomeLoRiichiRoute
+  '/dash/$store/actives': typeof DashStoreActivesRoute
+  '/dash/$store/events': typeof DashStoreEventsRoute
+  '/dash/$store/gsz': typeof DashStoreGszRoute
+  '/dash/$store/media': typeof DashStoreMediaRoute
+  '/dash/$store/orders': typeof DashStoreOrdersRoute
+  '/dash/$store/pricing': typeof DashStorePricingRoute
+  '/dash/$store/tables': typeof DashStoreTablesRoute
+  '/dash/$store/users': typeof DashStoreUsersRoute
+  '/$store/': typeof StoreWithHomeLoIndexRoute
+  '/dash/$store/': typeof DashStoreIndexRoute
+  '/$store/actives/$id': typeof StoreWithHomeLoActivesIdRoute
+  '/$store/actives/new': typeof StoreWithHomeLoActivesNewRoute
+  '/$store/events/$id': typeof StoreWithHomeLoEventsIdRoute
+  '/$store/inventory/$id': typeof StoreWithHomeLoInventoryIdRoute
+  '/dash/$store/actives/$id': typeof DashStoreActivesIdRoute
+  '/dash/$store/events/$id': typeof DashStoreEventsIdRoute
+  '/dash/$store/gsz/$id': typeof DashStoreGszIdRoute
+  '/dash/$store/orders/settle': typeof DashStoreOrdersSettleRoute
+  '/dash/$store/pricing/$id': typeof DashStorePricingIdRoute
+  '/dash/$store/tables/$id': typeof DashStoreTablesIdRoute
+  '/dash/$store/users/$id': typeof DashStoreUsersIdRoute
+  '/dash/$store/orders/$id/settle': typeof DashStoreOrdersIdSettleRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
+  '/$store': typeof StoreWithHomeLoIndexRoute
   '/my-riichi': typeof MyRiichiRouteWithChildren
   '/ready': typeof ReadyRouteWithChildren
   '/t': typeof TRouteWithChildren
-  '/actives': typeof WithHomeLoActivesRoute
-  '/contact-us': typeof WithHomeLoContactUsRoute
-  '/diceshock-agents': typeof WithHomeLoDiceshockAgentsRoute
-  '/external-redirect': typeof WithHomeLoExternalRedirectRoute
-  '/inventory': typeof WithHomeLoInventoryRoute
-  '/me': typeof WithHomeLoMeRoute
-  '/riichi': typeof WithHomeLoRiichiRoute
-  '/dash/actives': typeof DashActivesRoute
-  '/dash/events': typeof DashEventsRoute
-  '/dash/gsz': typeof DashGszRoute
-  '/dash/media': typeof DashMediaRoute
-  '/dash/orders': typeof DashOrdersRoute
-  '/dash/pricing': typeof DashPricingRoute
-  '/dash/tables': typeof DashTablesRoute
-  '/dash/users': typeof DashUsersRoute
   '/my-riichi/$id': typeof MyRiichiIdRoute
   '/ready/$code': typeof ReadyCodeRoute
   '/t/$code': typeof TCodeRoute
-  '/': typeof WithHomeLoIndexRoute
   '/dash': typeof DashIndexRoute
-  '/actives/$id': typeof WithHomeLoActivesIdRoute
-  '/actives/new': typeof WithHomeLoActivesNewRoute
-  '/events/$id': typeof WithHomeLoEventsIdRoute
-  '/inventory/$id': typeof WithHomeLoInventoryIdRoute
-  '/dash/actives/$id': typeof DashActivesIdRoute
-  '/dash/events/$id': typeof DashEventsIdRoute
-  '/dash/gsz/$id': typeof DashGszIdRoute
-  '/dash/orders/settle': typeof DashOrdersSettleRoute
-  '/dash/pricing/$id': typeof DashPricingIdRoute
-  '/dash/tables/$id': typeof DashTablesIdRoute
-  '/dash/users/$id': typeof DashUsersIdRoute
-  '/dash/orders/$id/settle': typeof DashOrdersIdSettleRoute
+  '/$store/actives': typeof StoreWithHomeLoActivesRoute
+  '/$store/contact-us': typeof StoreWithHomeLoContactUsRoute
+  '/$store/diceshock-agents': typeof StoreWithHomeLoDiceshockAgentsRoute
+  '/$store/external-redirect': typeof StoreWithHomeLoExternalRedirectRoute
+  '/$store/inventory': typeof StoreWithHomeLoInventoryRoute
+  '/$store/me': typeof StoreWithHomeLoMeRoute
+  '/$store/riichi': typeof StoreWithHomeLoRiichiRoute
+  '/dash/$store/actives': typeof DashStoreActivesRoute
+  '/dash/$store/events': typeof DashStoreEventsRoute
+  '/dash/$store/gsz': typeof DashStoreGszRoute
+  '/dash/$store/media': typeof DashStoreMediaRoute
+  '/dash/$store/orders': typeof DashStoreOrdersRoute
+  '/dash/$store/pricing': typeof DashStorePricingRoute
+  '/dash/$store/tables': typeof DashStoreTablesRoute
+  '/dash/$store/users': typeof DashStoreUsersRoute
+  '/dash/$store': typeof DashStoreIndexRoute
+  '/$store/actives/$id': typeof StoreWithHomeLoActivesIdRoute
+  '/$store/actives/new': typeof StoreWithHomeLoActivesNewRoute
+  '/$store/events/$id': typeof StoreWithHomeLoEventsIdRoute
+  '/$store/inventory/$id': typeof StoreWithHomeLoInventoryIdRoute
+  '/dash/$store/actives/$id': typeof DashStoreActivesIdRoute
+  '/dash/$store/events/$id': typeof DashStoreEventsIdRoute
+  '/dash/$store/gsz/$id': typeof DashStoreGszIdRoute
+  '/dash/$store/orders/settle': typeof DashStoreOrdersSettleRoute
+  '/dash/$store/pricing/$id': typeof DashStorePricingIdRoute
+  '/dash/$store/tables/$id': typeof DashStoreTablesIdRoute
+  '/dash/$store/users/$id': typeof DashStoreUsersIdRoute
+  '/dash/$store/orders/$id/settle': typeof DashStoreOrdersIdSettleRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/_with-home-lo': typeof WithHomeLoRouteWithChildren
+  '/': typeof IndexRoute
+  '/$store': typeof StoreRouteWithChildren
   '/dash': typeof DashRouteWithChildren
   '/my-riichi': typeof MyRiichiRouteWithChildren
   '/ready': typeof ReadyRouteWithChildren
   '/t': typeof TRouteWithChildren
-  '/_with-home-lo/actives': typeof WithHomeLoActivesRoute
-  '/_with-home-lo/contact-us': typeof WithHomeLoContactUsRoute
-  '/_with-home-lo/diceshock-agents': typeof WithHomeLoDiceshockAgentsRoute
-  '/_with-home-lo/external-redirect': typeof WithHomeLoExternalRedirectRoute
-  '/_with-home-lo/inventory': typeof WithHomeLoInventoryRoute
-  '/_with-home-lo/me': typeof WithHomeLoMeRoute
-  '/_with-home-lo/riichi': typeof WithHomeLoRiichiRoute
-  '/dash/actives': typeof DashActivesRoute
-  '/dash/events': typeof DashEventsRoute
-  '/dash/gsz': typeof DashGszRoute
-  '/dash/media': typeof DashMediaRoute
-  '/dash/orders': typeof DashOrdersRoute
-  '/dash/pricing': typeof DashPricingRoute
-  '/dash/tables': typeof DashTablesRoute
-  '/dash/users': typeof DashUsersRoute
+  '/$store/_with-home-lo': typeof StoreWithHomeLoRouteWithChildren
+  '/dash/$store': typeof DashStoreRouteWithChildren
   '/my-riichi/$id': typeof MyRiichiIdRoute
   '/ready/$code': typeof ReadyCodeRoute
   '/t/$code': typeof TCodeRoute
-  '/_with-home-lo/': typeof WithHomeLoIndexRoute
   '/dash/': typeof DashIndexRoute
-  '/_with-home-lo/actives_/$id': typeof WithHomeLoActivesIdRoute
-  '/_with-home-lo/actives_/new': typeof WithHomeLoActivesNewRoute
-  '/_with-home-lo/events_/$id': typeof WithHomeLoEventsIdRoute
-  '/_with-home-lo/inventory_/$id': typeof WithHomeLoInventoryIdRoute
-  '/dash/actives_/$id': typeof DashActivesIdRoute
-  '/dash/events_/$id': typeof DashEventsIdRoute
-  '/dash/gsz_/$id': typeof DashGszIdRoute
-  '/dash/orders_/settle': typeof DashOrdersSettleRoute
-  '/dash/pricing_/$id': typeof DashPricingIdRoute
-  '/dash/tables_/$id': typeof DashTablesIdRoute
-  '/dash/users_/$id': typeof DashUsersIdRoute
-  '/dash/orders_/$id/settle': typeof DashOrdersIdSettleRoute
+  '/$store/_with-home-lo/actives': typeof StoreWithHomeLoActivesRoute
+  '/$store/_with-home-lo/contact-us': typeof StoreWithHomeLoContactUsRoute
+  '/$store/_with-home-lo/diceshock-agents': typeof StoreWithHomeLoDiceshockAgentsRoute
+  '/$store/_with-home-lo/external-redirect': typeof StoreWithHomeLoExternalRedirectRoute
+  '/$store/_with-home-lo/inventory': typeof StoreWithHomeLoInventoryRoute
+  '/$store/_with-home-lo/me': typeof StoreWithHomeLoMeRoute
+  '/$store/_with-home-lo/riichi': typeof StoreWithHomeLoRiichiRoute
+  '/dash/$store/actives': typeof DashStoreActivesRoute
+  '/dash/$store/events': typeof DashStoreEventsRoute
+  '/dash/$store/gsz': typeof DashStoreGszRoute
+  '/dash/$store/media': typeof DashStoreMediaRoute
+  '/dash/$store/orders': typeof DashStoreOrdersRoute
+  '/dash/$store/pricing': typeof DashStorePricingRoute
+  '/dash/$store/tables': typeof DashStoreTablesRoute
+  '/dash/$store/users': typeof DashStoreUsersRoute
+  '/$store/_with-home-lo/': typeof StoreWithHomeLoIndexRoute
+  '/dash/$store/': typeof DashStoreIndexRoute
+  '/$store/_with-home-lo/actives_/$id': typeof StoreWithHomeLoActivesIdRoute
+  '/$store/_with-home-lo/actives_/new': typeof StoreWithHomeLoActivesNewRoute
+  '/$store/_with-home-lo/events_/$id': typeof StoreWithHomeLoEventsIdRoute
+  '/$store/_with-home-lo/inventory_/$id': typeof StoreWithHomeLoInventoryIdRoute
+  '/dash/$store/actives_/$id': typeof DashStoreActivesIdRoute
+  '/dash/$store/events_/$id': typeof DashStoreEventsIdRoute
+  '/dash/$store/gsz_/$id': typeof DashStoreGszIdRoute
+  '/dash/$store/orders_/settle': typeof DashStoreOrdersSettleRoute
+  '/dash/$store/pricing_/$id': typeof DashStorePricingIdRoute
+  '/dash/$store/tables_/$id': typeof DashStoreTablesIdRoute
+  '/dash/$store/users_/$id': typeof DashStoreUsersIdRoute
+  '/dash/$store/orders_/$id/settle': typeof DashStoreOrdersIdSettleRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/$store'
     | '/dash'
     | '/my-riichi'
     | '/ready'
     | '/t'
-    | '/actives'
-    | '/contact-us'
-    | '/diceshock-agents'
-    | '/external-redirect'
-    | '/inventory'
-    | '/me'
-    | '/riichi'
-    | '/dash/actives'
-    | '/dash/events'
-    | '/dash/gsz'
-    | '/dash/media'
-    | '/dash/orders'
-    | '/dash/pricing'
-    | '/dash/tables'
-    | '/dash/users'
+    | '/dash/$store'
     | '/my-riichi/$id'
     | '/ready/$code'
     | '/t/$code'
     | '/dash/'
-    | '/actives/$id'
-    | '/actives/new'
-    | '/events/$id'
-    | '/inventory/$id'
-    | '/dash/actives/$id'
-    | '/dash/events/$id'
-    | '/dash/gsz/$id'
-    | '/dash/orders/settle'
-    | '/dash/pricing/$id'
-    | '/dash/tables/$id'
-    | '/dash/users/$id'
-    | '/dash/orders/$id/settle'
+    | '/$store/actives'
+    | '/$store/contact-us'
+    | '/$store/diceshock-agents'
+    | '/$store/external-redirect'
+    | '/$store/inventory'
+    | '/$store/me'
+    | '/$store/riichi'
+    | '/dash/$store/actives'
+    | '/dash/$store/events'
+    | '/dash/$store/gsz'
+    | '/dash/$store/media'
+    | '/dash/$store/orders'
+    | '/dash/$store/pricing'
+    | '/dash/$store/tables'
+    | '/dash/$store/users'
+    | '/$store/'
+    | '/dash/$store/'
+    | '/$store/actives/$id'
+    | '/$store/actives/new'
+    | '/$store/events/$id'
+    | '/$store/inventory/$id'
+    | '/dash/$store/actives/$id'
+    | '/dash/$store/events/$id'
+    | '/dash/$store/gsz/$id'
+    | '/dash/$store/orders/settle'
+    | '/dash/$store/pricing/$id'
+    | '/dash/$store/tables/$id'
+    | '/dash/$store/users/$id'
+    | '/dash/$store/orders/$id/settle'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/'
+    | '/$store'
     | '/my-riichi'
     | '/ready'
     | '/t'
-    | '/actives'
-    | '/contact-us'
-    | '/diceshock-agents'
-    | '/external-redirect'
-    | '/inventory'
-    | '/me'
-    | '/riichi'
-    | '/dash/actives'
-    | '/dash/events'
-    | '/dash/gsz'
-    | '/dash/media'
-    | '/dash/orders'
-    | '/dash/pricing'
-    | '/dash/tables'
-    | '/dash/users'
     | '/my-riichi/$id'
     | '/ready/$code'
     | '/t/$code'
-    | '/'
     | '/dash'
-    | '/actives/$id'
-    | '/actives/new'
-    | '/events/$id'
-    | '/inventory/$id'
-    | '/dash/actives/$id'
-    | '/dash/events/$id'
-    | '/dash/gsz/$id'
-    | '/dash/orders/settle'
-    | '/dash/pricing/$id'
-    | '/dash/tables/$id'
-    | '/dash/users/$id'
-    | '/dash/orders/$id/settle'
+    | '/$store/actives'
+    | '/$store/contact-us'
+    | '/$store/diceshock-agents'
+    | '/$store/external-redirect'
+    | '/$store/inventory'
+    | '/$store/me'
+    | '/$store/riichi'
+    | '/dash/$store/actives'
+    | '/dash/$store/events'
+    | '/dash/$store/gsz'
+    | '/dash/$store/media'
+    | '/dash/$store/orders'
+    | '/dash/$store/pricing'
+    | '/dash/$store/tables'
+    | '/dash/$store/users'
+    | '/dash/$store'
+    | '/$store/actives/$id'
+    | '/$store/actives/new'
+    | '/$store/events/$id'
+    | '/$store/inventory/$id'
+    | '/dash/$store/actives/$id'
+    | '/dash/$store/events/$id'
+    | '/dash/$store/gsz/$id'
+    | '/dash/$store/orders/settle'
+    | '/dash/$store/pricing/$id'
+    | '/dash/$store/tables/$id'
+    | '/dash/$store/users/$id'
+    | '/dash/$store/orders/$id/settle'
   id:
     | '__root__'
-    | '/_with-home-lo'
+    | '/'
+    | '/$store'
     | '/dash'
     | '/my-riichi'
     | '/ready'
     | '/t'
-    | '/_with-home-lo/actives'
-    | '/_with-home-lo/contact-us'
-    | '/_with-home-lo/diceshock-agents'
-    | '/_with-home-lo/external-redirect'
-    | '/_with-home-lo/inventory'
-    | '/_with-home-lo/me'
-    | '/_with-home-lo/riichi'
-    | '/dash/actives'
-    | '/dash/events'
-    | '/dash/gsz'
-    | '/dash/media'
-    | '/dash/orders'
-    | '/dash/pricing'
-    | '/dash/tables'
-    | '/dash/users'
+    | '/$store/_with-home-lo'
+    | '/dash/$store'
     | '/my-riichi/$id'
     | '/ready/$code'
     | '/t/$code'
-    | '/_with-home-lo/'
     | '/dash/'
-    | '/_with-home-lo/actives_/$id'
-    | '/_with-home-lo/actives_/new'
-    | '/_with-home-lo/events_/$id'
-    | '/_with-home-lo/inventory_/$id'
-    | '/dash/actives_/$id'
-    | '/dash/events_/$id'
-    | '/dash/gsz_/$id'
-    | '/dash/orders_/settle'
-    | '/dash/pricing_/$id'
-    | '/dash/tables_/$id'
-    | '/dash/users_/$id'
-    | '/dash/orders_/$id/settle'
+    | '/$store/_with-home-lo/actives'
+    | '/$store/_with-home-lo/contact-us'
+    | '/$store/_with-home-lo/diceshock-agents'
+    | '/$store/_with-home-lo/external-redirect'
+    | '/$store/_with-home-lo/inventory'
+    | '/$store/_with-home-lo/me'
+    | '/$store/_with-home-lo/riichi'
+    | '/dash/$store/actives'
+    | '/dash/$store/events'
+    | '/dash/$store/gsz'
+    | '/dash/$store/media'
+    | '/dash/$store/orders'
+    | '/dash/$store/pricing'
+    | '/dash/$store/tables'
+    | '/dash/$store/users'
+    | '/$store/_with-home-lo/'
+    | '/dash/$store/'
+    | '/$store/_with-home-lo/actives_/$id'
+    | '/$store/_with-home-lo/actives_/new'
+    | '/$store/_with-home-lo/events_/$id'
+    | '/$store/_with-home-lo/inventory_/$id'
+    | '/dash/$store/actives_/$id'
+    | '/dash/$store/events_/$id'
+    | '/dash/$store/gsz_/$id'
+    | '/dash/$store/orders_/settle'
+    | '/dash/$store/pricing_/$id'
+    | '/dash/$store/tables_/$id'
+    | '/dash/$store/users_/$id'
+    | '/dash/$store/orders_/$id/settle'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  WithHomeLoRoute: typeof WithHomeLoRouteWithChildren
+  IndexRoute: typeof IndexRoute
+  StoreRoute: typeof StoreRouteWithChildren
   DashRoute: typeof DashRouteWithChildren
   MyRiichiRoute: typeof MyRiichiRouteWithChildren
   ReadyRoute: typeof ReadyRouteWithChildren
@@ -504,11 +554,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_with-home-lo': {
-      id: '/_with-home-lo'
-      path: ''
+    '/$store': {
+      id: '/$store'
+      path: '/$store'
+      fullPath: '/$store'
+      preLoaderRoute: typeof StoreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof WithHomeLoRouteImport
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dash/': {
@@ -517,13 +574,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/dash/'
       preLoaderRoute: typeof DashIndexRouteImport
       parentRoute: typeof DashRoute
-    }
-    '/_with-home-lo/': {
-      id: '/_with-home-lo/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof WithHomeLoIndexRouteImport
-      parentRoute: typeof WithHomeLoRoute
     }
     '/t/$code': {
       id: '/t/$code'
@@ -546,270 +596,322 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MyRiichiIdRouteImport
       parentRoute: typeof MyRiichiRoute
     }
-    '/dash/users': {
-      id: '/dash/users'
+    '/dash/$store': {
+      id: '/dash/$store'
+      path: '/$store'
+      fullPath: '/dash/$store'
+      preLoaderRoute: typeof DashStoreRouteImport
+      parentRoute: typeof DashRoute
+    }
+    '/$store/_with-home-lo': {
+      id: '/$store/_with-home-lo'
+      path: ''
+      fullPath: '/$store'
+      preLoaderRoute: typeof StoreWithHomeLoRouteImport
+      parentRoute: typeof StoreRoute
+    }
+    '/dash/$store/': {
+      id: '/dash/$store/'
+      path: '/'
+      fullPath: '/dash/$store/'
+      preLoaderRoute: typeof DashStoreIndexRouteImport
+      parentRoute: typeof DashStoreRoute
+    }
+    '/$store/_with-home-lo/': {
+      id: '/$store/_with-home-lo/'
+      path: '/'
+      fullPath: '/$store/'
+      preLoaderRoute: typeof StoreWithHomeLoIndexRouteImport
+      parentRoute: typeof StoreWithHomeLoRoute
+    }
+    '/dash/$store/users': {
+      id: '/dash/$store/users'
       path: '/users'
-      fullPath: '/dash/users'
-      preLoaderRoute: typeof DashUsersRouteImport
-      parentRoute: typeof DashRoute
+      fullPath: '/dash/$store/users'
+      preLoaderRoute: typeof DashStoreUsersRouteImport
+      parentRoute: typeof DashStoreRoute
     }
-    '/dash/tables': {
-      id: '/dash/tables'
+    '/dash/$store/tables': {
+      id: '/dash/$store/tables'
       path: '/tables'
-      fullPath: '/dash/tables'
-      preLoaderRoute: typeof DashTablesRouteImport
-      parentRoute: typeof DashRoute
+      fullPath: '/dash/$store/tables'
+      preLoaderRoute: typeof DashStoreTablesRouteImport
+      parentRoute: typeof DashStoreRoute
     }
-    '/dash/pricing': {
-      id: '/dash/pricing'
+    '/dash/$store/pricing': {
+      id: '/dash/$store/pricing'
       path: '/pricing'
-      fullPath: '/dash/pricing'
-      preLoaderRoute: typeof DashPricingRouteImport
-      parentRoute: typeof DashRoute
+      fullPath: '/dash/$store/pricing'
+      preLoaderRoute: typeof DashStorePricingRouteImport
+      parentRoute: typeof DashStoreRoute
     }
-    '/dash/orders': {
-      id: '/dash/orders'
+    '/dash/$store/orders': {
+      id: '/dash/$store/orders'
       path: '/orders'
-      fullPath: '/dash/orders'
-      preLoaderRoute: typeof DashOrdersRouteImport
-      parentRoute: typeof DashRoute
+      fullPath: '/dash/$store/orders'
+      preLoaderRoute: typeof DashStoreOrdersRouteImport
+      parentRoute: typeof DashStoreRoute
     }
-    '/dash/media': {
-      id: '/dash/media'
+    '/dash/$store/media': {
+      id: '/dash/$store/media'
       path: '/media'
-      fullPath: '/dash/media'
-      preLoaderRoute: typeof DashMediaRouteImport
-      parentRoute: typeof DashRoute
+      fullPath: '/dash/$store/media'
+      preLoaderRoute: typeof DashStoreMediaRouteImport
+      parentRoute: typeof DashStoreRoute
     }
-    '/dash/gsz': {
-      id: '/dash/gsz'
+    '/dash/$store/gsz': {
+      id: '/dash/$store/gsz'
       path: '/gsz'
-      fullPath: '/dash/gsz'
-      preLoaderRoute: typeof DashGszRouteImport
-      parentRoute: typeof DashRoute
+      fullPath: '/dash/$store/gsz'
+      preLoaderRoute: typeof DashStoreGszRouteImport
+      parentRoute: typeof DashStoreRoute
     }
-    '/dash/events': {
-      id: '/dash/events'
+    '/dash/$store/events': {
+      id: '/dash/$store/events'
       path: '/events'
-      fullPath: '/dash/events'
-      preLoaderRoute: typeof DashEventsRouteImport
-      parentRoute: typeof DashRoute
+      fullPath: '/dash/$store/events'
+      preLoaderRoute: typeof DashStoreEventsRouteImport
+      parentRoute: typeof DashStoreRoute
     }
-    '/dash/actives': {
-      id: '/dash/actives'
+    '/dash/$store/actives': {
+      id: '/dash/$store/actives'
       path: '/actives'
-      fullPath: '/dash/actives'
-      preLoaderRoute: typeof DashActivesRouteImport
-      parentRoute: typeof DashRoute
+      fullPath: '/dash/$store/actives'
+      preLoaderRoute: typeof DashStoreActivesRouteImport
+      parentRoute: typeof DashStoreRoute
     }
-    '/_with-home-lo/riichi': {
-      id: '/_with-home-lo/riichi'
+    '/$store/_with-home-lo/riichi': {
+      id: '/$store/_with-home-lo/riichi'
       path: '/riichi'
-      fullPath: '/riichi'
-      preLoaderRoute: typeof WithHomeLoRiichiRouteImport
-      parentRoute: typeof WithHomeLoRoute
+      fullPath: '/$store/riichi'
+      preLoaderRoute: typeof StoreWithHomeLoRiichiRouteImport
+      parentRoute: typeof StoreWithHomeLoRoute
     }
-    '/_with-home-lo/me': {
-      id: '/_with-home-lo/me'
+    '/$store/_with-home-lo/me': {
+      id: '/$store/_with-home-lo/me'
       path: '/me'
-      fullPath: '/me'
-      preLoaderRoute: typeof WithHomeLoMeRouteImport
-      parentRoute: typeof WithHomeLoRoute
+      fullPath: '/$store/me'
+      preLoaderRoute: typeof StoreWithHomeLoMeRouteImport
+      parentRoute: typeof StoreWithHomeLoRoute
     }
-    '/_with-home-lo/inventory': {
-      id: '/_with-home-lo/inventory'
+    '/$store/_with-home-lo/inventory': {
+      id: '/$store/_with-home-lo/inventory'
       path: '/inventory'
-      fullPath: '/inventory'
-      preLoaderRoute: typeof WithHomeLoInventoryRouteImport
-      parentRoute: typeof WithHomeLoRoute
+      fullPath: '/$store/inventory'
+      preLoaderRoute: typeof StoreWithHomeLoInventoryRouteImport
+      parentRoute: typeof StoreWithHomeLoRoute
     }
-    '/_with-home-lo/external-redirect': {
-      id: '/_with-home-lo/external-redirect'
+    '/$store/_with-home-lo/external-redirect': {
+      id: '/$store/_with-home-lo/external-redirect'
       path: '/external-redirect'
-      fullPath: '/external-redirect'
-      preLoaderRoute: typeof WithHomeLoExternalRedirectRouteImport
-      parentRoute: typeof WithHomeLoRoute
+      fullPath: '/$store/external-redirect'
+      preLoaderRoute: typeof StoreWithHomeLoExternalRedirectRouteImport
+      parentRoute: typeof StoreWithHomeLoRoute
     }
-    '/_with-home-lo/diceshock-agents': {
-      id: '/_with-home-lo/diceshock-agents'
+    '/$store/_with-home-lo/diceshock-agents': {
+      id: '/$store/_with-home-lo/diceshock-agents'
       path: '/diceshock-agents'
-      fullPath: '/diceshock-agents'
-      preLoaderRoute: typeof WithHomeLoDiceshockAgentsRouteImport
-      parentRoute: typeof WithHomeLoRoute
+      fullPath: '/$store/diceshock-agents'
+      preLoaderRoute: typeof StoreWithHomeLoDiceshockAgentsRouteImport
+      parentRoute: typeof StoreWithHomeLoRoute
     }
-    '/_with-home-lo/contact-us': {
-      id: '/_with-home-lo/contact-us'
+    '/$store/_with-home-lo/contact-us': {
+      id: '/$store/_with-home-lo/contact-us'
       path: '/contact-us'
-      fullPath: '/contact-us'
-      preLoaderRoute: typeof WithHomeLoContactUsRouteImport
-      parentRoute: typeof WithHomeLoRoute
+      fullPath: '/$store/contact-us'
+      preLoaderRoute: typeof StoreWithHomeLoContactUsRouteImport
+      parentRoute: typeof StoreWithHomeLoRoute
     }
-    '/_with-home-lo/actives': {
-      id: '/_with-home-lo/actives'
+    '/$store/_with-home-lo/actives': {
+      id: '/$store/_with-home-lo/actives'
       path: '/actives'
-      fullPath: '/actives'
-      preLoaderRoute: typeof WithHomeLoActivesRouteImport
-      parentRoute: typeof WithHomeLoRoute
+      fullPath: '/$store/actives'
+      preLoaderRoute: typeof StoreWithHomeLoActivesRouteImport
+      parentRoute: typeof StoreWithHomeLoRoute
     }
-    '/dash/users_/$id': {
-      id: '/dash/users_/$id'
+    '/dash/$store/users_/$id': {
+      id: '/dash/$store/users_/$id'
       path: '/users/$id'
-      fullPath: '/dash/users/$id'
-      preLoaderRoute: typeof DashUsersIdRouteImport
-      parentRoute: typeof DashRoute
+      fullPath: '/dash/$store/users/$id'
+      preLoaderRoute: typeof DashStoreUsersIdRouteImport
+      parentRoute: typeof DashStoreRoute
     }
-    '/dash/tables_/$id': {
-      id: '/dash/tables_/$id'
+    '/dash/$store/tables_/$id': {
+      id: '/dash/$store/tables_/$id'
       path: '/tables/$id'
-      fullPath: '/dash/tables/$id'
-      preLoaderRoute: typeof DashTablesIdRouteImport
-      parentRoute: typeof DashRoute
+      fullPath: '/dash/$store/tables/$id'
+      preLoaderRoute: typeof DashStoreTablesIdRouteImport
+      parentRoute: typeof DashStoreRoute
     }
-    '/dash/pricing_/$id': {
-      id: '/dash/pricing_/$id'
+    '/dash/$store/pricing_/$id': {
+      id: '/dash/$store/pricing_/$id'
       path: '/pricing/$id'
-      fullPath: '/dash/pricing/$id'
-      preLoaderRoute: typeof DashPricingIdRouteImport
-      parentRoute: typeof DashRoute
+      fullPath: '/dash/$store/pricing/$id'
+      preLoaderRoute: typeof DashStorePricingIdRouteImport
+      parentRoute: typeof DashStoreRoute
     }
-    '/dash/orders_/settle': {
-      id: '/dash/orders_/settle'
+    '/dash/$store/orders_/settle': {
+      id: '/dash/$store/orders_/settle'
       path: '/orders/settle'
-      fullPath: '/dash/orders/settle'
-      preLoaderRoute: typeof DashOrdersSettleRouteImport
-      parentRoute: typeof DashRoute
+      fullPath: '/dash/$store/orders/settle'
+      preLoaderRoute: typeof DashStoreOrdersSettleRouteImport
+      parentRoute: typeof DashStoreRoute
     }
-    '/dash/gsz_/$id': {
-      id: '/dash/gsz_/$id'
+    '/dash/$store/gsz_/$id': {
+      id: '/dash/$store/gsz_/$id'
       path: '/gsz/$id'
-      fullPath: '/dash/gsz/$id'
-      preLoaderRoute: typeof DashGszIdRouteImport
-      parentRoute: typeof DashRoute
+      fullPath: '/dash/$store/gsz/$id'
+      preLoaderRoute: typeof DashStoreGszIdRouteImport
+      parentRoute: typeof DashStoreRoute
     }
-    '/dash/events_/$id': {
-      id: '/dash/events_/$id'
+    '/dash/$store/events_/$id': {
+      id: '/dash/$store/events_/$id'
       path: '/events/$id'
-      fullPath: '/dash/events/$id'
-      preLoaderRoute: typeof DashEventsIdRouteImport
-      parentRoute: typeof DashRoute
+      fullPath: '/dash/$store/events/$id'
+      preLoaderRoute: typeof DashStoreEventsIdRouteImport
+      parentRoute: typeof DashStoreRoute
     }
-    '/dash/actives_/$id': {
-      id: '/dash/actives_/$id'
+    '/dash/$store/actives_/$id': {
+      id: '/dash/$store/actives_/$id'
       path: '/actives/$id'
-      fullPath: '/dash/actives/$id'
-      preLoaderRoute: typeof DashActivesIdRouteImport
-      parentRoute: typeof DashRoute
+      fullPath: '/dash/$store/actives/$id'
+      preLoaderRoute: typeof DashStoreActivesIdRouteImport
+      parentRoute: typeof DashStoreRoute
     }
-    '/_with-home-lo/inventory_/$id': {
-      id: '/_with-home-lo/inventory_/$id'
+    '/$store/_with-home-lo/inventory_/$id': {
+      id: '/$store/_with-home-lo/inventory_/$id'
       path: '/inventory/$id'
-      fullPath: '/inventory/$id'
-      preLoaderRoute: typeof WithHomeLoInventoryIdRouteImport
-      parentRoute: typeof WithHomeLoRoute
+      fullPath: '/$store/inventory/$id'
+      preLoaderRoute: typeof StoreWithHomeLoInventoryIdRouteImport
+      parentRoute: typeof StoreWithHomeLoRoute
     }
-    '/_with-home-lo/events_/$id': {
-      id: '/_with-home-lo/events_/$id'
+    '/$store/_with-home-lo/events_/$id': {
+      id: '/$store/_with-home-lo/events_/$id'
       path: '/events/$id'
-      fullPath: '/events/$id'
-      preLoaderRoute: typeof WithHomeLoEventsIdRouteImport
-      parentRoute: typeof WithHomeLoRoute
+      fullPath: '/$store/events/$id'
+      preLoaderRoute: typeof StoreWithHomeLoEventsIdRouteImport
+      parentRoute: typeof StoreWithHomeLoRoute
     }
-    '/_with-home-lo/actives_/new': {
-      id: '/_with-home-lo/actives_/new'
+    '/$store/_with-home-lo/actives_/new': {
+      id: '/$store/_with-home-lo/actives_/new'
       path: '/actives/new'
-      fullPath: '/actives/new'
-      preLoaderRoute: typeof WithHomeLoActivesNewRouteImport
-      parentRoute: typeof WithHomeLoRoute
+      fullPath: '/$store/actives/new'
+      preLoaderRoute: typeof StoreWithHomeLoActivesNewRouteImport
+      parentRoute: typeof StoreWithHomeLoRoute
     }
-    '/_with-home-lo/actives_/$id': {
-      id: '/_with-home-lo/actives_/$id'
+    '/$store/_with-home-lo/actives_/$id': {
+      id: '/$store/_with-home-lo/actives_/$id'
       path: '/actives/$id'
-      fullPath: '/actives/$id'
-      preLoaderRoute: typeof WithHomeLoActivesIdRouteImport
-      parentRoute: typeof WithHomeLoRoute
+      fullPath: '/$store/actives/$id'
+      preLoaderRoute: typeof StoreWithHomeLoActivesIdRouteImport
+      parentRoute: typeof StoreWithHomeLoRoute
     }
-    '/dash/orders_/$id/settle': {
-      id: '/dash/orders_/$id/settle'
+    '/dash/$store/orders_/$id/settle': {
+      id: '/dash/$store/orders_/$id/settle'
       path: '/orders/$id/settle'
-      fullPath: '/dash/orders/$id/settle'
-      preLoaderRoute: typeof DashOrdersIdSettleRouteImport
-      parentRoute: typeof DashRoute
+      fullPath: '/dash/$store/orders/$id/settle'
+      preLoaderRoute: typeof DashStoreOrdersIdSettleRouteImport
+      parentRoute: typeof DashStoreRoute
     }
   }
 }
 
-interface WithHomeLoRouteChildren {
-  WithHomeLoActivesRoute: typeof WithHomeLoActivesRoute
-  WithHomeLoContactUsRoute: typeof WithHomeLoContactUsRoute
-  WithHomeLoDiceshockAgentsRoute: typeof WithHomeLoDiceshockAgentsRoute
-  WithHomeLoExternalRedirectRoute: typeof WithHomeLoExternalRedirectRoute
-  WithHomeLoInventoryRoute: typeof WithHomeLoInventoryRoute
-  WithHomeLoMeRoute: typeof WithHomeLoMeRoute
-  WithHomeLoRiichiRoute: typeof WithHomeLoRiichiRoute
-  WithHomeLoIndexRoute: typeof WithHomeLoIndexRoute
-  WithHomeLoActivesIdRoute: typeof WithHomeLoActivesIdRoute
-  WithHomeLoActivesNewRoute: typeof WithHomeLoActivesNewRoute
-  WithHomeLoEventsIdRoute: typeof WithHomeLoEventsIdRoute
-  WithHomeLoInventoryIdRoute: typeof WithHomeLoInventoryIdRoute
+interface StoreWithHomeLoRouteChildren {
+  StoreWithHomeLoActivesRoute: typeof StoreWithHomeLoActivesRoute
+  StoreWithHomeLoContactUsRoute: typeof StoreWithHomeLoContactUsRoute
+  StoreWithHomeLoDiceshockAgentsRoute: typeof StoreWithHomeLoDiceshockAgentsRoute
+  StoreWithHomeLoExternalRedirectRoute: typeof StoreWithHomeLoExternalRedirectRoute
+  StoreWithHomeLoInventoryRoute: typeof StoreWithHomeLoInventoryRoute
+  StoreWithHomeLoMeRoute: typeof StoreWithHomeLoMeRoute
+  StoreWithHomeLoRiichiRoute: typeof StoreWithHomeLoRiichiRoute
+  StoreWithHomeLoIndexRoute: typeof StoreWithHomeLoIndexRoute
+  StoreWithHomeLoActivesIdRoute: typeof StoreWithHomeLoActivesIdRoute
+  StoreWithHomeLoActivesNewRoute: typeof StoreWithHomeLoActivesNewRoute
+  StoreWithHomeLoEventsIdRoute: typeof StoreWithHomeLoEventsIdRoute
+  StoreWithHomeLoInventoryIdRoute: typeof StoreWithHomeLoInventoryIdRoute
 }
 
-const WithHomeLoRouteChildren: WithHomeLoRouteChildren = {
-  WithHomeLoActivesRoute: WithHomeLoActivesRoute,
-  WithHomeLoContactUsRoute: WithHomeLoContactUsRoute,
-  WithHomeLoDiceshockAgentsRoute: WithHomeLoDiceshockAgentsRoute,
-  WithHomeLoExternalRedirectRoute: WithHomeLoExternalRedirectRoute,
-  WithHomeLoInventoryRoute: WithHomeLoInventoryRoute,
-  WithHomeLoMeRoute: WithHomeLoMeRoute,
-  WithHomeLoRiichiRoute: WithHomeLoRiichiRoute,
-  WithHomeLoIndexRoute: WithHomeLoIndexRoute,
-  WithHomeLoActivesIdRoute: WithHomeLoActivesIdRoute,
-  WithHomeLoActivesNewRoute: WithHomeLoActivesNewRoute,
-  WithHomeLoEventsIdRoute: WithHomeLoEventsIdRoute,
-  WithHomeLoInventoryIdRoute: WithHomeLoInventoryIdRoute,
+const StoreWithHomeLoRouteChildren: StoreWithHomeLoRouteChildren = {
+  StoreWithHomeLoActivesRoute: StoreWithHomeLoActivesRoute,
+  StoreWithHomeLoContactUsRoute: StoreWithHomeLoContactUsRoute,
+  StoreWithHomeLoDiceshockAgentsRoute: StoreWithHomeLoDiceshockAgentsRoute,
+  StoreWithHomeLoExternalRedirectRoute: StoreWithHomeLoExternalRedirectRoute,
+  StoreWithHomeLoInventoryRoute: StoreWithHomeLoInventoryRoute,
+  StoreWithHomeLoMeRoute: StoreWithHomeLoMeRoute,
+  StoreWithHomeLoRiichiRoute: StoreWithHomeLoRiichiRoute,
+  StoreWithHomeLoIndexRoute: StoreWithHomeLoIndexRoute,
+  StoreWithHomeLoActivesIdRoute: StoreWithHomeLoActivesIdRoute,
+  StoreWithHomeLoActivesNewRoute: StoreWithHomeLoActivesNewRoute,
+  StoreWithHomeLoEventsIdRoute: StoreWithHomeLoEventsIdRoute,
+  StoreWithHomeLoInventoryIdRoute: StoreWithHomeLoInventoryIdRoute,
 }
 
-const WithHomeLoRouteWithChildren = WithHomeLoRoute._addFileChildren(
-  WithHomeLoRouteChildren,
+const StoreWithHomeLoRouteWithChildren = StoreWithHomeLoRoute._addFileChildren(
+  StoreWithHomeLoRouteChildren,
+)
+
+interface StoreRouteChildren {
+  StoreWithHomeLoRoute: typeof StoreWithHomeLoRouteWithChildren
+}
+
+const StoreRouteChildren: StoreRouteChildren = {
+  StoreWithHomeLoRoute: StoreWithHomeLoRouteWithChildren,
+}
+
+const StoreRouteWithChildren = StoreRoute._addFileChildren(StoreRouteChildren)
+
+interface DashStoreRouteChildren {
+  DashStoreActivesRoute: typeof DashStoreActivesRoute
+  DashStoreEventsRoute: typeof DashStoreEventsRoute
+  DashStoreGszRoute: typeof DashStoreGszRoute
+  DashStoreMediaRoute: typeof DashStoreMediaRoute
+  DashStoreOrdersRoute: typeof DashStoreOrdersRoute
+  DashStorePricingRoute: typeof DashStorePricingRoute
+  DashStoreTablesRoute: typeof DashStoreTablesRoute
+  DashStoreUsersRoute: typeof DashStoreUsersRoute
+  DashStoreIndexRoute: typeof DashStoreIndexRoute
+  DashStoreActivesIdRoute: typeof DashStoreActivesIdRoute
+  DashStoreEventsIdRoute: typeof DashStoreEventsIdRoute
+  DashStoreGszIdRoute: typeof DashStoreGszIdRoute
+  DashStoreOrdersSettleRoute: typeof DashStoreOrdersSettleRoute
+  DashStorePricingIdRoute: typeof DashStorePricingIdRoute
+  DashStoreTablesIdRoute: typeof DashStoreTablesIdRoute
+  DashStoreUsersIdRoute: typeof DashStoreUsersIdRoute
+  DashStoreOrdersIdSettleRoute: typeof DashStoreOrdersIdSettleRoute
+}
+
+const DashStoreRouteChildren: DashStoreRouteChildren = {
+  DashStoreActivesRoute: DashStoreActivesRoute,
+  DashStoreEventsRoute: DashStoreEventsRoute,
+  DashStoreGszRoute: DashStoreGszRoute,
+  DashStoreMediaRoute: DashStoreMediaRoute,
+  DashStoreOrdersRoute: DashStoreOrdersRoute,
+  DashStorePricingRoute: DashStorePricingRoute,
+  DashStoreTablesRoute: DashStoreTablesRoute,
+  DashStoreUsersRoute: DashStoreUsersRoute,
+  DashStoreIndexRoute: DashStoreIndexRoute,
+  DashStoreActivesIdRoute: DashStoreActivesIdRoute,
+  DashStoreEventsIdRoute: DashStoreEventsIdRoute,
+  DashStoreGszIdRoute: DashStoreGszIdRoute,
+  DashStoreOrdersSettleRoute: DashStoreOrdersSettleRoute,
+  DashStorePricingIdRoute: DashStorePricingIdRoute,
+  DashStoreTablesIdRoute: DashStoreTablesIdRoute,
+  DashStoreUsersIdRoute: DashStoreUsersIdRoute,
+  DashStoreOrdersIdSettleRoute: DashStoreOrdersIdSettleRoute,
+}
+
+const DashStoreRouteWithChildren = DashStoreRoute._addFileChildren(
+  DashStoreRouteChildren,
 )
 
 interface DashRouteChildren {
-  DashActivesRoute: typeof DashActivesRoute
-  DashEventsRoute: typeof DashEventsRoute
-  DashGszRoute: typeof DashGszRoute
-  DashMediaRoute: typeof DashMediaRoute
-  DashOrdersRoute: typeof DashOrdersRoute
-  DashPricingRoute: typeof DashPricingRoute
-  DashTablesRoute: typeof DashTablesRoute
-  DashUsersRoute: typeof DashUsersRoute
+  DashStoreRoute: typeof DashStoreRouteWithChildren
   DashIndexRoute: typeof DashIndexRoute
-  DashActivesIdRoute: typeof DashActivesIdRoute
-  DashEventsIdRoute: typeof DashEventsIdRoute
-  DashGszIdRoute: typeof DashGszIdRoute
-  DashOrdersSettleRoute: typeof DashOrdersSettleRoute
-  DashPricingIdRoute: typeof DashPricingIdRoute
-  DashTablesIdRoute: typeof DashTablesIdRoute
-  DashUsersIdRoute: typeof DashUsersIdRoute
-  DashOrdersIdSettleRoute: typeof DashOrdersIdSettleRoute
 }
 
 const DashRouteChildren: DashRouteChildren = {
-  DashActivesRoute: DashActivesRoute,
-  DashEventsRoute: DashEventsRoute,
-  DashGszRoute: DashGszRoute,
-  DashMediaRoute: DashMediaRoute,
-  DashOrdersRoute: DashOrdersRoute,
-  DashPricingRoute: DashPricingRoute,
-  DashTablesRoute: DashTablesRoute,
-  DashUsersRoute: DashUsersRoute,
+  DashStoreRoute: DashStoreRouteWithChildren,
   DashIndexRoute: DashIndexRoute,
-  DashActivesIdRoute: DashActivesIdRoute,
-  DashEventsIdRoute: DashEventsIdRoute,
-  DashGszIdRoute: DashGszIdRoute,
-  DashOrdersSettleRoute: DashOrdersSettleRoute,
-  DashPricingIdRoute: DashPricingIdRoute,
-  DashTablesIdRoute: DashTablesIdRoute,
-  DashUsersIdRoute: DashUsersIdRoute,
-  DashOrdersIdSettleRoute: DashOrdersIdSettleRoute,
 }
 
 const DashRouteWithChildren = DashRoute._addFileChildren(DashRouteChildren)
@@ -847,7 +949,8 @@ const TRouteChildren: TRouteChildren = {
 const TRouteWithChildren = TRoute._addFileChildren(TRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
-  WithHomeLoRoute: WithHomeLoRouteWithChildren,
+  IndexRoute: IndexRoute,
+  StoreRoute: StoreRouteWithChildren,
   DashRoute: DashRouteWithChildren,
   MyRiichiRoute: MyRiichiRouteWithChildren,
   ReadyRoute: ReadyRouteWithChildren,

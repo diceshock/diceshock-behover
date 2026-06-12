@@ -6,6 +6,10 @@ import * as sqlite from "drizzle-orm/sqlite-core";
 
 export const boardGamesTable = sqlite.sqliteTable("board_games_table", {
   id: sqlite.text().$defaultFn(createId).primaryKey(),
+  store: sqlite
+    .text("store", { enum: ["guanggu", "jiedaokou", "legacy"] })
+    .notNull()
+    .default("legacy"),
   sch_name: sqlite.text(),
   eng_name: sqlite.text(),
   gstone_id: sqlite.int(),
@@ -93,6 +97,10 @@ export const usersRelations = relations(users, ({ one, many }) => ({
 
 export const activesTable = sqlite.sqliteTable("actives", {
   id: sqlite.text().$defaultFn(createId).primaryKey(),
+  store: sqlite
+    .text("store", { enum: ["guanggu", "jiedaokou", "legacy"] })
+    .notNull()
+    .default("legacy"),
   creator_id: sqlite
     .text()
     .notNull()
@@ -161,6 +169,10 @@ export const activeRegistrationsRelations = relations(
 
 export const eventsTable = sqlite.sqliteTable("events", {
   id: sqlite.text().$defaultFn(createId).primaryKey(),
+  store: sqlite
+    .text("store", { enum: ["guanggu", "jiedaokou", "legacy"] })
+    .notNull()
+    .default("legacy"),
   title: sqlite.text().notNull(),
   description: sqlite.text(),
   cover_image_url: sqlite.text(),
@@ -264,6 +276,10 @@ export const userMembershipPlansRelations = relations(
 
 export const tablesTable = sqlite.sqliteTable("tables", {
   id: sqlite.text().$defaultFn(createId).primaryKey(),
+  store: sqlite
+    .text("store", { enum: ["guanggu", "jiedaokou", "legacy"] })
+    .notNull()
+    .default("legacy"),
   name: sqlite.text().notNull(),
   type: sqlite.text("type", { enum: ["fixed", "solo"] }).notNull(),
   scope: sqlite
@@ -287,6 +303,10 @@ export const tablesTable = sqlite.sqliteTable("tables", {
 
 export const tableOccupancyTable = sqlite.sqliteTable("table_occupancy", {
   id: sqlite.text().$defaultFn(createId).primaryKey(),
+  store: sqlite
+    .text("store", { enum: ["guanggu", "jiedaokou", "legacy"] })
+    .notNull()
+    .default("legacy"),
   table_id: sqlite
     .text("table_id")
     .notNull()
@@ -457,6 +477,10 @@ export const tempIdentitiesTable = sqlite.sqliteTable("temp_identities", {
 
 export const pricingSnapshotsTable = sqlite.sqliteTable("pricing_snapshots", {
   id: sqlite.text().$defaultFn(createId).primaryKey(),
+  store: sqlite
+    .text("store", { enum: ["guanggu", "jiedaokou", "legacy"] })
+    .notNull()
+    .default("legacy"),
   name: sqlite
     .text("name")
     .notNull()

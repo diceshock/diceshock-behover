@@ -1,16 +1,25 @@
 import db, { drizzle, eventsTable } from "@lib/db";
 import { z } from "zod/v4";
+import { getStoreFilter, storeInputZ } from "@/shared/store";
 import { dashProcedure, unwrapInput } from "./baseTRPC";
 
-const list = dashProcedure.query(async ({ ctx }) => {
-  const tdb = db(ctx.env.DB);
-  const events = await tdb.query.eventsTable.findMany({
-    orderBy: (e, { desc }) => desc(e.create_at),
+const list = dashProcedure
+  .input((v: unknown) => {
+    const data = unwrapInput<{ store?: string }>(v);
+    const store = storeInputZ.parse(data.store ?? "jiedaokou");
+    return { store };
+  })
+  .query(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const events = await tdb.query.eventsTable.findMany({
+      where: (e, { inArray }) => inArray(e.store, getStoreFilter(input.store)),
+      orderBy: (e, { desc }) => desc(e.create_at),
+    });
+    return events;
   });
-  return events;
-});
 
 const createEventZ = z.object({
+  store: storeInputZ,
   title: z.string().min(1).max(200),
   description: z.string().optional(),
   cover_image_url: z.string().url().optional(),
@@ -24,6 +33,7 @@ const create = dashProcedure
     const [event] = await tdb
       .insert(eventsTable)
       .values({
+        store: input.store,
         title: input.title,
         description: input.description ?? null,
         cover_image_url: input.cover_image_url ?? null,
