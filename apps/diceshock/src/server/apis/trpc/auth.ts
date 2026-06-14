@@ -42,12 +42,22 @@ async function verifyAliyunCaptcha(
       new $Util.RuntimeOptions({}),
     );
 
+    const verifyCode = resp.body?.result?.verifyCode;
+    const verifyResult = resp.body?.result?.verifyResult;
+
     console.log("[验证码] 阿里云 CAPTCHA 验证结果:", JSON.stringify(resp.body));
 
-    return resp.body?.result?.verifyResult === true;
+    // F023: 前端 SDK 初始化失败时的容灾请求，放行
+    if (verifyCode === "F023") {
+      console.log("[验证码] F023 容灾放行");
+      return true;
+    }
+
+    return verifyResult === true;
   } catch (error: any) {
     console.error("[验证码] 阿里云 CAPTCHA 验证失败:", error.message);
-    return false;
+    // 验证服务异常时放行，避免阻断用户登录
+    return true;
   }
 }
 
