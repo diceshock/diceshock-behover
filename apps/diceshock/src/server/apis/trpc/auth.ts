@@ -1,8 +1,14 @@
-import Captcha20230305, * as $Captcha20230305 from "@alicloud/captcha20230305";
+import _Captcha20230305, * as $Captcha20230305 from "@alicloud/captcha20230305";
 import * as $Dysmsapi20170525 from "@alicloud/dysmsapi20170525";
 import * as $OpenApi from "@alicloud/openapi-client";
 import * as $Util from "@alicloud/tea-util";
 import db, { accounts, drizzle, userInfoTable } from "@lib/db";
+
+const Captcha20230305 =
+  typeof _Captcha20230305 === "function"
+    ? _Captcha20230305
+    : (_Captcha20230305 as { default: typeof _Captcha20230305 }).default;
+
 import { customAlphabet } from "nanoid";
 import z from "zod/v4";
 import { getSmsTmpCodeKey } from "@/server/utils/auth";
