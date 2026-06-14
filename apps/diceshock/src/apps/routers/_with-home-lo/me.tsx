@@ -86,7 +86,7 @@ function RouteComponent() {
     reset: resetSms,
   } = useSmsCode({
     phone,
-    containerId: "#phone-turnstile-container",
+    containerId: "#phone-captcha-container",
     enabled: isEditingPhone && import.meta.env.PROD && captchaEnabled,
   });
 
@@ -581,6 +581,7 @@ function RouteComponent() {
               />
 
               <button
+                id="sms-code-btn"
                 type="button"
                 className="btn btn-sm"
                 onClick={getSmsCode}
@@ -592,7 +593,7 @@ function RouteComponent() {
 
             {import.meta.env.PROD && captchaEnabled && (
               <div className="flex justify-center">
-                <div id="phone-turnstile-container" />
+                <div id="phone-captcha-container" />
               </div>
             )}
 

@@ -1,11 +1,18 @@
 import { signIn } from "@hono/auth-js/react";
 import { WarningIcon, XIcon } from "@phosphor-icons/react/dist/ssr";
 import clsx from "clsx";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import WechatIcon from "@/client/assets/svg/wechat.svg?react";
 import trpcClientPublic from "../../../../shared/utils/trpc";
 import useSmsCode from "../../../hooks/useSmsCode";
 import useTempIdentity from "../../../hooks/useTempIdentity";
 import Modal from "../../modal";
+
+/** 检测是否在微信内置浏览器中 */
+function isWechatBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /MicroMessenger/i.test(navigator.userAgent);
+}
 
 export default function LoginDialog({
   isOpen,
@@ -16,7 +23,7 @@ export default function LoginDialog({
   onClose: () => void;
   isSeatPage?: boolean;
 }) {
-  const [activeTab, setActiveTab] = useState<"phonenumber" | "thirdparty">(
+  const [activeTab, setActiveTab] = useState<"phonenumber" | "wechat">(
     "phonenumber",
   );
 
@@ -25,6 +32,8 @@ export default function LoginDialog({
   const { create: createTempIdentity } = useTempIdentity();
 
   const [captchaEnabled, setCaptchaEnabled] = useState(true);
+
+  const isInWechat = useMemo(() => isWechatBrowser(), []);
 
   useEffect(() => {
     trpcClientPublic.settings.getCaptchaEnabled
@@ -98,6 +107,12 @@ export default function LoginDialog({
     [phone, smsForm.code, setError, isSeatPage],
   );
 
+  const handleWechatLogin = useCallback(() => {
+    // 在微信浏览器内使用公众平台授权，否则使用开放平台扫码
+    const provider = isInWechat ? "wechat-mp" : "wechat-open";
+    signIn(provider, { callbackUrl: window.location.href });
+  }, [isInWechat]);
+
   const handleTempIdentity = useCallback(async () => {
     setCreatingTemp(true);
     try {
@@ -135,6 +150,24 @@ export default function LoginDialog({
         <h3 className="text-base font-bold px-7 pb-4 flex items-center gap-1">
           登录/注册
         </h3>
+
+        {/* Tab 切换 */}
+        <div className="tabs tabs-bordered px-7 mb-2">
+          <button
+            type="button"
+            className={clsx("tab", activeTab === "phonenumber" && "tab-active")}
+            onClick={() => setActiveTab("phonenumber")}
+          >
+            手机号登录
+          </button>
+          <button
+            type="button"
+            className={clsx("tab", activeTab === "wechat" && "tab-active")}
+            onClick={() => setActiveTab("wechat")}
+          >
+            微信登录
+          </button>
+        </div>
 
         {activeTab === "phonenumber" && (
           <form
@@ -184,6 +217,7 @@ export default function LoginDialog({
               />
 
               <button
+                id="sms-code-btn"
                 type="button"
                 className="btn btn-sm"
                 onClick={getSmsCode}
@@ -195,7 +229,7 @@ export default function LoginDialog({
 
             {import.meta.env.PROD && captchaEnabled && (
               <div className="flex justify-center">
-                <div id="turnstileIns-container" />
+                <div id="captcha-element" />
               </div>
             )}
 
@@ -218,6 +252,39 @@ export default function LoginDialog({
               </button>
             )}
           </form>
+        )}
+
+        {activeTab === "wechat" && (
+          <div className="flex flex-col items-center gap-4 py-8 px-12">
+            <button
+              type="button"
+              className="btn btn-success gap-2"
+              onClick={handleWechatLogin}
+            >
+              <WechatIcon className="size-5" />
+              {isInWechat ? "微信授权登录" : "微信扫码登录"}
+            </button>
+            <p className="text-xs text-base-content/60 text-center">
+              {isInWechat
+                ? "点击后将通过微信授权获取您的公开信息"
+                : "点击后将弹出微信二维码，请使用微信扫码完成登录"}
+            </p>
+
+            {isSeatPage && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={handleTempIdentity}
+                disabled={creatingTemp}
+              >
+                {creatingTemp ? (
+                  <span className="loading loading-spinner loading-xs" />
+                ) : (
+                  "临时使用（无需登录）"
+                )}
+              </button>
+            )}
+          </div>
         )}
       </div>
     </Modal>

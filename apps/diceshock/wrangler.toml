@@ -59,3 +59,9 @@ custom_domain = true
 
 [triggers]
 crons = ["0 4-22 * * *"]
+
+# WeChat OAuth secrets (set via `wrangler secret put`):
+# WECHAT_OPEN_APP_ID
+# WECHAT_OPEN_APP_SECRET
+# WECHAT_MP_APP_ID
+# WECHAT_MP_APP_SECRET

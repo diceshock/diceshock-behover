@@ -8,6 +8,7 @@ import { nanoid } from "nanoid/non-secure";
 import type z from "zod/v4";
 import type { HonoCtxEnv } from "@/shared/types";
 import { FACTORY } from "../factory";
+import { WechatMP, WechatOpen } from "../providers/wechat";
 import { injectCrossDataToCtx } from "../utils";
 import { genNickname, getSmsTmpCodeKey } from "../utils/auth";
 
@@ -81,6 +82,26 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
       },
     },
   };
+
+  // 微信开放平台 - PC 端扫码登录
+  if (c.env.WECHAT_OPEN_APP_ID && c.env.WECHAT_OPEN_APP_SECRET) {
+    config.providers.push(
+      WechatOpen({
+        clientId: c.env.WECHAT_OPEN_APP_ID,
+        clientSecret: c.env.WECHAT_OPEN_APP_SECRET,
+      }),
+    );
+  }
+
+  // 微信公众平台 - 微信内网页授权
+  if (c.env.WECHAT_MP_APP_ID && c.env.WECHAT_MP_APP_SECRET) {
+    config.providers.push(
+      WechatMP({
+        clientId: c.env.WECHAT_MP_APP_ID,
+        clientSecret: c.env.WECHAT_MP_APP_SECRET,
+      }),
+    );
+  }
 
   if (!aliyunClient) return config;
 

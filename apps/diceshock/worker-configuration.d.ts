@@ -11,10 +11,15 @@ declare namespace Cloudflare {
 		CLOUDFLARE_ACCOUNT_ID: string;
 		CLOUDFLARE_D1_TOKEN: string;
 		TURNSTILE_KEY: string;
+		CAPTCHA_PREFIX?: string;
 		AUTH_SECRET: string;
 		ALIBABA_CLOUD_ACCESS_KEY_ID: string;
 		ALIBABA_CLOUD_ACCESS_KEY_SECRET: string;
 		DEV_SMS_CODE?: string;
+		WECHAT_OPEN_APP_ID?: string;
+		WECHAT_OPEN_APP_SECRET?: string;
+		WECHAT_MP_APP_ID?: string;
+		WECHAT_MP_APP_SECRET?: string;
 		GSZ_TOKEN: string;
 		R2: R2Bucket;
 		DB: D1Database;

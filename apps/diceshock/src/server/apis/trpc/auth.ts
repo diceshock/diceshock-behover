@@ -6,16 +6,80 @@ import z from "zod/v4";
 import { getSmsTmpCodeKey } from "@/server/utils/auth";
 import { protectedProcedure, publicProcedure } from "./baseTRPC";
 
-export interface TurnstileResponse {
-  success: boolean;
-  challenge_ts: string;
-  hostname: string;
-  "error-codes": any[];
-  action: string;
-  cdata: string;
-  metadata: {
-    ephemeral_id: string;
+/**
+ * 阿里云验证码 2.0 服务端验证
+ * 使用 HMAC-SHA256 签名调用 VerifyIntelligentCaptcha API
+ */
+async function verifyAliyunCaptcha(
+  captchaVerifyParam: string,
+  sceneId: string,
+  accessKeyId: string,
+  accessKeySecret: string,
+): Promise<boolean> {
+  // 阿里云验证码 2.0 使用 POP API 风格调用
+  const endpoint = "captcha.cn-shanghai.aliyuncs.com";
+  const apiVersion = "2023-03-05";
+  const action = "VerifyCaptcha";
+
+  const params: Record<string, string> = {
+    Action: action,
+    Version: apiVersion,
+    Format: "JSON",
+    AccessKeyId: accessKeyId,
+    SignatureMethod: "HMAC-SHA256",
+    SignatureVersion: "1.0",
+    SignatureNonce: crypto.randomUUID(),
+    Timestamp: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
+    SceneId: sceneId,
+    CaptchaVerifyParam: captchaVerifyParam,
   };
+
+  // 构建签名字符串
+  const sortedKeys = Object.keys(params).sort();
+  const canonicalQuery = sortedKeys
+    .map(
+      (key) => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`,
+    )
+    .join("&");
+
+  const stringToSign = `GET&${encodeURIComponent("/")}&${encodeURIComponent(canonicalQuery)}`;
+
+  // HMAC-SHA256 签名
+  const keyData = new TextEncoder().encode(`${accessKeySecret}&`);
+  const msgData = new TextEncoder().encode(stringToSign);
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    keyData,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", cryptoKey, msgData);
+  const signatureBase64 = btoa(
+    String.fromCharCode(...new Uint8Array(signature)),
+  );
+
+  params.Signature = signatureBase64;
+
+  // 发起请求
+  const queryString = Object.entries(params)
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join("&");
+
+  const url = `https://${endpoint}/?${queryString}`;
+
+  try {
+    const response = await fetch(url);
+    const result = (await response.json()) as any;
+
+    console.log("[验证码] 阿里云 CAPTCHA 验证结果:", JSON.stringify(result));
+
+    // VerifyCaptcha 返回 Result.VerifyResult = true/false
+    return result?.Result?.VerifyResult === true;
+  } catch (error) {
+    console.error("[验证码] 阿里云 CAPTCHA 验证请求失败:", error);
+    return false;
+  }
 }
 
 const smsCode = publicProcedure
@@ -23,11 +87,11 @@ const smsCode = publicProcedure
   .mutation(async ({ input, ctx }) => {
     const { phone, botcheck } = input;
     const { aliyunClient, env } = ctx;
-    const { KV, TURNSTILE_KEY } = env;
+    const { KV } = env;
 
     const devSmsCode = env.DEV_SMS_CODE;
 
-    // DEV_SMS_CODE 模式：使用固定验证码，跳过 Turnstile 和阿里云 SMS
+    // DEV_SMS_CODE 模式：使用固定验证码，跳过验证码和阿里云 SMS
     if (devSmsCode) {
       const expirationTtl = 60 * 5;
       const kvKey = getSmsTmpCodeKey(phone);
@@ -40,29 +104,22 @@ const smsCode = publicProcedure
       return { success: true, expiresInMs: expirationTtl * 1000 };
     }
 
-    const formData = new FormData();
-    formData.append("secret", TURNSTILE_KEY);
-    formData.append("response", botcheck ?? "");
-
     const captchaDisabled = await KV.get("settings:captcha_disabled_until");
 
     if (import.meta.env.PROD && !captchaDisabled) {
-      try {
-        const response = await fetch(
-          "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-          {
-            method: "POST",
-            body: formData,
-          },
-        );
+      if (!botcheck) {
+        return { success: false, message: "请先通过人机验证" };
+      }
 
-        const result: TurnstileResponse = await response.json();
+      const captchaValid = await verifyAliyunCaptcha(
+        botcheck,
+        env.CAPTCHA_PREFIX || "1bqoki",
+        env.ALIBABA_CLOUD_ACCESS_KEY_ID,
+        env.ALIBABA_CLOUD_ACCESS_KEY_SECRET,
+      );
 
-        if (!result.success)
-          return { success: false, message: "Turnstile 验证失败, 请稍后重试" };
-      } catch (error) {
-        console.error("Turnstile validation error:", error);
-        return { success: false, message: "Turnstile 验证失败, 请稍后重试" };
+      if (!captchaValid) {
+        return { success: false, message: "人机验证失败，请重试" };
       }
     }
 

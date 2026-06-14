@@ -1,23 +1,46 @@
-/// <reference types="cloudflare-turnstile" />
-
 import { useAtomValue } from "jotai";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useReducer,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { z } from "zod/v4";
 import { themeA } from "@/client/components/ThemeSwap";
 import trpcClientPublic from "@/shared/utils/trpc";
 
-const SITE_KEY = "0x4AAAAAACNaVUPcjZJ2BWv-";
+/**
+ * 阿里云验证码 2.0 (CAPTCHA 2.0)
+ * 使用弹出式验证，用户点击「获取验证码」时弹出人机验证
+ */
 
-/** Read lazily — the `defer` script may not be ready at module-eval time. */
-const getTurnstile = (): typeof turnstile | null =>
-  (globalThis as any).turnstile ?? null;
+const CAPTCHA_PREFIX = "1bqoki";
+const CAPTCHA_SCENE_ID = CAPTCHA_PREFIX;
+
+declare global {
+  interface Window {
+    initAliyunCaptcha?: (
+      config: AliyunCaptchaConfig,
+    ) => Promise<AliyunCaptchaInstance>;
+  }
+}
+
+interface AliyunCaptchaConfig {
+  SceneId: string;
+  prefix: string;
+  mode: "popup" | "embed";
+  element?: string;
+  button?: string;
+  captchaVerifyCallback: (
+    captchaVerifyParam: string,
+  ) => Promise<{ captchaResult: boolean; bizResult: boolean }>;
+  onBizResultCallback: (bizResult: boolean) => void;
+  getInstance?: (instance: AliyunCaptchaInstance) => void;
+  slideStyle?: { width: number; height: number };
+  language?: string;
+}
+
+interface AliyunCaptchaInstance {
+  show: () => void;
+  hide: () => void;
+  refresh: () => void;
+  destroy: () => void;
+}
 
 type SmsFormState = {
   botcheck: null | string;
@@ -52,20 +75,21 @@ const INITIAL_SMS_FORM_STATE: SmsFormState = {
 
 export default function useSmsCode({
   phone,
-  containerId = "#turnstileIns-container",
+  containerId: _containerId = "#captcha-container",
   enabled = true,
 }: {
   phone: string;
   containerId?: string;
   enabled?: boolean;
 }) {
-  const theme = useAtomValue(themeA);
+  const _theme = useAtomValue(themeA);
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
 
-  const turnstileIdRef = useRef<string | null | undefined>(null);
+  const captchaInstanceRef = useRef<AliyunCaptchaInstance | null>(null);
   const countdownTimerRef = useRef<number | null>(null);
-  const prevPhoneRef = useRef<string>("");
+  const phoneRef = useRef(phone);
+  phoneRef.current = phone;
 
   const [smsForm, dispatchSmsForm] = useReducer(
     smsFormReducer,
@@ -76,92 +100,106 @@ export default function useSmsCode({
     dispatchSmsForm({ type: "RESET" });
     setCountdown(0);
     setError(null);
-    prevPhoneRef.current = "";
-    const ts = getTurnstile();
-    if (ts && turnstileIdRef.current) {
-      ts.reset(turnstileIdRef.current);
-    }
   }, []);
 
-  useLayoutEffect(() => {
-    if (typeof window === "undefined") return;
-
-    if (!enabled) {
-      const ts = getTurnstile();
-      if (ts && turnstileIdRef.current) {
-        ts.remove(turnstileIdRef.current);
-        turnstileIdRef.current = null;
-      }
-      dispatchSmsForm({ type: "RESET" });
-      setCountdown(0);
-      setError(null);
-      prevPhoneRef.current = "";
+  // 初始化阿里云验证码实例
+  useEffect(() => {
+    if (typeof window === "undefined" || !enabled) {
       return;
     }
 
-    const container = document.querySelector(containerId);
-    if (!container) return;
+    let destroyed = false;
 
-    const renderWidget = (ts: typeof turnstile) => {
-      if (turnstileIdRef.current) {
-        ts.remove(turnstileIdRef.current);
-        turnstileIdRef.current = null;
+    const initCaptcha = async () => {
+      // 等待 SDK 加载
+      const waitForSDK = (): Promise<void> =>
+        new Promise((resolve) => {
+          if (window.initAliyunCaptcha) {
+            resolve();
+            return;
+          }
+          const poll = setInterval(() => {
+            if (window.initAliyunCaptcha) {
+              clearInterval(poll);
+              resolve();
+            }
+          }, 200);
+          // 10s 超时
+          setTimeout(() => {
+            clearInterval(poll);
+            resolve();
+          }, 10000);
+        });
+
+      await waitForSDK();
+
+      if (destroyed || !window.initAliyunCaptcha) return;
+
+      try {
+        const instance = await window.initAliyunCaptcha({
+          SceneId: CAPTCHA_SCENE_ID,
+          prefix: CAPTCHA_PREFIX,
+          mode: "popup",
+          element: "#captcha-element",
+          button: "#sms-code-btn",
+          captchaVerifyCallback: async (captchaVerifyParam) => {
+            // 验证码通过后，发送短信
+            try {
+              const result = await trpcClientPublic.auth.smsCode.mutate({
+                botcheck: captchaVerifyParam,
+                phone: phoneRef.current,
+              });
+
+              if (result.success) {
+                return { captchaResult: true, bizResult: true };
+              }
+
+              return {
+                captchaResult: true,
+                bizResult: false,
+              };
+            } catch {
+              return { captchaResult: true, bizResult: false };
+            }
+          },
+          onBizResultCallback: (bizResult) => {
+            if (bizResult) {
+              setCountdown(20);
+              setError(null);
+            } else {
+              setError("发送失败，请稍后重试");
+            }
+          },
+          getInstance: (inst) => {
+            if (!destroyed) {
+              captchaInstanceRef.current = inst;
+            }
+          },
+          slideStyle: { width: 360, height: 40 },
+          language: "cn",
+        });
+
+        if (!destroyed) {
+          captchaInstanceRef.current = instance;
+        }
+      } catch (err) {
+        console.error("初始化阿里云验证码失败:", err);
       }
-
-      turnstileIdRef.current = ts.render(containerId, {
-        sitekey: SITE_KEY,
-        theme: theme === "dark" ? "dark" : "light",
-        size: "normal",
-        callback: (token: string) => {
-          dispatchSmsForm({ type: "SET_BOTCHECK", payload: token });
-        },
-      });
     };
 
-    const ts = getTurnstile();
-    if (ts) {
-      renderWidget(ts);
-    } else {
-      const pollId = window.setInterval(() => {
-        const ts = getTurnstile();
-        if (ts) {
-          clearInterval(pollId);
-          renderWidget(ts);
-        }
-      }, 200);
-      return () => clearInterval(pollId);
-    }
+    initCaptcha();
 
     return () => {
-      const ts = getTurnstile();
-      if (ts && turnstileIdRef.current) {
-        ts.remove(turnstileIdRef.current);
-        turnstileIdRef.current = null;
+      destroyed = true;
+      if (captchaInstanceRef.current) {
+        captchaInstanceRef.current.destroy();
+        captchaInstanceRef.current = null;
       }
     };
-  }, [enabled, theme, containerId]);
-
-  // 监听手机号变化，重置状态
-  useEffect(() => {
-    if (phone !== prevPhoneRef.current) {
-      if (prevPhoneRef.current && smsForm.botcheck) {
-        dispatchSmsForm({ type: "RESET" });
-        const ts = getTurnstile();
-        if (ts && turnstileIdRef.current) {
-          ts.reset(turnstileIdRef.current);
-        }
-      }
-      prevPhoneRef.current = phone;
-      setError(null);
-    }
-  }, [phone, smsForm.botcheck]);
+  }, [enabled]);
 
   const getSmsCode = useCallback(async () => {
     if (countdown > 0) return;
-
-    if (import.meta.env.PROD && enabled) {
-      if (!smsForm.botcheck) return setError("请先通过人机验证");
-    }
 
     const phoneResult = z
       .string()
@@ -174,33 +212,32 @@ export default function useSmsCode({
 
     setError(null);
 
-    try {
-      const result = await trpcClientPublic.auth.smsCode.mutate({
-        botcheck: smsForm.botcheck,
-        phone,
-      });
+    // 非生产环境或验证码未启用时直接发送
+    if (!import.meta.env.PROD || !enabled) {
+      try {
+        const result = await trpcClientPublic.auth.smsCode.mutate({
+          botcheck: null,
+          phone,
+        });
 
-      if (result.success) return setCountdown(20);
+        if (result.success) return setCountdown(20);
 
-      dispatchSmsForm({ type: "RESET" });
-      const ts = getTurnstile();
-      if (ts && turnstileIdRef.current) {
-        ts.reset(turnstileIdRef.current);
+        if (!result.success && "message" in result)
+          return setError(result.message);
+
+        setError("发送失败，请稍后重试");
+      } catch {
+        setError("网络错误，请稍后重试");
       }
-
-      if (!result.success && "message" in result)
-        return setError(result.message);
-
-      setError("发送失败，请稍后重试");
-    } catch {
-      dispatchSmsForm({ type: "RESET" });
-      const ts = getTurnstile();
-      if (ts && turnstileIdRef.current) {
-        ts.reset(turnstileIdRef.current);
-      }
-      setError("网络错误，请稍后重试");
+      return;
     }
-  }, [phone, smsForm.botcheck, countdown]);
+
+    // 生产环境下，验证码弹窗由 button id="sms-code-btn" 自动触发
+    // 如果 captcha 实例存在但未自动弹出，手动触发
+    if (captchaInstanceRef.current) {
+      captchaInstanceRef.current.show();
+    }
+  }, [phone, countdown, enabled]);
 
   useEffect(() => {
     if (countdown > 0) {

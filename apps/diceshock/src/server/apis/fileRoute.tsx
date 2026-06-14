@@ -59,7 +59,7 @@ export default async function fileRoute(c: Context<HonoCtxEnv>) {
             />
 
             <script
-              src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+              src="https://o.alicdn.com/captcha-frontend/aliyunCaptcha/AliyunCaptcha.js"
               defer
             ></script>
           </head>
