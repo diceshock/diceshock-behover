@@ -181,9 +181,13 @@ export function WechatOpen(config: WechatProviderConfig) {
     client: {
       token_endpoint_auth_method: "client_secret_post",
     },
-    // 使用 customFetch 拦截 token endpoint 请求
-    [customFetch]: createWechatFetch(clientId, clientSecret),
     checks: ["state"],
+    // [customFetch] 必须放在 options 里，Auth.js normalizeOAuth 只从 options 读取 Symbol
+    options: {
+      clientId,
+      clientSecret,
+      [customFetch]: createWechatFetch(clientId, clientSecret),
+    },
   } satisfies OAuthConfig<WechatProfile>;
 }
 
@@ -256,7 +260,11 @@ export function WechatMP(config: WechatProviderConfig) {
     client: {
       token_endpoint_auth_method: "client_secret_post",
     },
-    [customFetch]: createWechatFetch(clientId, clientSecret),
     checks: ["state"],
+    options: {
+      clientId,
+      clientSecret,
+      [customFetch]: createWechatFetch(clientId, clientSecret),
+    },
   } satisfies OAuthConfig<WechatProfile>;
 }
