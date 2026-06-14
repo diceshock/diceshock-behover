@@ -6,7 +6,7 @@ import trpcClientPublic from "@/shared/utils/trpc";
 
 /**
  * 阿里云验证码 2.0 (CAPTCHA 2.0)
- * 使用弹出式验证，用户点击「获取验证码」时弹出人机验证
+ * 使用弹出式验证，用户点击「获取验证码」时手动触发验证弹窗
  */
 
 const CAPTCHA_PREFIX = "1bqoki";
@@ -16,7 +16,7 @@ declare global {
   interface Window {
     initAliyunCaptcha?: (
       config: AliyunCaptchaConfig,
-    ) => Promise<AliyunCaptchaInstance>;
+    ) => Promise<AliyunCaptchaInstance | void>;
   }
 }
 
@@ -36,10 +36,10 @@ interface AliyunCaptchaConfig {
 }
 
 interface AliyunCaptchaInstance {
-  show: () => void;
-  hide: () => void;
-  refresh: () => void;
-  destroy: () => void;
+  show?: () => void;
+  hide?: () => void;
+  refresh?: () => void;
+  destroy?: () => void;
 }
 
 type SmsFormState = {
@@ -75,7 +75,7 @@ const INITIAL_SMS_FORM_STATE: SmsFormState = {
 
 export default function useSmsCode({
   phone,
-  containerId: _containerId = "#captcha-container",
+  containerId = "#captcha-element",
   enabled = true,
 }: {
   phone: string;
@@ -90,6 +90,7 @@ export default function useSmsCode({
   const countdownTimerRef = useRef<number | null>(null);
   const phoneRef = useRef(phone);
   phoneRef.current = phone;
+  const initializingRef = useRef(false);
 
   const [smsForm, dispatchSmsForm] = useReducer(
     smsFormReducer,
@@ -102,48 +103,25 @@ export default function useSmsCode({
     setError(null);
   }, []);
 
-  // 初始化阿里云验证码实例
-  useEffect(() => {
-    if (typeof window === "undefined" || !enabled) {
-      return;
-    }
+  const initCaptchaInstance =
+    useCallback(async (): Promise<AliyunCaptchaInstance | null> => {
+      if (captchaInstanceRef.current) return captchaInstanceRef.current;
+      if (initializingRef.current) return null;
+      if (!window.initAliyunCaptcha) return null;
 
-    let destroyed = false;
-
-    const initCaptcha = async () => {
-      // 等待 SDK 加载
-      const waitForSDK = (): Promise<void> =>
-        new Promise((resolve) => {
-          if (window.initAliyunCaptcha) {
-            resolve();
-            return;
-          }
-          const poll = setInterval(() => {
-            if (window.initAliyunCaptcha) {
-              clearInterval(poll);
-              resolve();
-            }
-          }, 200);
-          // 10s 超时
-          setTimeout(() => {
-            clearInterval(poll);
-            resolve();
-          }, 10000);
-        });
-
-      await waitForSDK();
-
-      if (destroyed || !window.initAliyunCaptcha) return;
+      initializingRef.current = true;
 
       try {
-        const instance = await window.initAliyunCaptcha({
+        let resolvedInstance: AliyunCaptchaInstance | null = null;
+
+        await window.initAliyunCaptcha({
           SceneId: CAPTCHA_SCENE_ID,
           prefix: CAPTCHA_PREFIX,
           mode: "popup",
-          element: "#captcha-element",
-          button: "#sms-code-btn",
+          element: containerId,
+          // 不绑定 button — 我们手动调用 show()
+          button: "#__captcha_no_bindbutton__",
           captchaVerifyCallback: async (captchaVerifyParam) => {
-            // 验证码通过后，发送短信
             try {
               const result = await trpcClientPublic.auth.smsCode.mutate({
                 botcheck: captchaVerifyParam,
@@ -154,10 +132,7 @@ export default function useSmsCode({
                 return { captchaResult: true, bizResult: true };
               }
 
-              return {
-                captchaResult: true,
-                bizResult: false,
-              };
+              return { captchaResult: true, bizResult: false };
             } catch {
               return { captchaResult: true, bizResult: false };
             }
@@ -171,32 +146,61 @@ export default function useSmsCode({
             }
           },
           getInstance: (inst) => {
-            if (!destroyed) {
-              captchaInstanceRef.current = inst;
-            }
+            resolvedInstance = inst;
+            captchaInstanceRef.current = inst;
           },
           slideStyle: { width: 360, height: 40 },
           language: "cn",
         });
 
-        if (!destroyed) {
-          captchaInstanceRef.current = instance;
+        if (resolvedInstance) {
+          captchaInstanceRef.current = resolvedInstance;
         }
+
+        return captchaInstanceRef.current;
       } catch (err) {
         console.error("初始化阿里云验证码失败:", err);
+        return null;
+      } finally {
+        initializingRef.current = false;
       }
-    };
+    }, [containerId]);
 
-    initCaptcha();
+  // 等待 SDK 加载
+  useEffect(() => {
+    if (typeof window === "undefined" || !enabled) return;
+
+    // SDK 已加载则尝试初始化
+    if (window.initAliyunCaptcha) {
+      initCaptchaInstance();
+      return;
+    }
+
+    // 轮询等待 SDK
+    const poll = setInterval(() => {
+      if (window.initAliyunCaptcha) {
+        clearInterval(poll);
+        initCaptchaInstance();
+      }
+    }, 300);
+
+    const timeout = setTimeout(() => clearInterval(poll), 10000);
 
     return () => {
-      destroyed = true;
-      if (captchaInstanceRef.current) {
+      clearInterval(poll);
+      clearTimeout(timeout);
+    };
+  }, [enabled, initCaptchaInstance]);
+
+  // 清理
+  useEffect(() => {
+    return () => {
+      if (captchaInstanceRef.current?.destroy) {
         captchaInstanceRef.current.destroy();
         captchaInstanceRef.current = null;
       }
     };
-  }, [enabled]);
+  }, []);
 
   const getSmsCode = useCallback(async () => {
     if (countdown > 0) return;
@@ -232,12 +236,29 @@ export default function useSmsCode({
       return;
     }
 
-    // 生产环境下，验证码弹窗由 button id="sms-code-btn" 自动触发
-    // 如果 captcha 实例存在但未自动弹出，手动触发
-    if (captchaInstanceRef.current) {
-      captchaInstanceRef.current.show();
+    // 生产环境：初始化并弹出验证码
+    const instance = await initCaptchaInstance();
+    if (instance?.show) {
+      instance.show();
+    } else {
+      // captcha SDK 未加载成功，直接发送短信（服务端 captchaDisabled 机制兜底）
+      try {
+        const result = await trpcClientPublic.auth.smsCode.mutate({
+          botcheck: null,
+          phone,
+        });
+
+        if (result.success) return setCountdown(20);
+
+        if (!result.success && "message" in result)
+          return setError(result.message);
+
+        setError("发送失败，请稍后重试");
+      } catch {
+        setError("网络错误，请稍后重试");
+      }
     }
-  }, [phone, countdown, enabled]);
+  }, [phone, countdown, enabled, initCaptchaInstance]);
 
   useEffect(() => {
     if (countdown > 0) {
