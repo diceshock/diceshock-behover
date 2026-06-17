@@ -153,6 +153,7 @@ function UserDetailPage() {
     phone: "",
   });
   const [editPending, setEditPending] = useState(false);
+  const [rolePending, setRolePending] = useState(false);
 
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [plansLoading, setPlansLoading] = useState(false);
@@ -497,6 +498,26 @@ function UserDetailPage() {
     }
   };
 
+  const handleRoleChange = async (newRole: string) => {
+    setRolePending(true);
+    try {
+      const res = await trpcClientDash.users.updateRole.mutate({
+        id,
+        role: newRole as "customer" | "admin" | "staff",
+      });
+      if (res.success) {
+        msg.success("角色已更新");
+        await fetchUser();
+      } else {
+        msg.error((res as any).message ?? "修改失败");
+      }
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "修改角色失败");
+    } finally {
+      setRolePending(false);
+    }
+  };
+
   const handleAddPlan = async (e: React.FormEvent) => {
     e.preventDefault();
     if (addFormOverlapError) {
@@ -779,6 +800,20 @@ function UserDetailPage() {
                   }
                   placeholder="手机号"
                 />
+              </label>
+
+              <label className="flex flex-col gap-2">
+                <span className="label text-sm font-semibold">角色</span>
+                <select
+                  className="select select-bordered w-full"
+                  value={user.role ?? "customer"}
+                  onChange={(e) => handleRoleChange(e.target.value)}
+                  disabled={rolePending}
+                >
+                  <option value="customer">顾客</option>
+                  <option value="staff">店员</option>
+                  <option value="admin">管理员</option>
+                </select>
               </label>
 
               <label className="flex flex-col gap-2">
