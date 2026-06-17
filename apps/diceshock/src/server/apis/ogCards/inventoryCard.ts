@@ -1,5 +1,5 @@
 import db, { boardGamesTable } from "@lib/db";
-import { count } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import type { Context } from "hono";
 import type { HonoCtxEnv } from "@/shared/types";
 import {
@@ -17,7 +17,8 @@ export async function inventoryCard(c: Context<HonoCtxEnv>) {
 
     const [result] = await db(c.env.DB)
       .select({ total: count() })
-      .from(boardGamesTable);
+      .from(boardGamesTable)
+      .where(eq(boardGamesTable.removeDate, new Date(0)));
 
     const total = result?.total ?? 0;
 
