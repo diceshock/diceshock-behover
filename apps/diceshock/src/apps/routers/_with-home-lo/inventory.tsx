@@ -4,7 +4,25 @@ import GameCountAnimation from "@/client/components/diceshock/GameCountAnimation
 import GameList from "@/client/components/diceshock/GameList";
 import trpcClientPublic from "@/shared/utils/trpc";
 
+const SITE_URL = "https://origin.runespark.fun";
+
 export const Route = createFileRoute("/_with-home-lo/inventory")({
+  head: () => ({
+    meta: [
+      { title: "桌游库 - DiceShock 骰惊" },
+      {
+        name: "description",
+        content: "DiceShock 骰惊桌游库存，查看我们拥有的所有桌游",
+      },
+      { property: "og:title", content: "桌游库 - DiceShock 骰惊" },
+      { property: "og:description", content: "查看 DiceShock 骰惊的桌游库存" },
+      {
+        property: "og:image",
+        content: `${SITE_URL}/edge/media/card/inventory`,
+      },
+      { property: "og:url", content: `${SITE_URL}/inventory` },
+    ],
+  }),
   component: RouteComponent,
 });
 

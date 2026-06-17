@@ -4,10 +4,10 @@ import { useCrossDataRegister } from "@/client/hooks/useCrossData";
 import { MessagesContainer } from "@/client/hooks/useMessages";
 
 export const Route = createRootRoute({
-  component: _Home,
+  component: RootComponent,
 });
 
-function _Home() {
+function RootComponent() {
   useCrossDataRegister();
   useAuthRegister();
 

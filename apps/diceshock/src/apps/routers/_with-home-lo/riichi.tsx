@@ -15,7 +15,28 @@ import type { PPCategory } from "@/shared/mahjong/pp";
 import { formatPP, PP_CATEGORY_LABELS } from "@/shared/mahjong/pp";
 import trpcClientPublic from "@/shared/utils/trpc";
 
+const SITE_URL = "https://origin.runespark.fun";
+
 export const Route = createFileRoute("/_with-home-lo/riichi")({
+  head: () => ({
+    meta: [
+      { title: "日麻 PP 排行榜 - DiceShock 骰惊" },
+      {
+        name: "description",
+        content: "DiceShock 骰惊立直麻将 PP 排行榜，查看日/周/月排名",
+      },
+      { property: "og:title", content: "日麻 PP 排行榜 - DiceShock 骰惊" },
+      {
+        property: "og:description",
+        content: "立直麻将 PP 排行榜，查看日/周/月排名",
+      },
+      {
+        property: "og:image",
+        content: `${SITE_URL}/edge/media/card/riichi-ranking`,
+      },
+      { property: "og:url", content: `${SITE_URL}/riichi` },
+    ],
+  }),
   component: GszPage,
 });
 

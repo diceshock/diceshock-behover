@@ -22,7 +22,22 @@ import { useMessages } from "@/client/hooks/useMessages";
 import dayjs from "@/shared/utils/dayjs-config";
 import trpcClientPublic from "@/shared/utils/trpc";
 
+const SITE_URL = "https://origin.runespark.fun";
+
 export const Route = createFileRoute("/_with-home-lo/actives_/$id")({
+  head: ({ params }) => ({
+    meta: [
+      { title: "约局详情 - DiceShock 骰惊" },
+      { name: "description", content: "查看约局详情，加入桌游社区" },
+      { property: "og:title", content: "约局详情 - DiceShock 骰惊" },
+      { property: "og:description", content: "查看约局详情，加入桌游社区" },
+      {
+        property: "og:image",
+        content: `${SITE_URL}/edge/media/card/active/${params.id}`,
+      },
+      { property: "og:url", content: `${SITE_URL}/actives/${params.id}` },
+    ],
+  }),
   component: ActiveDetailPage,
 });
 

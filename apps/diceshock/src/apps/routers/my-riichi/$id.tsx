@@ -30,7 +30,28 @@ import type { MatchType } from "@/shared/mahjong/types";
 import dayjs from "@/shared/utils/dayjs-config";
 import trpcClientPublic from "@/shared/utils/trpc";
 
+const SITE_URL = "https://origin.runespark.fun";
+
 export const Route = createFileRoute("/my-riichi/$id")({
+  head: ({ params }) => ({
+    meta: [
+      { title: "日麻个人战绩 - DiceShock 骰惊" },
+      {
+        name: "description",
+        content: "查看日麻 PP 统计、对局记录、排名和徽章",
+      },
+      { property: "og:title", content: "日麻个人战绩 - DiceShock 骰惊" },
+      {
+        property: "og:description",
+        content: "查看日麻 PP 统计、对局记录、排名和徽章",
+      },
+      {
+        property: "og:image",
+        content: `${SITE_URL}/edge/media/card/riichi-stats/${params.id}`,
+      },
+      { property: "og:url", content: `${SITE_URL}/my-riichi/${params.id}` },
+    ],
+  }),
   component: MyGszProfile,
 });
 

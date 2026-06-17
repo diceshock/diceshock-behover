@@ -1,88 +1,45 @@
-import puppeteer from "@cloudflare/puppeteer";
 import db from "@lib/db";
 import type { Context } from "hono";
 import type { HonoCtxEnv } from "@/shared/types";
-
-const CARD_PREFIX = "card/board-game/";
-const CACHE_TTL_MS = 2 * 60 * 60 * 1000;
+import { fetchAsDataUrl, LOGO_URL, renderCardResponse } from "./ogCards/shared";
 
 export async function boardGameCard(c: Context<HonoCtxEnv>) {
   const id = c.req.param("id") as string;
-  const r2Key = `${CARD_PREFIX}${id}.png`;
+  const r2Key = `card/board-game/${id}.png`;
 
-  const cached = await c.env.R2.head(r2Key);
-  if (cached && cached.uploaded) {
-    const age = Date.now() - cached.uploaded.getTime();
-    if (age < CACHE_TTL_MS) {
-      const obj = await c.env.R2.get(r2Key);
-      if (obj) {
-        return new Response(obj.body, {
-          headers: {
-            "content-type": "image/png",
-            "cache-control": "no-cache",
-          },
-        });
-      }
+  return renderCardResponse(c, r2Key, async () => {
+    const game = await db(c.env.DB).query.boardGamesTable.findFirst({
+      where: (g, { eq }) => eq(g.id, id),
+    });
+
+    if (!game || !game.content) {
+      return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body><p>Not found</p><script>window.__ready=true;</script></body></html>`;
     }
-  }
 
-  const game = await db(c.env.DB).query.boardGamesTable.findFirst({
-    where: (g, { eq }) => eq(g.id, id),
+    const col = game.content;
+    const coverUrl = col.sch_cover_url || col.eng_cover_url || "";
+    const [coverDataUrl, logoDataUrl] = await Promise.all([
+      fetchAsDataUrl(coverUrl),
+      fetchAsDataUrl(LOGO_URL),
+    ]);
+
+    return buildCardHtml({
+      schName: col.sch_name || game.sch_name || "",
+      engName: col.eng_name || game.eng_name || "",
+      coverUrl: coverDataUrl,
+      logoUrl: logoDataUrl,
+      rating: game.gstone_rating ?? col.gstone_rating ?? 0,
+      playerNum: game.player_num ?? col.player_num ?? [],
+      bestPlayerNum: game.best_player_num ?? [],
+      categories: (game.category ?? col.category ?? []).map(
+        (c) => c.sch_domain_value,
+      ),
+      mode: col.mode?.sch_domain_value ?? "",
+      difficulty: col.difficulty ?? 0,
+      avgTime: col.average_time_per_player ?? 0,
+      publishYear: col.publish_year ?? 0,
+    });
   });
-
-  if (!game || !game.content) {
-    return c.json({ error: "桌游不存在" }, 404);
-  }
-
-  const col = game.content;
-  const coverUrl = col.sch_cover_url || col.eng_cover_url || "";
-  const [coverDataUrl, logoDataUrl] = await Promise.all([
-    fetchAsDataUrl(coverUrl),
-    fetchAsDataUrl(LOGO_URL),
-  ]);
-
-  const html = buildCardHtml({
-    schName: col.sch_name || game.sch_name || "",
-    engName: col.eng_name || game.eng_name || "",
-    coverUrl: coverDataUrl,
-    logoUrl: logoDataUrl,
-    rating: game.gstone_rating ?? col.gstone_rating ?? 0,
-    playerNum: game.player_num ?? col.player_num ?? [],
-    bestPlayerNum: game.best_player_num ?? [],
-    categories: (game.category ?? col.category ?? []).map(
-      (c) => c.sch_domain_value,
-    ),
-    mode: col.mode?.sch_domain_value ?? "",
-    difficulty: col.difficulty ?? 0,
-    avgTime: col.average_time_per_player ?? 0,
-    publishYear: col.publish_year ?? 0,
-  });
-
-  const browser = await puppeteer.launch(c.env.BROWSER);
-  try {
-    const page = await browser.newPage();
-    await page.setViewport({ width: 1200, height: 630 });
-    await page.setContent(html, { waitUntil: "networkidle0" });
-    await page.waitForFunction(() => (window as any).__ready === true, {
-      timeout: 15000,
-    });
-
-    const buffer = (await page.screenshot({ type: "png" })) as Buffer;
-    const bytes = new Uint8Array(buffer);
-
-    await c.env.R2.put(r2Key, bytes, {
-      httpMetadata: { contentType: "image/png" },
-    });
-
-    return new Response(bytes, {
-      headers: {
-        "content-type": "image/png",
-        "cache-control": "no-cache",
-      },
-    });
-  } finally {
-    await browser.close();
-  }
 }
 
 interface CardData {
@@ -99,8 +56,6 @@ interface CardData {
   avgTime: number;
   publishYear: number;
 }
-
-const LOGO_URL = "https://assets.runespark.fun/images/diceshock.favicon.svg";
 
 function buildCardHtml(data: CardData): string {
   const playerRange = data.playerNum.length
@@ -273,22 +228,4 @@ else {
 }
 </script>
 </body></html>`;
-}
-
-async function fetchAsDataUrl(url: string): Promise<string> {
-  if (!url) return "";
-  try {
-    const resp = await fetch(url);
-    if (!resp.ok) return "";
-    const contentType = resp.headers.get("content-type") || "image/jpeg";
-    const buf = await resp.arrayBuffer();
-    const base64 = btoa(
-      Array.from(new Uint8Array(buf))
-        .map((b) => String.fromCharCode(b))
-        .join(""),
-    );
-    return `data:${contentType};base64,${base64}`;
-  } catch {
-    return "";
-  }
 }

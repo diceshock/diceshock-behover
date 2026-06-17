@@ -9,7 +9,14 @@ import {
   imageProcessSubmit,
 } from "@/server/apis/imageProcess";
 import mediaUpload from "@/server/apis/mediaUpload";
+import { activeCard } from "@/server/apis/ogCards/activeCard";
+import { activesListCard } from "@/server/apis/ogCards/activesListCard";
+import { eventCard } from "@/server/apis/ogCards/eventCard";
+import { inventoryCard } from "@/server/apis/ogCards/inventoryCard";
+import { riichiRankingCard } from "@/server/apis/ogCards/riichiRanking";
+import { riichiStatsCard } from "@/server/apis/ogCards/riichiStats";
 import sitemap from "@/server/apis/sitemap";
+import { wechatMessage, wechatVerify } from "@/server/apis/wechat";
 import type { HonoCtxEnv } from "@/shared/types";
 import seatRedirect from "./server/middlewares/seatRedirect";
 import "@/shared/utils/dayjs-config";
@@ -31,6 +38,9 @@ export const app = new Hono<{ Bindings: HonoCtxEnv }>();
 
 app.use(requestEndpoint);
 
+app.get("/wechat", wechatVerify);
+app.post("/wechat", wechatMessage);
+
 app.use(aliyunInj);
 app.use(authInit);
 
@@ -40,6 +50,12 @@ app.post("/edge/media/upload", mediaUpload);
 app.post("/edge/media/process", imageProcessSubmit);
 app.get("/edge/media/process/:taskId", imageProcessStatus);
 app.get("/edge/media/card/board-game/:id", boardGameCard);
+app.get("/edge/media/card/riichi-ranking", riichiRankingCard);
+app.get("/edge/media/card/riichi-stats/:userId", riichiStatsCard);
+app.get("/edge/media/card/active/:id", activeCard);
+app.get("/edge/media/card/actives", activesListCard);
+app.get("/edge/media/card/event/:id", eventCard);
+app.get("/edge/media/card/inventory", inventoryCard);
 
 app.use("/edge/*", trpcServerDash);
 app.use("/apis/*", trpcServerPublic);
