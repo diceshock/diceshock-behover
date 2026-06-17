@@ -1,5 +1,7 @@
 import puppeteer from "@cloudflare/puppeteer";
 import type { Context } from "hono";
+import type { PropsWithChildren } from "react";
+import { renderToString } from "react-dom/server";
 import type { HonoCtxEnv } from "@/shared/types";
 
 const CACHE_TTL_MS = 2 * 60 * 60 * 1000;
@@ -74,11 +76,7 @@ export async function renderCardResponse(
   }
 }
 
-export function cardShell(bodyContent: string): string {
-  return `<!DOCTYPE html>
-<html><head><meta charset="utf-8">
-<style>
-* { margin:0; padding:0; box-sizing:border-box; }
+const CARD_SHELL_CSS = `* { margin:0; padding:0; box-sizing:border-box; }
 body {
   width: 1200px; height: 630px;
   font-family: -apple-system, "Noto Sans SC", "Helvetica Neue", sans-serif;
@@ -139,8 +137,43 @@ body {
   font-size: 15px;
   color: #ccc;
   letter-spacing: 0.5px;
+}`;
+
+export function CardShell({ children }: PropsWithChildren) {
+  return (
+    <html>
+      <head>
+        <meta charSet="utf-8" />
+        <style dangerouslySetInnerHTML={{ __html: CARD_SHELL_CSS }} />
+      </head>
+      <body>
+        {children}
+        <script
+          dangerouslySetInnerHTML={{ __html: "window.__ready = true;" }}
+        />
+      </body>
+    </html>
+  );
 }
-</style>
+
+export function CardFooter({ logoUrl }: { logoUrl: string }) {
+  return (
+    <div className="footer">
+      <img src={logoUrl} />
+      <span>diceshock.com</span>
+    </div>
+  );
+}
+
+export function renderCard(element: React.ReactElement): string {
+  return `<!DOCTYPE html>${renderToString(element)}`;
+}
+
+export function cardShell(bodyContent: string): string {
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>${CARD_SHELL_CSS}</style>
+</head>
 ${bodyContent}
 <script>window.__ready = true;</script>
 </body></html>`;

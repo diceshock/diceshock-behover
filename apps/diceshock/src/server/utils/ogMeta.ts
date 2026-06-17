@@ -1,7 +1,7 @@
 const SITE_NAME = "DiceShock 骰子奇兵";
 const SITE_DESC = "跑团, 桌游, 日麻 我们都是专业的 · Lift-off to be The Shock";
 const SITE_URL = "https://origin.runespark.fun";
-const DEFAULT_OG_IMAGE = `${SITE_URL}/edge/media/card/inventory`;
+const DEFAULT_OG_IMAGE = `${SITE_URL}/edge/media/card/site-og`;
 
 interface OgMeta {
   title: string;

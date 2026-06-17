@@ -15,6 +15,7 @@ import { eventCard } from "@/server/apis/ogCards/eventCard";
 import { inventoryCard } from "@/server/apis/ogCards/inventoryCard";
 import { riichiRankingCard } from "@/server/apis/ogCards/riichiRanking";
 import { riichiStatsCard } from "@/server/apis/ogCards/riichiStats";
+import { siteOgCard } from "@/server/apis/ogCards/siteOgCard";
 import sitemap from "@/server/apis/sitemap";
 import { wechatMessage, wechatVerify } from "@/server/apis/wechat";
 import type { HonoCtxEnv } from "@/shared/types";
@@ -56,6 +57,7 @@ app.get("/edge/media/card/active/:id", activeCard);
 app.get("/edge/media/card/actives", activesListCard);
 app.get("/edge/media/card/event/:id", eventCard);
 app.get("/edge/media/card/inventory", inventoryCard);
+app.get("/edge/media/card/site-og", siteOgCard);
 
 app.use("/edge/*", trpcServerDash);
 app.use("/apis/*", trpcServerPublic);

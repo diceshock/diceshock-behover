@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 import type { HonoCtxEnv } from "@/shared/types";
 import { chatWithDeepSeek } from "./deepseekClient";
+import { generateAndSendMembershipCard } from "./membershipCard";
 import { checkRateLimit, recordTokenUsage } from "./rateLimit";
 import { buildImageReply, buildTextReply } from "./xmlUtils";
 
@@ -89,6 +90,5 @@ async function generateMembershipCard(
   c: Context<HonoCtxEnv>,
   openId: string,
 ): Promise<void> {
-  // TODO: Generate membership HTML → IMAGE_QUEUE → upload to WeChat → send customer message
-  console.log("[WechatMenu] membership card generation for:", openId);
+  await generateAndSendMembershipCard(c, openId);
 }
