@@ -190,11 +190,18 @@ async function processQrCode(
   }
 }
 
-function buildTranscodeHtml(sourceUrl: string, w: number, h: number): string {
-  return `<!DOCTYPE html><html><body>
-<canvas id="canvas" width="${w}" height="${h}"></canvas>
-<script>
-(async () => {
+import { renderToString } from "react-dom/server";
+
+function TranscodeView({
+  sourceUrl,
+  w,
+  h,
+}: {
+  sourceUrl: string;
+  w: number;
+  h: number;
+}) {
+  const script = `(async () => {
   const canvas = document.getElementById("canvas");
   const ctx = canvas.getContext("2d");
   const img = new Image();
@@ -206,9 +213,86 @@ function buildTranscodeHtml(sourceUrl: string, w: number, h: number): string {
     window.__ready = true;
   };
   img.onerror = () => { window.__ready = true; };
-  img.src = "${sourceUrl}";
-})();
-</script></body></html>`;
+  img.src = ${JSON.stringify(sourceUrl)};
+})();`;
+
+  return (
+    <html>
+      <body>
+        <canvas id="canvas" width={w} height={h} />
+        <script dangerouslySetInnerHTML={{ __html: script }} />
+      </body>
+    </html>
+  );
+}
+
+function buildTranscodeHtml(sourceUrl: string, w: number, h: number): string {
+  return `<!DOCTYPE html>${renderToString(<TranscodeView sourceUrl={sourceUrl} w={w} h={h} />)}`;
+}
+
+function QrCodeView({
+  data,
+  size,
+  fg,
+  bg,
+  logoUrl,
+}: {
+  data: string;
+  size: number;
+  fg: string;
+  bg: string;
+  logoUrl?: string;
+}) {
+  const logoScript = logoUrl
+    ? `
+    const logo = new Image();
+    logo.crossOrigin = "anonymous";
+    logo.onload = () => {
+      const logoSize = size * 0.25;
+      const x = (size - logoSize) / 2;
+      const y = (size - logoSize) / 2;
+      ctx.fillStyle = ${JSON.stringify(bg)};
+      ctx.fillRect(x - 4, y - 4, logoSize + 8, logoSize + 8);
+      ctx.drawImage(logo, x, y, logoSize, logoSize);
+      window.__ready = true;
+    };
+    logo.onerror = () => { window.__ready = true; };
+    logo.src = ${JSON.stringify(logoUrl)};`
+    : "window.__ready = true;";
+
+  const script = `(function() {
+  const size = ${size};
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
+  const qr = qrcode(0, "M");
+  qr.addData(${JSON.stringify(data)});
+  qr.make();
+  const modules = qr.getModuleCount();
+  const cellSize = size / modules;
+  ctx.fillStyle = ${JSON.stringify(bg)};
+  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = ${JSON.stringify(fg)};
+  for (let row = 0; row < modules; row++) {
+    for (let col = 0; col < modules; col++) {
+      if (qr.isDark(row, col)) {
+        ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+      }
+    }
+  }
+  ${logoScript}
+})();`;
+
+  return (
+    <html>
+      <head>
+        <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js" />
+      </head>
+      <body>
+        <canvas id="canvas" width={size} height={size} />
+        <script dangerouslySetInnerHTML={{ __html: script }} />
+      </body>
+    </html>
+  );
 }
 
 function buildQrCodeHtml(
@@ -218,55 +302,7 @@ function buildQrCodeHtml(
   bg: string,
   logoUrl?: string,
 ): string {
-  const logoScript = logoUrl
-    ? `
-    const logo = new Image();
-    logo.crossOrigin = "anonymous";
-    logo.onload = () => {
-      const logoSize = size * 0.25;
-      const x = (size - logoSize) / 2;
-      const y = (size - logoSize) / 2;
-      ctx.fillStyle = "${bg}";
-      ctx.fillRect(x - 4, y - 4, logoSize + 8, logoSize + 8);
-      ctx.drawImage(logo, x, y, logoSize, logoSize);
-      window.__ready = true;
-    };
-    logo.onerror = () => { window.__ready = true; };
-    logo.src = "${logoUrl}";`
-    : "window.__ready = true;";
-
-  return `<!DOCTYPE html><html><head>
-<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
-</head><body>
-<canvas id="canvas" width="${size}" height="${size}"></canvas>
-<script>
-(function() {
-  const size = ${size};
-  const canvas = document.getElementById("canvas");
-  const ctx = canvas.getContext("2d");
-
-  const qr = qrcode(0, "M");
-  qr.addData(${JSON.stringify(data)});
-  qr.make();
-
-  const modules = qr.getModuleCount();
-  const cellSize = size / modules;
-
-  ctx.fillStyle = "${bg}";
-  ctx.fillRect(0, 0, size, size);
-  ctx.fillStyle = "${fg}";
-
-  for (let row = 0; row < modules; row++) {
-    for (let col = 0; col < modules; col++) {
-      if (qr.isDark(row, col)) {
-        ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
-      }
-    }
-  }
-
-  ${logoScript}
-})();
-</script></body></html>`;
+  return `<!DOCTYPE html>${renderToString(<QrCodeView data={data} size={size} fg={fg} bg={bg} logoUrl={logoUrl} />)}`;
 }
 
 function dataUrlToUint8Array(dataUrl: string): Uint8Array {

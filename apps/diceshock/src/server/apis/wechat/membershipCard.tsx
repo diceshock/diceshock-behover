@@ -6,6 +6,7 @@ import db, {
 } from "@lib/db";
 import dayjs from "dayjs";
 import type { Context } from "hono";
+import { renderToString } from "react-dom/server";
 import type {
   ImageProcessMessage,
   ImageProcessResult,
@@ -230,33 +231,7 @@ function planTypeLabel(type: string): string {
   }
 }
 
-function buildMembershipHtml(data: MembershipCardData): string {
-  const activePlan = data.timePlans.find((p) => p.isActive);
-  const statusText = activePlan ? "有效" : "未激活";
-  const statusColor = activePlan ? "#36ffa1" : "#ff6b6b";
-
-  const plansHtml =
-    data.timePlans.length > 0
-      ? data.timePlans
-          .map(
-            (p) => `
-      <div class="plan-row">
-        <span class="plan-type">${p.type}</span>
-        <span class="plan-date">${p.startDate} ~ ${p.endDate}</span>
-        <span class="plan-status" style="color:${p.isActive ? "#36ffa1" : "#999"}">${p.isActive ? "有效" : "已过期"}</span>
-      </div>`,
-          )
-          .join("")
-      : `<div class="plan-row"><span class="plan-type" style="color:#999">暂无通行证</span></div>`;
-
-  const svHtml = data.storedValue
-    ? `<div class="sv-balance">¥${data.storedValue.balance.toFixed(0)}</div>`
-    : `<div class="sv-balance" style="color:#999">未开通</div>`;
-
-  return `<!DOCTYPE html>
-<html><head><meta charset="utf-8">
-<style>
-* { margin:0; padding:0; box-sizing:border-box; }
+const MEMBERSHIP_CSS = `* { margin:0; padding:0; box-sizing:border-box; }
 body {
   width: 800px;
   font-family: -apple-system, "Noto Sans SC", "Helvetica Neue", sans-serif;
@@ -264,118 +239,106 @@ body {
   color: #fff;
   padding: 48px;
 }
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 36px;
-}
-.brand {
-  font-size: 14px;
-  color: #666;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-}
-.status-badge {
-  padding: 6px 16px;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 600;
-  background: ${statusColor}22;
-  color: ${statusColor};
-  border: 1px solid ${statusColor}44;
-}
-.user-section {
-  margin-bottom: 40px;
-}
-.nickname {
-  font-size: 32px;
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-.uid {
-  font-size: 14px;
-  color: #888;
-}
-.section {
-  background: rgba(255,255,255,0.05);
-  border-radius: 16px;
-  padding: 24px 28px;
-  margin-bottom: 20px;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.08);
-}
-.section-title {
-  font-size: 12px;
-  color: #888;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  margin-bottom: 16px;
-}
-.plan-row {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-}
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 36px; }
+.brand { font-size: 14px; color: #666; letter-spacing: 2px; text-transform: uppercase; }
+.user-section { margin-bottom: 40px; }
+.nickname { font-size: 32px; font-weight: 700; margin-bottom: 6px; }
+.uid { font-size: 14px; color: #888; }
+.section { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 24px 28px; margin-bottom: 20px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.08); }
+.section-title { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 16px; }
+.plan-row { display: flex; align-items: center; gap: 16px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
 .plan-row:last-child { border-bottom: none; }
-.plan-type {
-  font-size: 16px;
-  font-weight: 600;
-  min-width: 140px;
+.plan-type { font-size: 16px; font-weight: 600; min-width: 140px; }
+.plan-date { font-size: 14px; color: #aaa; flex: 1; }
+.plan-status { font-size: 13px; font-weight: 600; }
+.sv-section { display: flex; align-items: center; justify-content: space-between; }
+.sv-label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 1.5px; }
+.sv-balance { font-size: 42px; font-weight: 800; color: #36ffa1; }
+.footer { margin-top: 32px; text-align: center; font-size: 12px; color: #555; }`;
+
+function MembershipCardView({ data }: { data: MembershipCardData }) {
+  const activePlan = data.timePlans.find((p) => p.isActive);
+  const statusText = activePlan ? "有效" : "未激活";
+  const statusColor = activePlan ? "#36ffa1" : "#ff6b6b";
+
+  return (
+    <html>
+      <head>
+        <meta charSet="utf-8" />
+        <style dangerouslySetInnerHTML={{ __html: MEMBERSHIP_CSS }} />
+      </head>
+      <body>
+        <div className="header">
+          <span className="brand">Diceshock 会员</span>
+          <span
+            className="status-badge"
+            style={{
+              padding: "6px 16px",
+              borderRadius: 20,
+              fontSize: 13,
+              fontWeight: 600,
+              background: `${statusColor}22`,
+              color: statusColor,
+              border: `1px solid ${statusColor}44`,
+            }}
+          >
+            {statusText}
+          </span>
+        </div>
+        <div className="user-section">
+          <div className="nickname">{data.nickname}</div>
+          {data.uid && <div className="uid">UID: {data.uid}</div>}
+        </div>
+        <div className="section">
+          <div className="section-title">通行证</div>
+          {data.timePlans.length > 0 ? (
+            data.timePlans.map((p, i) => (
+              <div key={i} className="plan-row">
+                <span className="plan-type">{p.type}</span>
+                <span className="plan-date">
+                  {p.startDate} ~ {p.endDate}
+                </span>
+                <span
+                  className="plan-status"
+                  style={{ color: p.isActive ? "#36ffa1" : "#999" }}
+                >
+                  {p.isActive ? "有效" : "已过期"}
+                </span>
+              </div>
+            ))
+          ) : (
+            <div className="plan-row">
+              <span className="plan-type" style={{ color: "#999" }}>
+                暂无通行证
+              </span>
+            </div>
+          )}
+        </div>
+        <div className="section">
+          <div className="sv-section">
+            <span className="sv-label">储值卡余额</span>
+            {data.storedValue ? (
+              <div className="sv-balance">
+                ¥{data.storedValue.balance.toFixed(0)}
+              </div>
+            ) : (
+              <div className="sv-balance" style={{ color: "#999" }}>
+                未开通
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="footer">
+          diceshock.com · {dayjs().format("YYYY-MM-DD HH:mm")} 生成
+        </div>
+        <script
+          dangerouslySetInnerHTML={{ __html: "window.__ready = true;" }}
+        />
+      </body>
+    </html>
+  );
 }
-.plan-date {
-  font-size: 14px;
-  color: #aaa;
-  flex: 1;
-}
-.plan-status {
-  font-size: 13px;
-  font-weight: 600;
-}
-.sv-section {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.sv-label {
-  font-size: 12px;
-  color: #888;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-}
-.sv-balance {
-  font-size: 42px;
-  font-weight: 800;
-  color: #36ffa1;
-}
-.footer {
-  margin-top: 32px;
-  text-align: center;
-  font-size: 12px;
-  color: #555;
-}
-</style>
-</head><body>
-<div class="header">
-  <span class="brand">Diceshock 会员</span>
-  <span class="status-badge">${statusText}</span>
-</div>
-<div class="user-section">
-  <div class="nickname">${data.nickname}</div>
-  ${data.uid ? `<div class="uid">UID: ${data.uid}</div>` : ""}
-</div>
-<div class="section">
-  <div class="section-title">通行证</div>
-  ${plansHtml}
-</div>
-<div class="section">
-  <div class="sv-section">
-    <span class="sv-label">储值卡余额</span>
-    ${svHtml}
-  </div>
-</div>
-<div class="footer">diceshock.com · ${dayjs().format("YYYY-MM-DD HH:mm")} 生成</div>
-</body></html>`;
+
+function buildMembershipHtml(data: MembershipCardData): string {
+  return `<!DOCTYPE html>${renderToString(<MembershipCardView data={data} />)}`;
 }

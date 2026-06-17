@@ -85,20 +85,3 @@ export function getOgMeta(pathname: string): OgMeta {
     url: SITE_URL,
   };
 }
-
-export function renderOgMetaTags(meta: OgMeta): string {
-  return [
-    `<title>${meta.title}</title>`,
-    `<meta name="description" content="${meta.description}" />`,
-    `<meta property="og:site_name" content="${SITE_NAME}" />`,
-    `<meta property="og:type" content="website" />`,
-    `<meta property="og:title" content="${meta.title}" />`,
-    `<meta property="og:description" content="${meta.description}" />`,
-    `<meta property="og:image" content="${meta.image}" />`,
-    `<meta property="og:url" content="${meta.url}" />`,
-    `<meta name="twitter:card" content="summary_large_image" />`,
-    `<meta name="twitter:title" content="${meta.title}" />`,
-    `<meta name="twitter:description" content="${meta.description}" />`,
-    `<meta name="twitter:image" content="${meta.image}" />`,
-  ].join("\n");
-}

@@ -92,6 +92,8 @@ export default function useSmsCode({
   phoneRef.current = phone;
   const initializingRef = useRef(false);
 
+  const userRequestedRef = useRef(false);
+
   const [smsForm, dispatchSmsForm] = useReducer(
     smsFormReducer,
     INITIAL_SMS_FORM_STATE,
@@ -122,6 +124,11 @@ export default function useSmsCode({
           // 不绑定 button — 我们手动调用 show()
           button: "#__captcha_no_bindbutton__",
           captchaVerifyCallback: async (captchaVerifyParam) => {
+            // SDK 初始化时会自动触发一次静默验证，此时用户尚未点击，直接放行但不发送短信
+            if (!userRequestedRef.current) {
+              return { captchaResult: true, bizResult: false };
+            }
+
             try {
               const result = await trpcClientPublic.auth.smsCode.mutate({
                 botcheck: captchaVerifyParam,
@@ -138,6 +145,10 @@ export default function useSmsCode({
             }
           },
           onBizResultCallback: (bizResult) => {
+            // 忽略 SDK 初始化时的自动回调
+            if (!userRequestedRef.current) return;
+            userRequestedRef.current = false;
+
             if (bizResult) {
               setCountdown(20);
               setError(null);
@@ -237,6 +248,7 @@ export default function useSmsCode({
     }
 
     // 生产环境：初始化并弹出验证码
+    userRequestedRef.current = true;
     const instance = await initCaptchaInstance();
     if (instance?.show) {
       instance.show();

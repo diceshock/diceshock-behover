@@ -239,26 +239,26 @@ export default function LoginDialog({
         </div>
 
         {activeTab === "wechat" && (
-          <div className="flex flex-col items-center gap-4 py-4 px-12">
-            {isDesktop && !isInWechat && !useQRFallback ? (
+          <div className="flex flex-col items-center gap-4 py-4 px-6 sm:px-12">
+            {isDesktop && !isInWechat && !useQRFallback && (
               <WechatQREmbed onFallback={() => setUseQRFallback(true)} />
-            ) : (
-              <>
-                <button
-                  type="button"
-                  className="btn btn-success gap-2"
-                  onClick={handleWechatLogin}
-                >
-                  <WechatIcon className="size-5" />
-                  {isInWechat ? "微信授权登录" : "微信扫码登录"}
-                </button>
-                <p className="text-xs text-base-content/60 text-center">
-                  {isInWechat
-                    ? "点击后将通过微信授权获取您的公开信息"
-                    : "点击后将弹出微信二维码，请使用微信扫码完成登录"}
-                </p>
-              </>
             )}
+
+            <button
+              type="button"
+              className="btn btn-success gap-2"
+              onClick={handleWechatLogin}
+            >
+              <WechatIcon className="size-5" />
+              {isInWechat ? "微信授权登录" : "微信扫码登录"}
+            </button>
+            <p className="text-xs text-base-content/60 text-center">
+              {isInWechat
+                ? "点击后将通过微信授权获取您的公开信息"
+                : isDesktop && !useQRFallback
+                  ? "也可点击按钮在微信中打开扫码"
+                  : "点击后将弹出微信二维码，请使用微信扫码完成登录"}
+            </p>
 
             {isSeatPage && (
               <button
