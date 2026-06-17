@@ -53,6 +53,19 @@ tag = "v2"
 new_sqlite_classes = ["SocketDO"]
 deleted_classes = ["SeatTimerDO"]
 
+[browser]
+binding = "BROWSER"
+
+[[queues.producers]]
+binding = "IMAGE_QUEUE"
+queue = "diceshock-image-processing"
+
+[[queues.consumers]]
+queue = "diceshock-image-processing"
+max_batch_size = 1
+max_batch_timeout = 30
+max_retries = 2
+
 [[routes]]
 pattern = "origin.runespark.fun"
 custom_domain = true

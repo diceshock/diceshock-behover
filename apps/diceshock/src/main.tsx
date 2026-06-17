@@ -2,7 +2,12 @@ import type { D1Database } from "@cloudflare/workers-types";
 import { authHandler } from "@hono/auth-js";
 import { Hono } from "hono";
 import apisRoot from "@/server/apis/apisRoot";
+import { boardGameCard } from "@/server/apis/boardGameCard";
 import fileRoute from "@/server/apis/fileRoute";
+import {
+  imageProcessStatus,
+  imageProcessSubmit,
+} from "@/server/apis/imageProcess";
 import mediaUpload from "@/server/apis/mediaUpload";
 import sitemap from "@/server/apis/sitemap";
 import type { HonoCtxEnv } from "@/shared/types";
@@ -32,6 +37,9 @@ app.use(authInit);
 app.use(serverMetaInj);
 
 app.post("/edge/media/upload", mediaUpload);
+app.post("/edge/media/process", imageProcessSubmit);
+app.get("/edge/media/process/:taskId", imageProcessStatus);
+app.get("/edge/media/card/board-game/:id", boardGameCard);
 
 app.use("/edge/*", trpcServerDash);
 app.use("/apis/*", trpcServerPublic);
@@ -93,5 +101,15 @@ export default {
   ) => {
     const { computeLeaderboards } = await import("./server/cron/leaderboard");
     await computeLeaderboards({ DB: env.DB as unknown as D1Database });
+  },
+  async queue(
+    batch: MessageBatch<unknown>,
+    env: HonoCtxEnv["Bindings"],
+    _ctx: ExecutionContext,
+  ): Promise<void> {
+    const { handleImageQueue } = await import(
+      "./server/queue/imageQueueConsumer"
+    );
+    await handleImageQueue(batch as MessageBatch<any>, env);
   },
 };

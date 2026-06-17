@@ -13,6 +13,7 @@
     "helper": "npm run start --workspace=scripts --"
   },
   "dependencies": {
+    "@cloudflare/puppeteer": "^1.1.0",
     "@hono/auth-js": "^1.1.1",
     "@hono/trpc-server": "^0.4.2",
     "@paralleldrive/cuid2": "^2.2.2",
