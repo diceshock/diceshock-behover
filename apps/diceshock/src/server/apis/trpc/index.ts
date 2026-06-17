@@ -76,6 +76,7 @@ export const appRouterPublic = router({
   },
   settings: {
     getCaptchaEnabled: settingsManagement.getCaptchaEnabled,
+    getWechatOpenConfig: settingsManagement.getWechatOpenConfig,
   },
   mahjong: {
     saveMatch: mahjong.saveMatch,

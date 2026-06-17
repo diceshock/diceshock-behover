@@ -25,4 +25,9 @@ const setCaptchaEnabled = dashProcedure
     return { success: true, enabled: false, disabledUntil };
   });
 
-export default { getCaptchaEnabled, setCaptchaEnabled };
+const getWechatOpenConfig = publicProcedure.query(async ({ ctx }) => {
+  const appId = ctx.env.WECHAT_OPEN_APP_ID || null;
+  return { appId };
+});
+
+export default { getCaptchaEnabled, setCaptchaEnabled, getWechatOpenConfig };

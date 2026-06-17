@@ -1,17 +1,84 @@
 import { signIn } from "@hono/auth-js/react";
 import { WarningIcon, XIcon } from "@phosphor-icons/react/dist/ssr";
 import clsx from "clsx";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import WechatIcon from "@/client/assets/svg/wechat.svg?react";
 import trpcClientPublic from "../../../../shared/utils/trpc";
 import useSmsCode from "../../../hooks/useSmsCode";
 import useTempIdentity from "../../../hooks/useTempIdentity";
 import Modal from "../../modal";
 
-/** 检测是否在微信内置浏览器中 */
 function isWechatBrowser(): boolean {
   if (typeof navigator === "undefined") return false;
   return /MicroMessenger/i.test(navigator.userAgent);
+}
+
+function WechatQREmbed({ onFallback }: { onFallback: () => void }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [appId, setAppId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [key, setKey] = useState(0);
+
+  useEffect(() => {
+    trpcClientPublic.settings.getWechatOpenConfig
+      .query()
+      .then((res) => {
+        setAppId(res.appId);
+        setLoading(false);
+      })
+      .catch(() => {
+        setLoading(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!appId || !containerRef.current) return;
+
+    const redirectUri = encodeURIComponent(
+      `${window.location.origin}/api/auth/callback/wechat-open`,
+    );
+    const state = `wxlogin_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    const iframe = document.createElement("iframe");
+    iframe.src = `https://open.weixin.qq.com/connect/qrconnect?appid=${appId}&redirect_uri=${redirectUri}&response_type=code&scope=snsapi_login&state=${state}#wechat_redirect`;
+    iframe.style.width = "300px";
+    iframe.style.height = "400px";
+    iframe.style.border = "none";
+    iframe.setAttribute(
+      "sandbox",
+      "allow-scripts allow-same-origin allow-top-navigation",
+    );
+
+    containerRef.current.innerHTML = "";
+    containerRef.current.appendChild(iframe);
+  }, [appId, key]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <span className="loading loading-spinner loading-lg" />
+      </div>
+    );
+  }
+
+  if (!appId) {
+    onFallback();
+    return null;
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <div
+        ref={containerRef}
+        className="cursor-pointer rounded-lg overflow-hidden"
+        onClick={() => setKey((k) => k + 1)}
+        title="点击刷新二维码"
+      />
+      <p className="text-xs text-base-content/60 text-center">
+        使用微信扫码登录 · 点击二维码刷新
+      </p>
+    </div>
+  );
 }
 
 export default function LoginDialog({
@@ -23,8 +90,10 @@ export default function LoginDialog({
   onClose: () => void;
   isSeatPage?: boolean;
 }) {
-  const [activeTab, setActiveTab] = useState<"phonenumber" | "wechat">(
-    "phonenumber",
+  const isInWechat = useMemo(() => isWechatBrowser(), []);
+
+  const [activeTab, setActiveTab] = useState<"wechat" | "phonenumber">(
+    isInWechat ? "phonenumber" : "wechat",
   );
 
   const [phone, setPhone] = useState("");
@@ -32,8 +101,7 @@ export default function LoginDialog({
   const { create: createTempIdentity } = useTempIdentity();
 
   const [captchaEnabled, setCaptchaEnabled] = useState(true);
-
-  const isInWechat = useMemo(() => isWechatBrowser(), []);
+  const [useQRFallback, setUseQRFallback] = useState(false);
 
   useEffect(() => {
     trpcClientPublic.settings.getCaptchaEnabled
@@ -108,7 +176,6 @@ export default function LoginDialog({
   );
 
   const handleWechatLogin = useCallback(() => {
-    // 在微信浏览器内使用公众平台授权，否则使用开放平台扫码
     const provider = isInWechat ? "wechat-mp" : "wechat-open";
     signIn(provider, { callbackUrl: window.location.href });
   }, [isInWechat]);
@@ -124,6 +191,8 @@ export default function LoginDialog({
       setCreatingTemp(false);
     }
   }, [createTempIdentity, onClose, setError]);
+
+  const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
 
   return (
     <Modal
@@ -155,19 +224,58 @@ export default function LoginDialog({
         <div className="tabs tabs-bordered px-7 mb-2">
           <button
             type="button"
-            className={clsx("tab", activeTab === "phonenumber" && "tab-active")}
-            onClick={() => setActiveTab("phonenumber")}
-          >
-            手机号登录
-          </button>
-          <button
-            type="button"
             className={clsx("tab", activeTab === "wechat" && "tab-active")}
             onClick={() => setActiveTab("wechat")}
           >
             微信登录
           </button>
+          <button
+            type="button"
+            className={clsx("tab", activeTab === "phonenumber" && "tab-active")}
+            onClick={() => setActiveTab("phonenumber")}
+          >
+            手机号登录
+          </button>
         </div>
+
+        {activeTab === "wechat" && (
+          <div className="flex flex-col items-center gap-4 py-4 px-12">
+            {isDesktop && !isInWechat && !useQRFallback ? (
+              <WechatQREmbed onFallback={() => setUseQRFallback(true)} />
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-success gap-2"
+                  onClick={handleWechatLogin}
+                >
+                  <WechatIcon className="size-5" />
+                  {isInWechat ? "微信授权登录" : "微信扫码登录"}
+                </button>
+                <p className="text-xs text-base-content/60 text-center">
+                  {isInWechat
+                    ? "点击后将通过微信授权获取您的公开信息"
+                    : "点击后将弹出微信二维码，请使用微信扫码完成登录"}
+                </p>
+              </>
+            )}
+
+            {isSeatPage && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={handleTempIdentity}
+                disabled={creatingTemp}
+              >
+                {creatingTemp ? (
+                  <span className="loading loading-spinner loading-xs" />
+                ) : (
+                  "临时使用（无需登录）"
+                )}
+              </button>
+            )}
+          </div>
+        )}
 
         {activeTab === "phonenumber" && (
           <form
@@ -252,39 +360,6 @@ export default function LoginDialog({
               </button>
             )}
           </form>
-        )}
-
-        {activeTab === "wechat" && (
-          <div className="flex flex-col items-center gap-4 py-8 px-12">
-            <button
-              type="button"
-              className="btn btn-success gap-2"
-              onClick={handleWechatLogin}
-            >
-              <WechatIcon className="size-5" />
-              {isInWechat ? "微信授权登录" : "微信扫码登录"}
-            </button>
-            <p className="text-xs text-base-content/60 text-center">
-              {isInWechat
-                ? "点击后将通过微信授权获取您的公开信息"
-                : "点击后将弹出微信二维码，请使用微信扫码完成登录"}
-            </p>
-
-            {isSeatPage && (
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm"
-                onClick={handleTempIdentity}
-                disabled={creatingTemp}
-              >
-                {creatingTemp ? (
-                  <span className="loading loading-spinner loading-xs" />
-                ) : (
-                  "临时使用（无需登录）"
-                )}
-              </button>
-            )}
-          </div>
         )}
       </div>
     </Modal>
