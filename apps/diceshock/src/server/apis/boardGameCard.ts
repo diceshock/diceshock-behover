@@ -146,12 +146,6 @@ body {
   width: 140px; height: 100%;
   background: linear-gradient(to right, transparent, #fff);
 }
-.accent-bar {
-  position: absolute;
-  top: 0; left: 420px;
-  width: 6px; height: 100%;
-  background: linear-gradient(to bottom, #e85d04, #f48c06, #faa307);
-}
 .info {
   flex: 1;
   display: flex;
@@ -165,7 +159,7 @@ body {
   top: 36px; right: 56px;
   font-size: 48px;
   font-weight: 800;
-  color: #e85d04;
+  color: #36ffa1;
   line-height: 1;
 }
 .rating-label {
@@ -190,7 +184,7 @@ body {
 }
 .divider {
   width: 48px; height: 3px;
-  background: #e85d04;
+  background: #36ffa1;
   margin-top: 24px;
   margin-left: auto;
   border-radius: 2px;
@@ -245,7 +239,6 @@ body {
     <img id="cover" crossorigin="anonymous" src="${data.coverUrl}" />
     <div class="cover-fade"></div>
   </div>
-  <div class="accent-bar"></div>
   <div class="info">
     <div class="title-sch">${data.schName}</div>
     <div class="title-eng">${data.engName}</div>
