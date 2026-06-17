@@ -42,6 +42,8 @@ app.use("*", wechatSilentAuth);
 
 app.get("/sitemap.xml", sitemap);
 
+app.get("/MP_verify_yvnJDKhKIBUZ0DgN.txt", (c) => c.text("yvnJDKhKIBUZ0DgN"));
+
 app.get("/sse/seat/:code", async (c) => {
   const code = c.req.param("code");
   const id = c.env.SOCKET.idFromName(code);
