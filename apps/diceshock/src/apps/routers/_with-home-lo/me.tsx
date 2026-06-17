@@ -4,6 +4,7 @@ import {
   GameControllerIcon,
   PencilSimpleLineIcon,
   PhoneIcon,
+  ScanIcon,
   SignOutIcon,
   WarningIcon,
   XIcon,
@@ -13,6 +14,7 @@ import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import BusinessCardModal from "@/client/components/diceshock/BusinessCardModal";
 import GszQuickCard from "@/client/components/diceshock/GszQuickCard";
+import QRScannerDialog from "@/client/components/diceshock/Header/QRScannerDialog";
 import GszRegistrationModal from "@/client/components/diceshock/MahjongMatch/GszRegistrationModal";
 import {
   getPlanConfig,
@@ -23,20 +25,45 @@ import {
 import TOTPCard from "@/client/components/diceshock/TOTPCard";
 import Modal from "@/client/components/modal";
 import useAuth from "@/client/hooks/useAuth";
+import useCrossData from "@/client/hooks/useCrossData";
 import { useMessages } from "@/client/hooks/useMessages";
 import useSmsCode from "@/client/hooks/useSmsCode";
 import { copyToClipboard } from "@/server/utils";
 import dayjs from "@/shared/utils/dayjs-config";
 import trpcClientPublic from "@/shared/utils/trpc";
 
+function MeSkeleton() {
+  return (
+    <main className="min-h-[calc(100vh-32rem)] w-full flex-col items-center mt-20 sm:mt-32 md:mt-40 px-4">
+      <div className="mx-auto w-full max-w-xl">
+        <div className="flex flex-col items-center gap-3 mb-8 sm:mb-12">
+          <div className="skeleton h-9 sm:h-11 md:h-13 w-48 rounded-lg" />
+          <div className="skeleton h-4 w-32 rounded" />
+        </div>
+        <div className="w-full flex flex-col items-center justify-center gap-3 sm:gap-4">
+          <div className="skeleton w-full h-52 rounded-xl" />
+          <div className="skeleton w-full h-20 rounded-xl" />
+          <div className="skeleton w-full h-20 rounded-xl" />
+          <div className="skeleton w-full h-20 rounded-xl" />
+        </div>
+      </div>
+    </main>
+  );
+}
+
 export const Route = createFileRoute("/_with-home-lo/me")({
   component: RouteComponent,
+  pendingComponent: MeSkeleton,
 });
 
 function RouteComponent() {
   const { userInfo, setUserInfoIm, signOut, session } = useAuth();
+  const crossData = useCrossData();
+  const ssrUserInfo = crossData?.UserInfo;
+  const displayInfo = userInfo ?? ssrUserInfo;
+
   const [isEditing, setIsEditing] = useState(false);
-  const [nickname, setNickname] = useState(userInfo?.nickname ?? "");
+  const [nickname, setNickname] = useState(displayInfo?.nickname ?? "");
   const [isLoading, setIsLoading] = useState(false);
   const messages = useMessages();
 
@@ -46,13 +73,18 @@ function RouteComponent() {
   const isAutoNickname = (userInfo?.meta as { auto_nickname?: boolean } | null)
     ?.auto_nickname;
 
+  const isInWechat =
+    typeof navigator !== "undefined" &&
+    /MicroMessenger/i.test(navigator.userAgent);
+
   useEffect(() => {
     if (typeof navigator === "undefined") return;
     if (!/MicroMessenger/i.test(navigator.userAgent)) return;
     if (!isAutoNickname) return;
-    if (sessionStorage.getItem("__wx_nickname_auth_done")) return;
+    // 使用 localStorage 持久标记，确保补授权只尝试一次（即使失败也不重试）
+    if (localStorage.getItem("__wx_nickname_auth_attempted")) return;
 
-    sessionStorage.setItem("__wx_nickname_auth_done", "1");
+    localStorage.setItem("__wx_nickname_auth_attempted", "1");
 
     const form = document.createElement("form");
     form.method = "POST";
@@ -100,6 +132,9 @@ function RouteComponent() {
 
   // 名片编辑相关状态
   const [isEditingBusinessCard, setIsEditingBusinessCard] = useState(false);
+
+  // 扫码弹窗
+  const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
 
   // 公式战绑定相关状态
   const [gszRegistered, setGszRegistered] = useState<boolean | null>(null);
@@ -194,17 +229,19 @@ function RouteComponent() {
   );
 
   const handleCopyUid = useCallback(async () => {
-    if (!userInfo?.uid) return;
+    if (!displayInfo?.uid) return;
 
     const uid =
-      typeof userInfo.uid === "string" ? userInfo.uid : String(userInfo.uid);
+      typeof displayInfo.uid === "string"
+        ? displayInfo.uid
+        : String(displayInfo.uid);
     const success = await copyToClipboard(uid);
     if (success) {
       messages.success("复制成功");
     } else {
       messages.error("复制失败，请稍后重试");
     }
-  }, [userInfo?.uid, messages]);
+  }, [displayInfo?.uid, messages]);
 
   const handleEditPhoneClick = useCallback(() => {
     setPhone("");
@@ -284,7 +321,7 @@ function RouteComponent() {
           <div className="flex flex-col items-center gap-3 mb-8 sm:mb-12">
             <h1 className="text-3xl sm:text-4xl md:text-5xl text-center align-baseline flex items-center gap-2 flex-wrap justify-center">
               <span className="break-words">
-                {userInfo?.nickname ?? "Anonymous Shock"}
+                {displayInfo?.nickname ?? "Anonymous Shock"}
               </span>
               <button
                 className="btn btn-ghost btn-circle btn-sm sm:btn-md shrink-0"
@@ -295,7 +332,7 @@ function RouteComponent() {
               </button>
             </h1>
             <h2 className="text-xs sm:text-sm text-center text-base-content/50 flex items-center gap-1.5 flex-wrap justify-center">
-              <span>uid: {userInfo?.uid}</span>
+              <span>uid: {displayInfo?.uid}</span>
               <button
                 className="btn btn-ghost btn-xs btn-circle shrink-0"
                 onClick={handleCopyUid}
@@ -380,7 +417,16 @@ function RouteComponent() {
                 </Link>
               )}
 
-            <TOTPCard />
+            <div className="relative w-full">
+              <TOTPCard />
+              <button
+                onClick={() => setIsQRScannerOpen(true)}
+                className="absolute top-3 right-3 sm:top-4 sm:right-4 btn btn-sm btn-ghost btn-circle"
+                aria-label="扫码"
+              >
+                <ScanIcon weight="fill" className="size-5" />
+              </button>
+            </div>
 
             <GszQuickCard userId={session?.user?.id} />
 
@@ -421,7 +467,7 @@ function RouteComponent() {
                       修改手机号
                     </p>
                     <p className="text-xs sm:text-sm text-base-content/60 break-words">
-                      当前手机号：{userInfo?.phone ?? "—"}
+                      当前手机号：{displayInfo?.phone ?? "—"}
                     </p>
                   </div>
                 </div>
@@ -449,26 +495,28 @@ function RouteComponent() {
               </div>
             </button>
 
-            <button
-              onClick={signOut}
-              className="card bg-base-200 hover:bg-base-300 transition-colors w-full cursor-pointer border border-base-content/10 hover:border-base-content/20 shadow-sm hover:shadow-md"
-            >
-              <div className="card-body p-4 sm:p-6 md:p-8">
-                <div className="flex items-start gap-3 sm:gap-4">
-                  <div className="shrink-0 p-2 sm:p-2.5 bg-error/10 rounded-lg">
-                    <SignOutIcon className="size-5 sm:size-6 md:size-8 text-error" />
-                  </div>
-                  <div className="flex flex-col items-start justify-start flex-1 min-w-0">
-                    <p className="text-base sm:text-lg font-bold mb-1">
-                      退出登录
-                    </p>
-                    <p className="text-xs sm:text-sm text-base-content/60 break-words">
-                      退出登录后，您将需要重新登录
-                    </p>
+            {!isInWechat && (
+              <button
+                onClick={signOut}
+                className="card bg-base-200 hover:bg-base-300 transition-colors w-full cursor-pointer border border-base-content/10 hover:border-base-content/20 shadow-sm hover:shadow-md"
+              >
+                <div className="card-body p-4 sm:p-6 md:p-8">
+                  <div className="flex items-start gap-3 sm:gap-4">
+                    <div className="shrink-0 p-2 sm:p-2.5 bg-error/10 rounded-lg">
+                      <SignOutIcon className="size-5 sm:size-6 md:size-8 text-error" />
+                    </div>
+                    <div className="flex flex-col items-start justify-start flex-1 min-w-0">
+                      <p className="text-base sm:text-lg font-bold mb-1">
+                        退出登录
+                      </p>
+                      <p className="text-xs sm:text-sm text-base-content/60 break-words">
+                        退出登录后，您将需要重新登录
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </button>
+              </button>
+            )}
           </div>
         </div>
       </main>
@@ -674,8 +722,13 @@ function RouteComponent() {
           messages.success("立直麻将绑定成功");
         }}
         onSkip={() => setShowGszModal(false)}
-        phone={userInfo?.phone ?? null}
-        nickname={userInfo?.nickname ?? ""}
+        phone={displayInfo?.phone ?? null}
+        nickname={displayInfo?.nickname ?? ""}
+      />
+
+      <QRScannerDialog
+        isOpen={isQRScannerOpen}
+        onClose={() => setIsQRScannerOpen(false)}
       />
     </>
   );
