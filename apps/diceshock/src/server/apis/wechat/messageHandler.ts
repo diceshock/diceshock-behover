@@ -3,11 +3,7 @@ import type { HonoCtxEnv } from "@/shared/types";
 import { chatWithDeepSeek } from "./deepseekClient";
 import { generateAndSendMembershipCard } from "./membershipCard";
 import { checkRateLimit, recordTokenUsage } from "./rateLimit";
-import {
-  getWechatAccessToken,
-  sendCustomerTextMessage,
-  sendCustomerTextMessage,
-} from "./wechatApi";
+import { sendCustomerTextMessage } from "./wechatApi";
 import { buildTextReply } from "./xmlUtils";
 
 const TYPING_REPLY = "正在思考中，请稍候...";
