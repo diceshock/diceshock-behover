@@ -1,5 +1,5 @@
 import z from "zod/v4";
-import { dashProcedure, publicProcedure } from "./baseTRPC";
+import { staffProcedure, publicProcedure } from "./baseTRPC";
 
 const KV_KEY_CAPTCHA_DISABLED_UNTIL = "settings:captcha_disabled_until";
 const CAPTCHA_DISABLE_TTL = 60 * 60 * 2;
@@ -10,7 +10,7 @@ const getCaptchaEnabled = publicProcedure.query(async ({ ctx }) => {
   return { enabled: false, disabledUntil: Number(disabledUntil) };
 });
 
-const setCaptchaEnabled = dashProcedure
+const setCaptchaEnabled = staffProcedure
   .input(z.object({ enabled: z.boolean() }))
   .mutation(async ({ input, ctx }) => {
     if (input.enabled) {

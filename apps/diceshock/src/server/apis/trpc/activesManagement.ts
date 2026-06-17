@@ -1,7 +1,7 @@
 import db, { activeRegistrationsTable, activesTable, drizzle } from "@lib/db";
-import { dashProcedure, unwrapInput } from "./baseTRPC";
+import { staffProcedure, unwrapInput } from "./baseTRPC";
 
-const list = dashProcedure.query(async ({ ctx }) => {
+const list = staffProcedure.query(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
   const actives = await tdb.query.activesTable.findMany({
     orderBy: (a, { desc }) => desc(a.create_at),
@@ -16,7 +16,7 @@ const list = dashProcedure.query(async ({ ctx }) => {
   return actives;
 });
 
-const getById = dashProcedure
+const getById = staffProcedure
   .input((v: unknown) => {
     const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
@@ -52,7 +52,7 @@ const getById = dashProcedure
     return { ...active, registrations: registrationsWithUser };
   });
 
-const update = dashProcedure
+const update = staffProcedure
   .input((v: unknown) => {
     const data = unwrapInput<{
       id: string;
@@ -77,7 +77,7 @@ const update = dashProcedure
     return { success: true };
   });
 
-const remove = dashProcedure
+const remove = staffProcedure
   .input((v: unknown) => {
     const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
@@ -92,7 +92,7 @@ const remove = dashProcedure
     return { success: true };
   });
 
-const removeRegistration = dashProcedure
+const removeRegistration = staffProcedure
   .input((v: unknown) => {
     const { registrationId } = unwrapInput<{ registrationId: string }>(v);
     if (!registrationId) throw new Error("registrationId is required");
@@ -106,7 +106,7 @@ const removeRegistration = dashProcedure
     return { success: true };
   });
 
-const batchRemove = dashProcedure
+const batchRemove = staffProcedure
   .input((v: unknown) => {
     const { ids } = unwrapInput<{ ids: string[] }>(v);
     if (!ids || !Array.isArray(ids) || ids.length === 0)

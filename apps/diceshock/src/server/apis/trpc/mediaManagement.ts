@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { dashProcedure } from "./baseTRPC";
+import { staffProcedure } from "./baseTRPC";
 
 const UPLOAD_PREFIX = "up/";
 const CDN_BASE = "https://assets.runespark.fun/";
@@ -11,7 +11,7 @@ const listInputZ = z.object({
   limit: z.number().min(1).max(1000).default(200),
 });
 
-const list = dashProcedure.input(listInputZ).query(async ({ input, ctx }) => {
+const list = staffProcedure.input(listInputZ).query(async ({ input, ctx }) => {
   const listed = await ctx.env.R2.list({
     prefix: UPLOAD_PREFIX,
     limit: input.limit,
@@ -49,7 +49,7 @@ const renameZ = z.object({
   newName: z.string().min(1).max(500),
 });
 
-const rename = dashProcedure.input(renameZ).mutation(async ({ input, ctx }) => {
+const rename = staffProcedure.input(renameZ).mutation(async ({ input, ctx }) => {
   const src = await ctx.env.R2.get(input.oldKey);
   if (!src) throw new Error("文件不存在");
 
@@ -71,7 +71,7 @@ const deleteZ = z.object({
   key: z.string(),
 });
 
-const remove = dashProcedure.input(deleteZ).mutation(async ({ input, ctx }) => {
+const remove = staffProcedure.input(deleteZ).mutation(async ({ input, ctx }) => {
   await ctx.env.R2.delete(input.key);
   return { success: true };
 });

@@ -7,7 +7,7 @@ import db, {
 import { eq, inArray } from "drizzle-orm";
 import z from "zod/v4";
 import type { MatchState } from "@/shared/mahjong/types";
-import { dashProcedure, unwrapInput } from "./baseTRPC";
+import { staffProcedure, unwrapInput } from "./baseTRPC";
 import { type GszPageResult, gszFetch } from "./gszApi";
 
 type ModeFilter = "all" | "3p" | "4p";
@@ -21,7 +21,7 @@ export type UnsyncableReason = {
   reason: "no_phone" | "temp_user";
 };
 
-const list = dashProcedure
+const list = staffProcedure
   .input((v: unknown) => {
     const data = unwrapInput<{
       search?: string;
@@ -234,7 +234,7 @@ const list = dashProcedure
     };
   });
 
-const getById = dashProcedure
+const getById = staffProcedure
   .input((v: unknown) => {
     const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
@@ -301,7 +301,7 @@ const getById = dashProcedure
     };
   });
 
-const listTables = dashProcedure.query(async ({ ctx }) => {
+const listTables = staffProcedure.query(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
   const tables = await tdb.query.tablesTable.findMany({
     where: (t, { eq }) => eq(t.scope, "mahjong"),
@@ -328,7 +328,7 @@ export interface ActiveMatchInfo {
   startedAt: number | null;
 }
 
-const listActive = dashProcedure.query(async ({ ctx }) => {
+const listActive = staffProcedure.query(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
   const mahjongTables = await tdb.query.tablesTable.findMany({
     where: (t, { eq }) => eq(t.scope, "mahjong"),
@@ -381,7 +381,7 @@ const listActive = dashProcedure.query(async ({ ctx }) => {
   return results;
 });
 
-const terminateMatch = dashProcedure
+const terminateMatch = staffProcedure
   .input((v: unknown) => {
     const data = unwrapInput<{ tableCode: string; reason?: string }>(v);
     if (!data.tableCode) throw new Error("tableCode is required");
@@ -404,7 +404,7 @@ const terminateMatch = dashProcedure
     return { success: true };
   });
 
-const updateScore = dashProcedure
+const updateScore = staffProcedure
   .input(
     z.object({
       matchId: z.string(),
@@ -634,13 +634,13 @@ async function performGszSync(
   }
 }
 
-const syncToGsz = dashProcedure
+const syncToGsz = staffProcedure
   .input(z.object({ matchId: z.string() }))
   .mutation(async ({ input, ctx }) => {
     return performGszSync(ctx.env, input.matchId);
   });
 
-const batchSyncToGsz = dashProcedure
+const batchSyncToGsz = staffProcedure
   .input(z.object({ matchIds: z.array(z.string()).min(1).max(50) }))
   .mutation(async ({ input, ctx }) => {
     const results = await Promise.allSettled(

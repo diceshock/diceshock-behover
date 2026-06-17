@@ -1,13 +1,20 @@
-import db, { drizzle, pagedZ, sessions, userInfoTable, users } from "@lib/db";
+import db, {
+  drizzle,
+  pagedZ,
+  sessions,
+  userInfoTable,
+  userRoles,
+  users,
+} from "@lib/db";
 import z4, { z } from "zod/v4";
 import { generateTOTP } from "@/shared/utils/totp";
-import { dashProcedure, publicProcedure } from "./baseTRPC";
+import { adminProcedure, publicProcedure, staffProcedure } from "./baseTRPC";
 
 export const getFilterZ = z4.object({
   searchWords: z4.string().nonempty().optional(),
 });
 
-const get = publicProcedure
+const get = staffProcedure
   .input(pagedZ(getFilterZ))
   .query(async ({ input, ctx }) => {
     const {
@@ -107,36 +114,34 @@ const getByIdZ = z.object({
   id: z.string(),
 });
 
-const getById = publicProcedure
-  .input(getByIdZ)
-  .query(async ({ input, ctx }) => {
-    const tdb = db(ctx.env.DB);
+const getById = staffProcedure.input(getByIdZ).query(async ({ input, ctx }) => {
+  const tdb = db(ctx.env.DB);
 
-    const user = await tdb.query.users.findFirst({
-      where: (u, { eq }) => eq(u.id, input.id),
-      with: {
-        userInfo: true,
-        membershipPlans: true,
-      },
-    });
-
-    if (!user) return null;
-
-    const userWithInfo = user as typeof user & {
-      userInfo: {
-        phone: string | null;
-        nickname: string;
-        uid: string;
-        create_at: Date | null;
-      } | null;
-    };
-
-    return {
-      ...user,
-      phone: userWithInfo.userInfo?.phone || null,
-      userInfo: userWithInfo.userInfo,
-    };
+  const user = await tdb.query.users.findFirst({
+    where: (u, { eq }) => eq(u.id, input.id),
+    with: {
+      userInfo: true,
+      membershipPlans: true,
+    },
   });
+
+  if (!user) return null;
+
+  const userWithInfo = user as typeof user & {
+    userInfo: {
+      phone: string | null;
+      nickname: string;
+      uid: string;
+      create_at: Date | null;
+    } | null;
+  };
+
+  return {
+    ...user,
+    phone: userWithInfo.userInfo?.phone || null,
+    userInfo: userWithInfo.userInfo,
+  };
+});
 
 const updateZ = z.object({
   id: z.string(),
@@ -215,7 +220,7 @@ const update = async (env: Cloudflare.Env, input: z.infer<typeof updateZ>) => {
   };
 };
 
-const mutation = publicProcedure
+const mutation = staffProcedure
   .input(updateZ)
   .mutation(async ({ input, ctx }) => {
     return update(ctx.env, input);
@@ -226,7 +231,7 @@ const disableZ = z.object({
   id: z.string(),
 });
 
-const disable = publicProcedure
+const disable = staffProcedure
   .input(disableZ)
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
@@ -244,7 +249,7 @@ const verifyTotpZ = z.object({
   lt: z.number(),
 });
 
-const verifyTotp = dashProcedure
+const verifyTotp = staffProcedure
   .input(verifyTotpZ)
   .mutation(async ({ input, ctx }) => {
     const { KV } = ctx.env;
@@ -280,4 +285,24 @@ const verifyTotp = dashProcedure
     return { success: false as const, message: "验证码无效或已过期" };
   });
 
-export default { get, getById, mutation, disable, verifyTotp };
+const updateRoleZ = z.object({
+  id: z.string(),
+  role: z.enum(userRoles),
+});
+
+const updateRole = adminProcedure
+  .input(updateRoleZ)
+  .mutation(async ({ input, ctx }) => {
+    const tdb = db(ctx.env.DB);
+    const { id, role } = input;
+
+    if (id === ctx.userId) {
+      return { success: false as const, message: "不能修改自己的角色" };
+    }
+
+    await tdb.update(users).set({ role }).where(drizzle.eq(users.id, id));
+
+    return { success: true as const };
+  });
+
+export default { get, getById, mutation, disable, verifyTotp, updateRole };

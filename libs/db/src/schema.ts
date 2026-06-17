@@ -22,6 +22,9 @@ export const boardGamesTable = sqlite.sqliteTable("board_games_table", {
     .$default(() => new Date(0)),
 });
 
+export const userRoles = ["customer", "admin", "staff"] as const;
+export type UserRole = (typeof userRoles)[number];
+
 export const users = sqlite.sqliteTable("user", {
   id: sqlite
     .text("id")
@@ -31,6 +34,7 @@ export const users = sqlite.sqliteTable("user", {
   email: sqlite.text("email").unique(),
   emailVerified: sqlite.integer("emailVerified", { mode: "timestamp_ms" }),
   image: sqlite.text("image"),
+  role: sqlite.text("role", { enum: userRoles }).notNull().default("customer"),
 });
 
 export const userInfoTable = sqlite.sqliteTable("user_info", {

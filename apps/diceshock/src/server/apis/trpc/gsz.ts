@@ -1,5 +1,5 @@
 import z from "zod/v4";
-import { dashProcedure } from "./baseTRPC";
+import { staffProcedure } from "./baseTRPC";
 import { type GszPageResult, gszFetch } from "./gszApi";
 
 const registerZ = z.object({
@@ -10,7 +10,7 @@ const registerZ = z.object({
   wechat: z.string().optional(),
 });
 
-const register = dashProcedure
+const register = staffProcedure
   .input(registerZ)
   .mutation(async ({ input, ctx }) => {
     return gszFetch<number>(ctx.env, "/gszapi/open/register", {
@@ -27,7 +27,7 @@ const customerPageInputZ = z.object({
   wechat: z.string().optional(),
 });
 
-const customerPage = dashProcedure
+const customerPage = staffProcedure
   .input(customerPageInputZ)
   .query(async ({ input, ctx }) => {
     const { pageNo, pageSize, ...filter } = input;
@@ -51,7 +51,7 @@ const scoreAddZ = z.object({
   rateTime: z.string().nonempty(),
 });
 
-const scoreAdd = dashProcedure
+const scoreAdd = staffProcedure
   .input(scoreAddZ)
   .mutation(async ({ input, ctx }) => {
     return gszFetch<number>(ctx.env, "/gszapi/open/score/add", {
@@ -72,7 +72,7 @@ const scoreUpdateZ = z.object({
   rateTime: z.string().nonempty(),
 });
 
-const scoreUpdate = dashProcedure
+const scoreUpdate = staffProcedure
   .input(scoreUpdateZ)
   .mutation(async ({ input, ctx }) => {
     return gszFetch(ctx.env, "/gszapi/open/score/update", {

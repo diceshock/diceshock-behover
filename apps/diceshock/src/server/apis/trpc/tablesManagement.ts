@@ -6,7 +6,7 @@ import db, {
 } from "@lib/db";
 import { createId } from "@paralleldrive/cuid2";
 import { fetchTableStateForDO, notifySocketDO } from "@/server/utils/seatTimer";
-import { dashProcedure, unwrapInput } from "./baseTRPC";
+import { staffProcedure, unwrapInput } from "./baseTRPC";
 
 const SHORT_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -35,7 +35,7 @@ async function generateUniqueCode(
   throw new Error("编号生成失败，请重试");
 }
 
-const list = dashProcedure.query(async ({ ctx }) => {
+const list = staffProcedure.query(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
   const tables = await tdb.query.tablesTable.findMany({
     orderBy: (t, { desc }) => desc(t.create_at),
@@ -49,7 +49,7 @@ const list = dashProcedure.query(async ({ ctx }) => {
   return tables;
 });
 
-const create = dashProcedure
+const create = staffProcedure
   .input((v: unknown) => {
     const data = unwrapInput<{
       name: string;
@@ -85,7 +85,7 @@ const create = dashProcedure
     return { id, code };
   });
 
-const getById = dashProcedure
+const getById = staffProcedure
   .input((v: unknown) => {
     const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
@@ -144,7 +144,7 @@ const getById = dashProcedure
     return { ...table, occupancies: occupanciesWithUserInfo };
   });
 
-const update = dashProcedure
+const update = staffProcedure
   .input((v: unknown) => {
     const data = unwrapInput<{
       id: string;
@@ -174,7 +174,7 @@ const update = dashProcedure
     return { success: true };
   });
 
-const toggleStatus = dashProcedure
+const toggleStatus = staffProcedure
   .input((v: unknown) => {
     const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
@@ -195,7 +195,7 @@ const toggleStatus = dashProcedure
     return { status: newStatus };
   });
 
-const remove = dashProcedure
+const remove = staffProcedure
   .input((v: unknown) => {
     const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
@@ -230,7 +230,7 @@ const remove = dashProcedure
     return { success: true };
   });
 
-const regenerateCode = dashProcedure
+const regenerateCode = staffProcedure
   .input((v: unknown) => {
     const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
@@ -246,7 +246,7 @@ const regenerateCode = dashProcedure
     return { code: newCode };
   });
 
-const addOccupancy = dashProcedure
+const addOccupancy = staffProcedure
   .input((v: unknown) => {
     const data = unwrapInput<{ table_id: string; user_id: string }>(v);
     if (!data.table_id) throw new Error("table_id is required");
@@ -278,7 +278,7 @@ const addOccupancy = dashProcedure
     return { id };
   });
 
-const removeOccupancy = dashProcedure
+const removeOccupancy = staffProcedure
   .input((v: unknown) => {
     const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
@@ -318,7 +318,7 @@ const removeOccupancy = dashProcedure
     return { success: true };
   });
 
-const getOccupancyByUserId = dashProcedure
+const getOccupancyByUserId = staffProcedure
   .input((v: unknown) => {
     const { userId } = unwrapInput<{ userId: string }>(v);
     if (!userId) throw new Error("userId is required");
@@ -335,7 +335,7 @@ const getOccupancyByUserId = dashProcedure
     return occupancies;
   });
 
-const getByCode = dashProcedure
+const getByCode = staffProcedure
   .input((v: unknown) => {
     const { code } = unwrapInput<{ code: string }>(v);
     if (!code) throw new Error("code is required");

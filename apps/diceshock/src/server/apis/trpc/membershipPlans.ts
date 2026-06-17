@@ -1,7 +1,7 @@
 import db, { drizzle, userMembershipPlansTable } from "@lib/db";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod/v4";
-import { protectedProcedure, publicProcedure } from "./baseTRPC";
+import { protectedProcedure, staffProcedure } from "./baseTRPC";
 
 const planTypeEnum = z.enum([
   "monthly",
@@ -51,7 +51,7 @@ async function getAllTimePlans(tdb: ReturnType<typeof db>, userId: string) {
     }));
 }
 
-const getByUserId = publicProcedure
+const getByUserId = staffProcedure
   .input(z.object({ userId: z.string() }))
   .query(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
@@ -79,7 +79,7 @@ const createZ = z.object({
   endDate: z.number().nullable().optional(),
 });
 
-const create = publicProcedure
+const create = staffProcedure
   .input(createZ)
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
@@ -119,7 +119,7 @@ const updateZ = z.object({
   endDate: z.number().nullable().optional(),
 });
 
-const update = publicProcedure
+const update = staffProcedure
   .input(updateZ)
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
@@ -174,7 +174,7 @@ const update = publicProcedure
     return updated;
   });
 
-const deduct = publicProcedure
+const deduct = staffProcedure
   .input(
     z.object({
       userId: z.string(),
@@ -223,7 +223,7 @@ const deduct = publicProcedure
     return { success: true, deducted: input.amount };
   });
 
-const remove = publicProcedure
+const remove = staffProcedure
   .input(z.object({ id: z.string() }))
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);

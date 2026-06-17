@@ -1,8 +1,8 @@
 import db, { drizzle, eventsTable } from "@lib/db";
 import { z } from "zod/v4";
-import { dashProcedure, unwrapInput } from "./baseTRPC";
+import { staffProcedure, unwrapInput } from "./baseTRPC";
 
-const list = dashProcedure.query(async ({ ctx }) => {
+const list = staffProcedure.query(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
   const events = await tdb.query.eventsTable.findMany({
     orderBy: (e, { desc }) => desc(e.create_at),
@@ -17,7 +17,7 @@ const createEventZ = z.object({
   content: z.string().optional(),
 });
 
-const create = dashProcedure
+const create = staffProcedure
   .input(createEventZ)
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
@@ -42,7 +42,7 @@ const updateEventZ = z.object({
   content: z.string().optional(),
 });
 
-const update = dashProcedure
+const update = staffProcedure
   .input(updateEventZ)
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
@@ -60,7 +60,7 @@ const update = dashProcedure
     return event;
   });
 
-const remove = dashProcedure
+const remove = staffProcedure
   .input((v: unknown) => {
     const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
@@ -72,7 +72,7 @@ const remove = dashProcedure
     return { success: true };
   });
 
-const togglePublish = dashProcedure
+const togglePublish = staffProcedure
   .input((v: unknown) => {
     const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
@@ -95,7 +95,7 @@ const togglePublish = dashProcedure
     return updated;
   });
 
-const getById = dashProcedure
+const getById = staffProcedure
   .input((v: unknown) => {
     const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");

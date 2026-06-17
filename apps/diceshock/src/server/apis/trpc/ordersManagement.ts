@@ -11,14 +11,14 @@ import db, {
 import { pauseWithReason } from "@/server/utils/pauseOrder";
 import { fetchTableStateForDO, notifySocketDO } from "@/server/utils/seatTimer";
 import { calculatePrice, type SnapshotData } from "@/shared/utils/pricing";
-import { dashProcedure, unwrapInput } from "./baseTRPC";
+import { staffProcedure, unwrapInput } from "./baseTRPC";
 
 type StatusFilter = "all" | "active" | "paused" | "ended";
 type SortBy = "start_at" | "end_at";
 type SortOrder = "asc" | "desc";
 type GroupBy = "table" | "user" | "date" | "none";
 
-const list = dashProcedure
+const list = staffProcedure
   .input((v: unknown) => {
     const data = unwrapInput<{
       search?: string;
@@ -157,7 +157,7 @@ const list = dashProcedure
     };
   });
 
-const getById = dashProcedure
+const getById = staffProcedure
   .input((v: unknown) => {
     const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
@@ -261,7 +261,7 @@ async function notifyDOForOrder(
   }
 }
 
-const endOrder = dashProcedure
+const endOrder = staffProcedure
   .input((v: unknown) => {
     const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
@@ -542,7 +542,7 @@ async function buildSettlementData(
   };
 }
 
-const getSettlementPreview = dashProcedure
+const getSettlementPreview = staffProcedure
   .input((v: unknown) => {
     const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
@@ -553,7 +553,7 @@ const getSettlementPreview = dashProcedure
     return buildSettlementData(tdb, input.id);
   });
 
-const settleOrder = dashProcedure
+const settleOrder = staffProcedure
   .input((v: unknown) => {
     const data = unwrapInput<{ id: string; deductFromStoredValue?: boolean }>(
       v,
@@ -852,7 +852,7 @@ const settleOrder = dashProcedure
     return { success: true, price: finalPrice, snapshot };
   });
 
-const pauseOrder = dashProcedure
+const pauseOrder = staffProcedure
   .input((v: unknown) => {
     const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
@@ -864,7 +864,7 @@ const pauseOrder = dashProcedure
     return { success: true };
   });
 
-const resumeOrder = dashProcedure
+const resumeOrder = staffProcedure
   .input((v: unknown) => {
     const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
@@ -892,7 +892,7 @@ const resumeOrder = dashProcedure
     return { success: true };
   });
 
-const batchPause = dashProcedure
+const batchPause = staffProcedure
   .input((v: unknown) => {
     const { ids } = unwrapInput<{ ids: string[] }>(v);
     if (!ids?.length) throw new Error("ids is required");
@@ -927,7 +927,7 @@ const batchPause = dashProcedure
     return { results };
   });
 
-const batchResume = dashProcedure
+const batchResume = staffProcedure
   .input((v: unknown) => {
     const { ids } = unwrapInput<{ ids: string[] }>(v);
     if (!ids?.length) throw new Error("ids is required");
@@ -978,7 +978,7 @@ const batchResume = dashProcedure
     return { results };
   });
 
-const batchSettlementPreview = dashProcedure
+const batchSettlementPreview = staffProcedure
   .input((v: unknown) => {
     const { ids } = unwrapInput<{ ids: string[] }>(v);
     if (!ids?.length) throw new Error("ids is required");
@@ -1001,7 +1001,7 @@ const batchSettlementPreview = dashProcedure
     return { previews };
   });
 
-const batchSettle = dashProcedure
+const batchSettle = staffProcedure
   .input((v: unknown) => {
     const data = unwrapInput<{
       ids: string[];
@@ -1266,7 +1266,7 @@ const batchSettle = dashProcedure
     return { batchId, results };
   });
 
-const cancelBatchSettlement = dashProcedure
+const cancelBatchSettlement = staffProcedure
   .input((v: unknown) => {
     const { ids } = unwrapInput<{ ids: string[] }>(v);
     if (!ids?.length) throw new Error("ids is required");
@@ -1337,7 +1337,7 @@ const cancelBatchSettlement = dashProcedure
     return { results };
   });
 
-const cleanupOrphanedData = dashProcedure
+const cleanupOrphanedData = staffProcedure
   .input((v: unknown) => {
     const data = unwrapInput<{ dryRun?: boolean }>(v);
     return { dryRun: data.dryRun ?? true };

@@ -1,6 +1,6 @@
 import { BoardGame } from "@lib/utils";
 import { z } from "zod/v4";
-import { publicProcedure } from "./baseTRPC";
+import { staffProcedure } from "./baseTRPC";
 
 const syncInpuZ = z.object({
   pageFrom: z.number(),
@@ -8,7 +8,7 @@ const syncInpuZ = z.object({
   date: z.number(),
 });
 
-const sync = publicProcedure
+const sync = staffProcedure
   .input(syncInpuZ)
   .mutation(({ ctx, input }) =>
     BoardGame.fetchToDb(ctx.env.DB, input.pageFrom, input.pageTo, input.date),
@@ -18,7 +18,7 @@ const wakeInpuZ = z.object({
   date: z.number(),
 });
 
-const wake = publicProcedure
+const wake = staffProcedure
   .input(wakeInpuZ)
   .mutation(({ ctx, input }) =>
     BoardGame.setDateToCurry(ctx.env.DB, input.date),

@@ -288,6 +288,13 @@
       "when": 1781704523787,
       "tag": "0040_chemical_dorian_gray",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "6",
+      "when": 1781717111113,
+      "tag": "0041_boring_proteus",
+      "breakpoints": true
     }
   ]
 }

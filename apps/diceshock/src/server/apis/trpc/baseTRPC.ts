@@ -1,4 +1,5 @@
 import type Dysmsapi20170525 from "@alicloud/dysmsapi20170525";
+import type { UserRole } from "@lib/db";
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { UserInfo } from "@/server/middlewares/auth";
 import type { HonoCtxEnv } from "@/shared/types";
@@ -22,16 +23,49 @@ const t = initTRPC
     aliyunClient: Dysmsapi20170525;
     userInfo?: UserInfo;
     userId?: string;
+    userRole?: UserRole;
   }>()
   .create();
 
 export const router = t.router;
 export const publicProcedure = t.procedure;
 
-// Dash procedure: 用于 dash 路由，由于路由已由 Cloudflare Zero Trust 保护，不需要检查认证
-export const dashProcedure = t.procedure;
+export const staffProcedure = t.procedure.use(({ ctx, next }) => {
+  if (!ctx.userId || !ctx.userRole) {
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "需要登录才能访问后台",
+    });
+  }
+  if (ctx.userRole !== "admin" && ctx.userRole !== "staff") {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "需要管理员或店员权限",
+    });
+  }
+  return next({
+    ctx: { ...ctx, userId: ctx.userId, userRole: ctx.userRole },
+  });
+});
 
-// Protected procedure that requires authentication
+export const adminProcedure = t.procedure.use(({ ctx, next }) => {
+  if (!ctx.userId || !ctx.userRole) {
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "需要登录才能访问后台",
+    });
+  }
+  if (ctx.userRole !== "admin") {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "需要管理员权限",
+    });
+  }
+  return next({
+    ctx: { ...ctx, userId: ctx.userId, userRole: ctx.userRole },
+  });
+});
+
 export const protectedProcedure = publicProcedure.use(({ ctx, next }) => {
   if (!ctx.userInfo || !ctx.userId) {
     throw new TRPCError({

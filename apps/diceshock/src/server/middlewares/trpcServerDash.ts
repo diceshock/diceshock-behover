@@ -1,5 +1,6 @@
-import { trpcServer } from "@hono/trpc-server";
 import { getAuthUser } from "@hono/auth-js";
+import { trpcServer } from "@hono/trpc-server";
+import type { UserRole } from "@lib/db";
 import { appRouterDash } from "@/server/apis/trpc";
 
 const trpcServerDash = trpcServer({
@@ -7,6 +8,7 @@ const trpcServerDash = trpcServer({
   createContext: async (_opts, c) => {
     const authUser = await getAuthUser(c);
     const id = authUser?.token?.sub || authUser?.user?.id;
+    const role = (authUser?.token?.role as UserRole) ?? "customer";
     const { UserInfo } = c.get("InjectCrossData") ?? {};
 
     return {
@@ -14,6 +16,7 @@ const trpcServerDash = trpcServer({
       aliyunClient: c.get("AliyunClient"),
       userInfo: UserInfo,
       userId: id,
+      userRole: role,
     };
   },
   onError({ error, path, input, ctx: _ctx, type }) {

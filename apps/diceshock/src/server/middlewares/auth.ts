@@ -1,7 +1,13 @@
 import Credentials from "@auth/core/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { type AuthConfig, getAuthUser, initAuthConfig } from "@hono/auth-js";
-import db, { accounts, drizzle, userInfoTable, users } from "@lib/db";
+import db, {
+  accounts,
+  drizzle,
+  type UserRole,
+  userInfoTable,
+  users,
+} from "@lib/db";
 import { createSelectSchema } from "drizzle-zod";
 import type { Context } from "hono";
 import { nanoid } from "nanoid/non-secure";
@@ -44,6 +50,16 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
 
         if ("phone" in user && user.phone) token.phone = user.phone;
 
+        // 从 DB 读取 role 写入 token
+        if (user.id) {
+          const tdb = db(c.env.DB);
+          const dbUser = await tdb.query.users.findFirst({
+            where: (u: any, { eq }: any) => eq(u.id, user.id),
+            columns: { role: true },
+          });
+          token.role = (dbUser?.role ?? "customer") as UserRole;
+        }
+
         // wechat-mp 授权带来了微信昵称，写入 token 以便后续中间件更新 DB
         if (
           account?.provider === "wechat-mp" &&
@@ -61,6 +77,7 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
 
         session.user.id = token.sub;
         session.user.name = token.name as string;
+        (session.user as any).role = (token.role as UserRole) ?? "customer";
 
         return session;
       },

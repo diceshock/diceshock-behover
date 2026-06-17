@@ -1,6 +1,6 @@
 import db, { drizzle, pricingSnapshotsTable } from "@lib/db";
 import { customAlphabet } from "nanoid/non-secure";
-import { dashProcedure, publicProcedure, unwrapInput } from "./baseTRPC";
+import { staffProcedure, publicProcedure, unwrapInput } from "./baseTRPC";
 
 type SnapshotData = NonNullable<typeof pricingSnapshotsTable.$inferSelect.data>;
 
@@ -22,7 +22,7 @@ async function deduplicateName(
   return existing ? `${name}-${nanoid()}` : name;
 }
 
-const load = dashProcedure.query(async ({ ctx }) => {
+const load = staffProcedure.query(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
   const latest = await tdb.query.pricingSnapshotsTable.findFirst({
     orderBy: (s, { desc }) => desc(s.created_at),
@@ -35,7 +35,7 @@ const load = dashProcedure.query(async ({ ctx }) => {
   };
 });
 
-const save = dashProcedure
+const save = staffProcedure
   .input((v: unknown) => {
     const { data, name } = unwrapInput<{ data: SnapshotData; name: string }>(v);
     if (!data?.config || !Array.isArray(data.plans))
@@ -58,7 +58,7 @@ const save = dashProcedure
     return { id: row.id, name: finalName };
   });
 
-const publish = dashProcedure.mutation(async ({ ctx }) => {
+const publish = staffProcedure.mutation(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
 
   const latestDraft = await tdb.query.pricingSnapshotsTable.findFirst({
@@ -93,7 +93,7 @@ function buildSummary(d: SnapshotData | null): string {
   return parts.join(" · ") || "空快照";
 }
 
-const listSnapshots = dashProcedure.query(async ({ ctx }) => {
+const listSnapshots = staffProcedure.query(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
   const rows = await tdb.query.pricingSnapshotsTable.findMany({
     orderBy: (s, { desc }) => desc(s.created_at),
@@ -108,7 +108,7 @@ const listSnapshots = dashProcedure.query(async ({ ctx }) => {
   }));
 });
 
-const restoreSnapshot = dashProcedure
+const restoreSnapshot = staffProcedure
   .input((v: unknown) => {
     const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
@@ -148,7 +148,7 @@ const getPublished = publicProcedure.query(async ({ ctx }) => {
   };
 });
 
-const getSnapshotDetail = dashProcedure
+const getSnapshotDetail = staffProcedure
   .input((v: unknown) => {
     const { id } = unwrapInput<{ id: string }>(v);
     if (!id) throw new Error("id is required");
