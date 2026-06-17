@@ -41,26 +41,22 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
     basePath: "/api/auth",
     callbacks: {
       async jwt({ token, user, account, profile }) {
-        if (!user) {
-          return token;
+        if (user) {
+          token.sub = user.id;
+          token.name = user.name;
+          if ("phone" in user && user.phone) token.phone = user.phone;
         }
 
-        token.sub = user.id;
-        token.name = user.name;
-
-        if ("phone" in user && user.phone) token.phone = user.phone;
-
-        // 从 DB 读取 role 写入 token
-        if (user.id) {
+        // 每次 token 刷新都从 DB 读取最新 role
+        if (token.sub) {
           const tdb = db(c.env.DB);
           const dbUser = await tdb.query.users.findFirst({
-            where: (u: any, { eq }: any) => eq(u.id, user.id),
+            where: (u: any, { eq }: any) => eq(u.id, token.sub),
             columns: { role: true },
           });
           token.role = (dbUser?.role ?? "customer") as UserRole;
         }
 
-        // wechat-mp 授权带来了微信昵称，写入 token 以便后续中间件更新 DB
         if (
           account?.provider === "wechat-mp" &&
           profile &&
