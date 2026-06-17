@@ -20,6 +20,7 @@ declare namespace Cloudflare {
 		WECHAT_OPEN_APP_SECRET?: string;
 		WECHAT_MP_APP_ID?: string;
 		WECHAT_MP_APP_SECRET?: string;
+		AUTH_URL?: string;
 		GSZ_TOKEN: string;
 		R2: R2Bucket;
 		DB: D1Database;

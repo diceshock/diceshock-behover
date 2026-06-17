@@ -60,6 +60,9 @@ custom_domain = true
 [triggers]
 crons = ["0 4-22 * * *"]
 
+[vars]
+AUTH_URL = "https://diceshock.com"
+
 # WeChat OAuth secrets (set via `wrangler secret put`):
 # WECHAT_OPEN_APP_ID
 # WECHAT_OPEN_APP_SECRET
