@@ -3,8 +3,28 @@ import db from "@lib/db";
 import type { Context } from "hono";
 import type { HonoCtxEnv } from "@/shared/types";
 
+const CARD_PREFIX = "card/board-game/";
+const CACHE_TTL_MS = 2 * 60 * 60 * 1000;
+
 export async function boardGameCard(c: Context<HonoCtxEnv>) {
-  const id = c.req.param("id");
+  const id = c.req.param("id") as string;
+  const r2Key = `${CARD_PREFIX}${id}.png`;
+
+  const cached = await c.env.R2.head(r2Key);
+  if (cached && cached.uploaded) {
+    const age = Date.now() - cached.uploaded.getTime();
+    if (age < CACHE_TTL_MS) {
+      const obj = await c.env.R2.get(r2Key);
+      if (obj) {
+        return new Response(obj.body, {
+          headers: {
+            "content-type": "image/png",
+            "cache-control": "no-cache",
+          },
+        });
+      }
+    }
+  }
 
   const game = await db(c.env.DB).query.boardGamesTable.findFirst({
     where: (g, { eq }) => eq(g.id, id),
@@ -41,11 +61,16 @@ export async function boardGameCard(c: Context<HonoCtxEnv>) {
     });
 
     const buffer = (await page.screenshot({ type: "png" })) as Buffer;
+    const bytes = new Uint8Array(buffer);
 
-    return new Response(new Uint8Array(buffer), {
+    await c.env.R2.put(r2Key, bytes, {
+      httpMetadata: { contentType: "image/png" },
+    });
+
+    return new Response(bytes, {
       headers: {
         "content-type": "image/png",
-        "cache-control": "public, max-age=86400",
+        "cache-control": "no-cache",
       },
     });
   } finally {
