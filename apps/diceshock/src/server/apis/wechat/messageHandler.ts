@@ -3,7 +3,10 @@ import type { HonoCtxEnv } from "@/shared/types";
 import { chatWithDeepSeek } from "./deepseekClient";
 import { generateAndSendMembershipCard } from "./membershipCard";
 import { checkRateLimit, recordTokenUsage } from "./rateLimit";
-import { buildImageReply, buildTextReply } from "./xmlUtils";
+import { getWechatAccessToken, sendCustomerTextMessage } from "./wechatApi";
+import { buildTextReply } from "./xmlUtils";
+
+const TYPING_REPLY = "正在思考中，请稍候...";
 
 export async function handleTextMessage(
   c: Context<HonoCtxEnv>,
@@ -17,19 +20,38 @@ export async function handleTextMessage(
   const { allowed, reason } = await checkRateLimit(c, openId);
   if (!allowed) return reason || "服务繁忙，稍后再试";
 
-  const ragContext = await searchKnowledgeBase(c, content);
-  const { reply, tokensUsed } = await chatWithDeepSeek(
-    c,
-    content,
-    openId,
-    ragContext,
-  );
+  c.executionCtx.waitUntil(processAndReplyAsync(c, openId, content));
 
-  if (tokensUsed > 0) {
-    c.executionCtx.waitUntil(recordTokenUsage(c, openId, tokensUsed));
+  return TYPING_REPLY;
+}
+
+async function processAndReplyAsync(
+  c: Context<HonoCtxEnv>,
+  openId: string,
+  content: string,
+): Promise<void> {
+  try {
+    const ragContext = await searchKnowledgeBase(c, content);
+    const { reply, tokensUsed } = await chatWithDeepSeek(
+      c,
+      content,
+      openId,
+      ragContext,
+    );
+
+    if (tokensUsed > 0) {
+      await recordTokenUsage(c, openId, tokensUsed);
+    }
+
+    await sendCustomerTextMessage(c.env as any, openId, reply);
+  } catch (e) {
+    console.error("[wechat:async] processing failed:", e);
+    await sendCustomerTextMessage(
+      c.env as any,
+      openId,
+      "AI 处理异常，请稍后再试",
+    );
   }
-
-  return reply;
 }
 
 export async function handleMenuEvent(
@@ -47,7 +69,9 @@ export async function handleMenuEvent(
         fromUser,
         "正在为您生成会员信息，请稍候...",
       );
-      c.executionCtx.waitUntil(generateMembershipCard(c, msg.FromUserName));
+      c.executionCtx.waitUntil(
+        generateAndSendMembershipCard(c, msg.FromUserName),
+      );
       return { xml: reply };
     }
     default:
@@ -84,11 +108,4 @@ async function searchKnowledgeBase(
     console.error("[AI Search] error:", e);
     return undefined;
   }
-}
-
-async function generateMembershipCard(
-  c: Context<HonoCtxEnv>,
-  openId: string,
-): Promise<void> {
-  await generateAndSendMembershipCard(c, openId);
 }

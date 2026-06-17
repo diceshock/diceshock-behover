@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 import type { HonoCtxEnv } from "@/shared/types";
+import { decryptMessage, encryptMessage } from "./crypto";
 import { handleMenuEvent, handleTextMessage } from "./messageHandler";
 import { buildEmptyReply, buildTextReply, parseXml } from "./xmlUtils";
 
@@ -8,6 +9,13 @@ export async function wechatVerify(c: Context<HonoCtxEnv>) {
   const token = (c.env as any).WECHAT_MP_TOKEN as string;
 
   if (!signature || !timestamp || !nonce || !echostr || !token) {
+    console.log("[wechat:verify] missing params", {
+      signature: !!signature,
+      timestamp: !!timestamp,
+      nonce: !!nonce,
+      echostr: !!echostr,
+      token: !!token,
+    });
     return c.text("missing params", 400);
   }
 
@@ -24,15 +32,62 @@ export async function wechatVerify(c: Context<HonoCtxEnv>) {
   if (hash === signature) {
     return c.text(echostr);
   }
+  console.log("[wechat:verify] signature mismatch", {
+    expected: hash,
+    got: signature,
+  });
   return c.text("invalid signature", 403);
 }
 
 export async function wechatMessage(c: Context<HonoCtxEnv>) {
+  const env = c.env as any;
   const body = await c.req.text();
-  const msg = parseXml(body);
+  const encryptType = c.req.query("encrypt_type");
+
+  console.log("[wechat:msg] received", { encryptType, bodyLen: body.length });
+
+  let msg: Record<string, string>;
+
+  if (encryptType === "aes") {
+    const aesKey = env.WECHAT_MP_ENCODING_AES_KEY as string;
+    const appId = env.WECHAT_MP_APP_ID as string;
+
+    if (!aesKey || !appId) {
+      console.log("[wechat:msg] missing AES config", {
+        aesKey: !!aesKey,
+        appId: !!appId,
+      });
+      return c.text(buildEmptyReply());
+    }
+
+    const outerXml = parseXml(body);
+    const encrypted = outerXml.Encrypt;
+    if (!encrypted) {
+      console.log("[wechat:msg] no Encrypt field in XML");
+      return c.text(buildEmptyReply());
+    }
+
+    try {
+      const decrypted = await decryptMessage(encrypted, aesKey);
+      console.log("[wechat:msg] decrypted ok, len:", decrypted.length);
+      msg = parseXml(decrypted);
+    } catch (e) {
+      console.error("[wechat:msg] decrypt failed:", e);
+      return c.text(buildEmptyReply());
+    }
+  } else {
+    msg = parseXml(body);
+  }
 
   const toUser = msg.FromUserName;
   const fromUser = msg.ToUserName;
+
+  console.log("[wechat:msg] parsed", {
+    msgType: msg.MsgType,
+    toUser: !!toUser,
+    fromUser: !!fromUser,
+    content: msg.Content?.slice(0, 50),
+  });
 
   if (!toUser || !fromUser) {
     return c.text(buildEmptyReply());
@@ -42,6 +97,7 @@ export async function wechatMessage(c: Context<HonoCtxEnv>) {
 
   if (msgType === "text") {
     const reply = await handleTextMessage(c, msg);
+    console.log("[wechat:msg] reply len:", reply.length);
     return c.body(buildTextReply(toUser, fromUser, reply), 200, {
       "Content-Type": "application/xml",
     });
@@ -49,6 +105,7 @@ export async function wechatMessage(c: Context<HonoCtxEnv>) {
 
   if (msgType === "event") {
     const eventType = msg.Event;
+    console.log("[wechat:msg] event:", eventType, msg.EventKey);
     if (eventType === "CLICK") {
       const result = await handleMenuEvent(c, msg);
       if (result) {
