@@ -43,10 +43,16 @@ function RouteComponent() {
   const [myPlans, setMyPlans] = useState<MembershipPlan[]>([]);
   const [captchaEnabled, setCaptchaEnabled] = useState(true);
 
+  const isAutoNickname = (userInfo?.meta as { auto_nickname?: boolean } | null)
+    ?.auto_nickname;
+
   useEffect(() => {
     if (typeof navigator === "undefined") return;
     if (!/MicroMessenger/i.test(navigator.userAgent)) return;
-    if (!userInfo?.meta?.auto_nickname) return;
+    if (!isAutoNickname) return;
+    if (sessionStorage.getItem("__wx_nickname_auth_done")) return;
+
+    sessionStorage.setItem("__wx_nickname_auth_done", "1");
 
     const form = document.createElement("form");
     form.method = "POST";
@@ -71,7 +77,7 @@ function RouteComponent() {
         form.submit();
       })
       .catch(() => {});
-  }, [userInfo?.meta?.auto_nickname]);
+  }, [isAutoNickname]);
 
   useEffect(() => {
     trpcClientPublic.settings.getCaptchaEnabled

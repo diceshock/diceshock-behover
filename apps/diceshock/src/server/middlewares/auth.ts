@@ -34,50 +34,34 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
     trustHost: true,
     basePath: "/api/auth",
     callbacks: {
-      async jwt({ token, user }) {
+      async jwt({ token, user, account, profile }) {
         if (!user) {
-          console.log("[登录流程] JWT回调: 无用户信息，返回现有token");
           return token;
         }
-
-        console.log("[登录流程] JWT回调: 处理用户信息", {
-          userId: user.id,
-          userName: user.name,
-          phone: "phone" in user ? user.phone : undefined,
-        });
 
         token.sub = user.id;
         token.name = user.name;
 
         if ("phone" in user && user.phone) token.phone = user.phone;
 
-        console.log("[登录流程] JWT回调: Token已更新", {
-          sub: token.sub,
-          name: token.name,
-          phone: token.phone,
-        });
+        // wechat-mp 授权带来了微信昵称，写入 token 以便后续中间件更新 DB
+        if (
+          account?.provider === "wechat-mp" &&
+          profile &&
+          "nickname" in profile &&
+          (profile as any).nickname
+        ) {
+          token.name = (profile as any).nickname;
+        }
+
         return token;
       },
       async session({ session, token }) {
-        if (!session.user || !token.sub) {
-          console.log(
-            "[登录流程] Session回调: 无用户或token.sub，返回现有session",
-          );
-          return session;
-        }
-
-        console.log("[登录流程] Session回调: 更新session", {
-          userId: token.sub,
-          userName: token.name,
-        });
+        if (!session.user || !token.sub) return session;
 
         session.user.id = token.sub;
         session.user.name = token.name as string;
 
-        console.log("[登录流程] Session回调: Session已更新", {
-          userId: session.user.id,
-          userName: session.user.name,
-        });
         return session;
       },
     },
@@ -325,8 +309,9 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
   });
 
   if (!userInfoRaw) {
-    const nickname = authUser.user?.name ?? genNickname();
-    const isAutoNickname = !authUser.user?.name;
+    const nickname =
+      authUser.user?.name || authUser.token?.name || genNickname();
+    const isAutoNickname = /^The Shock [0-9a-f]{5}$/.test(nickname);
 
     const uid = nanoid();
 
@@ -369,7 +354,8 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
   if (
     userInfoRaw.meta?.auto_nickname &&
     oauthName &&
-    oauthName !== userInfoRaw.nickname
+    oauthName !== userInfoRaw.nickname &&
+    !/^The Shock [0-9a-f]{5}$/.test(oauthName)
   ) {
     const tdb = db(c.env.DB);
     await tdb
