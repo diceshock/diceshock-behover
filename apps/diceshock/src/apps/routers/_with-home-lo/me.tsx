@@ -6,7 +6,6 @@ import {
   ListBulletsIcon,
   PencilSimpleLineIcon,
   PhoneIcon,
-  QrCodeIcon,
   ScanIcon,
   SignOutIcon,
   TrophyIcon,
@@ -473,18 +472,7 @@ function RouteComponent() {
           <section className="mb-4">
             <SectionHeader title="账号" />
             <div className="bg-base-200 rounded-2xl border border-base-content/5 overflow-hidden">
-              <div className="p-3">
-                <TOTPCard />
-              </div>
-
-              <div className="border-t border-base-content/5">
-                <ListItem
-                  icon={QrCodeIcon}
-                  label="活动验证码"
-                  sublabel="扫码签到入场"
-                  onClick={() => setIsQRScannerOpen(true)}
-                />
-              </div>
+              <TOTPCard />
 
               <div className="border-t border-base-content/5">
                 <ListItem
