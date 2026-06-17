@@ -143,7 +143,7 @@ body {
 .cover-fade {
   position: absolute;
   top: 0; right: 0;
-  width: 140px; height: 100%;
+  width: 80px; height: 100%;
   background: linear-gradient(to right, transparent, #fff);
 }
 .info {
@@ -151,7 +151,7 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 48px 56px 80px 48px;
+  padding: 48px 56px 80px 24px;
   text-align: right;
 }
 .rating {
