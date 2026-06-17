@@ -176,8 +176,26 @@ export default function LoginDialog({
   );
 
   const handleWechatLogin = useCallback(() => {
-    const provider = isInWechat ? "wechat-mp" : "wechat-open";
-    signIn(provider, { callbackUrl: window.location.href });
+    if (isInWechat) {
+      signIn("wechat-mp", { callbackUrl: window.location.href });
+      return;
+    }
+
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (isMobile) {
+      const callbackUrl = window.location.href;
+      // weixin:// deep link attempts to launch WeChat app
+      window.location.href = `weixin://dl/business/?appid=${encodeURIComponent(callbackUrl)}`;
+      // Fallback if WeChat not installed — document stays visible
+      setTimeout(() => {
+        if (!document.hidden) {
+          signIn("wechat-open", { callbackUrl });
+        }
+      }, 2500);
+      return;
+    }
+
+    signIn("wechat-open", { callbackUrl: window.location.href });
   }, [isInWechat]);
 
   const handleTempIdentity = useCallback(async () => {
@@ -250,14 +268,12 @@ export default function LoginDialog({
               onClick={handleWechatLogin}
             >
               <WechatIcon className="size-5" />
-              {isInWechat ? "微信授权登录" : "微信扫码登录"}
+              微信登录
             </button>
             <p className="text-xs text-base-content/60 text-center">
               {isInWechat
                 ? "点击后将通过微信授权获取您的公开信息"
-                : isDesktop && !useQRFallback
-                  ? "也可点击按钮在微信中打开扫码"
-                  : "点击后将弹出微信二维码，请使用微信扫码完成登录"}
+                : "点击后唤起微信授权登录"}
             </p>
 
             {isSeatPage && (

@@ -1,23 +1,43 @@
 export async function getWechatAccessToken(env: any): Promise<string> {
   const cached = await env.KV.get("wechat:mp:access_token");
-  if (cached) return cached;
+  if (cached) {
+    console.log("[wechat:api] access_token from cache");
+    return cached;
+  }
 
   const appId = env.WECHAT_MP_APP_ID;
   const appSecret = env.WECHAT_MP_APP_SECRET;
+
+  if (!appId || !appSecret) {
+    console.error(
+      "[wechat:api] WECHAT_MP_APP_ID or WECHAT_MP_APP_SECRET not set",
+    );
+    throw new Error("WeChat MP credentials not configured");
+  }
+
+  console.log("[wechat:api] fetching new access_token");
   const url = `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${appId}&secret=${appSecret}`;
   const res = await fetch(url);
   const data = (await res.json()) as {
-    access_token: string;
-    expires_in: number;
+    access_token?: string;
+    expires_in?: number;
+    errcode?: number;
+    errmsg?: string;
   };
 
   if (!data.access_token) {
-    console.error("[wechat:api] failed to get access_token:", data);
-    throw new Error("Failed to get WeChat access_token");
+    console.error("[wechat:api] failed to get access_token", {
+      errcode: data.errcode,
+      errmsg: data.errmsg,
+    });
+    throw new Error(
+      `Failed to get WeChat access_token: ${data.errcode} ${data.errmsg}`,
+    );
   }
 
+  console.log("[wechat:api] got access_token, expires_in:", data.expires_in);
   await env.KV.put("wechat:mp:access_token", data.access_token, {
-    expirationTtl: data.expires_in - 300,
+    expirationTtl: (data.expires_in ?? 7200) - 300,
   });
 
   return data.access_token;
@@ -28,6 +48,10 @@ export async function sendCustomerTextMessage(
   openId: string,
   content: string,
 ): Promise<void> {
+  console.log("[wechat:api] sending text message", {
+    openId: openId.slice(-8),
+    contentLen: content.length,
+  });
   const token = await getWechatAccessToken(env);
   const res = await fetch(
     `https://api.weixin.qq.com/cgi-bin/message/custom/send?access_token=${token}`,
@@ -43,7 +67,13 @@ export async function sendCustomerTextMessage(
   );
   const data = (await res.json()) as { errcode?: number; errmsg?: string };
   if (data.errcode && data.errcode !== 0) {
-    console.error("[wechat:api] send text failed:", data);
+    console.error("[wechat:api] send text failed", {
+      errcode: data.errcode,
+      errmsg: data.errmsg,
+      openId: openId.slice(-8),
+    });
+  } else {
+    console.log("[wechat:api] send text ok");
   }
 }
 

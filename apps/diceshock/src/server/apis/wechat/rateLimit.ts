@@ -56,10 +56,17 @@ export async function checkRateLimit(
     if (isWindowExpired(bucket, limit.windowMs)) continue;
 
     if (bucket.tokens >= limit.max) {
+      console.log("[ratelimit] blocked", {
+        openId: openId.slice(-8),
+        limitKey,
+        tokens: bucket.tokens,
+        max: limit.max,
+      });
       return { allowed: false, reason: "服务繁忙，稍后再试" };
     }
   }
 
+  console.log("[ratelimit] allowed", { openId: openId.slice(-8) });
   return { allowed: true };
 }
 
@@ -68,6 +75,7 @@ export async function recordTokenUsage(
   openId: string,
   tokensUsed: number,
 ): Promise<void> {
+  console.log("[ratelimit] record", { openId: openId.slice(-8), tokensUsed });
   const kv = c.env.KV;
   const now = Date.now();
 
@@ -97,4 +105,5 @@ export async function recordTokenUsage(
       });
     }),
   );
+  console.log("[ratelimit] recorded ok");
 }

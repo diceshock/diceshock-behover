@@ -58,9 +58,22 @@ export async function chatWithDeepSeek(
     (env.CF_ACCOUNT_ID as string) || "3244c8f91cd34317ce18652158e5853a";
   const gatewayId = env.CF_AI_GATEWAY_ID as string;
 
+  if (!apiKey) {
+    console.error("[deepseek] DEEPSEEK_API_KEY not configured");
+    return { reply: "AI 服务未配置，请联系管理员", tokensUsed: 0 };
+  }
+
   const baseUrl = gatewayId
     ? `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/deepseek`
     : "https://api.deepseek.com/v1";
+
+  console.log("[deepseek] starting chat", {
+    openId: openId.slice(-8),
+    msgLen: userMessage.length,
+    hasRag: !!ragContext,
+    ragLen: ragContext?.length ?? 0,
+    baseUrl,
+  });
 
   let systemContent = SYSTEM_PROMPT;
   if (ragContext) {
@@ -75,6 +88,9 @@ export async function chatWithDeepSeek(
   let totalTokens = 0;
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+    console.log("[deepseek] round", round + 1, "messages:", messages.length);
+
+    const startTime = Date.now();
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
@@ -89,10 +105,15 @@ export async function chatWithDeepSeek(
         max_tokens: 1024,
       }),
     });
+    const elapsed = Date.now() - startTime;
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error("[DeepSeek] API error:", response.status, errText);
+      console.error("[deepseek] API error", {
+        status: response.status,
+        elapsed,
+        body: errText.slice(0, 500),
+      });
       return {
         reply: "AI 服务暂时不可用，请稍后再试",
         tokensUsed: totalTokens,
@@ -102,14 +123,26 @@ export async function chatWithDeepSeek(
     const data = (await response.json()) as DeepSeekResponse;
     totalTokens += data.usage?.total_tokens ?? 0;
 
+    console.log("[deepseek] response ok", {
+      elapsed,
+      tokens: data.usage,
+      finishReason: data.choices[0]?.finish_reason,
+      hasToolCalls: !!data.choices[0]?.message?.tool_calls?.length,
+    });
+
     const choice = data.choices[0];
     if (!choice) {
+      console.error("[deepseek] empty choices array");
       return { reply: "AI 返回异常，请稍后再试", tokensUsed: totalTokens };
     }
 
     const assistantMsg = choice.message;
 
     if (!assistantMsg.tool_calls || assistantMsg.tool_calls.length === 0) {
+      console.log("[deepseek] final reply", {
+        len: assistantMsg.content?.length ?? 0,
+        totalTokens,
+      });
       return {
         reply: assistantMsg.content || "抱歉，我无法回答这个问题",
         tokensUsed: totalTokens,
@@ -123,8 +156,18 @@ export async function chatWithDeepSeek(
     });
 
     for (const toolCall of assistantMsg.tool_calls) {
+      console.log("[deepseek] tool call", {
+        name: toolCall.function.name,
+        args: toolCall.function.arguments.slice(0, 200),
+      });
       const args = JSON.parse(toolCall.function.arguments || "{}");
+      const toolStart = Date.now();
       const result = await executeTool(c, toolCall.function.name, args, openId);
+      console.log("[deepseek] tool result", {
+        name: toolCall.function.name,
+        elapsed: Date.now() - toolStart,
+        resultLen: result.length,
+      });
       messages.push({
         role: "tool",
         content: result,
@@ -133,6 +176,7 @@ export async function chatWithDeepSeek(
     }
   }
 
+  console.log("[deepseek] max tool rounds reached", { totalTokens });
   const lastAssistant = messages.findLast((m) => m.role === "assistant");
   return {
     reply: lastAssistant?.content || "查询完成，但未能生成回复",

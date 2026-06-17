@@ -1,16 +1,12 @@
 /**
- * 微信 OAuth 登录 Provider (Auth.js v0.40+ 兼容版)
+ * 微信 OAuth 登录 Provider (Auth.js v0.41+)
  *
- * 两种模式：
- * 1. WechatOpen - 微信开放平台（PC 端扫码登录）
- * 2. WechatMP - 微信公众平台（微信内网页授权）
- *
- * Auth.js 0.40 使用 oauth4webapi 发标准 POST 请求到 token endpoint，
- * 但微信 API 需要 GET + query params (appid, secret, code, grant_type)。
- * 因此我们通过 [customFetch] 拦截 token 请求并改写为微信兼容格式。
+ * 微信 API 使用非标准 OAuth2 流程：
+ * - authorization 使用 appid 而非 client_id
+ * - token endpoint 需要 GET + appid/secret 参数（非标准 POST）
+ * 使用 token.request 直接处理 token 交换，避免 customFetch Symbol 问题
  */
 
-import { customFetch } from "@auth/core";
 import type { OAuthConfig } from "@auth/core/providers";
 
 interface WechatProfile {
@@ -30,84 +26,60 @@ interface WechatProviderConfig {
   clientSecret: string;
 }
 
-/**
- * 创建自定义 fetch 函数，拦截 token endpoint 请求
- * 将 Auth.js 的标准 OAuth2 POST 改为微信的 GET + query params
- */
-function createWechatFetch(appId: string, appSecret: string) {
-  return async (
-    input: RequestInfo | URL,
-    init?: RequestInit,
-  ): Promise<Response> => {
-    const url = new URL(input.toString());
+async function fetchWechatToken(
+  appId: string,
+  appSecret: string,
+  code: string,
+) {
+  const tokenUrl = new URL("https://api.weixin.qq.com/sns/oauth2/access_token");
+  tokenUrl.searchParams.set("appid", appId);
+  tokenUrl.searchParams.set("secret", appSecret);
+  tokenUrl.searchParams.set("code", code);
+  tokenUrl.searchParams.set("grant_type", "authorization_code");
 
-    // 拦截 token endpoint 请求
-    if (url.pathname === "/sns/oauth2/access_token") {
-      // 从 POST body 提取 code
-      let code = "";
-      if (init?.body) {
-        const body =
-          init.body instanceof URLSearchParams
-            ? init.body
-            : new URLSearchParams(init.body as string);
-        code = body.get("code") || "";
-      }
+  console.log("[WeChat OAuth] Fetching token:", tokenUrl.toString());
+  const res = await fetch(tokenUrl.toString());
+  const data = (await res.json()) as any;
+  console.log("[WeChat OAuth] Token response:", JSON.stringify(data));
 
-      // 改用 GET 请求 + 微信专用参数
-      const tokenUrl = new URL(
-        "https://api.weixin.qq.com/sns/oauth2/access_token",
-      );
-      tokenUrl.searchParams.set("appid", appId);
-      tokenUrl.searchParams.set("secret", appSecret);
-      tokenUrl.searchParams.set("code", code);
-      tokenUrl.searchParams.set("grant_type", "authorization_code");
+  if (data.errcode) {
+    throw new Error(`WeChat token error: ${data.errcode} - ${data.errmsg}`);
+  }
 
-      console.log("[WeChat OAuth] Fetching token:", tokenUrl.toString());
-
-      const res = await fetch(tokenUrl.toString());
-      const data = (await res.json()) as any;
-
-      console.log("[WeChat OAuth] Token response:", JSON.stringify(data));
-
-      if (data.errcode) {
-        // 返回 OAuth2 标准错误格式
-        return new Response(
-          JSON.stringify({
-            error: "server_error",
-            error_description: `WeChat: ${data.errcode} - ${data.errmsg}`,
-          }),
-          {
-            status: 400,
-            headers: { "Content-Type": "application/json" },
-          },
-        );
-      }
-
-      // 将微信响应转换为标准 OAuth2 token 响应
-      const oauthResponse = {
-        access_token: data.access_token,
-        token_type: "bearer",
-        expires_in: data.expires_in,
-        refresh_token: data.refresh_token,
-        scope: data.scope || "snsapi_login",
-        // 把 openid 存入以便 userinfo 阶段使用
-        openid: data.openid,
-      };
-
-      return new Response(JSON.stringify(oauthResponse), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    // 其他请求正常 fetch
-    return fetch(input, init);
+  return {
+    tokens: {
+      access_token: data.access_token,
+      token_type: "bearer",
+      expires_in: data.expires_in,
+      refresh_token: data.refresh_token,
+      scope: data.scope || "snsapi_login",
+      openid: data.openid,
+    },
   };
+}
+
+async function fetchWechatUserinfo(
+  accessToken: string,
+  openid: string,
+): Promise<WechatProfile> {
+  const url = new URL("https://api.weixin.qq.com/sns/userinfo");
+  url.searchParams.set("access_token", accessToken);
+  url.searchParams.set("openid", openid);
+  url.searchParams.set("lang", "zh_CN");
+
+  console.log("[WeChat OAuth] Fetching userinfo:", url.toString());
+  const res = await fetch(url.toString());
+  const data = (await res.json()) as any;
+  console.log("[WeChat OAuth] Userinfo response:", JSON.stringify(data));
+
+  if (data.errcode) {
+    throw new Error(`WeChat userinfo error: ${data.errcode} - ${data.errmsg}`);
+  }
+  return data as WechatProfile;
 }
 
 /**
  * 微信开放平台 - PC 端扫码登录
- * 需要在 open.weixin.qq.com 注册应用
  */
 export function WechatOpen(config: WechatProviderConfig) {
   const { clientId, clientSecret } = config;
@@ -116,7 +88,6 @@ export function WechatOpen(config: WechatProviderConfig) {
     id: "wechat-open",
     name: "微信扫码登录",
     type: "oauth",
-    // 微信的 authorization URL 使用 appid 而非 client_id
     authorization: {
       url: "https://open.weixin.qq.com/connect/qrconnect",
       params: {
@@ -127,18 +98,10 @@ export function WechatOpen(config: WechatProviderConfig) {
     },
     token: {
       url: "https://api.weixin.qq.com/sns/oauth2/access_token",
-      // conform 确保返回的 response 有正确的 Content-Type
-      async conform(response: Response) {
-        const contentType = response.headers.get("content-type");
-        if (contentType?.includes("application/json")) return response;
-        // 如果没有正确的 content-type，重新包装
-        const text = await response.text();
-        const headers = new Headers(response.headers);
-        headers.set("Content-Type", "application/json");
-        return new Response(text, {
-          status: response.status,
-          headers,
-        });
+      async request({ params }: { params: URLSearchParams }) {
+        const code = params.get("code");
+        if (!code) throw new Error("Missing code in WeChat callback");
+        return fetchWechatToken(clientId, clientSecret, code);
       },
     },
     userinfo: {
@@ -148,24 +111,8 @@ export function WechatOpen(config: WechatProviderConfig) {
       }: {
         tokens: { access_token: string; openid?: string };
       }) {
-        // openid 从 token 响应中的额外字段获取
         const openid = (tokens as any).openid || "";
-        const url = new URL("https://api.weixin.qq.com/sns/userinfo");
-        url.searchParams.set("access_token", tokens.access_token);
-        url.searchParams.set("openid", openid);
-        url.searchParams.set("lang", "zh_CN");
-
-        console.log("[WeChat OAuth] Fetching userinfo:", url.toString());
-        const res = await fetch(url.toString());
-        const data = (await res.json()) as any;
-        console.log("[WeChat OAuth] Userinfo response:", JSON.stringify(data));
-
-        if (data.errcode) {
-          throw new Error(
-            `WeChat userinfo error: ${data.errcode} - ${data.errmsg}`,
-          );
-        }
-        return data as WechatProfile;
+        return fetchWechatUserinfo(tokens.access_token, openid);
       },
     },
     profile(profile: WechatProfile) {
@@ -175,26 +122,18 @@ export function WechatOpen(config: WechatProviderConfig) {
         image: profile.headimgurl,
       };
     },
-    // Auth.js 会用这些发标准 OAuth2 请求，但 customFetch 拦截并改写
     clientId,
     clientSecret,
     client: {
       token_endpoint_auth_method: "client_secret_post",
     },
     checks: ["state"],
-    // [customFetch] 必须放在 options 里，Auth.js normalizeOAuth 只从 options 读取 Symbol
-    options: {
-      clientId,
-      clientSecret,
-      [customFetch]: createWechatFetch(clientId, clientSecret),
-    },
   } satisfies OAuthConfig<WechatProfile>;
 }
 
 /**
  * 微信公众平台 - 微信内网页授权（需用户确认）
- * scope: snsapi_userinfo - 弹窗授权，可获取用户昵称头像等
- * 需要在 mp.weixin.qq.com 配置网页授权域名
+ * scope: snsapi_userinfo
  */
 export function WechatMP(config: WechatProviderConfig) {
   const { clientId, clientSecret } = config;
@@ -213,16 +152,10 @@ export function WechatMP(config: WechatProviderConfig) {
     },
     token: {
       url: "https://api.weixin.qq.com/sns/oauth2/access_token",
-      async conform(response: Response) {
-        const contentType = response.headers.get("content-type");
-        if (contentType?.includes("application/json")) return response;
-        const text = await response.text();
-        const headers = new Headers(response.headers);
-        headers.set("Content-Type", "application/json");
-        return new Response(text, {
-          status: response.status,
-          headers,
-        });
+      async request({ params }: { params: URLSearchParams }) {
+        const code = params.get("code");
+        if (!code) throw new Error("Missing code in WeChat MP callback");
+        return fetchWechatToken(clientId, clientSecret, code);
       },
     },
     userinfo: {
@@ -233,20 +166,7 @@ export function WechatMP(config: WechatProviderConfig) {
         tokens: { access_token: string; openid?: string };
       }) {
         const openid = (tokens as any).openid || "";
-        const url = new URL("https://api.weixin.qq.com/sns/userinfo");
-        url.searchParams.set("access_token", tokens.access_token);
-        url.searchParams.set("openid", openid);
-        url.searchParams.set("lang", "zh_CN");
-
-        const res = await fetch(url.toString());
-        const data = (await res.json()) as any;
-
-        if (data.errcode) {
-          throw new Error(
-            `WeChat userinfo error: ${data.errcode} - ${data.errmsg}`,
-          );
-        }
-        return data as WechatProfile;
+        return fetchWechatUserinfo(tokens.access_token, openid);
       },
     },
     profile(profile: WechatProfile) {
@@ -262,21 +182,12 @@ export function WechatMP(config: WechatProviderConfig) {
       token_endpoint_auth_method: "client_secret_post",
     },
     checks: ["state"],
-    options: {
-      clientId,
-      clientSecret,
-      [customFetch]: createWechatFetch(clientId, clientSecret),
-    },
   } satisfies OAuthConfig<WechatProfile>;
 }
 
 /**
  * 微信公众平台 - 静默授权（无感登录）
- * scope: snsapi_base - 无需用户确认，仅获取 openid
- * 用于微信内置浏览器自动登录，用户无感知
- *
- * 注意：snsapi_base 无法获取用户昵称/头像，只能拿到 openid
- * token 响应中直接包含 openid，不需要额外的 userinfo 请求
+ * scope: snsapi_base - 仅获取 openid
  */
 export function WechatMPSilent(config: WechatProviderConfig) {
   const { clientId, clientSecret } = config;
@@ -295,20 +206,12 @@ export function WechatMPSilent(config: WechatProviderConfig) {
     },
     token: {
       url: "https://api.weixin.qq.com/sns/oauth2/access_token",
-      async conform(response: Response) {
-        const contentType = response.headers.get("content-type");
-        if (contentType?.includes("application/json")) return response;
-        const text = await response.text();
-        const headers = new Headers(response.headers);
-        headers.set("Content-Type", "application/json");
-        return new Response(text, {
-          status: response.status,
-          headers,
-        });
+      async request({ params }: { params: URLSearchParams }) {
+        const code = params.get("code");
+        if (!code) throw new Error("Missing code in WeChat silent callback");
+        return fetchWechatToken(clientId, clientSecret, code);
       },
     },
-    // snsapi_base 不需要 userinfo 请求，openid 已经在 token 响应中
-    // 我们通过伪造一个 userinfo request 直接返回 openid 作为 profile
     userinfo: {
       url: "https://api.weixin.qq.com/sns/userinfo",
       async request({
@@ -316,7 +219,6 @@ export function WechatMPSilent(config: WechatProviderConfig) {
       }: {
         tokens: { access_token: string; openid?: string };
       }) {
-        // snsapi_base 模式下直接用 openid 构造 profile，不请求 userinfo 接口
         const openid = (tokens as any).openid || "";
         console.log(
           "[WeChat Silent] Using openid from token response:",
@@ -337,7 +239,6 @@ export function WechatMPSilent(config: WechatProviderConfig) {
     profile(profile: WechatProfile) {
       return {
         id: profile.unionid || profile.openid,
-        // 静默登录没有昵称，后续由 userInjMiddleware 补充
         name: "",
         image: "",
       };
@@ -348,10 +249,5 @@ export function WechatMPSilent(config: WechatProviderConfig) {
       token_endpoint_auth_method: "client_secret_post",
     },
     checks: ["state"],
-    options: {
-      clientId,
-      clientSecret,
-      [customFetch]: createWechatFetch(clientId, clientSecret),
-    },
   } satisfies OAuthConfig<WechatProfile>;
 }

@@ -39,6 +39,18 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
     session: { strategy: "jwt" },
     trustHost: true,
     basePath: "/api/auth",
+    debug: true,
+    logger: {
+      error(code: any, ...message: any[]) {
+        console.error("[Auth.js ERROR]", code, ...message);
+      },
+      warn(code: any, ...message: any[]) {
+        console.warn("[Auth.js WARN]", code, ...message);
+      },
+      debug(code: any, ...message: any[]) {
+        console.log("[Auth.js DEBUG]", code, ...message);
+      },
+    },
     callbacks: {
       async jwt({ token, user, account, profile }) {
         if (user) {
@@ -82,11 +94,19 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
 
   // 微信开放平台 - PC 端扫码登录
   if (c.env.WECHAT_OPEN_APP_ID && c.env.WECHAT_OPEN_APP_SECRET) {
+    console.log(
+      "[Auth Init] Registering wechat-open provider, appId:",
+      c.env.WECHAT_OPEN_APP_ID,
+    );
     config.providers.push(
       WechatOpen({
         clientId: c.env.WECHAT_OPEN_APP_ID,
         clientSecret: c.env.WECHAT_OPEN_APP_SECRET,
       }),
+    );
+  } else {
+    console.warn(
+      "[Auth Init] WECHAT_OPEN not configured, skipping wechat-open provider",
     );
   }
 
