@@ -144,6 +144,7 @@ function RouteComponent() {
               <td className="whitespace-nowrap">ID</td>
               <td className="whitespace-nowrap">昵称</td>
               <td className="whitespace-nowrap">姓名</td>
+              <td className="whitespace-nowrap">角色</td>
               <td className="whitespace-nowrap">会员计划</td>
               <td className="whitespace-nowrap">储值余额</td>
               <td className="whitespace-nowrap">手机号</td>
@@ -201,6 +202,17 @@ function RouteComponent() {
                       {user.userInfo?.nickname || "—"}
                     </td>
                     <td className="whitespace-nowrap">{user.name || "—"}</td>
+                    <td className="whitespace-nowrap">
+                      {user.role === "admin" ? (
+                        <span className="badge badge-sm badge-error">
+                          管理员
+                        </span>
+                      ) : user.role === "staff" ? (
+                        <span className="badge badge-sm badge-info">店员</span>
+                      ) : (
+                        <span className="badge badge-sm badge-ghost">顾客</span>
+                      )}
+                    </td>
                     <td className="relative group">
                       {(() => {
                         const activePlans = plans.filter(isActivePlan);
