@@ -1,7 +1,9 @@
 import { CaretDownIcon } from "@phosphor-icons/react/dist/ssr";
 import { Link } from "@tanstack/react-router";
 import type React from "react";
+import { useMemo } from "react";
 import LongTextLogo from "@/client/assets/svg/black-simplify-with-text-logo.svg?react";
+import useCrossData from "@/client/hooks/useCrossData";
 import AvatarMenu from "./AvataMenu";
 
 type PageType = {
@@ -88,36 +90,48 @@ const getMidMenu = (pages: PageType[]) =>
     })
     .filter(Boolean);
 
-const Header = () => (
-  <header className="sticky w-full top-0 left-0 z-50">
-    <nav className="navbar bg-base-100/70 backdrop-blur-xl">
-      <div className="navbar-start gap-1">
-        <div className="dropdown">
-          <div tabIndex={0} role="button" className="btn btn-ghost lg:hidden">
-            <CaretDownIcon className="h-5 w-5" />
+function Header() {
+  const crossData = useCrossData();
+  const isInWechat = useMemo(() => {
+    const ua =
+      crossData?.UserAgentMeta?.userAgent ??
+      (typeof navigator !== "undefined" ? navigator.userAgent : "");
+    return /MicroMessenger/i.test(ua);
+  }, [crossData?.UserAgentMeta?.userAgent]);
+
+  const logoTo = isInWechat ? "/me" : "/";
+
+  return (
+    <header className="sticky w-full top-0 left-0 z-50">
+      <nav className="navbar bg-base-100/70 backdrop-blur-xl">
+        <div className="navbar-start gap-1">
+          <div className="dropdown">
+            <div tabIndex={0} role="button" className="btn btn-ghost lg:hidden">
+              <CaretDownIcon className="h-5 w-5" />
+            </div>
+            <ul
+              tabIndex={0}
+              className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow"
+            >
+              {getSideMenu(PAGES)}
+            </ul>
           </div>
-          <ul
-            tabIndex={0}
-            className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow"
-          >
-            {getSideMenu(PAGES)}
-          </ul>
+
+          <Link to={logoTo} className="btn btn-ghost px-0">
+            <LongTextLogo className="h-full" />
+          </Link>
         </div>
 
-        <Link to="/" className="btn btn-ghost px-0">
-          <LongTextLogo className="h-full" />
-        </Link>
-      </div>
+        <div className="navbar-center hidden lg:flex">
+          <ul className="menu menu-horizontal px-1">{getMidMenu(PAGES)}</ul>
+        </div>
 
-      <div className="navbar-center hidden lg:flex">
-        <ul className="menu menu-horizontal px-1">{getMidMenu(PAGES)}</ul>
-      </div>
-
-      <div className="navbar-end pr-2">
-        <AvatarMenu />
-      </div>
-    </nav>
-  </header>
-);
+        <div className="navbar-end pr-2">
+          <AvatarMenu />
+        </div>
+      </nav>
+    </header>
+  );
+}
 
 export default Header;

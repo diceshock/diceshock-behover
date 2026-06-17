@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
 import { useMemo } from "react";
 import Footer from "@/client/components/diceshock/Footer";
 import Header from "@/client/components/diceshock/Header";
@@ -27,6 +27,7 @@ function WechatFooter() {
 }
 
 function _Home() {
+  const location = useLocation();
   const crossData = useCrossData();
   const isInWechat = useMemo(() => {
     const ua =
@@ -35,9 +36,11 @@ function _Home() {
     return /MicroMessenger/i.test(ua);
   }, [crossData?.UserAgentMeta?.userAgent]);
 
+  const hideHeader = isInWechat && location.pathname === "/me";
+
   return (
     <>
-      {!isInWechat && <Header />}
+      {!hideHeader && <Header />}
 
       <Outlet />
 
