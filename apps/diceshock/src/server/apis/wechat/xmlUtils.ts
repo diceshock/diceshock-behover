@@ -1,18 +1,34 @@
 /**
- * Minimal XML parser/builder for WeChat message protocol.
- * WeChat sends/receives flat XML with known tags — no need for a full parser.
+ * WeChat XML message parsing/building using fast-xml-parser.
+ * WeChat wraps values in CDATA — the parser strips it automatically.
  */
 
+import { XMLBuilder, XMLParser } from "fast-xml-parser";
+
+const parser = new XMLParser({
+  cdataPropName: "__cdata",
+  textNodeName: "__text",
+});
+
 export function parseXml(xml: string): Record<string, string> {
+  const parsed = parser.parse(xml);
+  const root = parsed.xml || parsed;
   const result: Record<string, string> = {};
-  const tagRegex =
-    /<(\w+)>\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*<\/\1>|<(\w+)>\s*([\s\S]*?)\s*<\/\3>/g;
-  let match: RegExpExecArray | null;
-  while ((match = tagRegex.exec(xml)) !== null) {
-    const key = match[1] || match[3];
-    const value = match[2] ?? match[4] ?? "";
-    result[key] = value;
+
+  for (const [key, value] of Object.entries(root)) {
+    if (key === "__text") continue;
+    if (typeof value === "string" || typeof value === "number") {
+      result[key] = String(value);
+    } else if (value && typeof value === "object") {
+      const obj = value as Record<string, unknown>;
+      if ("__cdata" in obj) {
+        result[key] = String(obj.__cdata);
+      } else if ("__text" in obj) {
+        result[key] = String(obj.__text);
+      }
+    }
   }
+
   return result;
 }
 
