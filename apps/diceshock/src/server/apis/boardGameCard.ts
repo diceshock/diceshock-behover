@@ -132,7 +132,7 @@ body {
   position: relative;
 }
 .cover-section {
-  width: 520px; height: 100%;
+  width: 420px; height: 100%;
   position: relative;
   flex-shrink: 0;
 }
@@ -143,71 +143,99 @@ body {
 .cover-fade {
   position: absolute;
   top: 0; right: 0;
-  width: 180px; height: 100%;
+  width: 140px; height: 100%;
   background: linear-gradient(to right, transparent, #fff);
+}
+.accent-bar {
+  position: absolute;
+  top: 0; left: 420px;
+  width: 6px; height: 100%;
+  background: linear-gradient(to bottom, #e85d04, #f48c06, #faa307);
 }
 .info {
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 48px 56px 48px 24px;
+  padding: 48px 56px 80px 48px;
   text-align: right;
 }
 .rating {
-  font-size: 56px;
+  position: absolute;
+  top: 36px; right: 56px;
+  font-size: 48px;
   font-weight: 800;
-  color: #1a1a1a;
+  color: #e85d04;
   line-height: 1;
 }
 .rating-label {
-  font-size: 13px;
-  color: #999;
-  margin-top: 4px;
-  letter-spacing: 1px;
+  position: absolute;
+  top: 88px; right: 56px;
+  font-size: 12px;
+  color: #c4c4c4;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
 }
 .title-sch {
-  font-size: 36px;
-  font-weight: 700;
+  font-size: 46px;
+  font-weight: 800;
   color: #1a1a1a;
-  margin-top: 28px;
-  line-height: 1.2;
+  line-height: 1.15;
 }
 .title-eng {
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 400;
-  color: #888;
-  margin-top: 6px;
+  color: #999;
+  margin-top: 10px;
+}
+.divider {
+  width: 48px; height: 3px;
+  background: #e85d04;
+  margin-top: 24px;
+  margin-left: auto;
+  border-radius: 2px;
 }
 .meta {
-  margin-top: 28px;
-  font-size: 15px;
-  color: #555;
-  line-height: 2;
+  margin-top: 24px;
+  font-size: 20px;
+  color: #444;
+  line-height: 2.2;
 }
-.meta span {
-  display: inline-block;
-  margin-left: 20px;
+.meta-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 24px;
 }
-.meta span:first-child { margin-left: 0; }
+.meta-item .label {
+  font-size: 12px;
+  color: #bbb;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.meta-item .value {
+  font-size: 22px;
+  font-weight: 600;
+  color: #333;
+  margin-top: 2px;
+}
 .tags {
-  margin-top: 16px;
-  font-size: 13px;
-  color: #aaa;
+  margin-top: 20px;
+  font-size: 16px;
+  color: #999;
 }
 .footer {
   position: absolute;
-  bottom: 32px; right: 56px;
+  bottom: 28px; right: 56px;
   display: flex;
   align-items: center;
   gap: 10px;
 }
 .footer img {
-  width: 28px; height: 28px;
+  width: 26px; height: 26px;
 }
 .footer span {
-  font-size: 14px;
-  color: #bbb;
+  font-size: 15px;
+  color: #ccc;
   letter-spacing: 0.5px;
 }
 </style>
@@ -217,19 +245,27 @@ body {
     <img id="cover" crossorigin="anonymous" src="${data.coverUrl}" />
     <div class="cover-fade"></div>
   </div>
+  <div class="accent-bar"></div>
   <div class="info">
-    <div class="rating">${ratingDisplay}</div>
-    <div class="rating-label">GSTONE RATING</div>
     <div class="title-sch">${data.schName}</div>
     <div class="title-eng">${data.engName}</div>
+    <div class="divider"></div>
     <div class="meta">
-      <span>${playerRange}</span>
-      <span>${data.avgTime ? data.avgTime + "min/人" : ""}</span>
-      <span>${data.mode || ""}</span>
-      ${difficulty ? `<span>${difficulty}</span>` : ""}
+      <div class="meta-row">
+        <div class="meta-item"><div class="label">人数</div><div class="value">${playerRange}</div></div>
+        <div class="meta-item"><div class="label">时长</div><div class="value">${data.avgTime ? data.avgTime + " min/人" : "—"}</div></div>
+        <div class="meta-item"><div class="label">类型</div><div class="value">${data.mode || "—"}</div></div>
+      </div>
+      <div class="meta-row" style="margin-top:12px">
+        ${difficulty ? `<div class="meta-item"><div class="label">难度</div><div class="value">${difficulty}</div></div>` : ""}
+        ${bestRange ? `<div class="meta-item"><div class="label">最佳</div><div class="value">${bestRange.replace("最佳 ", "")}</div></div>` : ""}
+        ${data.publishYear ? `<div class="meta-item"><div class="label">发行</div><div class="value">${data.publishYear}</div></div>` : ""}
+      </div>
     </div>
-    <div class="tags">${tags}${bestRange ? ` · ${bestRange}` : ""}${data.publishYear ? ` · ${data.publishYear}` : ""}</div>
+    <div class="tags">${tags}</div>
   </div>
+  <div class="rating">${ratingDisplay}</div>
+  <div class="rating-label">RATING</div>
   <div class="footer">
     <img src="${data.logoUrl}" />
     <span>diceshock.com</span>
