@@ -36,12 +36,16 @@ export async function boardGameCard(c: Context<HonoCtxEnv>) {
 
   const col = game.content;
   const coverUrl = col.sch_cover_url || col.eng_cover_url || "";
-  const coverDataUrl = await fetchAsDataUrl(coverUrl);
+  const [coverDataUrl, logoDataUrl] = await Promise.all([
+    fetchAsDataUrl(coverUrl),
+    fetchAsDataUrl(LOGO_URL),
+  ]);
 
   const html = buildCardHtml({
     schName: col.sch_name || game.sch_name || "",
     engName: col.eng_name || game.eng_name || "",
     coverUrl: coverDataUrl,
+    logoUrl: logoDataUrl,
     rating: game.gstone_rating ?? col.gstone_rating ?? 0,
     playerNum: game.player_num ?? col.player_num ?? [],
     bestPlayerNum: game.best_player_num ?? [],
@@ -57,7 +61,7 @@ export async function boardGameCard(c: Context<HonoCtxEnv>) {
   const browser = await puppeteer.launch(c.env.BROWSER);
   try {
     const page = await browser.newPage();
-    await page.setViewport({ width: 600, height: 900 });
+    await page.setViewport({ width: 1200, height: 630 });
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.waitForFunction(() => (window as any).__ready === true, {
       timeout: 15000,
@@ -85,6 +89,7 @@ interface CardData {
   schName: string;
   engName: string;
   coverUrl: string;
+  logoUrl: string;
   rating: number;
   playerNum: number[];
   bestPlayerNum: number[];
@@ -95,6 +100,8 @@ interface CardData {
   publishYear: number;
 }
 
+const LOGO_URL = "https://assets.runespark.fun/images/diceshock.favicon.svg";
+
 function buildCardHtml(data: CardData): string {
   const playerRange = data.playerNum.length
     ? `${Math.min(...data.playerNum)}-${Math.max(...data.playerNum)}人`
@@ -102,131 +109,135 @@ function buildCardHtml(data: CardData): string {
   const bestRange = data.bestPlayerNum.length
     ? `最佳 ${data.bestPlayerNum.join("/")}人`
     : "";
-  const stars =
-    "★".repeat(Math.round(data.difficulty)) +
-    "☆".repeat(5 - Math.round(data.difficulty));
   const ratingDisplay = data.rating ? data.rating.toFixed(1) : "N/A";
-  const tags = data.categories.slice(0, 4).join(" · ");
+  const tags = data.categories.slice(0, 3).join(" · ");
+  const difficulty = data.difficulty
+    ? `${"●".repeat(Math.round(data.difficulty))}${"○".repeat(5 - Math.round(data.difficulty))}`
+    : "";
 
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body {
-  width: 600px; height: 900px;
+  width: 1200px; height: 630px;
   font-family: -apple-system, "Noto Sans SC", "Helvetica Neue", sans-serif;
-  background: linear-gradient(160deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-  color: #fff;
+  background: #fff;
+  color: #1a1a1a;
   overflow: hidden;
 }
 .card {
   width: 100%; height: 100%;
-  display: flex; flex-direction: column;
-  padding: 32px;
-}
-.cover-wrap {
-  width: 100%; height: 360px;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  display: flex;
   position: relative;
 }
-.cover-wrap img {
+.cover-section {
+  width: 520px; height: 100%;
+  position: relative;
+  flex-shrink: 0;
+}
+.cover-section img {
   width: 100%; height: 100%;
   object-fit: cover;
 }
-.rating-badge {
+.cover-fade {
   position: absolute;
-  top: 16px; right: 16px;
-  background: rgba(255,193,7,0.95);
-  color: #1a1a2e;
-  font-size: 28px; font-weight: 800;
-  padding: 8px 16px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  top: 0; right: 0;
+  width: 180px; height: 100%;
+  background: linear-gradient(to right, transparent, #fff);
 }
-.info { flex:1; display:flex; flex-direction:column; padding-top:24px; }
+.info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 48px 56px 48px 24px;
+  text-align: right;
+}
+.rating {
+  font-size: 56px;
+  font-weight: 800;
+  color: #1a1a1a;
+  line-height: 1;
+}
+.rating-label {
+  font-size: 13px;
+  color: #999;
+  margin-top: 4px;
+  letter-spacing: 1px;
+}
 .title-sch {
-  font-size: 32px; font-weight: 700;
+  font-size: 36px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-top: 28px;
   line-height: 1.2;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 .title-eng {
-  font-size: 16px; font-weight: 400;
-  opacity: 0.7; margin-top: 4px;
+  font-size: 15px;
+  font-weight: 400;
+  color: #888;
+  margin-top: 6px;
 }
 .meta {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 24px;
+  margin-top: 28px;
+  font-size: 15px;
+  color: #555;
+  line-height: 2;
 }
-.meta-item {
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 12px;
-  padding: 12px 16px;
+.meta span {
+  display: inline-block;
+  margin-left: 20px;
 }
-.meta-label {
-  font-size: 12px;
-  text-transform: uppercase;
-  opacity: 0.5;
-  letter-spacing: 0.5px;
-}
-.meta-value {
-  font-size: 18px; font-weight: 600;
-  margin-top: 4px;
-}
+.meta span:first-child { margin-left: 0; }
 .tags {
-  margin-top: auto;
-  padding-top: 20px;
-  font-size: 14px;
-  opacity: 0.6;
-  border-top: 1px solid rgba(255,255,255,0.1);
+  margin-top: 16px;
+  font-size: 13px;
+  color: #aaa;
 }
 .footer {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-top: 12px;
-  font-size: 12px; opacity: 0.4;
+  position: absolute;
+  bottom: 32px; right: 56px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.footer img {
+  width: 28px; height: 28px;
+}
+.footer span {
+  font-size: 14px;
+  color: #bbb;
+  letter-spacing: 0.5px;
 }
 </style>
 </head><body>
 <div class="card">
-  <div class="cover-wrap">
+  <div class="cover-section">
     <img id="cover" crossorigin="anonymous" src="${data.coverUrl}" />
-    <div class="rating-badge">${ratingDisplay}</div>
+    <div class="cover-fade"></div>
   </div>
   <div class="info">
+    <div class="rating">${ratingDisplay}</div>
+    <div class="rating-label">GSTONE RATING</div>
     <div class="title-sch">${data.schName}</div>
     <div class="title-eng">${data.engName}</div>
     <div class="meta">
-      <div class="meta-item">
-        <div class="meta-label">玩家人数</div>
-        <div class="meta-value">${playerRange}</div>
-      </div>
-      <div class="meta-item">
-        <div class="meta-label">难度</div>
-        <div class="meta-value">${stars}</div>
-      </div>
-      <div class="meta-item">
-        <div class="meta-label">游戏时间</div>
-        <div class="meta-value">${data.avgTime ? data.avgTime + " 分钟/人" : "未知"}</div>
-      </div>
-      <div class="meta-item">
-        <div class="meta-label">类型</div>
-        <div class="meta-value">${data.mode || "未知"}</div>
-      </div>
+      <span>${playerRange}</span>
+      <span>${data.avgTime ? data.avgTime + "min/人" : ""}</span>
+      <span>${data.mode || ""}</span>
+      ${difficulty ? `<span>${difficulty}</span>` : ""}
     </div>
-    <div class="tags">${tags}${bestRange ? ` · ${bestRange}` : ""}</div>
-    <div class="footer">
-      <span>${data.publishYear ? data.publishYear + " 年发行" : ""}</span>
-      <span>DICESHOCK</span>
-    </div>
+    <div class="tags">${tags}${bestRange ? ` · ${bestRange}` : ""}${data.publishYear ? ` · ${data.publishYear}` : ""}</div>
+  </div>
+  <div class="footer">
+    <img src="${data.logoUrl}" />
+    <span>diceshock.com</span>
   </div>
 </div>
 <script>
 const img = document.getElementById("cover");
-if (img.complete) { window.__ready = true; }
+if (img.complete && img.naturalWidth > 0) { window.__ready = true; }
 else {
   img.onload = () => { window.__ready = true; };
   img.onerror = () => { window.__ready = true; };
