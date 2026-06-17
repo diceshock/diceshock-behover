@@ -27,9 +27,9 @@ const SITE_URL = "https://origin.runespark.fun";
 export const Route = createFileRoute("/_with-home-lo/actives_/$id")({
   head: ({ params }) => ({
     meta: [
-      { title: "约局详情 - DiceShock 骰惊" },
+      { title: "约局详情 - DiceShock 骰子奇兵" },
       { name: "description", content: "查看约局详情，加入桌游社区" },
-      { property: "og:title", content: "约局详情 - DiceShock 骰惊" },
+      { property: "og:title", content: "约局详情 - DiceShock 骰子奇兵" },
       { property: "og:description", content: "查看约局详情，加入桌游社区" },
       {
         property: "og:image",

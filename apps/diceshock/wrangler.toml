@@ -76,8 +76,21 @@ crons = ["0 4-22 * * *"]
 [vars]
 AUTH_URL = "https://diceshock.com"
 
-# WeChat OAuth secrets (set via `wrangler secret put`):
+# AI Search instance
+[[ai_search]]
+binding = "AI_SEARCH"
+instance_name = "diceshock-kb"
+
+# Workers AI (embeddings, etc.)
+[ai]
+binding = "AI"
+
+# Secrets (set via `wrangler secret put`):
 # WECHAT_OPEN_APP_ID
 # WECHAT_OPEN_APP_SECRET
 # WECHAT_MP_APP_ID
 # WECHAT_MP_APP_SECRET
+# WECHAT_MP_TOKEN              — 服务号消息验签 Token
+# WECHAT_MP_ENCODING_AES_KEY   — 消息加解密密钥
+# DEEPSEEK_API_KEY             — DeepSeek V4 Flash API Key
+# CF_AI_GATEWAY_ID             — AI Gateway ID

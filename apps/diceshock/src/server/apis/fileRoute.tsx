@@ -51,7 +51,7 @@ export default async function fileRoute(c: Context<HonoCtxEnv>) {
 
             <title>{og.title}</title>
             <meta name="description" content={og.description} />
-            <meta property="og:site_name" content="DiceShock 骰惊" />
+            <meta property="og:site_name" content="DiceShock 骰子奇兵" />
             <meta property="og:type" content="website" />
             <meta property="og:title" content={og.title} />
             <meta property="og:description" content={og.description} />

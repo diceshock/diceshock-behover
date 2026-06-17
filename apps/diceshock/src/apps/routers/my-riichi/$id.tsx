@@ -35,12 +35,12 @@ const SITE_URL = "https://origin.runespark.fun";
 export const Route = createFileRoute("/my-riichi/$id")({
   head: ({ params }) => ({
     meta: [
-      { title: "日麻个人战绩 - DiceShock 骰惊" },
+      { title: "日麻个人战绩 - DiceShock 骰子奇兵" },
       {
         name: "description",
         content: "查看日麻 PP 统计、对局记录、排名和徽章",
       },
-      { property: "og:title", content: "日麻个人战绩 - DiceShock 骰惊" },
+      { property: "og:title", content: "日麻个人战绩 - DiceShock 骰子奇兵" },
       {
         property: "og:description",
         content: "查看日麻 PP 统计、对局记录、排名和徽章",

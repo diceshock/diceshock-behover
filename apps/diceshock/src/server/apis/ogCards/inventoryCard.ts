@@ -26,7 +26,7 @@ export async function inventoryCard(c: Context<HonoCtxEnv>) {
 <div class="card" style="align-items:center;justify-content:center;text-align:center">
   <div style="font-size:120px;font-weight:900;color:#36ffa1;line-height:1">${total}</div>
   <div style="font-size:32px;color:#666;margin-top:16px">款桌游</div>
-  <div style="font-size:20px;color:#aaa;margin-top:8px">DiceShock 骰惊 · 桌游库</div>
+  <div style="font-size:20px;color:#aaa;margin-top:8px">DiceShock 骰子奇兵 · 桌游库</div>
   <div class="footer">
     <img src="${logoDataUrl}" />
     <span>diceshock.com</span>

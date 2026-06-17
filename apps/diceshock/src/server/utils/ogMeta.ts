@@ -1,5 +1,5 @@
-const SITE_NAME = "DiceShock 骰惊";
-const SITE_DESC = "DiceShock 骰惊 — 桌游、日麻、约局、活动，一站式桌游社区";
+const SITE_NAME = "DiceShock 骰子奇兵";
+const SITE_DESC = "跑团, 桌游, 日麻 我们都是专业的 · Lift-off to be The Shock";
 const SITE_URL = "https://origin.runespark.fun";
 const DEFAULT_OG_IMAGE = `${SITE_URL}/edge/media/card/inventory`;
 
@@ -33,7 +33,7 @@ export function getOgMeta(pathname: string): OgMeta {
   if (pathname === "/inventory") {
     return {
       title: `桌游库 - ${SITE_NAME}`,
-      description: "查看 DiceShock 骰惊的桌游库存",
+      description: "查看 DiceShock 骰子奇兵的桌游库存",
       image: `${SITE_URL}/edge/media/card/inventory`,
       url: `${SITE_URL}/inventory`,
     };

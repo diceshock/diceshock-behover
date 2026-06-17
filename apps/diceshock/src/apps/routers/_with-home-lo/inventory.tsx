@@ -9,13 +9,13 @@ const SITE_URL = "https://origin.runespark.fun";
 export const Route = createFileRoute("/_with-home-lo/inventory")({
   head: () => ({
     meta: [
-      { title: "桌游库 - DiceShock 骰惊" },
+      { title: "桌游库 - DiceShock 骰子奇兵" },
       {
         name: "description",
-        content: "DiceShock 骰惊桌游库存，查看我们拥有的所有桌游",
+        content: "DiceShock 骰子奇兵桌游库存，查看我们拥有的所有桌游",
       },
-      { property: "og:title", content: "桌游库 - DiceShock 骰惊" },
-      { property: "og:description", content: "查看 DiceShock 骰惊的桌游库存" },
+      { property: "og:title", content: "桌游库 - DiceShock 骰子奇兵" },
+      { property: "og:description", content: "查看 DiceShock 骰子奇兵的桌游库存" },
       {
         property: "og:image",
         content: `${SITE_URL}/edge/media/card/inventory`,
