@@ -2,10 +2,15 @@ import {
   ChatsTeardropIcon,
   CopyIcon,
   GameControllerIcon,
+  LinkIcon,
+  ListBulletsIcon,
   PencilSimpleLineIcon,
   PhoneIcon,
+  QrCodeIcon,
   ScanIcon,
   SignOutIcon,
+  TrophyIcon,
+  UsersIcon,
   WarningIcon,
   XIcon,
 } from "@phosphor-icons/react/dist/ssr";
@@ -13,7 +18,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import BusinessCardModal from "@/client/components/diceshock/BusinessCardModal";
-import GszQuickCard from "@/client/components/diceshock/GszQuickCard";
 import QRScannerDialog from "@/client/components/diceshock/Header/QRScannerDialog";
 import GszRegistrationModal from "@/client/components/diceshock/MahjongMatch/GszRegistrationModal";
 import {
@@ -34,17 +38,16 @@ import trpcClientPublic from "@/shared/utils/trpc";
 
 function MeSkeleton() {
   return (
-    <main className="min-h-[calc(100vh-32rem)] w-full flex-col items-center mt-20 sm:mt-32 md:mt-40 px-4">
-      <div className="mx-auto w-full max-w-xl">
-        <div className="flex flex-col items-center gap-3 mb-8 sm:mb-12">
-          <div className="skeleton h-9 sm:h-11 md:h-13 w-48 rounded-lg" />
-          <div className="skeleton h-4 w-32 rounded" />
+    <main className="min-h-[calc(100vh-8rem)] w-full px-4 pt-6 pb-12">
+      <div className="mx-auto w-full max-w-md">
+        <div className="flex flex-col items-center gap-1 mb-6">
+          <div className="skeleton h-7 w-36 rounded-lg" />
+          <div className="skeleton h-3.5 w-24 rounded" />
         </div>
-        <div className="w-full flex flex-col items-center justify-center gap-3 sm:gap-4">
-          <div className="skeleton w-full h-52 rounded-xl" />
-          <div className="skeleton w-full h-20 rounded-xl" />
-          <div className="skeleton w-full h-20 rounded-xl" />
-          <div className="skeleton w-full h-20 rounded-xl" />
+        <div className="flex flex-col gap-4">
+          <div className="skeleton h-20 w-full rounded-xl" />
+          <div className="skeleton h-20 w-full rounded-xl" />
+          <div className="skeleton h-52 w-full rounded-xl" />
         </div>
       </div>
     </main>
@@ -55,6 +58,97 @@ export const Route = createFileRoute("/_with-home-lo/me")({
   component: RouteComponent,
   pendingComponent: MeSkeleton,
 });
+
+function QuickAction({
+  icon: Icon,
+  label,
+  onClick,
+  href,
+  disabled,
+}: {
+  icon: React.ElementType;
+  label: string;
+  onClick?: () => void;
+  href?: string;
+  disabled?: boolean;
+}) {
+  const cls = clsx(
+    "flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl transition-colors",
+    disabled
+      ? "opacity-40 cursor-not-allowed"
+      : "hover:bg-base-300 active:bg-base-300 cursor-pointer",
+  );
+
+  const content = (
+    <>
+      <Icon className="size-6 text-primary" />
+      <span className="text-xs font-medium text-base-content/80">{label}</span>
+    </>
+  );
+
+  if (href && !disabled) {
+    return (
+      <Link to={href} className={cls}>
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <button type="button" onClick={onClick} disabled={disabled} className={cls}>
+      {content}
+    </button>
+  );
+}
+
+function SectionHeader({ title }: { title: string }) {
+  return (
+    <h3 className="text-xs font-bold text-base-content/50 uppercase tracking-wider px-1 mb-2">
+      {title}
+    </h3>
+  );
+}
+
+function ListItem({
+  icon: Icon,
+  label,
+  sublabel,
+  onClick,
+  danger,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  sublabel?: string;
+  onClick: () => void;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-base-300 active:bg-base-300 transition-colors text-left"
+    >
+      <div
+        className={clsx(
+          "shrink-0 p-2 rounded-lg",
+          danger ? "bg-error/10" : "bg-primary/10",
+        )}
+      >
+        <Icon
+          className={clsx("size-4", danger ? "text-error" : "text-primary")}
+        />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className={clsx("text-sm font-medium", danger && "text-error")}>
+          {label}
+        </p>
+        {sublabel && (
+          <p className="text-xs text-base-content/50 truncate">{sublabel}</p>
+        )}
+      </div>
+    </button>
+  );
+}
 
 function RouteComponent() {
   const { userInfo, setUserInfoIm, signOut, session } = useAuth();
@@ -81,7 +175,6 @@ function RouteComponent() {
     if (typeof navigator === "undefined") return;
     if (!/MicroMessenger/i.test(navigator.userAgent)) return;
     if (!isAutoNickname) return;
-    // 使用 localStorage 持久标记，确保补授权只尝试一次（即使失败也不重试）
     if (localStorage.getItem("__wx_nickname_auth_attempted")) return;
 
     localStorage.setItem("__wx_nickname_auth_attempted", "1");
@@ -125,18 +218,11 @@ function RouteComponent() {
       .catch(() => {});
   }, []);
 
-  // 修改手机号相关状态
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [phone, setPhone] = useState("");
   const [isLoadingPhone, setIsLoadingPhone] = useState(false);
-
-  // 名片编辑相关状态
   const [isEditingBusinessCard, setIsEditingBusinessCard] = useState(false);
-
-  // 扫码弹窗
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
-
-  // 公式战绑定相关状态
   const [gszRegistered, setGszRegistered] = useState<boolean | null>(null);
   const [showGszModal, setShowGszModal] = useState(false);
 
@@ -316,39 +402,129 @@ function RouteComponent() {
 
   return (
     <>
-      <main className="min-h-[calc(100vh-32rem)] w-full flex-col items-center mt-20 sm:mt-32 md:mt-40 px-4">
-        <div className="mx-auto w-full max-w-xl">
-          <div className="flex flex-col items-center gap-3 mb-8 sm:mb-12">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl text-center align-baseline flex items-center gap-2 flex-wrap justify-center">
+      <main className="min-h-[calc(100vh-8rem)] w-full px-4 pt-6 pb-12">
+        <div className="mx-auto w-full max-w-md">
+          <div className="flex flex-col items-center gap-1 mb-6">
+            <h1 className="text-xl sm:text-2xl font-bold text-center flex items-center gap-1.5">
               <span className="break-words">
                 {displayInfo?.nickname ?? "Anonymous Shock"}
               </span>
               <button
-                className="btn btn-ghost btn-circle btn-sm sm:btn-md shrink-0"
+                className="btn btn-ghost btn-circle btn-xs"
                 onClick={handleEditClick}
                 aria-label="编辑昵称"
               >
-                <PencilSimpleLineIcon className="size-4 sm:size-5 md:size-6" />
+                <PencilSimpleLineIcon className="size-3.5" />
               </button>
             </h1>
-            <h2 className="text-xs sm:text-sm text-center text-base-content/50 flex items-center gap-1.5 flex-wrap justify-center">
+            <p className="text-xs text-base-content/50 flex items-center gap-1">
               <span>uid: {displayInfo?.uid}</span>
               <button
-                className="btn btn-ghost btn-xs btn-circle shrink-0"
+                className="btn btn-ghost btn-xs btn-circle"
                 onClick={handleCopyUid}
                 aria-label="复制UID"
               >
-                <CopyIcon className="size-3 sm:size-4" />
+                <CopyIcon className="size-3" />
               </button>
-            </h2>
+            </p>
           </div>
 
-          <div className="w-full flex flex-col items-center justify-center gap-3 sm:gap-4">
-            {myPlans.filter(isActivePlan).length > 0 && (
-              <div className="w-full flex flex-wrap justify-center gap-4 mb-2">
+          <section className="mb-4">
+            <SectionHeader title="快捷" />
+            <div className="grid grid-cols-3 gap-1 bg-base-200 rounded-2xl p-2 border border-base-content/5">
+              <QuickAction icon={UsersIcon} label="约局" href="/actives" />
+              <QuickAction
+                icon={ScanIcon}
+                label="扫码"
+                onClick={() => setIsQRScannerOpen(true)}
+              />
+              <QuickAction
+                icon={ListBulletsIcon}
+                label="桌游库存"
+                href="/inventory"
+              />
+            </div>
+          </section>
+
+          <section className="mb-4">
+            <SectionHeader title="日麻" />
+            <div className="grid grid-cols-3 gap-1 bg-base-200 rounded-2xl p-2 border border-base-content/5">
+              <QuickAction icon={TrophyIcon} label="排行榜" href="/riichi" />
+              <QuickAction
+                icon={GameControllerIcon}
+                label="战绩"
+                href={
+                  session?.user?.id
+                    ? `/my-riichi/${session.user.id}`
+                    : "/riichi"
+                }
+              />
+              <QuickAction
+                icon={LinkIcon}
+                label={gszRegistered ? "已绑定" : "绑定"}
+                onClick={
+                  gszRegistered ? undefined : () => setShowGszModal(true)
+                }
+                disabled={gszRegistered === true}
+              />
+            </div>
+          </section>
+
+          <section className="mb-4">
+            <SectionHeader title="账号" />
+            <div className="bg-base-200 rounded-2xl border border-base-content/5 overflow-hidden">
+              <div className="p-3">
+                <TOTPCard />
+              </div>
+
+              <div className="border-t border-base-content/5">
+                <ListItem
+                  icon={QrCodeIcon}
+                  label="活动验证码"
+                  sublabel="扫码签到入场"
+                  onClick={() => setIsQRScannerOpen(true)}
+                />
+              </div>
+
+              <div className="border-t border-base-content/5">
+                <ListItem
+                  icon={PhoneIcon}
+                  label="修改手机号"
+                  sublabel={
+                    displayInfo?.phone ? `当前: ${displayInfo.phone}` : "未绑定"
+                  }
+                  onClick={handleEditPhoneClick}
+                />
+              </div>
+
+              <div className="border-t border-base-content/5">
+                <ListItem
+                  icon={ChatsTeardropIcon}
+                  label="登记/修改名片"
+                  sublabel="管理联系方式名片"
+                  onClick={() => setIsEditingBusinessCard(true)}
+                />
+              </div>
+
+              {!isInWechat && (
+                <div className="border-t border-base-content/5">
+                  <ListItem
+                    icon={SignOutIcon}
+                    label="退出登录"
+                    onClick={signOut}
+                    danger
+                  />
+                </div>
+              )}
+            </div>
+          </section>
+
+          {myPlans.filter(isActivePlan).length > 0 && (
+            <section className="mb-4">
+              <SectionHeader title="会员" />
+              <div className="flex flex-wrap gap-3">
                 {(() => {
                   const activePlans = myPlans.filter(isActivePlan);
-                  // Deduplicate by plan_type: keep the highest-priority (first) plan per type
                   const seen = new Set<string>();
                   const uniquePlans = activePlans
                     .sort(
@@ -367,157 +543,50 @@ function RouteComponent() {
                     const Icon = config.icon;
                     const totalBalance = getStoredValueBalance(myPlans);
                     return (
-                      <div key={plan.plan_type} className="hover-3d">
-                        <div className="card bg-base-200 w-44 sm:w-52 shadow-xl border border-base-content/10">
-                          <figure className="pt-4 px-4">
-                            <Icon className="w-full h-20 sm:h-24" />
-                          </figure>
-                          <div className="card-body p-3 sm:p-4 items-center text-center">
-                            <h3 className="card-title text-xs sm:text-sm">
-                              {config.label}
-                            </h3>
-                            <p className="text-[10px] sm:text-xs text-base-content/60">
-                              {plan.end_date
-                                ? `到期: ${dayjs(plan.end_date).format("YYYY/MM/DD")}`
-                                : plan.plan_type === "stored_value"
-                                  ? `余额: ¥${(totalBalance / 100).toFixed(0)}`
-                                  : "永久有效"}
-                            </p>
-                          </div>
+                      <div
+                        key={plan.plan_type}
+                        className="flex items-center gap-3 bg-base-200 rounded-xl px-4 py-3 border border-base-content/5 flex-1 min-w-[140px]"
+                      >
+                        <Icon className="size-8 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold truncate">
+                            {config.label}
+                          </p>
+                          <p className="text-[10px] text-base-content/50">
+                            {plan.end_date
+                              ? `到期: ${dayjs(plan.end_date).format("MM/DD")}`
+                              : plan.plan_type === "stored_value"
+                                ? `余额: ¥${(totalBalance / 100).toFixed(0)}`
+                                : "永久"}
+                          </p>
                         </div>
-                        <div />
-                        <div />
-                        <div />
-                        <div />
-                        <div />
-                        <div />
-                        <div />
-                        <div />
                       </div>
                     );
                   });
                 })()}
               </div>
-            )}
+            </section>
+          )}
 
-            {myPlans.filter(isActivePlan).length === 0 &&
-              myPlans.length === 0 && (
+          {myPlans.filter(isActivePlan).length === 0 &&
+            myPlans.length === 0 && (
+              <section className="mb-4">
                 <Link
                   to="/diceshock-agents"
-                  className="card bg-base-200 hover:bg-base-300 transition-colors w-full cursor-pointer border border-base-content/10 hover:border-base-content/20 shadow-sm hover:shadow-md"
+                  className="flex items-center gap-3 bg-base-200 hover:bg-base-300 rounded-2xl px-4 py-4 border border-base-content/5 transition-colors"
                 >
-                  <div className="card-body p-4 sm:p-6 md:p-8 items-center text-center">
-                    <p className="text-base sm:text-lg font-bold mb-1">
-                      加入 DiceShock Agents©
-                    </p>
-                    <p className="text-xs sm:text-sm text-base-content/60">
+                  <div className="shrink-0 p-2 bg-primary/10 rounded-lg">
+                    <TrophyIcon className="size-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold">加入 DiceShock Agents©</p>
+                    <p className="text-xs text-base-content/50">
                       了解会员计划权益
                     </p>
                   </div>
                 </Link>
-              )}
-
-            <div className="relative w-full">
-              <TOTPCard />
-              <button
-                onClick={() => setIsQRScannerOpen(true)}
-                className="absolute top-3 right-3 sm:top-4 sm:right-4 btn btn-sm btn-ghost btn-circle"
-                aria-label="扫码"
-              >
-                <ScanIcon weight="fill" className="size-5" />
-              </button>
-            </div>
-
-            <GszQuickCard userId={session?.user?.id} />
-
-            {gszRegistered === false && (
-              <button
-                onClick={() => setShowGszModal(true)}
-                className="card bg-base-200 hover:bg-base-300 transition-colors w-full cursor-pointer border border-base-content/10 hover:border-base-content/20 shadow-sm hover:shadow-md"
-              >
-                <div className="card-body p-4 sm:p-6 md:p-8">
-                  <div className="flex items-start gap-3 sm:gap-4">
-                    <div className="shrink-0 p-2 sm:p-2.5 bg-primary/10 rounded-lg">
-                      <GameControllerIcon className="size-5 sm:size-6 md:size-8 text-primary" />
-                    </div>
-                    <div className="flex flex-col items-start justify-start flex-1 min-w-0">
-                      <p className="text-base sm:text-lg font-bold mb-1">
-                        绑定立直麻将
-                      </p>
-                      <p className="text-xs sm:text-sm text-base-content/60 break-words">
-                        绑定后可参加公式战对局
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </button>
+              </section>
             )}
-
-            <button
-              onClick={handleEditPhoneClick}
-              className="card bg-base-200 hover:bg-base-300 transition-colors w-full cursor-pointer border border-base-content/10 hover:border-base-content/20 shadow-sm hover:shadow-md"
-            >
-              <div className="card-body p-4 sm:p-6 md:p-8">
-                <div className="flex items-start gap-3 sm:gap-4">
-                  <div className="shrink-0 p-2 sm:p-2.5 bg-primary/10 rounded-lg">
-                    <PhoneIcon className="size-5 sm:size-6 md:size-8 text-primary" />
-                  </div>
-                  <div className="flex flex-col items-start justify-start flex-1 min-w-0">
-                    <p className="text-base sm:text-lg font-bold mb-1">
-                      修改手机号
-                    </p>
-                    <p className="text-xs sm:text-sm text-base-content/60 break-words">
-                      当前手机号：{displayInfo?.phone ?? "—"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </button>
-
-            <button
-              onClick={() => setIsEditingBusinessCard(true)}
-              className="card bg-base-200 hover:bg-base-300 transition-colors w-full cursor-pointer border border-base-content/10 hover:border-base-content/20 shadow-sm hover:shadow-md"
-            >
-              <div className="card-body p-4 sm:p-6 md:p-8">
-                <div className="flex items-start gap-3 sm:gap-4">
-                  <div className="shrink-0 p-2 sm:p-2.5 bg-primary/10 rounded-lg">
-                    <ChatsTeardropIcon className="size-5 sm:size-6 md:size-8 text-primary" />
-                  </div>
-                  <div className="flex flex-col items-start justify-start flex-1 min-w-0">
-                    <p className="text-base sm:text-lg font-bold mb-1">
-                      登记/修改名片
-                    </p>
-                    <p className="text-xs sm:text-sm text-base-content/60 break-words">
-                      管理你的联系方式名片
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </button>
-
-            {!isInWechat && (
-              <button
-                onClick={signOut}
-                className="card bg-base-200 hover:bg-base-300 transition-colors w-full cursor-pointer border border-base-content/10 hover:border-base-content/20 shadow-sm hover:shadow-md"
-              >
-                <div className="card-body p-4 sm:p-6 md:p-8">
-                  <div className="flex items-start gap-3 sm:gap-4">
-                    <div className="shrink-0 p-2 sm:p-2.5 bg-error/10 rounded-lg">
-                      <SignOutIcon className="size-5 sm:size-6 md:size-8 text-error" />
-                    </div>
-                    <div className="flex flex-col items-start justify-start flex-1 min-w-0">
-                      <p className="text-base sm:text-lg font-bold mb-1">
-                        退出登录
-                      </p>
-                      <p className="text-xs sm:text-sm text-base-content/60 break-words">
-                        退出登录后，您将需要重新登录
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </button>
-            )}
-          </div>
         </div>
       </main>
 
@@ -619,7 +688,7 @@ function RouteComponent() {
 
           <form
             onSubmit={handlePhoneSubmit}
-            className="flex flex-col gap-4 py-4 px-12"
+            className="flex flex-col gap-4 py-4 px-6 sm:px-12"
           >
             {smsError && (
               <div role="alert" className="alert alert-error alert-soft">
@@ -628,7 +697,7 @@ function RouteComponent() {
               </div>
             )}
 
-            <label className="flex flex-row gap-2">
+            <label className="flex flex-col sm:flex-row gap-2">
               <span className="label text-sm min-w-20">手机号:</span>
               <input
                 placeholder="请输入新手机号"
@@ -646,33 +715,34 @@ function RouteComponent() {
               />
             </label>
 
-            <label className="flex flex-row gap-2">
-              <span className="label text-sm min-w-20">短信验证码:</span>
-              <input
-                type="text"
-                placeholder="六位数字短信验证码"
-                className="input input-sm flex-1"
-                value={smsForm.code}
-                onChange={(e) => {
-                  dispatchSmsForm({
-                    type: "SET_CODE",
-                    payload: e.target.value,
-                  });
-                  setSmsError(null);
-                }}
-                maxLength={6}
-                disabled={isLoadingPhone}
-              />
-
-              <button
-                id="sms-code-btn"
-                type="button"
-                className="btn btn-sm"
-                onClick={getSmsCode}
-                disabled={countdown > 0 || isLoadingPhone}
-              >
-                {countdown > 0 ? `${countdown}秒后重试` : "获取验证码"}
-              </button>
+            <label className="flex flex-col sm:flex-row gap-2">
+              <span className="label text-sm min-w-20">验证码:</span>
+              <div className="flex gap-2 flex-1">
+                <input
+                  type="text"
+                  placeholder="六位数字"
+                  className="input input-sm flex-1"
+                  value={smsForm.code}
+                  onChange={(e) => {
+                    dispatchSmsForm({
+                      type: "SET_CODE",
+                      payload: e.target.value,
+                    });
+                    setSmsError(null);
+                  }}
+                  maxLength={6}
+                  disabled={isLoadingPhone}
+                />
+                <button
+                  id="sms-code-btn"
+                  type="button"
+                  className="btn btn-sm shrink-0"
+                  onClick={getSmsCode}
+                  disabled={countdown > 0 || isLoadingPhone}
+                >
+                  {countdown > 0 ? `${countdown}s` : "获取"}
+                </button>
+              </div>
             </label>
 
             {import.meta.env.PROD && captchaEnabled && (
@@ -707,7 +777,6 @@ function RouteComponent() {
         </div>
       </Modal>
 
-      {/* 名片编辑弹窗 */}
       <BusinessCardModal
         isOpen={isEditingBusinessCard}
         onClose={() => setIsEditingBusinessCard(false)}
