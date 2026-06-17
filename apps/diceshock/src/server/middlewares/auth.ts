@@ -8,7 +8,7 @@ import { nanoid } from "nanoid/non-secure";
 import type z from "zod/v4";
 import type { HonoCtxEnv } from "@/shared/types";
 import { FACTORY } from "../factory";
-import { WechatMP, WechatOpen } from "../providers/wechat";
+import { WechatMP, WechatMPSilent, WechatOpen } from "../providers/wechat";
 import { injectCrossDataToCtx } from "../utils";
 import { genNickname, getSmsTmpCodeKey } from "../utils/auth";
 
@@ -97,6 +97,12 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
   if (c.env.WECHAT_MP_APP_ID && c.env.WECHAT_MP_APP_SECRET) {
     config.providers.push(
       WechatMP({
+        clientId: c.env.WECHAT_MP_APP_ID,
+        clientSecret: c.env.WECHAT_MP_APP_SECRET,
+      }),
+    );
+    config.providers.push(
+      WechatMPSilent({
         clientId: c.env.WECHAT_MP_APP_ID,
         clientSecret: c.env.WECHAT_MP_APP_SECRET,
       }),

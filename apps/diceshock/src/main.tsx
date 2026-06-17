@@ -18,6 +18,7 @@ import requestEndpoint from "./server/middlewares/requestEndpoint";
 import serverMetaInj from "./server/middlewares/serverMetaInj";
 import trpcServerDash from "./server/middlewares/trpcServerDash";
 import trpcServerPublic from "./server/middlewares/trpcServerPublic";
+import { wechatSilentAuth } from "./server/middlewares/wechatSilentAuth";
 
 export { SocketDO } from "./server/durableObjects/SocketDO";
 
@@ -36,6 +37,8 @@ app.use("/edge/*", trpcServerDash);
 app.use("/apis/*", trpcServerPublic);
 
 app.use("/api/auth/*", authHandler());
+
+app.use("*", wechatSilentAuth);
 
 app.get("/sitemap.xml", sitemap);
 

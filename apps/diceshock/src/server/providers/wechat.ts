@@ -192,7 +192,8 @@ export function WechatOpen(config: WechatProviderConfig) {
 }
 
 /**
- * 微信公众平台 - 微信内网页授权
+ * 微信公众平台 - 微信内网页授权（需用户确认）
+ * scope: snsapi_userinfo - 弹窗授权，可获取用户昵称头像等
  * 需要在 mp.weixin.qq.com 配置网页授权域名
  */
 export function WechatMP(config: WechatProviderConfig) {
@@ -253,6 +254,92 @@ export function WechatMP(config: WechatProviderConfig) {
         id: profile.unionid || profile.openid,
         name: profile.nickname,
         image: profile.headimgurl,
+      };
+    },
+    clientId,
+    clientSecret,
+    client: {
+      token_endpoint_auth_method: "client_secret_post",
+    },
+    checks: ["state"],
+    options: {
+      clientId,
+      clientSecret,
+      [customFetch]: createWechatFetch(clientId, clientSecret),
+    },
+  } satisfies OAuthConfig<WechatProfile>;
+}
+
+/**
+ * 微信公众平台 - 静默授权（无感登录）
+ * scope: snsapi_base - 无需用户确认，仅获取 openid
+ * 用于微信内置浏览器自动登录，用户无感知
+ *
+ * 注意：snsapi_base 无法获取用户昵称/头像，只能拿到 openid
+ * token 响应中直接包含 openid，不需要额外的 userinfo 请求
+ */
+export function WechatMPSilent(config: WechatProviderConfig) {
+  const { clientId, clientSecret } = config;
+
+  return {
+    id: "wechat-mp-silent",
+    name: "微信静默登录",
+    type: "oauth",
+    authorization: {
+      url: "https://open.weixin.qq.com/connect/oauth2/authorize",
+      params: {
+        appid: clientId,
+        response_type: "code",
+        scope: "snsapi_base",
+      },
+    },
+    token: {
+      url: "https://api.weixin.qq.com/sns/oauth2/access_token",
+      async conform(response: Response) {
+        const contentType = response.headers.get("content-type");
+        if (contentType?.includes("application/json")) return response;
+        const text = await response.text();
+        const headers = new Headers(response.headers);
+        headers.set("Content-Type", "application/json");
+        return new Response(text, {
+          status: response.status,
+          headers,
+        });
+      },
+    },
+    // snsapi_base 不需要 userinfo 请求，openid 已经在 token 响应中
+    // 我们通过伪造一个 userinfo request 直接返回 openid 作为 profile
+    userinfo: {
+      url: "https://api.weixin.qq.com/sns/userinfo",
+      async request({
+        tokens,
+      }: {
+        tokens: { access_token: string; openid?: string };
+      }) {
+        // snsapi_base 模式下直接用 openid 构造 profile，不请求 userinfo 接口
+        const openid = (tokens as any).openid || "";
+        console.log(
+          "[WeChat Silent] Using openid from token response:",
+          openid,
+        );
+        return {
+          openid,
+          nickname: "",
+          sex: 0,
+          province: "",
+          city: "",
+          country: "",
+          headimgurl: "",
+          privilege: [],
+        } as WechatProfile;
+      },
+    },
+    profile(profile: WechatProfile) {
+      return {
+        id: profile.unionid || profile.openid,
+        // 静默登录没有昵称，后续由 userInjMiddleware 补充
+        name: "",
+        image: "",
       };
     },
     clientId,
