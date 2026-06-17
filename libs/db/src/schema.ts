@@ -44,6 +44,9 @@ export const userInfoTable = sqlite.sqliteTable("user_info", {
     .$defaultFn(() => new Date(Date.now())),
   nickname: sqlite.text("nickname").notNull(),
   phone: sqlite.text("phone"),
+  meta: sqlite
+    .text("meta", { mode: "json" })
+    .$type<{ auto_nickname?: boolean } | null>(),
 });
 
 export const userBusinessCardTable = sqlite.sqliteTable("user_business_card", {

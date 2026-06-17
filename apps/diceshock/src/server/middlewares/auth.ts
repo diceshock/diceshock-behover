@@ -326,12 +326,19 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
 
   if (!userInfoRaw) {
     const nickname = authUser.user?.name ?? genNickname();
+    const isAutoNickname = !authUser.user?.name;
 
     const uid = nanoid();
 
     const [userInfo] = await db(c.env.DB)
       .insert(userInfoTable)
-      .values({ id, uid, nickname, phone })
+      .values({
+        id,
+        uid,
+        nickname,
+        phone,
+        meta: isAutoNickname ? { auto_nickname: true } : null,
+      })
       .returning();
 
     if (userInfo)
@@ -340,6 +347,7 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
           phone,
           uid: userInfo.uid,
           nickname: userInfo.nickname,
+          meta: userInfo.meta ?? null,
         },
       });
 
@@ -353,8 +361,23 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
       .update(userInfoTable)
       .set({ phone })
       .where((drizzle as any).eq(userInfoTable.id, id));
-    // 更新本地变量以反映最新值
     userInfoRaw.phone = phone;
+  }
+
+  // 如果用户昵称是自动生成的，且 OAuth 登录带来了真实昵称，则更新
+  const oauthName = authUser.user?.name || authUser.token?.name;
+  if (
+    userInfoRaw.meta?.auto_nickname &&
+    oauthName &&
+    oauthName !== userInfoRaw.nickname
+  ) {
+    const tdb = db(c.env.DB);
+    await tdb
+      .update(userInfoTable)
+      .set({ nickname: oauthName, meta: null })
+      .where((drizzle as any).eq(userInfoTable.id, id));
+    userInfoRaw.nickname = oauthName;
+    userInfoRaw.meta = null;
   }
 
   injectCrossDataToCtx(c, {
@@ -362,6 +385,7 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
       phone: userInfoRaw.phone || phone,
       uid: userInfoRaw.uid,
       nickname: userInfoRaw.nickname,
+      meta: userInfoRaw.meta ?? null,
     },
   });
 

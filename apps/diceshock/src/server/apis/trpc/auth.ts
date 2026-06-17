@@ -207,15 +207,16 @@ const updateUserInfo = protectedProcedure
     const updateData: {
       nickname?: string;
       phone?: string | null;
+      meta?: { auto_nickname?: boolean } | null;
     } = {};
 
     // 处理 nickname 更新
     if (input.nickname !== undefined) {
-      // 验证 nickname 不能为空
       if (!input.nickname.trim()) {
         return { success: false, message: "昵称不能为空" };
       }
       updateData.nickname = input.nickname.trim();
+      updateData.meta = null;
     }
 
     // 处理 phone 更新

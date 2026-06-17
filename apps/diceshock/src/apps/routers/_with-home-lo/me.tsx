@@ -44,6 +44,36 @@ function RouteComponent() {
   const [captchaEnabled, setCaptchaEnabled] = useState(true);
 
   useEffect(() => {
+    if (typeof navigator === "undefined") return;
+    if (!/MicroMessenger/i.test(navigator.userAgent)) return;
+    if (!userInfo?.meta?.auto_nickname) return;
+
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = "/api/auth/signin/wechat-mp";
+
+    const callbackInput = document.createElement("input");
+    callbackInput.type = "hidden";
+    callbackInput.name = "callbackUrl";
+    callbackInput.value = window.location.href;
+    form.appendChild(callbackInput);
+
+    const csrfInput = document.createElement("input");
+    csrfInput.type = "hidden";
+    csrfInput.name = "csrfToken";
+    form.appendChild(csrfInput);
+
+    fetch("/api/auth/csrf")
+      .then((r) => r.json())
+      .then((d: any) => {
+        csrfInput.value = d.csrfToken;
+        document.body.appendChild(form);
+        form.submit();
+      })
+      .catch(() => {});
+  }, [userInfo?.meta?.auto_nickname]);
+
+  useEffect(() => {
     trpcClientPublic.settings.getCaptchaEnabled
       .query()
       .then((res) => setCaptchaEnabled(res.enabled))
