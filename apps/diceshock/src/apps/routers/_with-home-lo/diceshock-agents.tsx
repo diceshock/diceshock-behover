@@ -6,11 +6,5 @@ export const Route = createFileRoute("/_with-home-lo/diceshock-agents")({
 });
 
 function RouteComponent() {
-  return (
-    <>
-      <Agents className="mt-40" />
-
-      <div className="w-full h-80" />
-    </>
-  );
+  return <Agents className="mt-20 sm:mt-32 md:mt-40" />;
 }

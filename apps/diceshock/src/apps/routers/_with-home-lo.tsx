@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import Footer from "@/client/components/diceshock/Footer";
 import Header from "@/client/components/diceshock/Header";
 import Msg from "@/client/components/diceshock/Msg";
@@ -37,6 +37,10 @@ function _Home() {
   }, [crossData?.UserAgentMeta?.userAgent]);
 
   const hideHeader = isInWechat && location.pathname === "/me";
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   return (
     <>
