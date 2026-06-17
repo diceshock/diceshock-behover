@@ -29,7 +29,7 @@ import { copyToClipboard } from "@/server/utils";
 import dayjs from "@/shared/utils/dayjs-config";
 import trpcClientPublic from "@/shared/utils/trpc";
 
-export const Route = createFileRoute("/me")({
+export const Route = createFileRoute("/_with-home-lo/me")({
   component: RouteComponent,
 });
 

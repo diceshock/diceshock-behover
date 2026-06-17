@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routers/__root'
 import { Route as TRouteImport } from './routers/t'
 import { Route as ReadyRouteImport } from './routers/ready'
 import { Route as MyRiichiRouteImport } from './routers/my-riichi'
-import { Route as MeRouteImport } from './routers/me'
 import { Route as DashRouteImport } from './routers/dash'
 import { Route as WithHomeLoRouteImport } from './routers/_with-home-lo'
 import { Route as DashIndexRouteImport } from './routers/dash/index'
@@ -29,6 +28,7 @@ import { Route as DashGszRouteImport } from './routers/dash/gsz'
 import { Route as DashEventsRouteImport } from './routers/dash/events'
 import { Route as DashActivesRouteImport } from './routers/dash/actives'
 import { Route as WithHomeLoRiichiRouteImport } from './routers/_with-home-lo/riichi'
+import { Route as WithHomeLoMeRouteImport } from './routers/_with-home-lo/me'
 import { Route as WithHomeLoInventoryRouteImport } from './routers/_with-home-lo/inventory'
 import { Route as WithHomeLoExternalRedirectRouteImport } from './routers/_with-home-lo/external-redirect'
 import { Route as WithHomeLoDiceshockAgentsRouteImport } from './routers/_with-home-lo/diceshock-agents'
@@ -60,11 +60,6 @@ const ReadyRoute = ReadyRouteImport.update({
 const MyRiichiRoute = MyRiichiRouteImport.update({
   id: '/my-riichi',
   path: '/my-riichi',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MeRoute = MeRouteImport.update({
-  id: '/me',
-  path: '/me',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashRoute = DashRouteImport.update({
@@ -144,6 +139,11 @@ const DashActivesRoute = DashActivesRouteImport.update({
 const WithHomeLoRiichiRoute = WithHomeLoRiichiRouteImport.update({
   id: '/riichi',
   path: '/riichi',
+  getParentRoute: () => WithHomeLoRoute,
+} as any)
+const WithHomeLoMeRoute = WithHomeLoMeRouteImport.update({
+  id: '/me',
+  path: '/me',
   getParentRoute: () => WithHomeLoRoute,
 } as any)
 const WithHomeLoInventoryRoute = WithHomeLoInventoryRouteImport.update({
@@ -237,7 +237,6 @@ const DashOrdersIdSettleRoute = DashOrdersIdSettleRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof WithHomeLoIndexRoute
   '/dash': typeof DashRouteWithChildren
-  '/me': typeof MeRoute
   '/my-riichi': typeof MyRiichiRouteWithChildren
   '/ready': typeof ReadyRouteWithChildren
   '/t': typeof TRouteWithChildren
@@ -246,6 +245,7 @@ export interface FileRoutesByFullPath {
   '/diceshock-agents': typeof WithHomeLoDiceshockAgentsRoute
   '/external-redirect': typeof WithHomeLoExternalRedirectRoute
   '/inventory': typeof WithHomeLoInventoryRoute
+  '/me': typeof WithHomeLoMeRoute
   '/riichi': typeof WithHomeLoRiichiRoute
   '/dash/actives': typeof DashActivesRoute
   '/dash/events': typeof DashEventsRoute
@@ -273,7 +273,6 @@ export interface FileRoutesByFullPath {
   '/dash/orders/$id/settle': typeof DashOrdersIdSettleRoute
 }
 export interface FileRoutesByTo {
-  '/me': typeof MeRoute
   '/my-riichi': typeof MyRiichiRouteWithChildren
   '/ready': typeof ReadyRouteWithChildren
   '/t': typeof TRouteWithChildren
@@ -282,6 +281,7 @@ export interface FileRoutesByTo {
   '/diceshock-agents': typeof WithHomeLoDiceshockAgentsRoute
   '/external-redirect': typeof WithHomeLoExternalRedirectRoute
   '/inventory': typeof WithHomeLoInventoryRoute
+  '/me': typeof WithHomeLoMeRoute
   '/riichi': typeof WithHomeLoRiichiRoute
   '/dash/actives': typeof DashActivesRoute
   '/dash/events': typeof DashEventsRoute
@@ -313,7 +313,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_with-home-lo': typeof WithHomeLoRouteWithChildren
   '/dash': typeof DashRouteWithChildren
-  '/me': typeof MeRoute
   '/my-riichi': typeof MyRiichiRouteWithChildren
   '/ready': typeof ReadyRouteWithChildren
   '/t': typeof TRouteWithChildren
@@ -322,6 +321,7 @@ export interface FileRoutesById {
   '/_with-home-lo/diceshock-agents': typeof WithHomeLoDiceshockAgentsRoute
   '/_with-home-lo/external-redirect': typeof WithHomeLoExternalRedirectRoute
   '/_with-home-lo/inventory': typeof WithHomeLoInventoryRoute
+  '/_with-home-lo/me': typeof WithHomeLoMeRoute
   '/_with-home-lo/riichi': typeof WithHomeLoRiichiRoute
   '/dash/actives': typeof DashActivesRoute
   '/dash/events': typeof DashEventsRoute
@@ -354,7 +354,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dash'
-    | '/me'
     | '/my-riichi'
     | '/ready'
     | '/t'
@@ -363,6 +362,7 @@ export interface FileRouteTypes {
     | '/diceshock-agents'
     | '/external-redirect'
     | '/inventory'
+    | '/me'
     | '/riichi'
     | '/dash/actives'
     | '/dash/events'
@@ -390,7 +390,6 @@ export interface FileRouteTypes {
     | '/dash/orders/$id/settle'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/me'
     | '/my-riichi'
     | '/ready'
     | '/t'
@@ -399,6 +398,7 @@ export interface FileRouteTypes {
     | '/diceshock-agents'
     | '/external-redirect'
     | '/inventory'
+    | '/me'
     | '/riichi'
     | '/dash/actives'
     | '/dash/events'
@@ -429,7 +429,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_with-home-lo'
     | '/dash'
-    | '/me'
     | '/my-riichi'
     | '/ready'
     | '/t'
@@ -438,6 +437,7 @@ export interface FileRouteTypes {
     | '/_with-home-lo/diceshock-agents'
     | '/_with-home-lo/external-redirect'
     | '/_with-home-lo/inventory'
+    | '/_with-home-lo/me'
     | '/_with-home-lo/riichi'
     | '/dash/actives'
     | '/dash/events'
@@ -469,7 +469,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   WithHomeLoRoute: typeof WithHomeLoRouteWithChildren
   DashRoute: typeof DashRouteWithChildren
-  MeRoute: typeof MeRoute
   MyRiichiRoute: typeof MyRiichiRouteWithChildren
   ReadyRoute: typeof ReadyRouteWithChildren
   TRoute: typeof TRouteWithChildren
@@ -496,13 +495,6 @@ declare module '@tanstack/react-router' {
       path: '/my-riichi'
       fullPath: '/my-riichi'
       preLoaderRoute: typeof MyRiichiRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/me': {
-      id: '/me'
-      path: '/me'
-      fullPath: '/me'
-      preLoaderRoute: typeof MeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dash': {
@@ -615,6 +607,13 @@ declare module '@tanstack/react-router' {
       path: '/riichi'
       fullPath: '/riichi'
       preLoaderRoute: typeof WithHomeLoRiichiRouteImport
+      parentRoute: typeof WithHomeLoRoute
+    }
+    '/_with-home-lo/me': {
+      id: '/_with-home-lo/me'
+      path: '/me'
+      fullPath: '/me'
+      preLoaderRoute: typeof WithHomeLoMeRouteImport
       parentRoute: typeof WithHomeLoRoute
     }
     '/_with-home-lo/inventory': {
@@ -745,6 +744,7 @@ interface WithHomeLoRouteChildren {
   WithHomeLoDiceshockAgentsRoute: typeof WithHomeLoDiceshockAgentsRoute
   WithHomeLoExternalRedirectRoute: typeof WithHomeLoExternalRedirectRoute
   WithHomeLoInventoryRoute: typeof WithHomeLoInventoryRoute
+  WithHomeLoMeRoute: typeof WithHomeLoMeRoute
   WithHomeLoRiichiRoute: typeof WithHomeLoRiichiRoute
   WithHomeLoIndexRoute: typeof WithHomeLoIndexRoute
   WithHomeLoActivesIdRoute: typeof WithHomeLoActivesIdRoute
@@ -759,6 +759,7 @@ const WithHomeLoRouteChildren: WithHomeLoRouteChildren = {
   WithHomeLoDiceshockAgentsRoute: WithHomeLoDiceshockAgentsRoute,
   WithHomeLoExternalRedirectRoute: WithHomeLoExternalRedirectRoute,
   WithHomeLoInventoryRoute: WithHomeLoInventoryRoute,
+  WithHomeLoMeRoute: WithHomeLoMeRoute,
   WithHomeLoRiichiRoute: WithHomeLoRiichiRoute,
   WithHomeLoIndexRoute: WithHomeLoIndexRoute,
   WithHomeLoActivesIdRoute: WithHomeLoActivesIdRoute,
@@ -848,7 +849,6 @@ const TRouteWithChildren = TRoute._addFileChildren(TRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   WithHomeLoRoute: WithHomeLoRouteWithChildren,
   DashRoute: DashRouteWithChildren,
-  MeRoute: MeRoute,
   MyRiichiRoute: MyRiichiRouteWithChildren,
   ReadyRoute: ReadyRouteWithChildren,
   TRoute: TRouteWithChildren,
