@@ -35,10 +35,13 @@ export async function boardGameCard(c: Context<HonoCtxEnv>) {
   }
 
   const col = game.content;
+  const coverUrl = col.sch_cover_url || col.eng_cover_url || "";
+  const coverDataUrl = await fetchAsDataUrl(coverUrl);
+
   const html = buildCardHtml({
     schName: col.sch_name || game.sch_name || "",
     engName: col.eng_name || game.eng_name || "",
-    coverUrl: col.sch_cover_url || col.eng_cover_url || "",
+    coverUrl: coverDataUrl,
     rating: game.gstone_rating ?? col.gstone_rating ?? 0,
     playerNum: game.player_num ?? col.player_num ?? [],
     bestPlayerNum: game.best_player_num ?? [],
@@ -230,4 +233,22 @@ else {
 }
 </script>
 </body></html>`;
+}
+
+async function fetchAsDataUrl(url: string): Promise<string> {
+  if (!url) return "";
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) return "";
+    const contentType = resp.headers.get("content-type") || "image/jpeg";
+    const buf = await resp.arrayBuffer();
+    const base64 = btoa(
+      Array.from(new Uint8Array(buf))
+        .map((b) => String.fromCharCode(b))
+        .join(""),
+    );
+    return `data:${contentType};base64,${base64}`;
+  } catch {
+    return "";
+  }
 }
