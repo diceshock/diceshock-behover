@@ -5,7 +5,8 @@
 
 export function parseXml(xml: string): Record<string, string> {
   const result: Record<string, string> = {};
-  const tagRegex = /<(\w+)><!\[CDATA\[(.*?)\]\]><\/\1>|<(\w+)>(.*?)<\/\3>/gs;
+  const tagRegex =
+    /<(\w+)>\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*<\/\1>|<(\w+)>\s*([\s\S]*?)\s*<\/\3>/g;
   let match: RegExpExecArray | null;
   while ((match = tagRegex.exec(xml)) !== null) {
     const key = match[1] || match[3];

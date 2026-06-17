@@ -44,7 +44,11 @@ export async function wechatMessage(c: Context<HonoCtxEnv>) {
   const body = await c.req.text();
   const encryptType = c.req.query("encrypt_type");
 
-  console.log("[wechat:msg] received", { encryptType, bodyLen: body.length });
+  console.log("[wechat:msg] received", {
+    encryptType,
+    bodyLen: body.length,
+    body: body.slice(0, 300),
+  });
 
   let msg: Record<string, string>;
 
