@@ -185,7 +185,6 @@ export async function chatWithAgent(
     body: JSON.stringify({
       model: "deepseek-v4-flash",
       messages,
-      response_format: { type: "json_object" },
       max_tokens: 1024,
     }),
   });

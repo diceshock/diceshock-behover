@@ -7,10 +7,16 @@ import {
 
 const MAX_MESSAGES = 5;
 
+function stripCodeBlock(raw: string): string {
+  const match = raw.match(/```(?:json)?\s*\n?([\s\S]*?)```/);
+  if (match) return match[1].trim();
+  return raw.trim();
+}
+
 export function parseAgentOutput(rawOutput: string): AgentMessage[] {
   if (!rawOutput?.trim()) return [];
 
-  const trimmed = rawOutput.trim();
+  const trimmed = stripCodeBlock(rawOutput);
 
   try {
     const parsed = JSON.parse(trimmed);
