@@ -71,7 +71,18 @@ export async function chatWithAgent(
     ? `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/deepseek`
     : "https://api.deepseek.com/v1";
 
-  let systemContent = `${BASE_SYSTEM_PROMPT}\n\n${params.skill.systemPrompt}`;
+  const now = new Date();
+  const shanghaiTime = now.toLocaleString("zh-CN", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    weekday: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  let systemContent = `${BASE_SYSTEM_PROMPT}\n\n当前时间：${shanghaiTime}（亚洲/上海）\n\n${params.skill.systemPrompt}`;
   if (params.memory) {
     systemContent += `\n\n${params.memory}`;
   }
