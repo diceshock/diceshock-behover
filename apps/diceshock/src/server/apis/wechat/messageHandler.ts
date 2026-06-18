@@ -368,8 +368,6 @@ async function buildActivesReply(c: Context<HonoCtxEnv>): Promise<string> {
   } catch {
     return `想约局？直接告诉我"最近有什么约局"或"我想发起约局"即可！\n\nhttps://diceshock.com/actives`;
   }
-  catch
-  return `想约局？直接告诉我"最近有什么约局"或"我想发起约局"即可！\n\nhttps://diceshock.com/actives`;
 }
 
 async function clearAllContext(
