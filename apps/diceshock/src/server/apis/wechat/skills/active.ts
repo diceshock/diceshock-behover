@@ -16,8 +16,10 @@ export const activeSkill: SkillDefinition = {
 查询工具：
 · 最近的约局列表（今天/本周/本月）→ query_actives_list
 · 约局详情（发起者、参加人数、桌游、时间）→ query_active_detail
-· 用户已报名的约局 → query_active_notifications
-· 用户自己发起的约局 → query_my_created_actives
+· 用户已报名/观望的约局 → query_active_notifications
+· 用户自己发起/创建的约局 → query_my_created_actives
+
+重要：当用户问"我的约局"、"我约的"、"我参加的"时，必须同时调用 query_my_created_actives 和 query_active_notifications，合并结果展示。用户发起的约局不在报名列表里。
 
 写操作（需用户确认）：
 · 创建约局 → propose_create_active（需标题、日期、人数上限）
