@@ -5,6 +5,7 @@ import type { SkillDefinition, ToolDefinition } from "./skills";
 import { BASE_SYSTEM_PROMPT } from "./skills";
 import { getToolStatusMessage } from "./statusMessages";
 import { CONTEXT_TOOL, executeTool } from "./tools";
+import { isProposeToolName } from "./tools/propose";
 import type { ChatMessage } from "./types";
 
 const MAX_TOOL_ROUNDS = 3;
@@ -149,6 +150,7 @@ export async function chatWithAgent(
       tool_calls: assistantMsg.tool_calls,
     });
 
+    let proposeCalled = false;
     for (const toolCall of assistantMsg.tool_calls) {
       const statusMsg = getToolStatusMessage(toolCall.function.name);
       sendStatusMessage(env, params.openId, statusMsg).catch(() => {});
@@ -165,7 +167,13 @@ export async function chatWithAgent(
         content: result,
         tool_call_id: toolCall.id,
       });
+
+      if (isProposeToolName(toolCall.function.name)) {
+        proposeCalled = true;
+      }
     }
+
+    if (proposeCalled) break;
   }
 
   const finalResponse = await fetch(`${baseUrl}/chat/completions`, {
