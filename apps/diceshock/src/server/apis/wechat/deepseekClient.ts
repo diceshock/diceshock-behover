@@ -8,7 +8,7 @@ import { CONTEXT_TOOL, executeTool } from "./tools";
 import { isProposeToolName } from "./tools/propose";
 import type { ChatMessage } from "./types";
 
-const MAX_TOOL_ROUNDS = 3;
+const MAX_TOOL_ROUNDS = 5;
 
 interface ChatWithAgentParams {
   userMessage: string;
@@ -192,10 +192,21 @@ export async function chatWithAgent(
   if (finalResponse.ok) {
     const finalData = (await finalResponse.json()) as DeepSeekResponse;
     totalTokens += finalData.usage?.total_tokens ?? 0;
-    const finalContent = finalData.choices?.[0]?.message?.content;
-    if (finalContent) {
-      return { rawOutput: finalContent, tokensUsed: totalTokens };
+    const finalChoice = finalData.choices?.[0]?.message;
+    console.log("[deepseek] final call result", {
+      hasContent: !!finalChoice?.content,
+      contentLen: finalChoice?.content?.length ?? 0,
+      hasToolCalls: !!finalChoice?.tool_calls?.length,
+    });
+    if (finalChoice?.content) {
+      return { rawOutput: finalChoice.content, tokensUsed: totalTokens };
     }
+  } else {
+    const errText = await finalResponse.text();
+    console.error("[deepseek] final call failed", {
+      status: finalResponse.status,
+      body: errText.slice(0, 300),
+    });
   }
 
   return {
