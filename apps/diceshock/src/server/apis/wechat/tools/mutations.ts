@@ -91,25 +91,45 @@ async function executeCreateActive(
   userId: string,
   params: Record<string, unknown>,
 ): Promise<ActionResult> {
+  const title = params.title as string | undefined;
+  const date = params.date as string | undefined;
+  const maxPlayers = params.max_players as number | undefined;
+
+  if (!title || !date || !maxPlayers) {
+    return {
+      success: false,
+      notification: `❌ 创建约局失败：缺少必要信息\n${!title ? "· 标题\n" : ""}${!date ? "· 日期\n" : ""}${!maxPlayers ? "· 人数上限" : ""}`,
+    };
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return { success: false, notification: "❌ 日期格式错误，需要 YYYY-MM-DD" };
+  }
+
   const d = db(c.env.DB);
   const id = crypto.randomUUID();
 
-  await d.insert(activesTable).values({
-    id,
-    creator_id: userId,
-    title: params.title as string,
-    board_game_id: (params.board_game_id as string) || null,
-    date: params.date as string,
-    time: (params.time as string) || null,
-    max_players: params.max_players as number,
-    content: (params.content as string) || null,
-    is_game: params.is_game !== false,
-  });
+  try {
+    await d.insert(activesTable).values({
+      id,
+      creator_id: userId,
+      title,
+      board_game_id: (params.board_game_id as string) || null,
+      date,
+      time: (params.time as string) || null,
+      max_players: maxPlayers,
+      content: (params.content as string) || null,
+      is_game: params.is_game !== false,
+    });
+  } catch (e) {
+    console.error("[mutations:create_active] insert failed:", e);
+    return { success: false, notification: `❌ 创建约局失败：${String(e)}` };
+  }
 
   const url = SITE_LINKS.activeDetail(id);
   return {
     success: true,
-    notification: `[通知] ✅ 约局创建成功！\n标题: ${params.title}\n日期: ${params.date}${params.time ? ` ${params.time}` : ""}\n人数上限: ${params.max_players}\n\n查看详情: ${url}`,
+    notification: `[通知] ✅ 约局创建成功！\n标题: ${title}\n日期: ${date}${params.time ? ` ${params.time}` : ""}\n人数上限: ${maxPlayers}\n\n查看详情: ${url}`,
   };
 }
 
@@ -216,6 +236,10 @@ async function executeLeaveActive(
   const d = db(c.env.DB);
   const activeId = params.active_id as string;
 
+  if (!activeId) {
+    return { success: false, notification: "❌ 退出约局失败：缺少约局ID" };
+  }
+
   const active = await d
     .select({ creator_id: activesTable.creator_id, title: activesTable.title })
     .from(activesTable)
@@ -227,33 +251,71 @@ async function executeLeaveActive(
   }
 
   if (active[0].creator_id === userId) {
-    await d
-      .delete(activeRegistrationsTable)
-      .where(eq(activeRegistrationsTable.active_id, activeId));
-    await d.delete(activesTable).where(eq(activesTable.id, activeId));
+    try {
+      await d
+        .delete(activeRegistrationsTable)
+        .where(eq(activeRegistrationsTable.active_id, activeId));
+      await d.delete(activesTable).where(eq(activesTable.id, activeId));
+    } catch (e) {
+      console.error("[mutations:leave_active] delete failed:", e);
+      return { success: false, notification: `❌ 删除约局失败：${String(e)}` };
+    }
     return {
       success: true,
       notification: `[通知] ✅ 约局已删除\n标题: ${active[0].title}\n\n（组织者退出即删除整个约局）`,
     };
   }
 
-  await d
-    .delete(activeRegistrationsTable)
-    .where(
-      and(
-        eq(activeRegistrationsTable.active_id, activeId),
-        eq(activeRegistrationsTable.user_id, userId),
-      ),
-    );
+  try {
+    await d
+      .delete(activeRegistrationsTable)
+      .where(
+        and(
+          eq(activeRegistrationsTable.active_id, activeId),
+          eq(activeRegistrationsTable.user_id, userId),
+        ),
+      );
+  } catch (e) {
+    console.error("[mutations:leave_active] unregister failed:", e);
+    return { success: false, notification: `❌ 退出约局失败：${String(e)}` };
+  }
 
   const url = SITE_LINKS.activeDetail(activeId);
   return {
+    success: true,
+    notification: `[通知] ✅ 已退出约局\n约局: ${active[0].title}\n\n查看详情: ${url}`,
+  };
+}
+
+if (active[0].creator_id === userId) {
+  await d
+    .delete(activeRegistrationsTable)
+    .where(eq(activeRegistrationsTable.active_id, activeId));
+  await d.delete(activesTable).where(eq(activesTable.id, activeId));
+  return {
+      success: true,
+      notification: `[通知] ✅ 约局已删除\n标题: ${active[0].title}\n\n（组织者退出即删除整个约局）`,
+    };
+}
+
+await d
+  .delete(activeRegistrationsTable)
+  .where(
+    and(
+      eq(activeRegistrationsTable.active_id, activeId),
+      eq(activeRegistrationsTable.user_id, userId),
+    ),
+  );
+
+const url = SITE_LINKS.activeDetail(activeId);
+return {
     success: true,
     notification: `[通知] ✅ 已退出约局\n\n查看详情: ${url}`,
   };
 }
 
-async function executeUpdateActive(
+async
+function executeUpdateActive(
   c: Context<HonoCtxEnv>,
   userId: string,
   params: Record<string, unknown>,
