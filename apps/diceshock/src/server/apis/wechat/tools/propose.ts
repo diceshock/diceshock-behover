@@ -88,7 +88,8 @@ export const ACTIVE_WRITE_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "propose_leave_active",
-      description: "提议退出/解除一个已报名或观望的约局。需要约局ID。",
+      description:
+        "退出或删除约局。组织者退出即删除整个约局，参与者退出即取消报名。用户要求删除约局时也用这个工具。",
       parameters: {
         type: "object",
         properties: {
