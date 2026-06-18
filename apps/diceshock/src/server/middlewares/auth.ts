@@ -43,6 +43,11 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
     logger: {
       error(code: any, ...message: any[]) {
         console.error("[Auth.js ERROR]", code, ...message);
+        (globalThis as any).__lastAuthError = {
+          code,
+          message,
+          time: Date.now(),
+        };
       },
       warn(code: any, ...message: any[]) {
         console.warn("[Auth.js WARN]", code, ...message);

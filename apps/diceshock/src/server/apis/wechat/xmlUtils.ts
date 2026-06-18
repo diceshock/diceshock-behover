@@ -1,14 +1,24 @@
+import { DOMParser } from "@xmldom/xmldom";
+
+const domParser = new DOMParser();
+
 export function parseXml(xml: string): Record<string, string> {
+  const doc = domParser.parseFromString(xml, "text/xml");
+  const root = doc.documentElement;
   const result: Record<string, string> = {};
-  const tags = xml.matchAll(
-    /<(\w+)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/\1>/g,
-  );
-  for (const match of tags) {
-    const key = match[1];
-    if (key === "xml") continue;
-    result[key] = match[2];
+
+  for (let i = 0; i < root.childNodes.length; i++) {
+    const node = root.childNodes[i];
+    if (node.nodeType === 1) {
+      const key = node.nodeName;
+      const value = node.textContent ?? "";
+      result[key] = value;
+    }
   }
+
   return result;
+}
+return result;
 }
 
 export function buildTextReply(

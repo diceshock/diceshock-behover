@@ -62,6 +62,20 @@ app.get("/edge/media/card/site-og", siteOgCard);
 app.use("/edge/*", trpcServerDash);
 app.use("/apis/*", trpcServerPublic);
 
+app.get("/api/auth/error", (c) => {
+  const error = c.req.query("error");
+  const lastErr = (globalThis as any).__lastAuthError;
+  return c.json({ error, detail: lastErr ?? null }, 500);
+});
+
+app.get("/api/auth/callback/:provider", async (c, next) => {
+  const provider = c.req.param("provider");
+  const query = c.req.query();
+  console.log("[Auth Callback]", provider, "params:", JSON.stringify(query));
+  console.log("[Auth Callback] cookies present:", !!c.req.header("cookie"));
+  return next();
+});
+
 app.use("/api/auth/*", authHandler());
 
 app.use("*", wechatSilentAuth);

@@ -140,7 +140,7 @@ export function WechatOpen(config: WechatProviderConfig) {
     client: {
       token_endpoint_auth_method: "client_secret_post",
     },
-    checks: ["state"],
+    checks: [] as [],
     [customFetch]: createWechatFetch(clientId, clientSecret),
   } satisfies OAuthConfig<WechatProfile>;
 }
