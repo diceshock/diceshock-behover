@@ -8,11 +8,16 @@ import db, {
 import dayjs from "dayjs";
 import type { Context } from "hono";
 import type { HonoCtxEnv } from "@/shared/types";
-import { getRecentHistory, saveMessage } from "./conversationContext";
+import {
+  clearConversationHistory,
+  getRecentHistory,
+  saveMessage,
+} from "./conversationContext";
 import { chatWithAgent } from "./deepseekClient";
 import { detectIntent } from "./intentRouter";
 import { getRelatedLinks } from "./linkRegistry";
-import { addMemory, searchMemory } from "./memory";
+import { generateAndSendMembershipCard } from "./membershipCard";
+import { addMemory, deleteAllMemories, searchMemory } from "./memory";
 import { dispatchMessages, parseAgentOutput } from "./messagePipeline";
 import {
   clearPendingAction,
@@ -37,6 +42,11 @@ export async function handleTextMessage(
   const content = msg.Content?.trim();
 
   if (!content) return "请输入您的问题~";
+
+  if (content === "清理上下文") {
+    c.executionCtx.waitUntil(clearAllContext(c, openId));
+    return "✅ 已清理所有对话历史和记忆";
+  }
 
   const { allowed, reason } = await checkRateLimit(c, openId);
   if (!allowed) return reason || ERROR_MESSAGES.RATE_LIMITED;
@@ -358,4 +368,24 @@ async function buildActivesReply(c: Context<HonoCtxEnv>): Promise<string> {
   } catch {
     return `想约局？直接告诉我"最近有什么约局"或"我想发起约局"即可！\n\nhttps://diceshock.com/actives`;
   }
+  catch
+  return `想约局？直接告诉我"最近有什么约局"或"我想发起约局"即可！\n\nhttps://diceshock.com/actives`;
+}
+
+async function clearAllContext(
+  c: Context<HonoCtxEnv>,
+  openId: string,
+): Promise<void> {
+  const env = c.env as any;
+  const kv = env.KV as KVNamespace;
+
+  await Promise.all([
+    clearConversationHistory(c, openId),
+    deleteAllMemories(env, openId),
+    clearPendingAction(kv, openId),
+  ]);
+
+  console.log("[wechat:clear] cleared all context", {
+    openId: openId.slice(-8),
+  });
 }

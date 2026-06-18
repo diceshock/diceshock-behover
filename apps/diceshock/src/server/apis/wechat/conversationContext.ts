@@ -156,3 +156,13 @@ export async function archiveToR2(
     key,
   });
 }
+
+export async function clearConversationHistory(
+  c: Context<HonoCtxEnv>,
+  openId: string,
+): Promise<void> {
+  const d = db(c.env.DB);
+  await d
+    .delete(wechatConversationsTable)
+    .where(eq(wechatConversationsTable.open_id, openId));
+}

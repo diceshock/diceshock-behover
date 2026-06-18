@@ -117,7 +117,7 @@ export async function getMemoryCount(
       client.getAll({
         filters: { user_id: openId },
         page: 1,
-        pageSize: 1, // Only need count, not results
+        pageSize: 1,
       }),
       new Promise<never>((_, reject) =>
         setTimeout(
@@ -130,6 +130,29 @@ export async function getMemoryCount(
     return typeof result.count === "number" ? result.count : 0;
   } catch (e) {
     console.error("[mem0] getMemoryCount failed:", e);
-    return MAX_MEMORIES_PER_USER; // Safe default: treat as full
+    return MAX_MEMORIES_PER_USER;
+  }
+}
+
+export async function deleteAllMemories(
+  env: any,
+  openId: string,
+): Promise<void> {
+  const client = getClient(env);
+  if (!client) return;
+
+  try {
+    await Promise.race([
+      client.deleteAll({ userId: openId }),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error("mem0 deleteAll timeout")),
+          MEM0_TIMEOUT_MS,
+        ),
+      ),
+    ]);
+    console.log("[mem0] deleteAll ok", { openId: openId.slice(-8) });
+  } catch (e) {
+    console.error("[mem0] deleteAll failed:", e);
   }
 }
