@@ -4,6 +4,7 @@ export type SkillId =
   | "mahjong"
   | "active"
   | "trpg"
+  | "clocktower"
   | "event"
   | "general";
 
