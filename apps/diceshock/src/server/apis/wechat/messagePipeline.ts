@@ -7,92 +7,40 @@ import {
 
 const MAX_MESSAGES = 5;
 
-/**
- * Splits a text content into separate messages by paragraph boundaries.
- * Consecutive list items (lines starting with - or digit.) are kept together.
- */
-function splitTextByParagraphs(content: string): string[] {
-  const lines = content.split("\n");
-  const blocks: string[] = [];
-  let currentBlock: string[] = [];
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-
-    if (trimmed === "") {
-      if (currentBlock.length > 0) {
-        blocks.push(currentBlock.join("\n"));
-        currentBlock = [];
-      }
-      continue;
-    }
-
-    const isListItem = /^[-•]\s|^\d+[.)]\s/.test(trimmed);
-    const lastIsListItem =
-      currentBlock.length > 0 &&
-      /^[-•]\s|^\d+[.)]\s/.test(currentBlock[currentBlock.length - 1].trim());
-
-    if (currentBlock.length > 0 && !isListItem && !lastIsListItem) {
-      blocks.push(currentBlock.join("\n"));
-      currentBlock = [line];
-    } else {
-      currentBlock.push(line);
-    }
-  }
-
-  if (currentBlock.length > 0) {
-    blocks.push(currentBlock.join("\n"));
-  }
-
-  return blocks.filter((b) => b.trim().length > 0);
-}
-
 export function parseAgentOutput(rawOutput: string): AgentMessage[] {
   if (!rawOutput?.trim()) return [];
 
   const trimmed = rawOutput.trim();
-  if (trimmed.startsWith("[")) {
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        const textParts = parsed
-          .filter(
-            (item: any) =>
-              typeof item === "object" && item !== null && item.type === "text",
-          )
-          .map((item: any) => item.content as string)
-          .filter(Boolean);
 
-        if (textParts.length > 0) {
-          return expandTextMessages([
-            { type: "text", content: textParts.join("\n\n") },
-          ]).slice(0, MAX_MESSAGES);
-        }
-      }
-    } catch {}
-  }
+  try {
+    const parsed = JSON.parse(trimmed);
 
-  return expandTextMessages([{ type: "text", content: trimmed }]).slice(
-    0,
-    MAX_MESSAGES,
-  );
-}
+    const messages: unknown[] = Array.isArray(parsed)
+      ? parsed
+      : Array.isArray(parsed.messages)
+        ? parsed.messages
+        : null;
 
-function expandTextMessages(messages: AgentMessage[]): AgentMessage[] {
-  const expanded: AgentMessage[] = [];
-
-  for (const msg of messages) {
-    if (msg.type === "text") {
-      const paragraphs = splitTextByParagraphs(msg.content);
-      for (const p of paragraphs) {
-        expanded.push({ type: "text", content: p });
-      }
-    } else {
-      expanded.push(msg);
+    if (!messages) {
+      return [{ type: "text", content: trimmed }];
     }
-  }
 
-  return expanded;
+    const validMessages = messages.filter(
+      (item: unknown): item is AgentMessage =>
+        typeof item === "object" &&
+        item !== null &&
+        "type" in item &&
+        (item.type === "text" || item.type === "img" || item.type === "totp"),
+    );
+
+    if (validMessages.length === 0) {
+      return [{ type: "text", content: trimmed }];
+    }
+
+    return validMessages.slice(0, MAX_MESSAGES);
+  } catch {
+    return [{ type: "text", content: trimmed }];
+  }
 }
 
 export async function dispatchMessages(

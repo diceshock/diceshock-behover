@@ -103,6 +103,7 @@ export async function chatWithAgent(
         model: "deepseek-v4-flash",
         messages,
         ...(tools ? { tools, tool_choice: "auto" } : {}),
+        response_format: { type: "json_object" },
         max_tokens: 1024,
       }),
     });
