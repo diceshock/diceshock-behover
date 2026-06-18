@@ -1,23 +1,13 @@
-import { XMLParser } from "fast-xml-parser";
-
-const parser = new XMLParser({
-  processEntities: false,
-  htmlEntities: false,
-  ignorePiTags: true,
-});
-
 export function parseXml(xml: string): Record<string, string> {
-  const stripped = xml.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1");
-  const parsed = parser.parse(stripped);
-  const root = parsed.xml || parsed;
   const result: Record<string, string> = {};
-
-  for (const [key, value] of Object.entries(root)) {
-    if (typeof value === "string" || typeof value === "number") {
-      result[key] = String(value);
-    }
+  const tags = xml.matchAll(
+    /<(\w+)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/\1>/g,
+  );
+  for (const match of tags) {
+    const key = match[1];
+    if (key === "xml") continue;
+    result[key] = match[2];
   }
-
   return result;
 }
 
