@@ -1,5 +1,8 @@
+import db, { accounts, drizzle, users } from "@lib/db";
 import type { Context } from "hono";
 import type { HonoCtxEnv } from "@/shared/types";
+
+const { and, eq } = drizzle;
 
 interface RateLimitBucket {
   tokens: number;
@@ -38,6 +41,12 @@ export async function checkRateLimit(
   c: Context<HonoCtxEnv>,
   openId: string,
 ): Promise<{ allowed: boolean; reason?: string }> {
+  const isAdmin = await isAdminUser(c, openId);
+  if (isAdmin) {
+    console.log("[ratelimit] admin bypass", { openId: openId.slice(-8) });
+    return { allowed: true };
+  }
+
   const kv = c.env.KV;
 
   const checks: Array<{ key: string; limitKey: LimitKey }> = [
@@ -106,4 +115,22 @@ export async function recordTokenUsage(
     }),
   );
   console.log("[ratelimit] recorded ok");
+}
+
+async function isAdminUser(
+  c: Context<HonoCtxEnv>,
+  openId: string,
+): Promise<boolean> {
+  const d = db(c.env.DB);
+  const result = await d
+    .select({ role: users.role })
+    .from(accounts)
+    .innerJoin(users, eq(users.id, accounts.userId))
+    .where(eq(accounts.providerAccountId, openId))
+    .limit(1);
+
+  return (
+    result.length > 0 &&
+    (result[0].role === "admin" || result[0].role === "staff")
+  );
 }
