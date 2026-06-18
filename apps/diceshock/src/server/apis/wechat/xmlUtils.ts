@@ -1,31 +1,20 @@
-/**
- * WeChat XML message parsing/building using fast-xml-parser.
- * WeChat wraps values in CDATA — the parser strips it automatically.
- */
-
-import { XMLBuilder, XMLParser } from "fast-xml-parser";
+import { XMLParser } from "fast-xml-parser";
 
 const parser = new XMLParser({
-  cdataPropName: "__cdata",
-  textNodeName: "__text",
+  processEntities: false,
+  htmlEntities: false,
+  ignorePiTags: true,
 });
 
 export function parseXml(xml: string): Record<string, string> {
-  const parsed = parser.parse(xml);
+  const stripped = xml.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1");
+  const parsed = parser.parse(stripped);
   const root = parsed.xml || parsed;
   const result: Record<string, string> = {};
 
   for (const [key, value] of Object.entries(root)) {
-    if (key === "__text") continue;
     if (typeof value === "string" || typeof value === "number") {
       result[key] = String(value);
-    } else if (value && typeof value === "object") {
-      const obj = value as Record<string, unknown>;
-      if ("__cdata" in obj) {
-        result[key] = String(obj.__cdata);
-      } else if ("__text" in obj) {
-        result[key] = String(obj.__text);
-      }
     }
   }
 
