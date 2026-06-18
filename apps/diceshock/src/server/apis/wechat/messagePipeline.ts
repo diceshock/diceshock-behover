@@ -13,40 +13,54 @@ function stripCodeBlock(raw: string): string {
   return raw.trim();
 }
 
+function extractObjects(raw: string): AgentMessage[] {
+  const results: AgentMessage[] = [];
+  let depth = 0;
+  let start = -1;
+
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+    if (ch === "{") {
+      if (depth === 0) start = i;
+      depth++;
+    } else if (ch === "}") {
+      depth--;
+      if (depth === 0 && start !== -1) {
+        const slice = raw.slice(start, i + 1);
+        try {
+          const obj = JSON.parse(slice);
+          if (obj?.type && obj?.content) {
+            results.push(obj as AgentMessage);
+          }
+        } catch {
+          const fixed = slice
+            .replace(/\n/g, "\\n")
+            .replace(/\r/g, "\\r")
+            .replace(/\t/g, "\\t");
+          try {
+            const obj = JSON.parse(fixed);
+            if (obj?.type && obj?.content) {
+              results.push(obj as AgentMessage);
+            }
+          } catch {}
+        }
+        start = -1;
+      }
+    }
+  }
+
+  return results;
+}
+
 export function parseAgentOutput(rawOutput: string): AgentMessage[] {
   if (!rawOutput?.trim()) return [];
 
   const trimmed = stripCodeBlock(rawOutput);
+  const messages = extractObjects(trimmed);
 
-  try {
-    const parsed = JSON.parse(trimmed);
+  if (messages.length > 0) return messages.slice(0, MAX_MESSAGES);
 
-    const messages: unknown[] = Array.isArray(parsed)
-      ? parsed
-      : Array.isArray(parsed.messages)
-        ? parsed.messages
-        : null;
-
-    if (!messages) {
-      return [{ type: "text", content: trimmed }];
-    }
-
-    const validMessages = messages.filter(
-      (item: unknown): item is AgentMessage =>
-        typeof item === "object" &&
-        item !== null &&
-        "type" in item &&
-        (item.type === "text" || item.type === "img" || item.type === "totp"),
-    );
-
-    if (validMessages.length === 0) {
-      return [{ type: "text", content: trimmed }];
-    }
-
-    return validMessages.slice(0, MAX_MESSAGES);
-  } catch {
-    return [{ type: "text", content: trimmed }];
-  }
+  return [{ type: "text", content: trimmed }];
 }
 
 export async function dispatchMessages(

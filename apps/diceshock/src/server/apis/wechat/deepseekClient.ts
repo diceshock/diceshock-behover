@@ -195,10 +195,20 @@ export async function chatWithAgent(
     if (proposeCalled) break;
   }
 
+  const toolResults = messages
+    .filter((m) => m.role === "tool")
+    .map((m) => m.content);
+
   messages.push({
     role: "user",
     content:
-      "请根据以上工具返回的信息，直接用JSON数组格式回复用户。不要再调用工具。",
+      '请根据以上工具返回的信息，直接用JSON数组格式回复用户。不要再调用工具。格式示例：[{"type":"text","content":"回复内容"}]',
+  });
+
+  console.log("[deepseek] final call", {
+    messageCount: messages.length,
+    toolResultCount: toolResults.length,
+    calledTools,
   });
 
   const finalResponse = await fetch(`${baseUrl}/chat/completions`, {
@@ -210,6 +220,7 @@ export async function chatWithAgent(
     body: JSON.stringify({
       model: "deepseek-v4-flash",
       messages,
+      tool_choice: "none",
       max_tokens: 1024,
     }),
   });
@@ -218,26 +229,75 @@ export async function chatWithAgent(
     const finalData = (await finalResponse.json()) as DeepSeekResponse;
     totalTokens += finalData.usage?.total_tokens ?? 0;
     const finalChoice = finalData.choices?.[0]?.message;
+    console.log("[deepseek] final response", {
+      hasContent: !!finalChoice?.content,
+      contentLen: finalChoice?.content?.length ?? 0,
+      hasToolCalls: !!finalChoice?.tool_calls?.length,
+    });
     if (finalChoice?.content) {
       return { rawOutput: finalChoice.content, tokensUsed: totalTokens };
     }
+  } else {
+    const errText = await finalResponse.text();
+    console.error("[deepseek] final call failed", {
+      status: finalResponse.status,
+      body: errText.slice(0, 300),
+    });
   }
 
-  const lastToolResult = [...messages].reverse().find((m) => m.role === "tool");
-  if (lastToolResult?.content) {
-    try {
-      const data = JSON.parse(lastToolResult.content);
-      const summary = data.message || data.error || "查询完成";
-      return {
-        rawOutput: `[{"type":"text","content":"${summary}"}]`,
-        tokensUsed: totalTokens,
-      };
-    } catch {}
-  }
-
+  console.log("[deepseek] using tool result fallback", {
+    toolResultCount: toolResults.length,
+  });
   return {
-    rawOutput:
-      '[{"type":"text","content":"抱歉，处理超时了。请简化您的问题再试一次。"}]',
+    rawOutput: synthesizeFromToolResults(toolResults),
     tokensUsed: totalTokens,
   };
+}
+
+function synthesizeFromToolResults(toolResults: string[]): string {
+  const summaries: string[] = [];
+
+  for (const raw of toolResults) {
+    try {
+      const data = JSON.parse(raw);
+      if (data.error) {
+        summaries.push(`错误: ${data.error}`);
+        continue;
+      }
+      if (data.actives && Array.isArray(data.actives)) {
+        const items = data.actives
+          .slice(0, 5)
+          .map(
+            (a: any) =>
+              `- ${a.date || ""} ${a.title || ""}${a.link ? ` ${a.link}` : ""}`,
+          );
+        summaries.push(
+          `找到 ${data.count ?? data.total ?? data.actives.length} 个约局:\n${items.join("\n")}`,
+        );
+      } else if (data.games && Array.isArray(data.games)) {
+        const items = data.games
+          .slice(0, 5)
+          .map(
+            (g: any) =>
+              `- ${g.sch_name || g.eng_name || g.name || ""}${g.link ? ` ${g.link}` : ""}`,
+          );
+        summaries.push(
+          `找到 ${data.count ?? data.games.length} 款桌游:\n${items.join("\n")}`,
+        );
+      } else if (data.total_count !== undefined) {
+        summaries.push(`当前库存共 ${data.total_count} 款桌游`);
+      } else if (data.message) {
+        summaries.push(data.message);
+      }
+    } catch {
+      if (raw && raw.length < 200) summaries.push(raw);
+    }
+  }
+
+  if (summaries.length === 0) {
+    return '[{"type":"text","content":"查询完成，但未找到相关结果。请尝试换个方式提问。"}]';
+  }
+
+  const content = summaries.join("\n\n").replace(/"/g, '\\"');
+  return `[{"type":"text","content":"${content}"}]`;
 }

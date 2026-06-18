@@ -45,6 +45,8 @@ export async function getWechatAccessToken(env: any): Promise<string> {
   return data.access_token;
 }
 
+const TOKEN_EXPIRED_CODES = new Set([40001, 40014, 42001]);
+
 export async function sendCustomerTextMessage(
   env: any,
   openId: string,
@@ -54,7 +56,35 @@ export async function sendCustomerTextMessage(
     openId: openId.slice(-8),
     contentLen: content.length,
   });
-  const token = await getWechatAccessToken(env);
+
+  let token = await getWechatAccessToken(env);
+  let data = await doSendText(token, openId, content);
+
+  if (data.errcode && TOKEN_EXPIRED_CODES.has(data.errcode)) {
+    console.log("[wechat:api] token expired, refreshing", {
+      errcode: data.errcode,
+    });
+    await env.KV.delete("wechat:mp:access_token");
+    token = await getWechatAccessToken(env);
+    data = await doSendText(token, openId, content);
+  }
+
+  if (data.errcode && data.errcode !== 0) {
+    console.error("[wechat:api] send text failed", {
+      errcode: data.errcode,
+      errmsg: data.errmsg,
+      openId: openId.slice(-8),
+    });
+  } else {
+    console.log("[wechat:api] send text ok");
+  }
+}
+
+async function doSendText(
+  token: string,
+  openId: string,
+  content: string,
+): Promise<{ errcode?: number; errmsg?: string }> {
   const res = await fetch(
     `${WECHAT_API_BASE}/cgi-bin/message/custom/send?access_token=${token}`,
     {
@@ -67,16 +97,7 @@ export async function sendCustomerTextMessage(
       }),
     },
   );
-  const data = (await res.json()) as { errcode?: number; errmsg?: string };
-  if (data.errcode && data.errcode !== 0) {
-    console.error("[wechat:api] send text failed", {
-      errcode: data.errcode,
-      errmsg: data.errmsg,
-      openId: openId.slice(-8),
-    });
-  } else {
-    console.log("[wechat:api] send text ok");
-  }
+  return (await res.json()) as { errcode?: number; errmsg?: string };
 }
 
 export async function sendCustomerImageMessage(

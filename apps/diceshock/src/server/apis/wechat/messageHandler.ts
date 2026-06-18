@@ -133,6 +133,13 @@ async function processMessage(
       messages.push({ type: "text", content: `相关链接：\n${linksText}` });
     }
 
+    if (messages.length === 0) {
+      messages.push({
+        type: "text",
+        content: "抱歉，我暂时无法生成回复。请稍后再试或换个方式提问。",
+      });
+    }
+
     await dispatchMessages(env, openId, messages);
 
     const metadata = JSON.stringify({
