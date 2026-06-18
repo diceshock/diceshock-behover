@@ -1,5 +1,5 @@
 const DEDUP_PREFIX = "wechat:dedup:";
-const DEDUP_TTL = 30; // seconds — covers WeChat's 3 retry attempts within ~15s
+const DEDUP_TTL = 60;
 
 export async function isDuplicate(
   kv: KVNamespace,
