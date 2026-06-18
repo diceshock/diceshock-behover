@@ -71,6 +71,8 @@ export async function executeAction(
       return await executeJoinActive(c, userId, action.params, true);
     case "update_active":
       return await executeUpdateActive(c, userId, action.params);
+    case "leave_active":
+      return await executeLeaveActive(c, userId, action.params);
     case "upsert_business_card":
       return await executeUpsertBusinessCard(c, userId, action.params);
     case "send_sms_code":
@@ -203,6 +205,30 @@ async function executeJoinActive(
   return {
     success: true,
     notification: `[通知] ✅ 成功${status}约局\n约局: ${active[0].title}\n\n查看详情: ${url}`,
+  };
+}
+
+async function executeLeaveActive(
+  c: Context<HonoCtxEnv>,
+  userId: string,
+  params: Record<string, unknown>,
+): Promise<ActionResult> {
+  const d = db(c.env.DB);
+  const activeId = params.active_id as string;
+
+  await d
+    .delete(activeRegistrationsTable)
+    .where(
+      and(
+        eq(activeRegistrationsTable.active_id, activeId),
+        eq(activeRegistrationsTable.user_id, userId),
+      ),
+    );
+
+  const url = SITE_LINKS.activeDetail(activeId);
+  return {
+    success: true,
+    notification: `[通知] ✅ 已退出约局\n\n查看详情: ${url}`,
   };
 }
 
@@ -389,12 +415,11 @@ async function executeVerifyPhone(
 
   if (existingAccount.length === 0) {
     await d.insert(accounts).values({
-      id: crypto.randomUUID(),
       userId,
-      type: "credentials",
+      type: "credentials" as "credentials",
       provider: "SMS",
       providerAccountId: phone,
-    });
+    } as any);
   }
 
   return {

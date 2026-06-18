@@ -4,6 +4,7 @@ import db, {
   activesTable,
   boardGamesTable,
   drizzle,
+  userInfoTable,
 } from "@lib/db";
 import dayjs from "dayjs";
 import type { Context } from "hono";
@@ -174,7 +175,6 @@ async function queryActiveDetail(
 
   const a = active[0];
 
-  // Count registrations
   const registrations = await d
     .select()
     .from(activeRegistrationsTable)
@@ -183,7 +183,6 @@ async function queryActiveDetail(
   const joiningCount = registrations.filter((r) => !r.is_watching).length;
   const watchingCount = registrations.filter((r) => r.is_watching).length;
 
-  // Resolve board game name
   let boardGameName: string | null = null;
   if (a.board_game_id) {
     const games = await d
@@ -199,12 +198,24 @@ async function queryActiveDetail(
     }
   }
 
+  let creatorName: string | null = null;
+  if (a.creator_id) {
+    const creator = await d
+      .select({ nickname: userInfoTable.nickname })
+      .from(userInfoTable)
+      .where(eq(userInfoTable.id, a.creator_id))
+      .limit(1);
+    creatorName = creator.length > 0 ? creator[0].nickname : null;
+  }
+
   return result(
     {
       found: true,
       active: {
         id: a.id,
         title: a.title,
+        creator_id: a.creator_id,
+        creator_name: creatorName,
         date: a.date,
         time: a.time,
         max_players: a.max_players,
@@ -308,6 +319,79 @@ async function queryActiveNotifications(
   });
 }
 
+// ─── Tool: query_my_created_actives ─────────────────────────────
+
+async function queryMyCreatedActives(
+  c: Context<HonoCtxEnv>,
+  openId: string,
+): Promise<string> {
+  const userId = await resolveUserId(c, openId);
+  if (!userId) {
+    return notFound("未找到该用户的账号");
+  }
+
+  const d = db(c.env.DB);
+  const today = dayjs().tz("Asia/Shanghai").format("YYYY-MM-DD");
+
+  const actives = await d
+    .select({
+      id: activesTable.id,
+      title: activesTable.title,
+      date: activesTable.date,
+      time: activesTable.time,
+      max_players: activesTable.max_players,
+      board_game_id: activesTable.board_game_id,
+      is_game: activesTable.is_game,
+    })
+    .from(activesTable)
+    .where(
+      and(eq(activesTable.creator_id, userId), gte(activesTable.date, today)),
+    )
+    .orderBy(activesTable.date)
+    .limit(20);
+
+  if (actives.length === 0) {
+    return result({
+      found: true,
+      count: 0,
+      actives: [],
+      message: "您暂无发起的约局",
+    });
+  }
+
+  const gameIds = [
+    ...new Set(actives.map((a) => a.board_game_id).filter(Boolean)),
+  ];
+  const games =
+    gameIds.length > 0
+      ? await d
+          .select({
+            id: boardGamesTable.id,
+            sch_name: boardGamesTable.sch_name,
+            eng_name: boardGamesTable.eng_name,
+          })
+          .from(boardGamesTable)
+          .where(drizzle.inArray(boardGamesTable.id, gameIds as string[]))
+      : [];
+  const gameMap = new Map(games.map((g) => [g.id, g]));
+
+  const items = actives.map((a) => {
+    const game = a.board_game_id ? gameMap.get(a.board_game_id) : null;
+    return {
+      id: a.id,
+      title: a.title,
+      date: a.date,
+      time: a.time,
+      max_players: a.max_players,
+      board_game_name: game?.sch_name || game?.eng_name || null,
+      is_game: a.is_game,
+      link: SITE_LINKS.activeDetail(a.id),
+    };
+  });
+
+  return result({ found: true, count: items.length, actives: items });
+}
+
 // ─── Tool Definitions ────────────────────────────────────────────
 
 export const ACTIVE_TOOLS: ToolDefinition[] = [
@@ -333,7 +417,7 @@ export const ACTIVE_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "query_active_detail",
-      description: "查询约局详情，包括参加人数、桌游名称、时间等信息",
+      description: "查询约局详情，包括发起者、参加人数、桌游名称、时间等信息",
       parameters: {
         type: "object",
         properties: {
@@ -348,6 +432,17 @@ export const ACTIVE_TOOLS: ToolDefinition[] = [
     function: {
       name: "query_active_notifications",
       description: "查询当前用户已报名或观望的约局（仅显示未过期的）",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "query_my_created_actives",
+      description: "查询当前用户自己发起/创建的所有约局（仅显示未过期的）",
       parameters: {
         type: "object",
         properties: {},
@@ -379,6 +474,8 @@ export async function executeActiveTool(
         return await queryActiveDetail(c, args as { id: string });
       case "query_active_notifications":
         return await queryActiveNotifications(c, openId);
+      case "query_my_created_actives":
+        return await queryMyCreatedActives(c, openId);
       default:
         console.error("[tools:active] unknown tool:", toolName);
         return JSON.stringify({ error: "未知工具", links: ACTIVE_LINKS });

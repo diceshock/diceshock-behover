@@ -15,14 +15,21 @@ export const activeSkill: SkillDefinition = {
 
 查询工具：
 · 最近的约局列表（今天/本周/本月）→ query_actives_list
-· 约局详情（参加人数、桌游、时间）→ query_active_detail
+· 约局详情（发起者、参加人数、桌游、时间）→ query_active_detail
 · 用户已报名的约局 → query_active_notifications
+· 用户自己发起的约局 → query_my_created_actives
 
 写操作（需用户确认）：
 · 创建约局 → propose_create_active（需标题、日期、人数上限）
 · 加入约局 → propose_join_active
 · 观望约局 → propose_watch_active
-· 修改约局 → propose_update_active（仅发起者）
+· 退出约局 → propose_leave_active（退出自己报名/观望的约局，任何已报名用户可操作）
+· 修改约局 → propose_update_active（仅发起者可修改）
+
+权限说明：
+· 任何用户都可以退出自己报名或观望的约局
+· 只有约局发起者才能修改约局信息
+· 约局详情会显示发起者昵称
 
 核心原则：先搜后建。
 用户想约局时，先用 query_actives_list 搜索是否已有合适的约局，有则推荐加入。没有合适的再引导创建。
@@ -37,5 +44,15 @@ export const activeSkill: SkillDefinition = {
 
 回复中提到具体约局时，附上详情页链接：https://diceshock.com/actives/{id}`,
   tools: [...ACTIVE_TOOLS, ...ACTIVE_WRITE_TOOLS],
-  keywords: ["约局", "组局", "报名", "参加", "一起玩", "创建约局", "发起"],
+  keywords: [
+    "约局",
+    "组局",
+    "报名",
+    "参加",
+    "拼桌",
+    "一起玩",
+    "创建约局",
+    "发起",
+    "退出",
+  ],
 };

@@ -78,6 +78,7 @@ export async function executeTool(
       case "query_actives_list":
       case "query_active_detail":
       case "query_active_notifications":
+      case "query_my_created_actives":
         return await executeActiveTool(c, toolName, args, openId);
       case "query_events_list":
       case "query_event_detail":

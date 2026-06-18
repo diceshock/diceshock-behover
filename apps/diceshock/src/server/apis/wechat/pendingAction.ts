@@ -9,6 +9,7 @@ export type PendingActionType =
   | "join_active"
   | "watch_active"
   | "update_active"
+  | "leave_active"
   | "send_sms_code"
   | "verify_phone"
   | "bind_gsz"

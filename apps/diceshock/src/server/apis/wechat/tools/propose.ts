@@ -84,6 +84,24 @@ export const ACTIVE_WRITE_TOOLS: ToolDefinition[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "propose_leave_active",
+      description: "提议退出/解除一个已报名或观望的约局。需要约局ID。",
+      parameters: {
+        type: "object",
+        properties: {
+          active_id: { type: "string", description: "约局ID" },
+          active_title: {
+            type: "string",
+            description: "约局标题（用于确认提示）",
+          },
+        },
+        required: ["active_id"],
+      },
+    },
+  },
 ];
 
 export const PHONE_WRITE_TOOLS: ToolDefinition[] = [
@@ -184,6 +202,7 @@ const SUMMARIES: Record<
     if (p.max_players) parts.push(`人数→${p.max_players}`);
     return parts.join("\n");
   },
+  leave_active: (p) => `退出约局: ${p.active_title || p.active_id}`,
   send_sms_code: (p) => `发送验证码到: ${p.phone}`,
   verify_phone: (p) =>
     `验证并绑定手机号: ${(p.phone as string)?.slice(0, 3)}****${(p.phone as string)?.slice(-4)}`,
@@ -205,6 +224,7 @@ function getActionType(toolName: string): PendingActionType | null {
     propose_join_active: "join_active",
     propose_watch_active: "watch_active",
     propose_update_active: "update_active",
+    propose_leave_active: "leave_active",
     propose_send_sms_code: "send_sms_code",
     propose_verify_phone: "verify_phone",
     propose_bind_gsz: "bind_gsz",
