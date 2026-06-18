@@ -40,11 +40,11 @@ describe("dedup", () => {
   });
 
   describe("markProcessed", () => {
-    it("marks message with 30s TTL", async () => {
+    it("marks message with 60s TTL", async () => {
       const kv = mockKV();
       await markProcessed(kv, "msg456");
       expect(kv.put).toHaveBeenCalledWith("wechat:dedup:msg456", "1", {
-        expirationTtl: 30,
+        expirationTtl: 60,
       });
     });
 

@@ -48,29 +48,34 @@ function splitTextByParagraphs(content: string): string[] {
 }
 
 export function parseAgentOutput(rawOutput: string): AgentMessage[] {
-  try {
-    const parsed = JSON.parse(rawOutput);
+  if (!rawOutput?.trim()) return [];
 
-    if (!Array.isArray(parsed)) {
-      return expandTextMessages([{ type: "text", content: rawOutput }]);
-    }
+  const trimmed = rawOutput.trim();
+  if (trimmed.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const textParts = parsed
+          .filter(
+            (item: any) =>
+              typeof item === "object" && item !== null && item.type === "text",
+          )
+          .map((item: any) => item.content as string)
+          .filter(Boolean);
 
-    const validMessages = parsed.filter(
-      (item: unknown): item is AgentMessage =>
-        typeof item === "object" &&
-        item !== null &&
-        "type" in item &&
-        (item.type === "text" || item.type === "img" || item.type === "totp"),
-    );
-
-    if (validMessages.length === 0) {
-      return expandTextMessages([{ type: "text", content: rawOutput }]);
-    }
-
-    return expandTextMessages(validMessages).slice(0, MAX_MESSAGES);
-  } catch {
-    return expandTextMessages([{ type: "text", content: rawOutput }]);
+        if (textParts.length > 0) {
+          return expandTextMessages([
+            { type: "text", content: textParts.join("\n\n") },
+          ]).slice(0, MAX_MESSAGES);
+        }
+      }
+    } catch {}
   }
+
+  return expandTextMessages([{ type: "text", content: trimmed }]).slice(
+    0,
+    MAX_MESSAGES,
+  );
 }
 
 function expandTextMessages(messages: AgentMessage[]): AgentMessage[] {
