@@ -5,6 +5,7 @@ import { boardgameSkill } from "./boardgame";
 import { eventSkill } from "./event";
 import { generalSkill } from "./general";
 import { mahjongSkill } from "./mahjong";
+import { trpgSkill } from "./trpg";
 
 /** Tool definition matching OpenAI function-calling format */
 export interface ToolDefinition {
@@ -71,6 +72,7 @@ export function getSkillById(id: SkillId): SkillDefinition | undefined {
 registerSkill(accountSkill);
 registerSkill(boardgameSkill);
 registerSkill(mahjongSkill);
+registerSkill(trpgSkill);
 registerSkill(activeSkill);
 registerSkill(eventSkill);
 registerSkill(generalSkill);
