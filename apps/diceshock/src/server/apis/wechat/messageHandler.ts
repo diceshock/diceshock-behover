@@ -3,6 +3,7 @@ import type { HonoCtxEnv } from "@/shared/types";
 import { getRecentHistory, saveMessage } from "./conversationContext";
 import { chatWithAgent } from "./deepseekClient";
 import { detectIntent } from "./intentRouter";
+import { getRelatedLinks } from "./linkRegistry";
 import { generateAndSendMembershipCard } from "./membershipCard";
 import { addMemory, searchMemory } from "./memory";
 import { dispatchMessages, parseAgentOutput } from "./messagePipeline";
@@ -63,6 +64,15 @@ async function processMessage(
     }
 
     const messages = parseAgentOutput(rawOutput);
+
+    const relatedLinks = getRelatedLinks(intent.skillId);
+    if (relatedLinks.length > 0) {
+      const linksText = relatedLinks
+        .map((link) => `🔗 ${link.title}: ${link.url}`)
+        .join("\n");
+      messages.push({ type: "text", content: `相关链接：\n${linksText}` });
+    }
+
     await dispatchMessages(env, openId, messages);
 
     const metadata = JSON.stringify({

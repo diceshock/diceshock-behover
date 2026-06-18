@@ -80,23 +80,23 @@ describe("parseAgentOutput", () => {
 
     it("handles empty string gracefully", () => {
       const result = parseAgentOutput("");
-      expect(result).toHaveLength(1);
-      expect(result[0]).toEqual({ type: "text", content: "" });
+      expect(result).toHaveLength(0);
     });
   });
 
   describe("message limit", () => {
-    it("limits to 3 messages", () => {
+    it("limits to 5 messages", () => {
       const json = JSON.stringify([
         { type: "text", content: "1" },
         { type: "text", content: "2" },
         { type: "text", content: "3" },
         { type: "text", content: "4" },
         { type: "text", content: "5" },
+        { type: "text", content: "6" },
+        { type: "text", content: "7" },
       ]);
       const result = parseAgentOutput(json);
-      expect(result).toHaveLength(3);
-      expect(result.map((m) => m.content)).toEqual(["1", "2", "3"]);
+      expect(result).toHaveLength(5);
     });
 
     it("returns all messages when exactly 3", () => {

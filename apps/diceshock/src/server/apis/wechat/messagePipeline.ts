@@ -5,14 +5,54 @@ import {
   uploadImageToWechat,
 } from "./wechatApi";
 
-const MAX_MESSAGES = 3;
+const MAX_MESSAGES = 5;
+
+/**
+ * Splits a text content into separate messages by paragraph boundaries.
+ * Consecutive list items (lines starting with - or digit.) are kept together.
+ */
+function splitTextByParagraphs(content: string): string[] {
+  const lines = content.split("\n");
+  const blocks: string[] = [];
+  let currentBlock: string[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    if (trimmed === "") {
+      if (currentBlock.length > 0) {
+        blocks.push(currentBlock.join("\n"));
+        currentBlock = [];
+      }
+      continue;
+    }
+
+    const isListItem = /^[-•]\s|^\d+[.)]\s/.test(trimmed);
+    const lastIsListItem =
+      currentBlock.length > 0 &&
+      /^[-•]\s|^\d+[.)]\s/.test(currentBlock[currentBlock.length - 1].trim());
+
+    if (currentBlock.length > 0 && !isListItem && !lastIsListItem) {
+      blocks.push(currentBlock.join("\n"));
+      currentBlock = [line];
+    } else {
+      currentBlock.push(line);
+    }
+  }
+
+  if (currentBlock.length > 0) {
+    blocks.push(currentBlock.join("\n"));
+  }
+
+  return blocks.filter((b) => b.trim().length > 0);
+}
 
 export function parseAgentOutput(rawOutput: string): AgentMessage[] {
   try {
     const parsed = JSON.parse(rawOutput);
 
     if (!Array.isArray(parsed)) {
-      return [{ type: "text", content: rawOutput }];
+      return expandTextMessages([{ type: "text", content: rawOutput }]);
     }
 
     const validMessages = parsed.filter(
@@ -24,13 +64,30 @@ export function parseAgentOutput(rawOutput: string): AgentMessage[] {
     );
 
     if (validMessages.length === 0) {
-      return [{ type: "text", content: rawOutput }];
+      return expandTextMessages([{ type: "text", content: rawOutput }]);
     }
 
-    return validMessages.slice(0, MAX_MESSAGES);
+    return expandTextMessages(validMessages).slice(0, MAX_MESSAGES);
   } catch {
-    return [{ type: "text", content: rawOutput }];
+    return expandTextMessages([{ type: "text", content: rawOutput }]);
   }
+}
+
+function expandTextMessages(messages: AgentMessage[]): AgentMessage[] {
+  const expanded: AgentMessage[] = [];
+
+  for (const msg of messages) {
+    if (msg.type === "text") {
+      const paragraphs = splitTextByParagraphs(msg.content);
+      for (const p of paragraphs) {
+        expanded.push({ type: "text", content: p });
+      }
+    } else {
+      expanded.push(msg);
+    }
+  }
+
+  return expanded;
 }
 
 export async function dispatchMessages(
