@@ -16,8 +16,6 @@ import type { PageLink } from "../types";
 
 const { and, eq, gte, lte } = drizzle;
 
-// ─── Links ───────────────────────────────────────────────────────
-
 const ACTIVE_LINKS: PageLink[] = [
   { url: SITE_LINKS.actives(), title: "约局列表" },
   { url: SITE_LINKS.activeNew(), title: "发起新约局" },
@@ -33,8 +31,6 @@ function result<T>(data: T, extraLinks?: PageLink[]): string {
 function notFound(message: string): string {
   return JSON.stringify({ found: false, message, links: ACTIVE_LINKS });
 }
-
-// ─── Helper: resolve userId from openId ──────────────────────────
 
 async function resolveUserId(
   c: Context<HonoCtxEnv>,
@@ -65,8 +61,6 @@ async function resolveUserId(
     .limit(1);
   return silent.length > 0 ? silent[0].userId : null;
 }
-
-// ─── Tool: query_actives_list ────────────────────────────────────
 
 async function queryActivesList(
   c: Context<HonoCtxEnv>,
@@ -108,7 +102,6 @@ async function queryActivesList(
       time: activesTable.time,
       max_players: activesTable.max_players,
       board_game_id: activesTable.board_game_id,
-      content: activesTable.content,
       is_game: activesTable.is_game,
     })
     .from(activesTable)
@@ -116,7 +109,6 @@ async function queryActivesList(
     .orderBy(activesTable.date)
     .limit(20);
 
-  // Resolve board game names
   const gameIds = [
     ...new Set(actives.map((a) => a.board_game_id).filter(Boolean)),
   ];
@@ -154,8 +146,6 @@ async function queryActivesList(
     actives: items,
   });
 }
-
-// ─── Tool: query_active_detail ───────────────────────────────────
 
 async function queryActiveDetail(
   c: Context<HonoCtxEnv>,
@@ -231,97 +221,7 @@ async function queryActiveDetail(
   );
 }
 
-// ─── Tool: query_active_notifications ────────────────────────────
-
-async function queryActiveNotifications(
-  c: Context<HonoCtxEnv>,
-  openId: string,
-): Promise<string> {
-  const userId = await resolveUserId(c, openId);
-  if (!userId) {
-    return notFound("未找到该用户的账号");
-  }
-
-  const d = db(c.env.DB);
-
-  // Find user's active registrations
-  const myRegs = await d
-    .select({
-      active_id: activeRegistrationsTable.active_id,
-      is_watching: activeRegistrationsTable.is_watching,
-    })
-    .from(activeRegistrationsTable)
-    .where(eq(activeRegistrationsTable.user_id, userId));
-
-  if (myRegs.length === 0) {
-    return result({ found: true, count: 0, actives: [] });
-  }
-
-  const activeIds = myRegs.map((r) => r.active_id);
-
-  const actives = await d
-    .select({
-      id: activesTable.id,
-      title: activesTable.title,
-      date: activesTable.date,
-      time: activesTable.time,
-      max_players: activesTable.max_players,
-      board_game_id: activesTable.board_game_id,
-    })
-    .from(activesTable)
-    .where(
-      and(
-        drizzle.inArray(activesTable.id, activeIds),
-        gte(
-          activesTable.date,
-          dayjs().tz("Asia/Shanghai").format("YYYY-MM-DD"),
-        ),
-      ),
-    )
-    .orderBy(activesTable.date);
-
-  // Resolve board game names
-  const gameIds = [
-    ...new Set(actives.map((a) => a.board_game_id).filter(Boolean)),
-  ];
-  const games =
-    gameIds.length > 0
-      ? await d
-          .select({
-            id: boardGamesTable.id,
-            sch_name: boardGamesTable.sch_name,
-            eng_name: boardGamesTable.eng_name,
-          })
-          .from(boardGamesTable)
-          .where(drizzle.inArray(boardGamesTable.id, gameIds as string[]))
-      : [];
-  const gameMap = new Map(games.map((g) => [g.id, g]));
-
-  const items = actives.map((a) => {
-    const reg = myRegs.find((r) => r.active_id === a.id);
-    const game = a.board_game_id ? gameMap.get(a.board_game_id) : null;
-    return {
-      id: a.id,
-      title: a.title,
-      date: a.date,
-      time: a.time,
-      max_players: a.max_players,
-      board_game_name: game?.sch_name || game?.eng_name || null,
-      is_watching: reg?.is_watching ?? false,
-      link: SITE_LINKS.activeDetail(a.id),
-    };
-  });
-
-  return result({
-    found: true,
-    count: items.length,
-    actives: items,
-  });
-}
-
-// ─── Tool: query_my_created_actives ─────────────────────────────
-
-async function queryMyCreatedActives(
+async function queryMyActives(
   c: Context<HonoCtxEnv>,
   openId: string,
 ): Promise<string> {
@@ -333,7 +233,7 @@ async function queryMyCreatedActives(
   const d = db(c.env.DB);
   const today = dayjs().tz("Asia/Shanghai").format("YYYY-MM-DD");
 
-  const actives = await d
+  const created = await d
     .select({
       id: activesTable.id,
       title: activesTable.title,
@@ -350,20 +250,44 @@ async function queryMyCreatedActives(
     .orderBy(activesTable.date)
     .limit(20);
 
-  if (actives.length === 0) {
-    return result({
-      found: true,
-      count: 0,
-      actives: [],
-      message: "您暂无发起的约局",
-    });
-  }
+  const myRegs = await d
+    .select({
+      active_id: activeRegistrationsTable.active_id,
+      is_watching: activeRegistrationsTable.is_watching,
+    })
+    .from(activeRegistrationsTable)
+    .where(eq(activeRegistrationsTable.user_id, userId));
 
-  const gameIds = [
-    ...new Set(actives.map((a) => a.board_game_id).filter(Boolean)),
+  const regActiveIds = myRegs.map((r) => r.active_id);
+  const joined =
+    regActiveIds.length > 0
+      ? await d
+          .select({
+            id: activesTable.id,
+            title: activesTable.title,
+            date: activesTable.date,
+            time: activesTable.time,
+            max_players: activesTable.max_players,
+            board_game_id: activesTable.board_game_id,
+            is_game: activesTable.is_game,
+          })
+          .from(activesTable)
+          .where(
+            and(
+              drizzle.inArray(activesTable.id, regActiveIds),
+              gte(activesTable.date, today),
+            ),
+          )
+          .orderBy(activesTable.date)
+      : [];
+
+  const allGameIds = [
+    ...new Set(
+      [...created, ...joined].map((a) => a.board_game_id).filter(Boolean),
+    ),
   ];
   const games =
-    gameIds.length > 0
+    allGameIds.length > 0
       ? await d
           .select({
             id: boardGamesTable.id,
@@ -371,11 +295,11 @@ async function queryMyCreatedActives(
             eng_name: boardGamesTable.eng_name,
           })
           .from(boardGamesTable)
-          .where(drizzle.inArray(boardGamesTable.id, gameIds as string[]))
+          .where(drizzle.inArray(boardGamesTable.id, allGameIds as string[]))
       : [];
   const gameMap = new Map(games.map((g) => [g.id, g]));
 
-  const items = actives.map((a) => {
+  const formatItem = (a: any, role: string) => {
     const game = a.board_game_id ? gameMap.get(a.board_game_id) : null;
     return {
       id: a.id,
@@ -384,15 +308,29 @@ async function queryMyCreatedActives(
       time: a.time,
       max_players: a.max_players,
       board_game_name: game?.sch_name || game?.eng_name || null,
-      is_game: a.is_game,
+      role,
       link: SITE_LINKS.activeDetail(a.id),
     };
+  };
+
+  const createdItems = created.map((a) => formatItem(a, "organizer"));
+  const joinedItems = joined
+    .filter((a) => !created.some((c) => c.id === a.id))
+    .map((a) => {
+      const reg = myRegs.find((r) => r.active_id === a.id);
+      return formatItem(a, reg?.is_watching ? "watching" : "joined");
+    });
+
+  const all = [...createdItems, ...joinedItems];
+
+  return result({
+    found: true,
+    total: all.length,
+    created_count: createdItems.length,
+    joined_count: joinedItems.length,
+    actives: all,
   });
-
-  return result({ found: true, count: items.length, actives: items });
 }
-
-// ─── Tool Definitions ────────────────────────────────────────────
 
 export const ACTIVE_TOOLS: ToolDefinition[] = [
   {
@@ -430,19 +368,9 @@ export const ACTIVE_TOOLS: ToolDefinition[] = [
   {
     type: "function",
     function: {
-      name: "query_active_notifications",
-      description: "查询当前用户已报名或观望的约局（仅显示未过期的）",
-      parameters: {
-        type: "object",
-        properties: {},
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "query_my_created_actives",
-      description: "查询当前用户自己发起/创建的所有约局（仅显示未过期的）",
+      name: "query_my_actives",
+      description:
+        "查询当前用户所有相关的约局：包括自己发起的(role=organizer)和报名/观望的(role=joined/watching)。仅未过期。",
       parameters: {
         type: "object",
         properties: {},
@@ -450,8 +378,6 @@ export const ACTIVE_TOOLS: ToolDefinition[] = [
     },
   },
 ];
-
-// ─── Dispatcher ──────────────────────────────────────────────────
 
 export async function executeActiveTool(
   c: Context<HonoCtxEnv>,
@@ -472,10 +398,8 @@ export async function executeActiveTool(
         );
       case "query_active_detail":
         return await queryActiveDetail(c, args as { id: string });
-      case "query_active_notifications":
-        return await queryActiveNotifications(c, openId);
-      case "query_my_created_actives":
-        return await queryMyCreatedActives(c, openId);
+      case "query_my_actives":
+        return await queryMyActives(c, openId);
       default:
         console.error("[tools:active] unknown tool:", toolName);
         return JSON.stringify({ error: "未知工具", links: ACTIVE_LINKS });
