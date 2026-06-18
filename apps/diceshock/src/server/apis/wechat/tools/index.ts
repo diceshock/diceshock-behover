@@ -7,10 +7,13 @@ import type { HonoCtxEnv } from "@/shared/types";
 import { executeAccountTool } from "./account";
 import { executeActiveTool } from "./active";
 import { executeBoardgameTool } from "./boardgame";
+import { CONTEXT_TOOL, executeContextTool } from "./context";
 import { executeEventTool } from "./event";
 import { executeMahjongTool } from "./mahjong";
 import { executeProposeTool, isProposeToolName } from "./propose";
 import { generateTotpMessage } from "./totp";
+
+export { CONTEXT_TOOL };
 
 export interface ToolDefinition {
   type: "function";
@@ -34,6 +37,8 @@ export async function executeTool(
     }
 
     switch (toolName) {
+      case "get_current_context":
+        return await executeContextTool(c, openId);
       case "query_board_game_inventory":
       case "query_board_game_count":
       case "query_board_game_detail":

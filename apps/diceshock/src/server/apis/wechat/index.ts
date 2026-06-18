@@ -150,6 +150,22 @@ export async function wechatMessage(c: Context<HonoCtxEnv>) {
       return c.text(buildEmptyReply());
     }
 
+    if (eventType === "LOCATION") {
+      const lat = msg.Latitude;
+      const lng = msg.Longitude;
+      const precision = msg.Precision;
+      if (lat && lng) {
+        c.executionCtx.waitUntil(
+          (env.KV as KVNamespace).put(
+            `wechat:location:${toUser}`,
+            JSON.stringify({ lat, lng, precision, ts: Date.now() }),
+            { expirationTtl: 3600 },
+          ),
+        );
+      }
+      return c.text(buildEmptyReply());
+    }
+
     if (eventType === "CLICK") {
       const result = await handleMenuEvent(c, msg);
       if (result) {

@@ -164,11 +164,11 @@ export async function notifyOrderStart(
     template_id: templateId,
     url: "https://diceshock.com",
     data: {
-      first: { value: "⏱️ 您的计时已开始" },
+      first: { value: "[通知] 计时已开始" },
       keyword1: { value: data.tableName },
       keyword2: { value: data.startTime },
       keyword3: { value: `${data.seats} 位` },
-      remark: { value: "祝您玩得开心！结束后工作人员会为您结算。" },
+      remark: { value: "结束后工作人员会为您结算" },
     },
   });
 }
@@ -186,11 +186,11 @@ export async function notifyTableTransfer(
     template_id: templateId,
     url: "https://diceshock.com",
     data: {
-      first: { value: "🔄 您已换桌" },
+      first: { value: "[通知] 已换桌" },
       keyword1: { value: data.fromTable },
       keyword2: { value: data.toTable },
       keyword3: { value: data.transferTime },
-      remark: { value: "计时不间断，祝您继续享受！" },
+      remark: { value: "计时不间断" },
     },
   });
 }
@@ -208,11 +208,11 @@ export async function notifyMahjongStart(
     template_id: templateId,
     url: "https://diceshock.com/mahjong",
     data: {
-      first: { value: "🀄 日麻对局已开始" },
+      first: { value: "[通知] 日麻对局已开始" },
       keyword1: { value: `${data.mode} · ${data.format}` },
       keyword2: { value: data.tableName },
       keyword3: { value: data.startTime },
-      remark: { value: "对局结束后成绩将自动记录，祝好运！" },
+      remark: { value: "结束后成绩自动记录" },
     },
   });
 }
@@ -225,17 +225,17 @@ export async function notifyGszSync(
   const templateId = await getTemplateId(env, TEMPLATE_KEYS.MAHJONG_GSZ_SYNC);
   if (!templateId) return null;
 
-  const statusText = data.success ? "✅ 同步成功" : "❌ 同步失败";
+  const statusText = data.success ? "同步成功" : "同步失败";
   const remark = data.success
-    ? "成绩已上传至全国日麻公式站。"
-    : `失败原因: ${data.errorMsg || "未知错误"}，可联系工作人员处理。`;
+    ? "成绩已上传至公式站"
+    : `原因: ${data.errorMsg || "未知错误"}，可联系工作人员`;
 
   return sendTemplateMessage(env, {
     touser: openId,
     template_id: templateId,
     url: "https://diceshock.com/mahjong",
     data: {
-      first: { value: `🀄 公式站成绩同步 — ${statusText}` },
+      first: { value: `[通知] 公式站成绩${statusText}` },
       keyword1: { value: data.matchInfo },
       keyword2: { value: statusText },
       remark: { value: remark },
@@ -256,10 +256,10 @@ export async function notifyPhoneBound(
     template_id: templateId,
     url: "https://diceshock.com",
     data: {
-      first: { value: "📱 手机号绑定成功" },
+      first: { value: "[通知] 手机号绑定成功" },
       keyword1: { value: data.phone },
       keyword2: { value: data.bindTime },
-      remark: { value: "您现在可以使用手机号登录，并参与日麻公式站成绩同步。" },
+      remark: { value: "可用于登录及公式站成绩同步" },
     },
   });
 }
@@ -283,15 +283,13 @@ export async function notifyOrderSettled(
     template_id: templateId,
     url: "https://diceshock.com",
     data: {
-      first: { value: "💰 订单已结算" },
+      first: { value: "[通知] 订单已结算" },
       keyword1: { value: data.tableName },
       keyword2: { value: data.duration },
       keyword3: { value: data.price },
       keyword4: { value: data.settledTime },
       remark: {
-        value: data.payMethod
-          ? `支付方式: ${data.payMethod}。感谢光临，欢迎下次再来！`
-          : "感谢光临，欢迎下次再来！",
+        value: data.payMethod ? `支付方式: ${data.payMethod}` : "感谢光临",
       },
     },
   });
@@ -310,10 +308,10 @@ export async function notifyMembershipChange(
     template_id: templateId,
     url: "https://diceshock.com",
     data: {
-      first: { value: `🎫 会员计划${data.action}` },
+      first: { value: `[通知] 会员计划${data.action}` },
       keyword1: { value: data.planName },
       keyword2: { value: data.detail },
-      remark: { value: "如有疑问，请联系店内工作人员。" },
+      remark: { value: "如有疑问请联系工作人员" },
     },
   });
 }
@@ -332,13 +330,11 @@ export async function notifyPassExpiring(
 
   const title =
     data.status === "expiring_5d"
-      ? "⚠️ 您的通行卡即将到期"
-      : "🚫 您的通行卡已过期";
+      ? "[通知] 通行卡即将到期"
+      : "[通知] 通行卡已过期";
 
   const remark =
-    data.status === "expiring_5d"
-      ? "请在到期前续费以继续享受会员优惠。"
-      : "续费后即可重新激活，如需帮助请联系工作人员。";
+    data.status === "expiring_5d" ? "请在到期前续费" : "续费后即可重新激活";
 
   return sendTemplateMessage(env, {
     touser: openId,

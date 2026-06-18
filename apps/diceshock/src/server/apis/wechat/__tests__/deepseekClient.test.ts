@@ -11,6 +11,14 @@ vi.mock("../tools", () => ({
     .mockResolvedValue(
       JSON.stringify({ result: "mocked tool result", data: [] }),
     ),
+  CONTEXT_TOOL: {
+    type: "function",
+    function: {
+      name: "get_current_context",
+      description: "获取当前环境上下文",
+      parameters: { type: "object", properties: {} },
+    },
+  },
 }));
 
 import { chatWithAgent } from "../deepseekClient";

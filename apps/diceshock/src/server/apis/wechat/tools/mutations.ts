@@ -58,7 +58,7 @@ export async function executeAction(
   if (!userId) {
     return {
       success: false,
-      notification: "❌ 操作失败：未找到您的账号，请先在网站注册",
+      notification: "操作失败: 未找到账号，请先在网站注册",
     };
   }
 
@@ -82,7 +82,7 @@ export async function executeAction(
     case "bind_gsz":
       return await executeBindGsz(c, userId, action.params);
     default:
-      return { success: false, notification: "❌ 未知操作类型" };
+      return { success: false, notification: "操作失败: 未知操作类型" };
   }
 }
 
@@ -98,12 +98,15 @@ async function executeCreateActive(
   if (!title || !date || !maxPlayers) {
     return {
       success: false,
-      notification: `❌ 创建约局失败：缺少必要信息\n${!title ? "· 标题\n" : ""}${!date ? "· 日期\n" : ""}${!maxPlayers ? "· 人数上限" : ""}`,
+      notification: `创建约局失败: 缺少${!title ? "标题 " : ""}${!date ? "日期 " : ""}${!maxPlayers ? "人数上限" : ""}`,
     };
   }
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return { success: false, notification: "❌ 日期格式错误，需要 YYYY-MM-DD" };
+    return {
+      success: false,
+      notification: "创建约局失败: 日期格式需为 YYYY-MM-DD",
+    };
   }
 
   const d = db(c.env.DB);
@@ -123,13 +126,13 @@ async function executeCreateActive(
     });
   } catch (e) {
     console.error("[mutations:create_active] insert failed:", e);
-    return { success: false, notification: `❌ 创建约局失败：${String(e)}` };
+    return { success: false, notification: `创建约局失败: ${String(e)}` };
   }
 
   const url = SITE_LINKS.activeDetail(id);
   return {
     success: true,
-    notification: `[通知] ✅ 约局创建成功！\n标题: ${title}\n日期: ${date}${params.time ? ` ${params.time}` : ""}\n人数上限: ${maxPlayers}\n\n查看详情: ${url}`,
+    notification: `[通知] 约局创建成功\n${title} | ${date}${params.time ? ` ${params.time}` : ""} | ${maxPlayers}人\n${url}`,
   };
 }
 
@@ -154,13 +157,13 @@ async function executeJoinActive(
     .limit(1);
 
   if (active.length === 0) {
-    return { success: false, notification: "❌ 操作失败：活动不存在" };
+    return { success: false, notification: "操作失败: 活动不存在" };
   }
 
   if (active[0].creator_id === userId) {
     return {
       success: false,
-      notification: "❌ 操作失败：不能加入/观望自己发起的约局",
+      notification: "操作失败: 不能加入自己发起的约局",
     };
   }
 
@@ -181,7 +184,7 @@ async function executeJoinActive(
   if (existing.length > 0) {
     if (existing[0].is_watching === isWatching) {
       const status = isWatching ? "观望" : "参加";
-      return { success: true, notification: `ℹ️ 您已经${status}了此约局` };
+      return { success: true, notification: `[通知] 您已${status}此约局` };
     }
     await d
       .update(activeRegistrationsTable)
@@ -191,7 +194,7 @@ async function executeJoinActive(
     const url = SITE_LINKS.activeDetail(activeId);
     return {
       success: true,
-      notification: `[通知] ✅ 已切换为${status}状态\n约局: ${active[0].title}\n\n查看详情: ${url}`,
+      notification: `[通知] 已切换为${status}\n${active[0].title}\n${url}`,
     };
   }
 
@@ -208,7 +211,7 @@ async function executeJoinActive(
     if (count >= active[0].max_players) {
       return {
         success: false,
-        notification: "❌ 操作失败：人数已满，可以选择观望",
+        notification: "操作失败: 人数已满，可选择观望",
       };
     }
   }
@@ -224,7 +227,7 @@ async function executeJoinActive(
   const url = SITE_LINKS.activeDetail(activeId);
   return {
     success: true,
-    notification: `[通知] ✅ 成功${status}约局\n约局: ${active[0].title}\n\n查看详情: ${url}`,
+    notification: `[通知] 已${status}约局\n${active[0].title}\n${url}`,
   };
 }
 
@@ -237,7 +240,7 @@ async function executeLeaveActive(
   const activeId = params.active_id as string;
 
   if (!activeId) {
-    return { success: false, notification: "❌ 退出约局失败：缺少约局ID" };
+    return { success: false, notification: "退出约局失败: 缺少约局ID" };
   }
 
   const active = await d
@@ -247,7 +250,7 @@ async function executeLeaveActive(
     .limit(1);
 
   if (active.length === 0) {
-    return { success: false, notification: "❌ 约局不存在" };
+    return { success: false, notification: "操作失败: 约局不存在" };
   }
 
   if (active[0].creator_id === userId) {
@@ -258,11 +261,11 @@ async function executeLeaveActive(
       await d.delete(activesTable).where(eq(activesTable.id, activeId));
     } catch (e) {
       console.error("[mutations:leave_active] delete failed:", e);
-      return { success: false, notification: `❌ 删除约局失败：${String(e)}` };
+      return { success: false, notification: `删除约局失败: ${String(e)}` };
     }
     return {
       success: true,
-      notification: `[通知] ✅ 约局已删除\n标题: ${active[0].title}\n\n（组织者退出即删除整个约局）`,
+      notification: `[通知] 约局已删除\n${active[0].title}`,
     };
   }
 
@@ -277,45 +280,17 @@ async function executeLeaveActive(
       );
   } catch (e) {
     console.error("[mutations:leave_active] unregister failed:", e);
-    return { success: false, notification: `❌ 退出约局失败：${String(e)}` };
+    return { success: false, notification: `退出约局失败: ${String(e)}` };
   }
 
   const url = SITE_LINKS.activeDetail(activeId);
   return {
     success: true,
-    notification: `[通知] ✅ 已退出约局\n约局: ${active[0].title}\n\n查看详情: ${url}`,
+    notification: `[通知] 已退出约局\n${active[0].title}\n${url}`,
   };
 }
 
-if (active[0].creator_id === userId) {
-  await d
-    .delete(activeRegistrationsTable)
-    .where(eq(activeRegistrationsTable.active_id, activeId));
-  await d.delete(activesTable).where(eq(activesTable.id, activeId));
-  return {
-      success: true,
-      notification: `[通知] ✅ 约局已删除\n标题: ${active[0].title}\n\n（组织者退出即删除整个约局）`,
-    };
-}
-
-await d
-  .delete(activeRegistrationsTable)
-  .where(
-    and(
-      eq(activeRegistrationsTable.active_id, activeId),
-      eq(activeRegistrationsTable.user_id, userId),
-    ),
-  );
-
-const url = SITE_LINKS.activeDetail(activeId);
-return {
-    success: true,
-    notification: `[通知] ✅ 已退出约局\n\n查看详情: ${url}`,
-  };
-}
-
-async
-function executeUpdateActive(
+async function executeUpdateActive(
   c: Context<HonoCtxEnv>,
   userId: string,
   params: Record<string, unknown>,
@@ -330,13 +305,13 @@ function executeUpdateActive(
     .limit(1);
 
   if (active.length === 0) {
-    return { success: false, notification: "❌ 操作失败：约局不存在" };
+    return { success: false, notification: "操作失败: 约局不存在" };
   }
 
   if (active[0].creator_id !== userId) {
     return {
       success: false,
-      notification: "❌ 操作失败：只有发起者可以修改约局",
+      notification: "操作失败: 只有发起者可以修改约局",
     };
   }
 
@@ -356,7 +331,7 @@ function executeUpdateActive(
   const url = SITE_LINKS.activeDetail(activeId);
   return {
     success: true,
-    notification: `[通知] ✅ 约局修改成功\n\n查看详情: ${url}`,
+    notification: `[通知] 约局修改成功\n${url}`,
   };
 }
 
@@ -392,7 +367,7 @@ async function executeUpsertBusinessCard(
 
   return {
     success: true,
-    notification: `[通知] ✅ 名片${existing.length > 0 ? "更新" : "创建"}成功\n\n查看: ${SITE_LINKS.me()}`,
+    notification: `[通知] 名片${existing.length > 0 ? "更新" : "创建"}成功\n${SITE_LINKS.me()}`,
   };
 }
 
@@ -408,7 +383,7 @@ async function executeSendSmsCode(
     await kv.put(`sms_code:${phone}`, env.DEV_SMS_CODE, { expirationTtl: 300 });
     return {
       success: true,
-      notification: `[通知] ✅ 验证码已发送到 ${phone.slice(0, 3)}****${phone.slice(-4)}\n请在5分钟内回复验证码完成绑定`,
+      notification: `[通知] 验证码已发送到 ${phone.slice(0, 3)}****${phone.slice(-4)}\n5分钟内回复验证码完成绑定`,
     };
   }
 
@@ -420,7 +395,7 @@ async function executeSendSmsCode(
     if (!aliyunClient) {
       return {
         success: false,
-        notification: "❌ 短信服务未配置，请联系管理员",
+        notification: "短信服务未配置，请联系管理员",
       };
     }
 
@@ -436,23 +411,23 @@ async function executeSendSmsCode(
 
     if (body?.code !== "OK") {
       if (body?.code === "isv.MOBILE_NUMBER_ILLEGAL") {
-        return { success: false, notification: "❌ 手机号码格式错误" };
+        return { success: false, notification: "手机号码格式错误" };
       }
       if (body?.code === "isv.BUSINESS_LIMIT_CONTROL") {
-        return { success: false, notification: "❌ 发送次数过多，请稍后再试" };
+        return { success: false, notification: "发送次数过多，请稍后再试" };
       }
-      return { success: false, notification: "❌ 无法发送短信，请联系管理员" };
+      return { success: false, notification: "无法发送短信，请联系管理员" };
     }
 
     await kv.put(`sms_code:${phone}`, code, { expirationTtl: 300 });
 
     return {
       success: true,
-      notification: `[通知] ✅ 验证码已发送到 ${phone.slice(0, 3)}****${phone.slice(-4)}\n请在5分钟内回复验证码完成绑定`,
+      notification: `[通知] 验证码已发送到 ${phone.slice(0, 3)}****${phone.slice(-4)}\n5分钟内回复验证码完成绑定`,
     };
   } catch (e) {
     console.error("[mutations:sms] error:", e);
-    return { success: false, notification: "❌ 短信发送失败，请稍后再试" };
+    return { success: false, notification: "短信发送失败，请稍后再试" };
   }
 }
 
@@ -471,7 +446,7 @@ async function executeVerifyPhone(
   if (!storedCode || storedCode !== code) {
     return {
       success: false,
-      notification: "❌ 验证码错误或已过期，请重新发送",
+      notification: "验证码错误或已过期，请重新发送",
     };
   }
 
@@ -488,7 +463,7 @@ async function executeVerifyPhone(
     .limit(1);
 
   if (existingAccount.length > 0 && existingAccount[0].userId !== userId) {
-    return { success: false, notification: "❌ 该手机号已被其他账号使用" };
+    return { success: false, notification: "该手机号已被其他账号使用" };
   }
 
   await d
@@ -507,7 +482,7 @@ async function executeVerifyPhone(
 
   return {
     success: true,
-    notification: `[通知] ✅ 手机号绑定成功\n已绑定: ${phone.slice(0, 3)}****${phone.slice(-4)}\n\n查看: ${SITE_LINKS.me()}`,
+    notification: `[通知] 手机号绑定成功\n${phone.slice(0, 3)}****${phone.slice(-4)}\n${SITE_LINKS.me()}`,
   };
 }
 
@@ -528,7 +503,7 @@ async function executeBindGsz(
   if (existing.length > 0) {
     return {
       success: true,
-      notification: `ℹ️ 您已绑定公式战账号（ID: ${existing[0].gsz_id}）\n\n查看: ${SITE_LINKS.myRiichi()}`,
+      notification: `[通知] 已绑定公式战账号 (ID: ${existing[0].gsz_id})\n${SITE_LINKS.myRiichi()}`,
     };
   }
 
@@ -542,7 +517,7 @@ async function executeBindGsz(
   if (!phone) {
     return {
       success: false,
-      notification: "❌ 绑定公式战需要手机号，请先绑定手机号",
+      notification: "绑定公式战需要手机号，请先绑定手机号",
     };
   }
 
@@ -552,7 +527,7 @@ async function executeBindGsz(
   if (!gszToken) {
     return {
       success: false,
-      notification: "❌ 公式战服务未配置，请联系管理员",
+      notification: "公式战服务未配置，请联系管理员",
     };
   }
 
@@ -610,12 +585,12 @@ async function executeBindGsz(
   if (gszSynced) {
     return {
       success: true,
-      notification: `[通知] ✅ 公式战绑定成功\n公式战昵称: ${actualGszName}\nID: ${gszId}\n\n查看战绩: ${SITE_LINKS.myRiichi()}`,
+      notification: `[通知] 公式战绑定成功\n昵称: ${actualGszName} | ID: ${gszId}\n${SITE_LINKS.myRiichi()}`,
     };
   }
 
   return {
     success: false,
-    notification: `⚠️ 公式战注册信息已保存，但同步失败: ${gszError}\n后续会自动重试\n\n查看: ${SITE_LINKS.myRiichi()}`,
+    notification: `[通知] 公式战信息已保存，同步失败: ${gszError}\n后续自动重试\n${SITE_LINKS.myRiichi()}`,
   };
 }

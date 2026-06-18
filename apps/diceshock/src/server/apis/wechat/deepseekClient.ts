@@ -4,7 +4,7 @@ import { sendStatusMessage } from "./messagePipeline";
 import type { SkillDefinition, ToolDefinition } from "./skills";
 import { BASE_SYSTEM_PROMPT } from "./skills";
 import { getToolStatusMessage } from "./statusMessages";
-import { executeTool } from "./tools";
+import { CONTEXT_TOOL, executeTool } from "./tools";
 import type { ChatMessage } from "./types";
 
 const MAX_TOOL_ROUNDS = 3;
@@ -71,18 +71,7 @@ export async function chatWithAgent(
     ? `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/deepseek`
     : "https://api.deepseek.com/v1";
 
-  const now = new Date();
-  const shanghaiTime = now.toLocaleString("zh-CN", {
-    timeZone: "Asia/Shanghai",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    weekday: "long",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  let systemContent = `${BASE_SYSTEM_PROMPT}\n\n当前时间：${shanghaiTime}（亚洲/上海）\n\n${params.skill.systemPrompt}`;
+  let systemContent = `${BASE_SYSTEM_PROMPT}\n\n${params.skill.systemPrompt}`;
   if (params.memory) {
     systemContent += `\n\n${params.memory}`;
   }
@@ -100,8 +89,10 @@ export async function chatWithAgent(
   ];
 
   let totalTokens = 0;
+  const skillTools = params.skill.tools;
+  const allTools: ToolDefinition[] = [CONTEXT_TOOL, ...skillTools];
   const tools: ToolDefinition[] | undefined =
-    params.skill.tools.length > 0 ? params.skill.tools : undefined;
+    allTools.length > 0 ? allTools : undefined;
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     const response = await fetch(`${baseUrl}/chat/completions`, {
