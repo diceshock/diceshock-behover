@@ -329,38 +329,58 @@ describe("chatWithAgent", () => {
   });
 
   describe("max tool rounds", () => {
-    it("returns last assistant content after max rounds", async () => {
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            choices: [
-              {
-                message: {
-                  content: "processing",
-                  tool_calls: [
-                    {
-                      id: "call_loop",
-                      type: "function",
-                      function: {
-                        name: "query_board_game_inventory",
-                        arguments: "{}",
-                      },
+    it("makes final response call after exhausting tool rounds", async () => {
+      let callCount = 0;
+      const mockFetch = vi.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount <= 3) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                choices: [
+                  {
+                    message: {
+                      content: "processing",
+                      tool_calls: [
+                        {
+                          id: `call_${callCount}`,
+                          type: "function",
+                          function: {
+                            name: "query_board_game_inventory",
+                            arguments: "{}",
+                          },
+                        },
+                      ],
                     },
-                  ],
+                  },
+                ],
+                usage: { total_tokens: 10 },
+              }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              choices: [
+                {
+                  message: {
+                    content: '[{"type":"text","content":"最终回复"}]',
+                  },
                 },
-              },
-            ],
-            usage: { total_tokens: 10 },
-          }),
+              ],
+              usage: { total_tokens: 20 },
+            }),
+        });
       });
       vi.stubGlobal("fetch", mockFetch);
 
       const ctx = mockContext();
       const result = await chatWithAgent(ctx, defaultParams);
 
-      expect(mockFetch).toHaveBeenCalledTimes(3);
-      expect(result.rawOutput).toBe("processing");
+      expect(mockFetch).toHaveBeenCalledTimes(4);
+      expect(result.rawOutput).toBe('[{"type":"text","content":"最终回复"}]');
     });
   });
 });

@@ -103,7 +103,6 @@ export async function chatWithAgent(
         model: "deepseek-v4-flash",
         messages,
         ...(tools ? { tools, tool_choice: "auto" } : {}),
-        response_format: { type: "json_object" },
         max_tokens: 1024,
       }),
     });
@@ -167,13 +166,31 @@ export async function chatWithAgent(
     }
   }
 
-  const lastAssistant = messages.findLast(
-    (message) => message.role === "assistant",
-  );
+  const finalResponse = await fetch(`${baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "deepseek-v4-flash",
+      messages,
+      response_format: { type: "json_object" },
+      max_tokens: 1024,
+    }),
+  });
+
+  if (finalResponse.ok) {
+    const finalData = (await finalResponse.json()) as DeepSeekResponse;
+    totalTokens += finalData.usage?.total_tokens ?? 0;
+    const finalContent = finalData.choices?.[0]?.message?.content;
+    if (finalContent) {
+      return { rawOutput: finalContent, tokensUsed: totalTokens };
+    }
+  }
+
   return {
-    rawOutput:
-      lastAssistant?.content ||
-      '[{"type":"text","content":"查询完成，但未能生成回复"}]',
+    rawOutput: '[{"type":"text","content":"查询完成，但未能生成回复"}]',
     tokensUsed: totalTokens,
   };
 }
