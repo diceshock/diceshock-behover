@@ -12,8 +12,12 @@ export const activeSkill: SkillDefinition = {
 - 约局详情（参加人数、桌游、时间）
 - 用户已报名的约局
 
-创建约局和加入约局需要在网页完成。当用户想约局/创建活动时，告知：
-"创建约局请前往：https://diceshock.com/actives/new"`,
+以下操作请引导用户前往对应页面完成：
+- 创建约局 → https://diceshock.com/actives/new
+- 加入/观望约局 → 提供具体约局详情页链接
+- 修改约局 → 提供具体约局详情页链接
+
+回复中提到具体约局时，附上该约局详情页链接：https://diceshock.com/actives/{id}`,
   tools: ACTIVE_TOOLS,
   keywords: [
     "约局",

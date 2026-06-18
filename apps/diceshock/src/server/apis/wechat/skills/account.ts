@@ -15,7 +15,15 @@ export const accountSkill: SkillDefinition = {
 - 名片信息 → 用 get_my_business_card
 
 当用户问"有什么计划"、"会员多少钱"、"怎么收费"时，调用 query_all_membership_plans。
-修改昵称、绑定手机号等操作需要在网页完成，引导前往：https://diceshock.com/me`,
+
+以下操作请引导用户前往个人中心（https://diceshock.com/me）完成：
+- 修改昵称
+- 修改头像
+- 绑定手机号
+- 绑定日麻公式战（GSZ）
+- 登记/修改名片
+- 查看/使用活动验证码
+- 查看扫码页面`,
   tools: ACCOUNT_TOOLS,
   keywords: [
     "昵称",

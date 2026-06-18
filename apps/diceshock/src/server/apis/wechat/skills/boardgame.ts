@@ -14,7 +14,9 @@ export const boardgameSkill: SkillDefinition = {
 - 查看桌游详细信息（评分、人数、分类）→ 用 query_board_game_detail
 
 当用户问"有多少桌游"、"库存多少"、"总共几款"等数量问题时，必须调用 query_board_game_count。
-当用户问"几个人玩"、"推荐X人的"时，调用 query_board_game_filter。`,
+当用户问"几个人玩"、"推荐X人的"时，调用 query_board_game_filter。
+
+回复中提到具体桌游时，附上该桌游详情页链接：https://diceshock.com/inventory/{id}`,
   tools: BOARDGAME_TOOLS,
   keywords: [
     "桌游",

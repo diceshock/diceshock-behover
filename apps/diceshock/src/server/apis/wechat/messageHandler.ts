@@ -65,7 +65,12 @@ async function processMessage(
 
     const messages = parseAgentOutput(rawOutput);
 
-    const relatedLinks = getRelatedLinks(intent.skillId);
+    const mentionedUrls = new Set(
+      rawOutput.match(/https:\/\/diceshock\.com[^\s"}\]）]*/g) || [],
+    );
+    const relatedLinks = getRelatedLinks(intent.skillId).filter(
+      (link) => !mentionedUrls.has(link.url),
+    );
     if (relatedLinks.length > 0) {
       const linksText = relatedLinks
         .map((link) => `🔗 ${link.title}: ${link.url}`)
@@ -143,6 +148,19 @@ export async function handleMenuEvent(
       c.executionCtx.waitUntil(
         generateAndSendMembershipCard(c, msg.FromUserName),
       );
+      return { xml: reply };
+    }
+    case "HELP_GUIDE": {
+      const helpText = `我是骰子奇兵 AI 助手，直接发送文字消息即可对话。
+
+你可以问我：
+• "有什么桌游可以玩？"
+• "我的日麻战绩"
+• "最近有什么约局？"
+• "我的会员信息"
+
+我会实时查询并回复你。`;
+      const reply = buildTextReply(toUser, fromUser, helpText);
       return { xml: reply };
     }
     default:
