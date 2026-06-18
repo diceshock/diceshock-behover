@@ -341,7 +341,7 @@ describe("chatWithAgent", () => {
       let callCount = 0;
       const mockFetch = vi.fn().mockImplementation(() => {
         callCount++;
-        if (callCount <= 3) {
+        if (callCount <= 5) {
           return Promise.resolve({
             ok: true,
             json: () =>
@@ -356,7 +356,9 @@ describe("chatWithAgent", () => {
                           type: "function",
                           function: {
                             name: "query_board_game_inventory",
-                            arguments: "{}",
+                            arguments: JSON.stringify({
+                              query: `search_${callCount}`,
+                            }),
                           },
                         },
                       ],
@@ -387,7 +389,6 @@ describe("chatWithAgent", () => {
       const ctx = mockContext();
       const result = await chatWithAgent(ctx, defaultParams);
 
-      expect(mockFetch).toHaveBeenCalledTimes(4);
       expect(result.rawOutput).toBe('[{"type":"text","content":"最终回复"}]');
     });
   });

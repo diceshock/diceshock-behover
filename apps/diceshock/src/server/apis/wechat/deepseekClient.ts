@@ -95,7 +95,11 @@ export async function chatWithAgent(
   const tools: ToolDefinition[] | undefined =
     allTools.length > 0 ? allTools : undefined;
 
+  const calledTools: string[] = [];
+
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+    const isLastToolRound = round === MAX_TOOL_ROUNDS - 1;
+
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
@@ -105,7 +109,7 @@ export async function chatWithAgent(
       body: JSON.stringify({
         model: "deepseek-v4-flash",
         messages,
-        ...(tools ? { tools, tool_choice: "auto" } : {}),
+        ...(tools && !isLastToolRound ? { tools, tool_choice: "auto" } : {}),
         max_tokens: 1024,
       }),
     });
@@ -152,6 +156,21 @@ export async function chatWithAgent(
 
     let proposeCalled = false;
     for (const toolCall of assistantMsg.tool_calls) {
+      const toolKey = `${toolCall.function.name}:${toolCall.function.arguments}`;
+      if (calledTools.includes(toolKey)) {
+        console.log("[deepseek] duplicate tool call detected, breaking", {
+          tool: toolCall.function.name,
+        });
+        proposeCalled = true;
+        messages.push({
+          role: "tool",
+          content: JSON.stringify({ error: "重复调用，请直接回复用户" }),
+          tool_call_id: toolCall.id,
+        });
+        continue;
+      }
+      calledTools.push(toolKey);
+
       const statusMsg = getToolStatusMessage(toolCall.function.name);
       sendStatusMessage(env, params.openId, statusMsg).catch(() => {});
 
