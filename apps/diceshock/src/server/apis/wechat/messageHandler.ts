@@ -4,7 +4,6 @@ import { getRecentHistory, saveMessage } from "./conversationContext";
 import { chatWithAgent } from "./deepseekClient";
 import { detectIntent } from "./intentRouter";
 import { getRelatedLinks } from "./linkRegistry";
-import { generateAndSendMembershipCard } from "./membershipCard";
 import { addMemory, searchMemory } from "./memory";
 import { dispatchMessages, parseAgentOutput } from "./messagePipeline";
 import {
@@ -176,32 +175,19 @@ export async function handleMenuEvent(
   const toUser = msg.FromUserName;
   const fromUser = msg.ToUserName;
 
-  switch (eventKey) {
-    case "MEMBERSHIP_PLAN": {
-      const reply = buildTextReply(
-        toUser,
-        fromUser,
-        "正在为您生成会员信息，请稍候...",
-      );
-      c.executionCtx.waitUntil(
-        generateAndSendMembershipCard(c, msg.FromUserName),
-      );
-      return { xml: reply };
-    }
-    case "HELP_GUIDE": {
-      const helpText = `我是骰子奇兵 AI 助手，直接发送文字消息即可对话。
+  const MENU_REPLIES: Record<string, string> = {
+    MENU_INVENTORY: `想查桌游库存？直接发消息告诉我桌游名字或问"有什么桌游"即可！\n\n也可以在线浏览完整库存：\nhttps://diceshock.com/inventory`,
+    MENU_RIICHI: `想看日麻战绩？直接问我"我的日麻战绩"或"排行榜"即可查看！\n\n也可以在线查看：\nhttps://diceshock.com/riichi`,
+    MENU_ACTIVES: `想约局？直接告诉我"最近有什么约局"或"我想发起约局"即可！\n\n也可以在线查看：\nhttps://diceshock.com/actives`,
+    MENU_HELP: `我是骰子奇兵 AI 助手，直接发送文字消息即可对话。\n\n你可以问我：\n· 查桌游库存\n· 看日麻战绩和排行\n· 查约局、发起约局\n· 查会员信息\n· 绑定手机号/名片\n\n有任何问题直接发消息就好！`,
+    MENU_STORE: `骰子奇兵·跑团桌游日麻\n\n📍 光谷天地店\n地址：洪山区高新二路光谷总部国际2栋203\n¥35/人\n大众点评：http://dpurl.cn/Cif4Lcbz\n\n📍 街道口店\n地址：洪山区珞南街道阜华大厦C座2103\n大众点评：http://dpurl.cn/mxdbXGYz\n\n咨询请加官微：\n· DiceShock（光谷天地）\n· DiceShockJDK（街道口）`,
+    MEMBERSHIP_PLAN: `想查看会员信息？直接问我"我的会员"或"有什么会员计划"即可！\n\n也可以前往个人中心查看：\nhttps://diceshock.com/me`,
+  };
 
-你可以问我：
-• "有什么桌游可以玩？"
-• "我的日麻战绩"
-• "最近有什么约局？"
-• "我的会员信息"
-
-我会实时查询并回复你。`;
-      const reply = buildTextReply(toUser, fromUser, helpText);
-      return { xml: reply };
-    }
-    default:
-      return null;
+  const reply = MENU_REPLIES[eventKey];
+  if (reply) {
+    return { xml: buildTextReply(toUser, fromUser, reply) };
   }
+
+  return null;
 }

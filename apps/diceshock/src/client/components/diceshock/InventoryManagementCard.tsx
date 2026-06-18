@@ -1,8 +1,8 @@
 import type { BoardGame } from "@lib/utils";
 import { CheckIcon, WarningIcon } from "@phosphor-icons/react/dist/ssr";
+import _ from "lodash";
 import { useCallback, useEffect, useState } from "react";
 import trpcClientPublic, { trpcClientDash } from "@/shared/utils/trpc";
-import _ from "lodash";
 
 export default function InventoryManagementCard() {
   const [count, setCount] = useState<{
@@ -21,6 +21,8 @@ export default function InventoryManagementCard() {
     clean?: number;
     hidded?: number;
     fetched?: BoardGame.BoardGameCol[];
+    menuSynced?: boolean;
+    menuError?: string;
   }>({ syncing: false });
 
   const sync = useCallback(async () => {
@@ -51,7 +53,28 @@ export default function InventoryManagementCard() {
       const { clean, hidded } =
         await trpcClientDash.ownedManagement.wake.mutate({ date });
 
-      setSynced({ syncing: false, clean, hidded, fetched });
+      let menuSynced = false;
+      let menuError: string | undefined;
+      try {
+        const menuRes = await window.fetch("/wechat/menu", { method: "POST" });
+        const menuData = (await menuRes.json()) as {
+          success?: boolean;
+          error?: string;
+        };
+        menuSynced = menuData.success === true;
+        if (!menuSynced) menuError = menuData.error;
+      } catch (e) {
+        menuError = String(e);
+      }
+
+      setSynced({
+        syncing: false,
+        clean,
+        hidded,
+        fetched,
+        menuSynced,
+        menuError,
+      });
       fetch();
     } catch {
       setSynced({ syncing: false });
@@ -66,7 +89,7 @@ export default function InventoryManagementCard() {
     <div className="card w-full bg-base-100 shadow-sm">
       <div className="card-body">
         <div className="flex justify-between">
-          <h2 className="text-3xl font-bold">更新桌游库存</h2>
+          <h2 className="text-3xl font-bold">同步信息</h2>
           {count.current && (
             <span className="text-xl">
               {count.current}/{count.removed}
@@ -95,7 +118,19 @@ export default function InventoryManagementCard() {
               <span>{synced.fetched?.length}</span>项数据
             </li>
           )}
-          {!synced.fetched?.length && (
+          {synced.menuSynced && (
+            <li key="menu">
+              <CheckIcon className="size-4 me-2 inline-block text-success" />
+              微信菜单已同步
+            </li>
+          )}
+          {synced.menuError && (
+            <li key="menu-error">
+              <WarningIcon className="size-4 me-2 inline-block text-error" />
+              微信菜单同步失败: {synced.menuError}
+            </li>
+          )}
+          {!synced.fetched?.length && !synced.menuSynced && (
             <li key="unfetch">
               <WarningIcon className="size-4 me-2 inline-block text-error" />
               还没同步呢...

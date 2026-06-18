@@ -7,7 +7,7 @@ import { decryptMessage } from "./crypto";
 import { isDuplicate, markProcessed } from "./dedup";
 import { handleMenuEvent, handleTextMessage } from "./messageHandler";
 import { ERROR_MESSAGES } from "./statusMessages";
-import { sendCustomerTextMessage } from "./wechatApi";
+import { getWechatAccessToken, sendCustomerTextMessage } from "./wechatApi";
 import { buildEmptyReply, buildTextReply, parseXml } from "./xmlUtils";
 
 function extractCdataContent(xml: string, tag: string): string | undefined {
@@ -244,5 +244,55 @@ async function sendWelcomeMessage(env: any, openId: string): Promise<void> {
     console.log("[wechat:subscribe] welcome message sent");
   } catch (e) {
     console.error("[wechat:subscribe] failed to send welcome:", e);
+  }
+}
+
+const WECHAT_MENU = {
+  button: [
+    {
+      type: "view",
+      name: "账户管理",
+      url: "https://diceshock.com/me",
+    },
+    {
+      name: "快捷功能",
+      sub_button: [
+        { type: "click", name: "桌游库存", key: "MENU_INVENTORY" },
+        { type: "click", name: "日麻战绩", key: "MENU_RIICHI" },
+        { type: "click", name: "约局", key: "MENU_ACTIVES" },
+        { type: "click", name: "进入店铺", key: "MENU_STORE" },
+      ],
+    },
+    {
+      name: "使用帮助",
+      sub_button: [
+        { type: "click", name: "如何对话", key: "MENU_HELP" },
+        {
+          type: "view",
+          name: "个人中心",
+          url: "https://diceshock.com/me",
+        },
+      ],
+    },
+  ],
+};
+
+export async function wechatCreateMenu(c: Context<HonoCtxEnv>) {
+  const env = c.env as any;
+  try {
+    const token = await getWechatAccessToken(env);
+    const url = `https://diceshock.com/wx-proxy/cgi-bin/menu/create?access_token=${token}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(WECHAT_MENU),
+    });
+    const data = (await res.json()) as { errcode: number; errmsg: string };
+    if (data.errcode !== 0) {
+      return c.json({ error: `${data.errcode} ${data.errmsg}` }, 500);
+    }
+    return c.json({ success: true, message: "Menu created" });
+  } catch (e) {
+    return c.json({ error: String(e) }, 500);
   }
 }

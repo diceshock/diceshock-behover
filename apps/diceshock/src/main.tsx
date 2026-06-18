@@ -17,7 +17,11 @@ import { riichiRankingCard } from "@/server/apis/ogCards/riichiRanking";
 import { riichiStatsCard } from "@/server/apis/ogCards/riichiStats";
 import { siteOgCard } from "@/server/apis/ogCards/siteOgCard";
 import sitemap from "@/server/apis/sitemap";
-import { wechatMessage, wechatVerify } from "@/server/apis/wechat";
+import {
+  wechatCreateMenu,
+  wechatMessage,
+  wechatVerify,
+} from "@/server/apis/wechat";
 import type { HonoCtxEnv } from "@/shared/types";
 import seatRedirect from "./server/middlewares/seatRedirect";
 import "@/shared/utils/dayjs-config";
@@ -41,6 +45,7 @@ app.use(requestEndpoint);
 
 app.get("/wechat", wechatVerify);
 app.post("/wechat", wechatMessage);
+app.post("/wechat/menu", wechatCreateMenu);
 
 app.use(aliyunInj);
 app.use(authInit);
