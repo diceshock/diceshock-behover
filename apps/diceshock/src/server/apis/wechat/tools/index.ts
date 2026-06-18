@@ -1,16 +1,12 @@
-import db, {
-  accounts,
-  boardGamesTable,
-  drizzle,
-  userMembershipPlansTable,
-} from "@lib/db";
+import db, { accounts, drizzle, userMembershipPlansTable } from "@lib/db";
 
-const { and, eq, like } = drizzle;
+const { and, eq } = drizzle;
 
 import type { Context } from "hono";
 import type { HonoCtxEnv } from "@/shared/types";
 import { executeAccountTool } from "./account";
 import { executeActiveTool } from "./active";
+import { executeBoardgameTool } from "./boardgame";
 import { executeEventTool } from "./event";
 import { executeMahjongTool } from "./mahjong";
 import { executeProposeTool, isProposeToolName } from "./propose";
@@ -24,34 +20,6 @@ export interface ToolDefinition {
     parameters: Record<string, unknown>;
   };
 }
-
-export const TOOLS: ToolDefinition[] = [
-  {
-    type: "function",
-    function: {
-      name: "query_board_game_inventory",
-      description: "查询店里桌游的库存/在架状态，支持按名称模糊搜索",
-      parameters: {
-        type: "object",
-        properties: {
-          name: { type: "string", description: "桌游名称（中文或英文）" },
-        },
-        required: ["name"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "query_membership_status",
-      description: "查询当前用户的会员状态（通行证和储值卡余额）",
-      parameters: {
-        type: "object",
-        properties: {},
-      },
-    },
-  },
-];
 
 export async function executeTool(
   c: Context<HonoCtxEnv>,
@@ -67,7 +35,10 @@ export async function executeTool(
 
     switch (toolName) {
       case "query_board_game_inventory":
-        return await queryBoardGameInventory(c, args.name as string);
+      case "query_board_game_count":
+      case "query_board_game_detail":
+      case "query_board_game_filter":
+        return await executeBoardgameTool(c, toolName, args);
       case "query_membership_status":
         return await queryMembershipStatus(c, openId);
       case "query_all_membership_plans":
@@ -106,74 +77,6 @@ export async function executeTool(
     console.error("[tools] execution error", { toolName, error: String(e) });
     return JSON.stringify({ error: `工具执行失败: ${String(e)}` });
   }
-}
-
-async function queryBoardGameInventory(
-  c: Context<HonoCtxEnv>,
-  name: string,
-): Promise<string> {
-  console.log("[tools:inventory] searching:", name);
-  const d = db(c.env.DB);
-  const results = await d
-    .select({
-      id: boardGamesTable.id,
-      sch_name: boardGamesTable.sch_name,
-      eng_name: boardGamesTable.eng_name,
-      player_num: boardGamesTable.player_num,
-      removeDate: boardGamesTable.removeDate,
-    })
-    .from(boardGamesTable)
-    .where(like(boardGamesTable.sch_name, `%${name}%`))
-    .limit(10);
-
-  console.log("[tools:inventory] cn results:", results.length);
-
-  if (results.length === 0) {
-    const engResults = await d
-      .select({
-        id: boardGamesTable.id,
-        sch_name: boardGamesTable.sch_name,
-        eng_name: boardGamesTable.eng_name,
-        player_num: boardGamesTable.player_num,
-        removeDate: boardGamesTable.removeDate,
-      })
-      .from(boardGamesTable)
-      .where(like(boardGamesTable.eng_name, `%${name}%`))
-      .limit(10);
-
-    console.log("[tools:inventory] en results:", engResults.length);
-
-    if (engResults.length === 0) {
-      return JSON.stringify({
-        found: false,
-        message: `未找到"${name}"相关桌游`,
-      });
-    }
-    return formatGameResults(engResults);
-  }
-
-  return formatGameResults(results);
-}
-
-function formatGameResults(
-  games: Array<{
-    id: string;
-    sch_name: string | null;
-    eng_name: string | null;
-    player_num: number[] | null;
-    removeDate: Date | null;
-  }>,
-): string {
-  const items = games.map((g) => {
-    const removed = g.removeDate && g.removeDate.getTime() > 0;
-    return {
-      name: g.sch_name || g.eng_name || "未知",
-      eng_name: g.eng_name,
-      player_num: g.player_num,
-      in_stock: !removed,
-    };
-  });
-  return JSON.stringify({ found: true, count: items.length, games: items });
 }
 
 async function queryMembershipStatus(

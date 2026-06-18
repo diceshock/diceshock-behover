@@ -5,7 +5,7 @@ import type { HonoCtxEnv } from "@/shared/types";
 import { SITE_LINKS } from "../linkRegistry";
 import type { ToolDefinition } from "../skills";
 
-const { and, eq, gt, like } = drizzle;
+const { and, eq, like } = drizzle;
 const EPOCH = new Date(0);
 
 // ============================================================================
@@ -199,22 +199,8 @@ async function queryBoardGameCount(c: Context<HonoCtxEnv>): Promise<string> {
     .from(boardGamesTable)
     .where(eq(boardGamesTable.removeDate, EPOCH));
 
-  const [{ removed }] = await d
-    .select({ removed: drizzle.count(boardGamesTable.id) })
-    .from(boardGamesTable)
-    .where(gt(boardGamesTable.removeDate, EPOCH));
-
-  const latest = await d
-    .select({ removeDate: boardGamesTable.removeDate })
-    .from(boardGamesTable)
-    .where(gt(boardGamesTable.removeDate, EPOCH))
-    .orderBy(drizzle.desc(boardGamesTable.removeDate))
-    .limit(1);
-
   return JSON.stringify({
-    current,
-    removed,
-    latestRemoveDate: latest[0]?.removeDate ?? null,
+    count: current,
     links: [{ url: SITE_LINKS.inventory(), title: "桌游库存" }],
   });
 }
@@ -232,7 +218,9 @@ async function queryBoardGameDetail(
   const result = await d
     .select()
     .from(boardGamesTable)
-    .where(eq(boardGamesTable.id, id))
+    .where(
+      and(eq(boardGamesTable.id, id), eq(boardGamesTable.removeDate, EPOCH)),
+    )
     .limit(1);
 
   if (result.length === 0) {
@@ -243,7 +231,6 @@ async function queryBoardGameDetail(
   }
 
   const game = result[0];
-  const inStock = (game.removeDate?.getTime() ?? 0) === 0;
 
   return JSON.stringify({
     found: true,
@@ -257,7 +244,6 @@ async function queryBoardGameDetail(
       best_player_num: game.best_player_num,
       category: game.category,
       mode: game.mode,
-      in_stock: inStock,
       detail_link: SITE_LINKS.inventoryDetail(game.id),
     },
     links: [
