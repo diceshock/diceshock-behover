@@ -260,18 +260,13 @@ const WECHAT_MENU = {
         { type: "click", name: "桌游库存", key: "MENU_INVENTORY" },
         { type: "click", name: "日麻战绩", key: "MENU_RIICHI" },
         { type: "click", name: "约局", key: "MENU_ACTIVES" },
-        { type: "click", name: "进入店铺", key: "MENU_STORE" },
       ],
     },
     {
-      name: "使用帮助",
+      name: "帮助指南",
       sub_button: [
         { type: "click", name: "如何对话", key: "MENU_HELP" },
-        {
-          type: "view",
-          name: "个人中心",
-          url: "https://diceshock.com/me",
-        },
+        { type: "click", name: "进入店铺", key: "MENU_STORE" },
       ],
     },
   ],
