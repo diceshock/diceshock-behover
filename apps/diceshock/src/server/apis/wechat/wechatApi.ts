@@ -1,3 +1,5 @@
+const WECHAT_API_BASE = "https://diceshock.com/wx-proxy";
+
 export async function getWechatAccessToken(env: any): Promise<string> {
   const cached = await env.KV.get("wechat:mp:access_token");
   if (cached) {
@@ -16,7 +18,7 @@ export async function getWechatAccessToken(env: any): Promise<string> {
   }
 
   console.log("[wechat:api] fetching new access_token");
-  const url = `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${appId}&secret=${appSecret}`;
+  const url = `${WECHAT_API_BASE}/cgi-bin/token?grant_type=client_credential&appid=${appId}&secret=${appSecret}`;
   const res = await fetch(url);
   const data = (await res.json()) as {
     access_token?: string;
@@ -54,7 +56,7 @@ export async function sendCustomerTextMessage(
   });
   const token = await getWechatAccessToken(env);
   const res = await fetch(
-    `https://api.weixin.qq.com/cgi-bin/message/custom/send?access_token=${token}`,
+    `${WECHAT_API_BASE}/cgi-bin/message/custom/send?access_token=${token}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -84,7 +86,7 @@ export async function sendCustomerImageMessage(
 ): Promise<void> {
   const token = await getWechatAccessToken(env);
   const res = await fetch(
-    `https://api.weixin.qq.com/cgi-bin/message/custom/send?access_token=${token}`,
+    `${WECHAT_API_BASE}/cgi-bin/message/custom/send?access_token=${token}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -113,7 +115,7 @@ export async function uploadImageToWechat(
   const formData = new FormData();
   formData.append("media", blob, "membership.png");
 
-  const uploadUrl = `https://api.weixin.qq.com/cgi-bin/media/upload?access_token=${token}&type=image`;
+  const uploadUrl = `${WECHAT_API_BASE}/cgi-bin/media/upload?access_token=${token}&type=image`;
   const res = await fetch(uploadUrl, { method: "POST", body: formData });
   const data = (await res.json()) as { media_id?: string; errcode?: number };
 
