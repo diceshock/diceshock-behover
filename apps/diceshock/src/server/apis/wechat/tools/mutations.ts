@@ -216,6 +216,27 @@ async function executeLeaveActive(
   const d = db(c.env.DB);
   const activeId = params.active_id as string;
 
+  const active = await d
+    .select({ creator_id: activesTable.creator_id, title: activesTable.title })
+    .from(activesTable)
+    .where(eq(activesTable.id, activeId))
+    .limit(1);
+
+  if (active.length === 0) {
+    return { success: false, notification: "❌ 约局不存在" };
+  }
+
+  if (active[0].creator_id === userId) {
+    await d
+      .delete(activeRegistrationsTable)
+      .where(eq(activeRegistrationsTable.active_id, activeId));
+    await d.delete(activesTable).where(eq(activesTable.id, activeId));
+    return {
+      success: true,
+      notification: `[通知] ✅ 约局已删除\n标题: ${active[0].title}\n\n（组织者退出即删除整个约局）`,
+    };
+  }
+
   await d
     .delete(activeRegistrationsTable)
     .where(
