@@ -21,7 +21,9 @@ export async function decryptMessage(
   const aesKey = decodeAESKey(encodingAESKey);
   const iv = aesKey.slice(0, 16);
 
-  const ciphertext = Uint8Array.from(atob(encrypted), (c) => c.charCodeAt(0));
+  const ciphertext = Uint8Array.from(atob(encrypted.replace(/\s/g, "")), (c) =>
+    c.charCodeAt(0),
+  );
 
   const key = await crypto.subtle.importKey(
     "raw",
