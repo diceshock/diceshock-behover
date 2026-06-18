@@ -71,6 +71,15 @@ export async function wechatMessage(c: Context<HonoCtxEnv>) {
       return c.text(buildEmptyReply());
     }
 
+    console.log("[wechat:msg] encrypt field", {
+      len: encrypted.length,
+      first20: encrypted.slice(0, 20),
+      last20: encrypted.slice(-20),
+      hasNewline: encrypted.includes("\n"),
+      hasSpace: encrypted.includes(" "),
+      hasCR: encrypted.includes("\r"),
+    });
+
     try {
       const decrypted = await decryptMessage(encrypted, aesKey);
       console.log("[wechat:msg] decrypted ok, len:", decrypted.length);
