@@ -33,13 +33,53 @@ const MENU = {
   button: [
     {
       type: "click",
-      name: "会员计划",
+      name: "账户管理",
       key: "MEMBERSHIP_PLAN",
     },
     {
-      type: "view",
-      name: "进入店铺",
-      url: "https://diceshock.com",
+      name: "快捷功能",
+      sub_button: [
+        {
+          type: "view",
+          name: "桌游库存",
+          url: "https://diceshock.com/inventory",
+        },
+        {
+          type: "view",
+          name: "日麻战绩",
+          url: "https://diceshock.com/riichi",
+        },
+        {
+          type: "view",
+          name: "约局",
+          url: "https://diceshock.com/actives",
+        },
+      ],
+    },
+    {
+      name: "使用帮助",
+      sub_button: [
+        {
+          type: "click",
+          name: "如何对话",
+          key: "HELP_GUIDE",
+        },
+        {
+          type: "view",
+          name: "进入店铺",
+          url: "https://diceshock.com",
+        },
+        {
+          type: "view",
+          name: "联系我们",
+          url: "https://diceshock.com/contact-us",
+        },
+        {
+          type: "view",
+          name: "个人信息",
+          url: "https://diceshock.com/me",
+        },
+      ],
     },
   ],
 };
