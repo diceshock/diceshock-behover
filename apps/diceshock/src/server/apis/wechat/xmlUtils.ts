@@ -18,8 +18,6 @@ export function parseXml(xml: string): Record<string, string> {
 
   return result;
 }
-return result;
-}
 
 export function buildTextReply(
   toUser: string,

@@ -39,22 +39,14 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
     session: { strategy: "jwt" },
     trustHost: true,
     basePath: "/api/auth",
-    debug: true,
     logger: {
       error(code: any, ...message: any[]) {
-        console.error("[Auth.js ERROR]", code, ...message);
-        (globalThis as any).__lastAuthError = {
-          code,
-          message,
-          time: Date.now(),
-        };
+        console.error("[Auth.js]", code, ...message);
       },
-      warn(code: any, ...message: any[]) {
-        console.warn("[Auth.js WARN]", code, ...message);
+      warn(code: any) {
+        console.warn("[Auth.js]", code);
       },
-      debug(code: any, ...message: any[]) {
-        console.log("[Auth.js DEBUG]", code, ...message);
-      },
+      debug() {},
     },
     callbacks: {
       async jwt({ token, user, account, profile }) {
@@ -64,7 +56,6 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
           if ("phone" in user && user.phone) token.phone = user.phone;
         }
 
-        // 每次 token 刷新都从 DB 读取最新 role
         if (token.sub) {
           const tdb = db(c.env.DB);
           const dbUser = await tdb.query.users.findFirst({
@@ -97,25 +88,15 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
     },
   };
 
-  // 微信开放平台 - PC 端扫码登录
   if (c.env.WECHAT_OPEN_APP_ID && c.env.WECHAT_OPEN_APP_SECRET) {
-    console.log(
-      "[Auth Init] Registering wechat-open provider, appId:",
-      c.env.WECHAT_OPEN_APP_ID,
-    );
     config.providers.push(
       WechatOpen({
         clientId: c.env.WECHAT_OPEN_APP_ID,
         clientSecret: c.env.WECHAT_OPEN_APP_SECRET,
       }),
     );
-  } else {
-    console.warn(
-      "[Auth Init] WECHAT_OPEN not configured, skipping wechat-open provider",
-    );
   }
 
-  // 微信公众平台 - 微信内网页授权
   if (c.env.WECHAT_MP_APP_ID && c.env.WECHAT_MP_APP_SECRET) {
     config.providers.push(
       WechatMP({
