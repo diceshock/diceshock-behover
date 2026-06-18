@@ -195,6 +195,12 @@ export async function chatWithAgent(
     if (proposeCalled) break;
   }
 
+  messages.push({
+    role: "user",
+    content:
+      "请根据以上工具返回的信息，直接用JSON数组格式回复用户。不要再调用工具。",
+  });
+
   const finalResponse = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
@@ -212,24 +218,26 @@ export async function chatWithAgent(
     const finalData = (await finalResponse.json()) as DeepSeekResponse;
     totalTokens += finalData.usage?.total_tokens ?? 0;
     const finalChoice = finalData.choices?.[0]?.message;
-    console.log("[deepseek] final call result", {
-      hasContent: !!finalChoice?.content,
-      contentLen: finalChoice?.content?.length ?? 0,
-      hasToolCalls: !!finalChoice?.tool_calls?.length,
-    });
     if (finalChoice?.content) {
       return { rawOutput: finalChoice.content, tokensUsed: totalTokens };
     }
-  } else {
-    const errText = await finalResponse.text();
-    console.error("[deepseek] final call failed", {
-      status: finalResponse.status,
-      body: errText.slice(0, 300),
-    });
+  }
+
+  const lastToolResult = [...messages].reverse().find((m) => m.role === "tool");
+  if (lastToolResult?.content) {
+    try {
+      const data = JSON.parse(lastToolResult.content);
+      const summary = data.message || data.error || "查询完成";
+      return {
+        rawOutput: `[{"type":"text","content":"${summary}"}]`,
+        tokensUsed: totalTokens,
+      };
+    } catch {}
   }
 
   return {
-    rawOutput: '[{"type":"text","content":"查询完成，但未能生成回复"}]',
+    rawOutput:
+      '[{"type":"text","content":"抱歉，处理超时了。请简化您的问题再试一次。"}]',
     tokensUsed: totalTokens,
   };
 }
