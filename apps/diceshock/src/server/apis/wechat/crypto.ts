@@ -39,19 +39,15 @@ export async function decryptMessage(
 
   const decryptedBytes = new Uint8Array(decrypted);
 
-  // PKCS#7 padding removal
-  const padLen = decryptedBytes[decryptedBytes.length - 1];
-  const unpadded = decryptedBytes.slice(0, decryptedBytes.length - padLen);
-
   // Format: 16-byte random + 4-byte msg_len (big-endian) + msg_content + appid
-  const msgLenBytes = unpadded.slice(16, 20);
+  const msgLenBytes = decryptedBytes.slice(16, 20);
   const msgLen =
     (msgLenBytes[0] << 24) |
     (msgLenBytes[1] << 16) |
     (msgLenBytes[2] << 8) |
     msgLenBytes[3];
 
-  const msgBytes = unpadded.slice(20, 20 + msgLen);
+  const msgBytes = decryptedBytes.slice(20, 20 + msgLen);
 
   return new TextDecoder().decode(msgBytes);
 }
