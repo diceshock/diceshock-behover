@@ -1,7 +1,7 @@
 export const CONTACT_INFO = "微信: diceshock_admin";
 
 export const STATUS_MESSAGES = {
-  THINKING: "正在思考中...",
+  THINKING: "正在回复...",
   QUERYING_INVENTORY: "正在查询桌游库存...",
   QUERYING_ACTIVE: "正在查询约局信息...",
   QUERYING_MAHJONG: "正在查询日麻数据...",

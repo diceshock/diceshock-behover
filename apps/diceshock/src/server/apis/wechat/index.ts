@@ -185,6 +185,7 @@ async function handleSubscribe(
       "[wechat:subscribe] user already exists:",
       existing[0].userId.slice(-8),
     );
+    await sendWelcomeMessage(env, openId);
     return;
   }
 
@@ -217,4 +218,31 @@ async function handleSubscribe(
     openId: openId.slice(-8),
     uid,
   });
+
+  await sendWelcomeMessage(env, openId);
+}
+
+const WELCOME_MESSAGE = `欢迎关注 Diceshock 骰子奇兵！
+
+我是骰子奇兵 AI 助手，一个 LLM Agent，可以通过对话为你提供实时服务。
+
+我们是武汉地区的跑团/桌游/日麻品牌，目前有两家店铺：
+📍 光谷店（光谷天地）
+📍 街道口店
+
+你可以直接发消息问我：
+• 查询桌游库存
+• 查看日麻战绩和排行
+• 了解约局和活动信息
+• 查询会员信息
+
+有任何问题，直接发消息即可。`;
+
+async function sendWelcomeMessage(env: any, openId: string): Promise<void> {
+  try {
+    await sendCustomerTextMessage(env, openId, WELCOME_MESSAGE);
+    console.log("[wechat:subscribe] welcome message sent");
+  } catch (e) {
+    console.error("[wechat:subscribe] failed to send welcome:", e);
+  }
 }

@@ -128,7 +128,7 @@ describe("STATUS_MESSAGES", () => {
   });
 
   it("THINKING is set correctly", () => {
-    expect(STATUS_MESSAGES.THINKING).toBe("正在思考中...");
+    expect(STATUS_MESSAGES.THINKING).toBe("正在回复...");
   });
 
   it("QUERYING_INVENTORY is set correctly", () => {

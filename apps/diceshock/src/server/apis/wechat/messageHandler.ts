@@ -7,9 +7,16 @@ import { getRelatedLinks } from "./linkRegistry";
 import { generateAndSendMembershipCard } from "./membershipCard";
 import { addMemory, searchMemory } from "./memory";
 import { dispatchMessages, parseAgentOutput } from "./messagePipeline";
+import {
+  clearPendingAction,
+  getPendingAction,
+  isCancellation,
+  isConfirmation,
+} from "./pendingAction";
 import { checkRateLimit, recordTokenUsage } from "./rateLimit";
 import { getSkillById } from "./skills";
 import { ERROR_MESSAGES } from "./statusMessages";
+import { executeAction } from "./tools/mutations";
 import { sendCustomerTextMessage } from "./wechatApi";
 import { buildTextReply } from "./xmlUtils";
 
@@ -29,6 +36,105 @@ export async function handleTextMessage(
 
   c.executionCtx.waitUntil(processMessage(c, openId, content));
   return TYPING_REPLY;
+}
+
+async function processMessage(
+  c: Context<HonoCtxEnv>,
+  openId: string,
+  content: string,
+): Promise<void> {
+  const env = c.env as any;
+  const kv = env.KV as KVNamespace;
+
+  try {
+    const pending = await getPendingAction(kv, openId);
+
+    if (pending && isConfirmation(content)) {
+      await clearPendingAction(kv, openId);
+      const result = await executeAction(c, pending, openId);
+      await sendCustomerTextMessage(env, openId, result.notification);
+      await saveMessage(
+        c,
+        openId,
+        "user",
+        content,
+        `{"confirm":"${pending.type}"}`,
+      );
+      await saveMessage(
+        c,
+        openId,
+        "assistant",
+        result.notification,
+        `{"action":"${pending.type}"}`,
+      );
+      return;
+    }
+
+    if (pending && isCancellation(content)) {
+      await clearPendingAction(kv, openId);
+      await sendCustomerTextMessage(env, openId, "已取消操作。");
+      await saveMessage(c, openId, "user", content, '{"cancel":true}');
+      return;
+    }
+
+    const history = await getRecentHistory(c, openId);
+    const memory = await searchMemory(env, openId, content);
+    const intent = detectIntent(content, history);
+    const skill = getSkillById(intent.skillId);
+
+    if (!skill) {
+      await sendCustomerTextMessage(env, openId, ERROR_MESSAGES.SERVER_ERROR);
+      return;
+    }
+
+    const ragContext = await searchKnowledgeBase(c, content);
+    const { rawOutput, tokensUsed } = await chatWithAgent(c, {
+      userMessage: content,
+      openId,
+      skill,
+      conversationHistory: history,
+      ragContext,
+      memory,
+    });
+
+    if (tokensUsed > 0) {
+      await recordTokenUsage(c, openId, tokensUsed);
+    }
+
+    const messages = parseAgentOutput(rawOutput);
+
+    const mentionedUrls = new Set(
+      rawOutput.match(/https:\/\/diceshock\.com[^\s"}\]）]*/g) || [],
+    );
+    const relatedLinks = getRelatedLinks(intent.skillId).filter(
+      (link) => !mentionedUrls.has(link.url),
+    );
+    if (relatedLinks.length > 0) {
+      const linksText = relatedLinks
+        .map((link) => `🔗 ${link.title}: ${link.url}`)
+        .join("\n");
+      messages.push({ type: "text", content: `相关链接：\n${linksText}` });
+    }
+
+    await dispatchMessages(env, openId, messages);
+
+    const metadata = JSON.stringify({
+      skillId: intent.skillId,
+      confidence: intent.confidence,
+    });
+    await saveMessage(c, openId, "user", content, metadata);
+    await saveMessage(c, openId, "assistant", rawOutput, metadata);
+
+    addMemory(env, openId, [
+      { role: "user", content },
+      { role: "assistant", content: rawOutput },
+    ]).catch(() => {});
+  } catch (e) {
+    console.error("[wechat:process] pipeline error:", e);
+    try {
+      await sendCustomerTextMessage(env, openId, ERROR_MESSAGES.AI_UNAVAILABLE);
+    } catch {}
+  }
 }
 
 async function processMessage(

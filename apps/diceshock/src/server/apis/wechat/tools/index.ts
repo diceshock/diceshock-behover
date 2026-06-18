@@ -13,6 +13,7 @@ import { executeAccountTool } from "./account";
 import { executeActiveTool } from "./active";
 import { executeEventTool } from "./event";
 import { executeMahjongTool } from "./mahjong";
+import { executeProposeTool, isProposeToolName } from "./propose";
 import { generateTotpMessage } from "./totp";
 
 export interface ToolDefinition {
@@ -60,6 +61,10 @@ export async function executeTool(
 ): Promise<string> {
   console.log("[tools] execute", { toolName, args, openId: openId.slice(-8) });
   try {
+    if (isProposeToolName(toolName)) {
+      return await executeProposeTool(c, toolName, args, openId);
+    }
+
     switch (toolName) {
       case "query_board_game_inventory":
         return await queryBoardGameInventory(c, args.name as string);

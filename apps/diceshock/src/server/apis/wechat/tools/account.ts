@@ -162,7 +162,7 @@ async function queryAllPlans(c: Context<HonoCtxEnv>): Promise<string> {
             {
               type: "monthly_cc",
               name: "月卡(CC)",
-              desc: "30天畅玩桌游 + CC包间",
+              desc: "30天仅限工作日畅玩桌游（更划算）",
             },
             { type: "yearly", name: "年卡", desc: "365天畅玩桌游" },
             {
