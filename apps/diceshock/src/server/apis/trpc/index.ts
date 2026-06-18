@@ -20,6 +20,7 @@ import tables from "./tables";
 import tablesManagement from "./tablesManagement";
 import tempIdentity from "./tempIdentity";
 import users from "./users";
+import { wechatTemplateAdmin } from "./wechatTemplateAdmin";
 
 export const appRouterDash = router({
   ownedManagement,
@@ -35,6 +36,13 @@ export const appRouterDash = router({
   gszManagement,
   settingsManagement: {
     setCaptchaEnabled: settingsManagement.setCaptchaEnabled,
+  },
+  wechatTemplate: {
+    addFromLibrary: wechatTemplateAdmin.addFromLibrary,
+    listTemplates: wechatTemplateAdmin.listTemplates,
+    listSlots: wechatTemplateAdmin.listSlots,
+    assignSlot: wechatTemplateAdmin.assignSlot,
+    removeTemplate: wechatTemplateAdmin.removeTemplate,
   },
 });
 

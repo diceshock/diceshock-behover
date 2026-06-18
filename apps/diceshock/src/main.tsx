@@ -119,12 +119,25 @@ export default {
   ) => {
     const { computeLeaderboards } = await import("./server/cron/leaderboard");
     await computeLeaderboards({ DB: env.DB as unknown as D1Database });
+
+    const { checkPassExpiration } = await import(
+      "./server/cron/passExpiration"
+    );
+    await checkPassExpiration({ DB: env.DB, KV: env.KV });
   },
   async queue(
     batch: MessageBatch<unknown>,
     env: HonoCtxEnv["Bindings"],
     _ctx: ExecutionContext,
   ): Promise<void> {
+    const queueName = (batch as any).queue;
+    if (queueName === "diceshock-notifications") {
+      const { handleNotificationQueue } = await import(
+        "./server/queue/notificationConsumer"
+      );
+      await handleNotificationQueue(batch as any, env as any);
+      return;
+    }
     const { handleImageQueue } = await import(
       "./server/queue/imageQueueConsumer"
     );

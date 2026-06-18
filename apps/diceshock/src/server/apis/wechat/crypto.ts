@@ -1,7 +1,7 @@
 import { Base64 } from "js-base64";
 
 function decodeAESKey(encodingAESKey: string): Uint8Array {
-  return Base64.toUint8Array(encodingAESKey + "=");
+  return Base64.toUint8Array(`${encodingAESKey}=`);
 }
 
 export async function decryptMessage(
@@ -14,16 +14,16 @@ export async function decryptMessage(
 
   const key = await crypto.subtle.importKey(
     "raw",
-    aesKey,
+    aesKey as unknown as BufferSource,
     { name: "AES-CBC" },
     false,
     ["decrypt"],
   );
 
   const decrypted = await crypto.subtle.decrypt(
-    { name: "AES-CBC", iv },
+    { name: "AES-CBC", iv: iv as unknown as BufferSource },
     key,
-    ciphertext,
+    ciphertext as unknown as BufferSource,
   );
 
   const decryptedBytes = new Uint8Array(decrypted);
@@ -69,16 +69,16 @@ export async function encryptMessage(
 
   const key = await crypto.subtle.importKey(
     "raw",
-    aesKey,
+    aesKey as unknown as BufferSource,
     { name: "AES-CBC" },
     false,
     ["encrypt"],
   );
 
   const ciphertext = await crypto.subtle.encrypt(
-    { name: "AES-CBC", iv },
+    { name: "AES-CBC", iv: iv as unknown as BufferSource },
     key,
-    payload,
+    payload as unknown as BufferSource,
   );
 
   return Base64.fromUint8Array(new Uint8Array(ciphertext));

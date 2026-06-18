@@ -2,7 +2,7 @@ import db, { accounts, drizzle, users } from "@lib/db";
 import type { Context } from "hono";
 import type { HonoCtxEnv } from "@/shared/types";
 
-const { and, eq } = drizzle;
+const { eq } = drizzle;
 
 interface RateLimitBucket {
   tokens: number;

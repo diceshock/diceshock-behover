@@ -2,6 +2,7 @@ import { DurableObject } from "cloudflare:workers";
 import db, { mahjongMatchesTable } from "@lib/db";
 import { eq } from "drizzle-orm";
 import { gszFetch } from "@/server/apis/trpc/gszApi";
+import { queueNotification } from "@/server/apis/wechat/templateMessage";
 import {
   fetchTableStateForDO,
   fetchTableStateForDOByCode,
@@ -465,6 +466,7 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
         case "mahjong_start": {
           if (!this.mahjongState) return;
           this.mahjongState = engine.startMatch(this.mahjongState);
+          this.sendMahjongStartNotifications();
           break;
         }
         case "mahjong_begin_scoring": {
@@ -559,6 +561,7 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
       this.pendingAlarm = null;
       if (this.mahjongState?.phase === "countdown") {
         this.mahjongState = engine.startMatch(this.mahjongState);
+        this.sendMahjongStartNotifications();
         this.step++;
         this.broadcastState();
       }
@@ -615,5 +618,23 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
         this.sseClients.delete(sessionId);
       }
     }
+  }
+
+  private sendMahjongStartNotifications(): void {
+    if (!this.mahjongState) return;
+    const state = this.mahjongState;
+    const modeLabel = state.config?.mode === "3p" ? "3人麻" : "4人麻";
+    const formatLabel = state.config?.format === "hanchan" ? "半庄" : "东风";
+    const tableName = this.tableInfo?.name ?? "未知桌台";
+    const startTime = new Date().toLocaleString("zh-CN", {
+      timeZone: "Asia/Shanghai",
+    });
+    const playerIds = state.players.map((p) => p.userId);
+
+    queueNotification(this.env, {
+      type: "mahjong_start",
+      userIds: playerIds,
+      data: { mode: modeLabel, format: formatLabel, tableName, startTime },
+    }).catch(() => {});
   }
 }

@@ -1,0 +1,396 @@
+import db, {
+  accounts,
+  activeRegistrationsTable,
+  activesTable,
+  boardGamesTable,
+  drizzle,
+} from "@lib/db";
+import dayjs from "dayjs";
+import type { Context } from "hono";
+import type { HonoCtxEnv } from "@/shared/types";
+import "dayjs/locale/zh-cn";
+import { SITE_LINKS } from "../linkRegistry";
+import type { ToolDefinition } from "../skills";
+import type { PageLink } from "../types";
+
+const { and, eq, gte, lte } = drizzle;
+
+// ─── Links ───────────────────────────────────────────────────────
+
+const ACTIVE_LINKS: PageLink[] = [
+  { url: SITE_LINKS.actives(), title: "约局列表" },
+  { url: SITE_LINKS.activeNew(), title: "发起新约局" },
+];
+
+function result<T>(data: T, extraLinks?: PageLink[]): string {
+  return JSON.stringify({
+    ...(data as object),
+    links: extraLinks ? [...ACTIVE_LINKS, ...extraLinks] : ACTIVE_LINKS,
+  });
+}
+
+function notFound(message: string): string {
+  return JSON.stringify({ found: false, message, links: ACTIVE_LINKS });
+}
+
+// ─── Helper: resolve userId from openId ──────────────────────────
+
+async function resolveUserId(
+  c: Context<HonoCtxEnv>,
+  openId: string,
+): Promise<string | null> {
+  const d = db(c.env.DB);
+  const account = await d
+    .select({ userId: accounts.userId })
+    .from(accounts)
+    .where(
+      and(
+        eq(accounts.provider, "wechat-mp"),
+        eq(accounts.providerAccountId, openId),
+      ),
+    )
+    .limit(1);
+  if (account.length > 0) return account[0].userId;
+
+  const silent = await d
+    .select({ userId: accounts.userId })
+    .from(accounts)
+    .where(
+      and(
+        eq(accounts.provider, "wechat-mp-silent"),
+        eq(accounts.providerAccountId, openId),
+      ),
+    )
+    .limit(1);
+  return silent.length > 0 ? silent[0].userId : null;
+}
+
+// ─── Tool: query_actives_list ────────────────────────────────────
+
+async function queryActivesList(
+  c: Context<HonoCtxEnv>,
+  args: { dateRange?: "today" | "week" | "month" },
+): Promise<string> {
+  const d = db(c.env.DB);
+  const now = dayjs().tz("Asia/Shanghai");
+  const today = now.format("YYYY-MM-DD");
+
+  let dateStart: string;
+  let dateEnd: string;
+
+  switch (args.dateRange) {
+    case "today":
+      dateStart = today;
+      dateEnd = today;
+      break;
+    case "week":
+      dateStart = now.startOf("week").format("YYYY-MM-DD");
+      dateEnd = now.endOf("week").format("YYYY-MM-DD");
+      break;
+    default:
+      dateStart = now.startOf("month").format("YYYY-MM-DD");
+      dateEnd = now.endOf("month").format("YYYY-MM-DD");
+      break;
+  }
+
+  const conditions = [
+    gte(activesTable.date, today),
+    gte(activesTable.date, dateStart),
+    lte(activesTable.date, dateEnd),
+  ];
+
+  const actives = await d
+    .select({
+      id: activesTable.id,
+      title: activesTable.title,
+      date: activesTable.date,
+      time: activesTable.time,
+      max_players: activesTable.max_players,
+      board_game_id: activesTable.board_game_id,
+      content: activesTable.content,
+      is_game: activesTable.is_game,
+    })
+    .from(activesTable)
+    .where(and(...conditions))
+    .orderBy(activesTable.date)
+    .limit(20);
+
+  // Resolve board game names
+  const gameIds = [
+    ...new Set(actives.map((a) => a.board_game_id).filter(Boolean)),
+  ];
+  const games =
+    gameIds.length > 0
+      ? await d
+          .select({
+            id: boardGamesTable.id,
+            sch_name: boardGamesTable.sch_name,
+            eng_name: boardGamesTable.eng_name,
+          })
+          .from(boardGamesTable)
+          .where(drizzle.inArray(boardGamesTable.id, gameIds as string[]))
+      : [];
+  const gameMap = new Map(games.map((g) => [g.id, g]));
+
+  const items = actives.map((a) => {
+    const game = a.board_game_id ? gameMap.get(a.board_game_id) : null;
+    return {
+      id: a.id,
+      title: a.title,
+      date: a.date,
+      time: a.time,
+      max_players: a.max_players,
+      board_game_name: game?.sch_name || game?.eng_name || null,
+      is_game: a.is_game,
+      link: SITE_LINKS.activeDetail(a.id),
+    };
+  });
+
+  return result({
+    found: true,
+    count: items.length,
+    date_range: args.dateRange || "month",
+    actives: items,
+  });
+}
+
+// ─── Tool: query_active_detail ───────────────────────────────────
+
+async function queryActiveDetail(
+  c: Context<HonoCtxEnv>,
+  args: { id: string },
+): Promise<string> {
+  const d = db(c.env.DB);
+
+  const active = await d
+    .select()
+    .from(activesTable)
+    .where(eq(activesTable.id, args.id))
+    .limit(1);
+
+  if (active.length === 0) {
+    return notFound("约局不存在");
+  }
+
+  const a = active[0];
+
+  // Count registrations
+  const registrations = await d
+    .select()
+    .from(activeRegistrationsTable)
+    .where(eq(activeRegistrationsTable.active_id, args.id));
+
+  const joiningCount = registrations.filter((r) => !r.is_watching).length;
+  const watchingCount = registrations.filter((r) => r.is_watching).length;
+
+  // Resolve board game name
+  let boardGameName: string | null = null;
+  if (a.board_game_id) {
+    const games = await d
+      .select({
+        sch_name: boardGamesTable.sch_name,
+        eng_name: boardGamesTable.eng_name,
+      })
+      .from(boardGamesTable)
+      .where(eq(boardGamesTable.id, a.board_game_id))
+      .limit(1);
+    if (games.length > 0) {
+      boardGameName = games[0].sch_name || games[0].eng_name || null;
+    }
+  }
+
+  return result(
+    {
+      found: true,
+      active: {
+        id: a.id,
+        title: a.title,
+        date: a.date,
+        time: a.time,
+        max_players: a.max_players,
+        board_game_name: boardGameName,
+        content: a.content,
+        is_game: a.is_game,
+        joining_count: joiningCount,
+        watching_count: watchingCount,
+        total_registrations: registrations.length,
+      },
+    },
+    [{ url: SITE_LINKS.activeDetail(a.id), title: "约局详情" }],
+  );
+}
+
+// ─── Tool: query_active_notifications ────────────────────────────
+
+async function queryActiveNotifications(
+  c: Context<HonoCtxEnv>,
+  openId: string,
+): Promise<string> {
+  const userId = await resolveUserId(c, openId);
+  if (!userId) {
+    return notFound("未找到该用户的账号");
+  }
+
+  const d = db(c.env.DB);
+
+  // Find user's active registrations
+  const myRegs = await d
+    .select({
+      active_id: activeRegistrationsTable.active_id,
+      is_watching: activeRegistrationsTable.is_watching,
+    })
+    .from(activeRegistrationsTable)
+    .where(eq(activeRegistrationsTable.user_id, userId));
+
+  if (myRegs.length === 0) {
+    return result({ found: true, count: 0, actives: [] });
+  }
+
+  const activeIds = myRegs.map((r) => r.active_id);
+
+  const actives = await d
+    .select({
+      id: activesTable.id,
+      title: activesTable.title,
+      date: activesTable.date,
+      time: activesTable.time,
+      max_players: activesTable.max_players,
+      board_game_id: activesTable.board_game_id,
+    })
+    .from(activesTable)
+    .where(
+      and(
+        drizzle.inArray(activesTable.id, activeIds),
+        gte(
+          activesTable.date,
+          dayjs().tz("Asia/Shanghai").format("YYYY-MM-DD"),
+        ),
+      ),
+    )
+    .orderBy(activesTable.date);
+
+  // Resolve board game names
+  const gameIds = [
+    ...new Set(actives.map((a) => a.board_game_id).filter(Boolean)),
+  ];
+  const games =
+    gameIds.length > 0
+      ? await d
+          .select({
+            id: boardGamesTable.id,
+            sch_name: boardGamesTable.sch_name,
+            eng_name: boardGamesTable.eng_name,
+          })
+          .from(boardGamesTable)
+          .where(drizzle.inArray(boardGamesTable.id, gameIds as string[]))
+      : [];
+  const gameMap = new Map(games.map((g) => [g.id, g]));
+
+  const items = actives.map((a) => {
+    const reg = myRegs.find((r) => r.active_id === a.id);
+    const game = a.board_game_id ? gameMap.get(a.board_game_id) : null;
+    return {
+      id: a.id,
+      title: a.title,
+      date: a.date,
+      time: a.time,
+      max_players: a.max_players,
+      board_game_name: game?.sch_name || game?.eng_name || null,
+      is_watching: reg?.is_watching ?? false,
+      link: SITE_LINKS.activeDetail(a.id),
+    };
+  });
+
+  return result({
+    found: true,
+    count: items.length,
+    actives: items,
+  });
+}
+
+// ─── Tool Definitions ────────────────────────────────────────────
+
+export const ACTIVE_TOOLS: ToolDefinition[] = [
+  {
+    type: "function",
+    function: {
+      name: "query_actives_list",
+      description:
+        "查询约局列表，可按日期范围筛选（今天/本周/本月）。默认只显示尚未过期的约局。",
+      parameters: {
+        type: "object",
+        properties: {
+          dateRange: {
+            type: "string",
+            enum: ["today", "week", "month"],
+            description: "日期范围：today=今天, week=本周, month=本月",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "query_active_detail",
+      description: "查询约局详情，包括参加人数、桌游名称、时间等信息",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "约局 ID" },
+        },
+        required: ["id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "query_active_notifications",
+      description: "查询当前用户已报名或观望的约局（仅显示未过期的）",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+    },
+  },
+];
+
+// ─── Dispatcher ──────────────────────────────────────────────────
+
+export async function executeActiveTool(
+  c: Context<HonoCtxEnv>,
+  toolName: string,
+  args: Record<string, unknown>,
+  openId: string,
+): Promise<string> {
+  console.log("[tools:active] execute", {
+    toolName,
+    openId: openId.slice(-8),
+  });
+  try {
+    switch (toolName) {
+      case "query_actives_list":
+        return await queryActivesList(
+          c,
+          args as { dateRange?: "today" | "week" | "month" },
+        );
+      case "query_active_detail":
+        return await queryActiveDetail(c, args as { id: string });
+      case "query_active_notifications":
+        return await queryActiveNotifications(c, openId);
+      default:
+        console.error("[tools:active] unknown tool:", toolName);
+        return JSON.stringify({ error: "未知工具", links: ACTIVE_LINKS });
+    }
+  } catch (e) {
+    console.error("[tools:active] execution error", {
+      toolName,
+      error: String(e),
+    });
+    return JSON.stringify({
+      error: `工具执行失败: ${String(e)}`,
+      links: ACTIVE_LINKS,
+    });
+  }
+}

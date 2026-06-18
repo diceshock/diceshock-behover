@@ -1,12 +1,18 @@
 import type { Context } from "hono";
 import type { HonoCtxEnv } from "@/shared/types";
-import { chatWithDeepSeek } from "./deepseekClient";
+import { getRecentHistory, saveMessage } from "./conversationContext";
+import { chatWithAgent } from "./deepseekClient";
+import { detectIntent } from "./intentRouter";
 import { generateAndSendMembershipCard } from "./membershipCard";
+import { addMemory, searchMemory } from "./memory";
+import { dispatchMessages, parseAgentOutput } from "./messagePipeline";
 import { checkRateLimit, recordTokenUsage } from "./rateLimit";
+import { getSkillById } from "./skills";
+import { ERROR_MESSAGES } from "./statusMessages";
 import { sendCustomerTextMessage } from "./wechatApi";
 import { buildTextReply } from "./xmlUtils";
 
-const TYPING_REPLY = "正在思考中，请稍候...";
+const TYPING_REPLY = "收到，正在处理中...";
 
 export async function handleTextMessage(
   c: Context<HonoCtxEnv>,
@@ -18,64 +24,63 @@ export async function handleTextMessage(
   if (!content) return "请输入您的问题~";
 
   const { allowed, reason } = await checkRateLimit(c, openId);
-  if (!allowed) return reason || "服务繁忙，稍后再试";
+  if (!allowed) return reason || ERROR_MESSAGES.RATE_LIMITED;
 
-  c.executionCtx.waitUntil(processAndReplyAsync(c, openId, content));
-
+  c.executionCtx.waitUntil(processMessage(c, openId, content));
   return TYPING_REPLY;
 }
 
-async function processAndReplyAsync(
+async function processMessage(
   c: Context<HonoCtxEnv>,
   openId: string,
   content: string,
 ): Promise<void> {
+  const env = c.env as any;
+
   try {
+    const history = await getRecentHistory(c, openId);
+    const memory = await searchMemory(env, openId, content);
+    const intent = detectIntent(content, history);
+    const skill = getSkillById(intent.skillId);
+
+    if (!skill) {
+      await sendCustomerTextMessage(env, openId, ERROR_MESSAGES.SERVER_ERROR);
+      return;
+    }
+
     const ragContext = await searchKnowledgeBase(c, content);
-    const { reply, tokensUsed } = await chatWithDeepSeek(
-      c,
-      content,
+    const { rawOutput, tokensUsed } = await chatWithAgent(c, {
+      userMessage: content,
       openId,
+      skill,
+      conversationHistory: history,
       ragContext,
-    );
+      memory,
+    });
 
     if (tokensUsed > 0) {
       await recordTokenUsage(c, openId, tokensUsed);
     }
 
-    await sendCustomerTextMessage(c.env as any, openId, reply);
+    const messages = parseAgentOutput(rawOutput);
+    await dispatchMessages(env, openId, messages);
+
+    const metadata = JSON.stringify({
+      skillId: intent.skillId,
+      confidence: intent.confidence,
+    });
+    await saveMessage(c, openId, "user", content, metadata);
+    await saveMessage(c, openId, "assistant", rawOutput, metadata);
+
+    addMemory(env, openId, [
+      { role: "user", content },
+      { role: "assistant", content: rawOutput },
+    ]).catch(() => {});
   } catch (e) {
-    console.error("[wechat:async] processing failed:", e);
-    await sendCustomerTextMessage(
-      c.env as any,
-      openId,
-      "AI 处理异常，请稍后再试",
-    );
-  }
-}
-
-export async function handleMenuEvent(
-  c: Context<HonoCtxEnv>,
-  msg: Record<string, string>,
-): Promise<{ xml: string } | null> {
-  const eventKey = msg.EventKey;
-  const toUser = msg.FromUserName;
-  const fromUser = msg.ToUserName;
-
-  switch (eventKey) {
-    case "MEMBERSHIP_PLAN": {
-      const reply = buildTextReply(
-        toUser,
-        fromUser,
-        "正在为您生成会员信息，请稍候...",
-      );
-      c.executionCtx.waitUntil(
-        generateAndSendMembershipCard(c, msg.FromUserName),
-      );
-      return { xml: reply };
-    }
-    default:
-      return null;
+    console.error("[wechat:process] pipeline error:", e);
+    try {
+      await sendCustomerTextMessage(env, openId, ERROR_MESSAGES.AI_UNAVAILABLE);
+    } catch {}
   }
 }
 
@@ -107,5 +112,30 @@ async function searchKnowledgeBase(
   } catch (e) {
     console.error("[AI Search] error:", e);
     return undefined;
+  }
+}
+
+export async function handleMenuEvent(
+  c: Context<HonoCtxEnv>,
+  msg: Record<string, string>,
+): Promise<{ xml: string } | null> {
+  const eventKey = msg.EventKey;
+  const toUser = msg.FromUserName;
+  const fromUser = msg.ToUserName;
+
+  switch (eventKey) {
+    case "MEMBERSHIP_PLAN": {
+      const reply = buildTextReply(
+        toUser,
+        fromUser,
+        "正在为您生成会员信息，请稍候...",
+      );
+      c.executionCtx.waitUntil(
+        generateAndSendMembershipCard(c, msg.FromUserName),
+      );
+      return { xml: reply };
+    }
+    default:
+      return null;
   }
 }

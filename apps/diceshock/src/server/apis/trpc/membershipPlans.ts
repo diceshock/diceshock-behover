@@ -1,6 +1,7 @@
 import db, { drizzle, userMembershipPlansTable } from "@lib/db";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod/v4";
+import { queueNotification } from "@/server/apis/wechat/templateMessage";
 import { protectedProcedure, staffProcedure } from "./baseTRPC";
 
 const planTypeEnum = z.enum([
@@ -108,6 +109,34 @@ const create = staffProcedure
         end_date: input.endDate ? new Date(input.endDate) : null,
       })
       .returning();
+
+    const planNames: Record<string, string> = {
+      monthly: "月卡",
+      monthly_cc: "月卡(CC)",
+      yearly: "年卡",
+      stored_value: "储值卡",
+    };
+    const planName = planNames[input.planType] ?? input.planType;
+    let detail: string;
+    if (input.planType === "stored_value") {
+      detail = `充值 ¥${((input.amount ?? 0) / 100).toFixed(0)}`;
+    } else {
+      const start = new Date(input.startDate).toLocaleDateString("zh-CN", {
+        timeZone: "Asia/Shanghai",
+      });
+      const end = input.endDate
+        ? new Date(input.endDate).toLocaleDateString("zh-CN", {
+            timeZone: "Asia/Shanghai",
+          })
+        : "永久";
+      detail = `有效期: ${start} ~ ${end}`;
+    }
+    queueNotification(ctx.env, {
+      type: "membership_change",
+      userId: input.userId,
+      data: { action: "新增", planName, detail },
+    }).catch(() => {});
+
     return created;
   });
 

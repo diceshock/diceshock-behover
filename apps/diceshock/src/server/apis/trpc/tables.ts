@@ -1,5 +1,6 @@
 import db, { drizzle, tableOccupancyTable, tablesTable } from "@lib/db";
 import { createId } from "@paralleldrive/cuid2";
+import { queueNotification } from "@/server/apis/wechat/templateMessage";
 import { pauseWithReason } from "@/server/utils/pauseOrder";
 import { fetchTableStateForDO, notifySocketDO } from "@/server/utils/seatTimer";
 import { protectedProcedure, publicProcedure, unwrapInput } from "./baseTRPC";
@@ -142,6 +143,28 @@ const occupy = protectedProcedure
     const fresh = await fetchTableStateForDO(tdb, table.id);
     if (fresh) {
       await notifySocketDO(ctx.env, input.code, fresh.table, fresh.occupancies);
+    }
+
+    const fmtTime = new Date().toLocaleString("zh-CN", {
+      timeZone: "Asia/Shanghai",
+    });
+
+    if (existingOccupancy && existingOccupancy.table.code !== input.code) {
+      await queueNotification(ctx.env, {
+        type: "table_transfer",
+        userId: ctx.userId,
+        data: {
+          fromTable: existingOccupancy.table.name,
+          toTable: table.name,
+          transferTime: fmtTime,
+        },
+      });
+    } else {
+      await queueNotification(ctx.env, {
+        type: "order_start",
+        userId: ctx.userId,
+        data: { tableName: table.name, startTime: fmtTime, seats: 1 },
+      });
     }
 
     return { id };

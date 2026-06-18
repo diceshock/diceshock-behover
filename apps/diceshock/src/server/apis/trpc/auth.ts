@@ -11,6 +11,7 @@ const Captcha20230305 =
 
 import { customAlphabet } from "nanoid";
 import z from "zod/v4";
+import { queueNotification } from "@/server/apis/wechat/templateMessage";
 import { getSmsTmpCodeKey } from "@/server/utils/auth";
 import { protectedProcedure, publicProcedure } from "./baseTRPC";
 
@@ -304,6 +305,21 @@ const updateUserInfo = protectedProcedure
 
       if (!updatedUserInfo) {
         return { success: false, message: "用户信息不存在" };
+      }
+
+      if (input.phone && updatedUserInfo.phone) {
+        const masked = updatedUserInfo.phone.replace(
+          /^(\d{3})\d{4}(\d{4})$/,
+          "$1****$2",
+        );
+        const bindTime = new Date().toLocaleString("zh-CN", {
+          timeZone: "Asia/Shanghai",
+        });
+        queueNotification(env, {
+          type: "phone_bound",
+          userId,
+          data: { phone: masked, bindTime },
+        }).catch(() => {});
       }
 
       return {

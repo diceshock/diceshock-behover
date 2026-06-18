@@ -6,6 +6,7 @@ import db, {
 } from "@lib/db";
 import { eq, inArray } from "drizzle-orm";
 import z from "zod/v4";
+import { queueNotification } from "@/server/apis/wechat/templateMessage";
 import type { MatchState } from "@/shared/mahjong/types";
 import { staffProcedure, unwrapInput } from "./baseTRPC";
 import { type GszPageResult, gszFetch } from "./gszApi";
@@ -623,6 +624,19 @@ async function performGszSync(
       })
       .where(eq(mahjongMatchesTable.id, matchId));
 
+    const modeLabel = match.mode === "4p" ? "4人" : "3人";
+    const formatLabel = match.format === "hanchan" ? "半庄" : "东风";
+    const dateLabel = d.toLocaleDateString("zh-CN", {
+      timeZone: "Asia/Shanghai",
+    });
+    const matchInfo = `${modeLabel}${formatLabel} ${dateLabel}`;
+    const playerIds = sorted.map((p) => p.userId);
+    await queueNotification(env, {
+      type: "gsz_sync",
+      userIds: playerIds,
+      data: { success: true, matchInfo },
+    });
+
     return { success: true };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : "公式战同步失败";
@@ -630,6 +644,20 @@ async function performGszSync(
       .update(mahjongMatchesTable)
       .set({ gsz_error: errorMsg })
       .where(eq(mahjongMatchesTable.id, matchId));
+
+    const modeLabel = match.mode === "4p" ? "4人" : "3人";
+    const formatLabel = match.format === "hanchan" ? "半庄" : "东风";
+    const dateLabel = d.toLocaleDateString("zh-CN", {
+      timeZone: "Asia/Shanghai",
+    });
+    const matchInfo = `${modeLabel}${formatLabel} ${dateLabel}`;
+    const playerIds = sorted.map((p) => p.userId);
+    await queueNotification(env, {
+      type: "gsz_sync",
+      userIds: playerIds,
+      data: { success: false, matchInfo, errorMsg },
+    });
+
     return { success: false, error: errorMsg };
   }
 }

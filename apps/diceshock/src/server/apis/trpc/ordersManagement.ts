@@ -8,6 +8,7 @@ import db, {
   userMembershipPlansTable,
   users,
 } from "@lib/db";
+import { queueNotification } from "@/server/apis/wechat/templateMessage";
 import { pauseWithReason } from "@/server/utils/pauseOrder";
 import { fetchTableStateForDO, notifySocketDO } from "@/server/utils/seatTimer";
 import { calculatePrice, type SnapshotData } from "@/shared/utils/pricing";
@@ -849,6 +850,31 @@ const settleOrder = staffProcedure
       .where(drizzle.eq(tableOccupancyTable.id, input.id));
 
     await notifyDOForOrder(tdb, ctx.env, input.id);
+
+    if (occ.user_id) {
+      const durationMs = endAt - startAt - pausedMinutes * 60000;
+      const hrs = Math.floor(durationMs / 3600000);
+      const mins = Math.floor((durationMs % 3600000) / 60000);
+      const durationStr = hrs > 0 ? `${hrs}小时${mins}分` : `${mins}分钟`;
+      const settledTime = now.toLocaleString("zh-CN", {
+        timeZone: "Asia/Shanghai",
+      });
+      const payMethod = storedValueDeduction?.deducted
+        ? "储值卡扣费"
+        : undefined;
+      queueNotification(ctx.env, {
+        type: "order_settled",
+        userId: occ.user_id,
+        data: {
+          tableName: tableInfo.name,
+          duration: durationStr,
+          price: `¥${(finalPrice / 100).toFixed(0)}`,
+          settledTime,
+          payMethod,
+        },
+      }).catch(() => {});
+    }
+
     return { success: true, price: finalPrice, snapshot };
   });
 
@@ -1202,6 +1228,26 @@ const batchSettle = staffProcedure
           totalPriceForUser += finalPrice;
           settledOrders.push({ id, price: finalPrice });
           results.push({ id, success: true, price: finalPrice });
+
+          if (occ.user_id) {
+            const durationMs = endAt - startAt - pausedMinutes * 60000;
+            const hrs = Math.floor(durationMs / 3600000);
+            const mins = Math.floor((durationMs % 3600000) / 60000);
+            const durationStr = hrs > 0 ? `${hrs}小时${mins}分` : `${mins}分钟`;
+            const settledTime = now.toLocaleString("zh-CN", {
+              timeZone: "Asia/Shanghai",
+            });
+            queueNotification(ctx.env, {
+              type: "order_settled",
+              userId: occ.user_id,
+              data: {
+                tableName: tableInfo.name,
+                duration: durationStr,
+                price: `¥${(finalPrice / 100).toFixed(0)}`,
+                settledTime,
+              },
+            }).catch(() => {});
+          }
         } catch (err) {
           results.push({
             id,

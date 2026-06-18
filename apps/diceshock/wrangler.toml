@@ -60,11 +60,21 @@ binding = "BROWSER"
 binding = "IMAGE_QUEUE"
 queue = "diceshock-image-processing"
 
+[[queues.producers]]
+binding = "NOTIFICATION_QUEUE"
+queue = "diceshock-notifications"
+
 [[queues.consumers]]
 queue = "diceshock-image-processing"
 max_batch_size = 1
 max_batch_timeout = 30
 max_retries = 2
+
+[[queues.consumers]]
+queue = "diceshock-notifications"
+max_batch_size = 10
+max_batch_timeout = 5
+max_retries = 3
 
 [[routes]]
 pattern = "origin.runespark.fun"

@@ -457,8 +457,32 @@ export const tempIdentitiesTable = sqlite.sqliteTable("temp_identities", {
   created_at: sqlite
     .integer("created_at", { mode: "timestamp_ms" })
     .$defaultFn(() => new Date(Date.now())),
-  expires_at: sqlite.integer("expires_at", { mode: "timestamp_ms" }),
 });
+
+export const wechatConversationRoles = ["user", "assistant", "tool"] as const;
+export type WechatConversationRole = (typeof wechatConversationRoles)[number];
+
+export const wechatConversationsTable = sqlite.sqliteTable(
+  "wechat_conversations",
+  {
+    id: sqlite.text().$defaultFn(createId).primaryKey(),
+    open_id: sqlite.text("open_id").notNull(),
+    role: sqlite
+      .text("role", { enum: wechatConversationRoles })
+      .$type<WechatConversationRole>()
+      .notNull(),
+    content: sqlite.text("content").notNull(),
+    metadata: sqlite.text("metadata"),
+    created_at: sqlite
+      .integer("created_at")
+      .notNull()
+      .$defaultFn(() => Date.now()),
+  },
+  (table) => [
+    sqlite.index("idx_wechat_conversations_open_id").on(table.open_id),
+    sqlite.index("idx_wechat_conversations_created_at").on(table.created_at),
+  ],
+);
 
 // ─── Pricing Plans ──────────────────────────────────────────────
 

@@ -5,6 +5,7 @@ const domParser = new DOMParser();
 export function parseXml(xml: string): Record<string, string> {
   const doc = domParser.parseFromString(xml, "text/xml");
   const root = doc.documentElement;
+  if (!root) return {};
   const result: Record<string, string> = {};
 
   for (let i = 0; i < root.childNodes.length; i++) {

@@ -9,6 +9,11 @@ const { and, eq, like } = drizzle;
 
 import type { Context } from "hono";
 import type { HonoCtxEnv } from "@/shared/types";
+import { executeAccountTool } from "./account";
+import { executeActiveTool } from "./active";
+import { executeEventTool } from "./event";
+import { executeMahjongTool } from "./mahjong";
+import { generateTotpMessage } from "./totp";
 
 export interface ToolDefinition {
   type: "function";
@@ -60,6 +65,33 @@ export async function executeTool(
         return await queryBoardGameInventory(c, args.name as string);
       case "query_membership_status":
         return await queryMembershipStatus(c, openId);
+      case "query_all_membership_plans":
+      case "query_my_active_table":
+      case "get_user_profile":
+      case "get_my_business_card":
+        return await executeAccountTool(c, toolName, args, openId);
+      case "query_actives_list":
+      case "query_active_detail":
+      case "query_active_notifications":
+        return await executeActiveTool(c, toolName, args, openId);
+      case "query_events_list":
+      case "query_event_detail":
+        return await executeEventTool(c, toolName, args, openId);
+      case "query_leaderboard":
+      case "query_my_rankings":
+      case "query_my_match_history":
+      case "query_my_pp_stats":
+      case "query_my_badges":
+        return await executeMahjongTool(c, toolName, args, openId);
+      case "generate_totp": {
+        const totpMsg = await generateTotpMessage(c, openId);
+        if (!totpMsg) {
+          return JSON.stringify({
+            error: "TOTP 验证码生成失败，请先在个人中心绑定验证器",
+          });
+        }
+        return JSON.stringify(totpMsg);
+      }
       default:
         console.error("[tools] unknown tool:", toolName);
         return JSON.stringify({ error: "未知工具" });
