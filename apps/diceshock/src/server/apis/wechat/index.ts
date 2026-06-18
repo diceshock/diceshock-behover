@@ -4,6 +4,12 @@ import { decryptMessage, encryptMessage } from "./crypto";
 import { handleMenuEvent, handleTextMessage } from "./messageHandler";
 import { buildEmptyReply, buildTextReply, parseXml } from "./xmlUtils";
 
+function extractCdataContent(xml: string, tag: string): string | undefined {
+  const re = new RegExp(`<${tag}><!\\[CDATA\\[([\\s\\S]*?)\\]\\]></${tag}>`);
+  const match = xml.match(re);
+  return match?.[1];
+}
+
 export async function wechatVerify(c: Context<HonoCtxEnv>) {
   const { signature, timestamp, nonce, echostr } = c.req.query();
   const token = (c.env as any).WECHAT_MP_TOKEN as string;
@@ -65,7 +71,7 @@ export async function wechatMessage(c: Context<HonoCtxEnv>) {
     }
 
     const outerXml = parseXml(body);
-    const encrypted = outerXml.Encrypt;
+    const encrypted = outerXml.Encrypt || extractCdataContent(body, "Encrypt");
     if (!encrypted) {
       console.log("[wechat:msg] no Encrypt field in XML");
       return c.text(buildEmptyReply());
@@ -73,11 +79,9 @@ export async function wechatMessage(c: Context<HonoCtxEnv>) {
 
     console.log("[wechat:msg] encrypt field", {
       len: encrypted.length,
-      first20: encrypted.slice(0, 20),
-      last20: encrypted.slice(-20),
-      hasNewline: encrypted.includes("\n"),
-      hasSpace: encrypted.includes(" "),
-      hasCR: encrypted.includes("\r"),
+      first30: encrypted.slice(0, 30),
+      last30: encrypted.slice(-30),
+      mod4: encrypted.length % 4,
     });
 
     try {
@@ -86,6 +90,7 @@ export async function wechatMessage(c: Context<HonoCtxEnv>) {
       msg = parseXml(decrypted);
     } catch (e) {
       console.error("[wechat:msg] decrypt failed:", e);
+      console.error("[wechat:msg] encrypted raw (full):", encrypted);
       return c.text(buildEmptyReply());
     }
   } else {
