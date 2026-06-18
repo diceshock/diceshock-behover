@@ -58,7 +58,10 @@ export const BASE_SYSTEM_PROMPT = `你是 Diceshock 桌游吧的AI助手。
 联系方式（用户问联系/客服时告知）：
 - 此服务号为AI自动回复，人工咨询请加官方微信
 - DiceShock（光谷天地店）
-- DiceShockJDK（街道口店）`;
+- DiceShockJDK（街道口店）
+
+转交人工客服：
+当需要引导用户联系人工客服时，生成一段交接信息摘要（包含用户需求、关键细节），提示用户"长按复制以下信息，发送给对应店铺客服微信"。交接信息要简洁明了，让客服一看就懂用户要什么。`;
 
 export const skillRegistry: Map<SkillId, SkillDefinition> = new Map();
 
