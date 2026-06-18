@@ -1,17 +1,7 @@
-/**
- * WeChat AES-256-CBC message encryption/decryption.
- * EncodingAESKey is base64-encoded 256-bit key (43 chars → 32 bytes + 4-byte pad = 44 base64 chars).
- * Message format after decrypt: 16-byte random + 4-byte msg_len (network byte order) + msg + appid
- */
+import { Base64 } from "js-base64";
 
 function decodeAESKey(encodingAESKey: string): Uint8Array {
-  const base64 = encodingAESKey + "=";
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
+  return Base64.toUint8Array(encodingAESKey + "=");
 }
 
 export async function decryptMessage(
@@ -20,10 +10,7 @@ export async function decryptMessage(
 ): Promise<string> {
   const aesKey = decodeAESKey(encodingAESKey);
   const iv = aesKey.slice(0, 16);
-
-  const ciphertext = Uint8Array.from(atob(encrypted.replace(/\s/g, "")), (c) =>
-    c.charCodeAt(0),
-  );
+  const ciphertext = Base64.toUint8Array(encrypted);
 
   const key = await crypto.subtle.importKey(
     "raw",
@@ -41,7 +28,6 @@ export async function decryptMessage(
 
   const decryptedBytes = new Uint8Array(decrypted);
 
-  // Format: 16-byte random + 4-byte msg_len (big-endian) + msg_content + appid
   const msgLenBytes = decryptedBytes.slice(16, 20);
   const msgLen =
     (msgLenBytes[0] << 24) |
@@ -95,5 +81,5 @@ export async function encryptMessage(
     payload,
   );
 
-  return btoa(String.fromCharCode(...new Uint8Array(ciphertext)));
+  return Base64.fromUint8Array(new Uint8Array(ciphertext));
 }
