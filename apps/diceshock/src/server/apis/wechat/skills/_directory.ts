@@ -72,11 +72,17 @@ const NODES: Record<string, SkillNode> = {
       () => `必填: title, date(YYYY-MM-DD), startTime(HH:mm), maxPlayers, location(光谷天地/街道口)
 可选: gameId(先搜桌游拿id), description
 
-补全规则:
-- 用户未指定店铺 → 默认"光谷天地", 直接用, 不追问
-- 搜桌游后用 best_player_num 作为 maxPlayers
-- "明天下午"=明天14:00, "晚上"=19:00, "下午X点"=X:00
-- 能推断的全推断, 直接创建。只有完全无法推断时才追问(一次性列全)
+判断用户是否给全信息(5项核心): 游戏名+日期+时间+人数+店铺
+- 全部明确给出 → 搜游戏拿id后直接 mutate 创建, 不需要确认
+- 有任何一项缺失需要你推断(如: 未说人数你用best_player_num, 未说店铺你用默认值) → 先输出方案等确认
+- 搜游戏拿gameId 不算推断, 这是执行步骤
+
+方案格式(仅缺信息时用):
+"找到了1817(2020), 最佳3-4人。我建议:
+时间: 明天(6/20) 14:00
+人数: 4人
+店铺: 光谷天地
+没问题我直接创建, 有调整告诉我~"
 
 搜桌游返回字段: id sch_name best_player_num player_num
 创建: mutate action=create_active params={title,date,startTime,maxPlayers,location,gameId}`,

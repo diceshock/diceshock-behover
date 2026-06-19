@@ -277,7 +277,7 @@ function validateResult(result: TestResult): TestResult {
   return result;
 }
 
-interface Scenario { name: string; input: string; expect: { toolsCalled?: string[]; mutateAction?: string; containsUrl?: boolean; noTools?: boolean } }
+interface Scenario { name: string; input: string; expect: { toolsCalled?: string[]; mutateAction?: string; containsUrl?: boolean; containsText?: string; noTools?: boolean } }
 
 const SCENARIOS: Scenario[] = [
   { name: "桌游搜索-精确名", input: "搜索卡坦岛", expect: { toolsCalled: ["query"], containsUrl: true } },
@@ -290,7 +290,7 @@ const SCENARIOS: Scenario[] = [
   { name: "约局-查+加入", input: "我想加入周日那个阿瓦隆约局", expect: { toolsCalled: ["query", "mutate"], mutateAction: "join_active" } },
   { name: "约局-退出", input: "我想退出act001那个约局", expect: { mutateAction: "leave_active" } },
   { name: "约局-删除自己的", input: "帮我把我创建的周五卡坦岛约局删了", expect: { mutateAction: "leave_active" } },
-  { name: "联合-搜桌游+创建约局", input: "帮我搜一下卡坦岛，然后创建一个明天晚上7点的3人约局", expect: { toolsCalled: ["query", "mutate"], mutateAction: "create_active" } },
+  { name: "联合-搜桌游+提方案", input: "帮我搜一下卡坦岛，然后创建一个明天晚上7点的3人约局", expect: { toolsCalled: ["query"], containsText: "光谷天地" } },
 ];
 
 async function runAllScenarios() {
@@ -309,6 +309,7 @@ async function runAllScenarios() {
       r.errors.push(`EXPECTED_MUTATE_${s.expect.mutateAction}_NOT_CALLED`); r.passed = false;
     }
     if (s.expect.containsUrl && !r.response.includes("https://")) { r.errors.push("EXPECTED_URL_MISSING"); r.passed = false; }
+    if (s.expect.containsText && !r.response.includes(s.expect.containsText)) { r.errors.push(`EXPECTED_TEXT_MISSING:${s.expect.containsText}`); r.passed = false; }
 
     results.push(r);
   }
