@@ -313,7 +313,7 @@ const SCENARIOS: Scenario[] = [
   { name: "约局-退出", input: "我想退出act001那个约局", expect: { mutateAction: "leave_active" } },
   { name: "约局-删除自己的", input: "帮我把我创建的周五卡坦岛约局删了", expect: { mutateAction: "leave_active" } },
   { name: "联合-搜桌游+提方案", input: "帮我搜一下卡坦岛，然后创建一个明天晚上7点的3人约局", expect: { toolsCalled: ["query"], containsText: "光谷天地" } },
-  { name: "会员-查询", input: "查询会员信息", expect: { toolsCalled: ["query"] } },
+  { name: "会员-查询", input: "查询我的会员信息", expect: { toolsCalled: ["query"] } },
 ];
 
 async function runAllScenarios() {

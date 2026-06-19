@@ -133,7 +133,11 @@ leave_active: params={activeId} (创建者调用=删除整个约局)
     content:
       () => `${renderSchema(["userMembershipPlansTable", "userInfoTable", "userBusinessCardTable"])}
 
-手机绑定两步: send_sms_code → (等用户给码) → verify_phone
+查会员: { userMembershipPlansTable(where: {user_id: {eq: "当前userId"}}) { id plan_type amount start_date end_date } }
+查用户资料: { userInfoTable(where: {id: {eq: "当前userId"}}) { id uid nickname phone } }
+查名片: { userBusinessCardTable(where: {id: {eq: "当前userId"}}) { id share_phone wechat qq custom_content } }
+
+手机绑定两步: send_sms_code params={phone} → (等用户给码) → verify_phone params={phone,code}
 名片: mutate action=upsert_business_card
 个人中心: https://diceshock.com/me`,
   },
