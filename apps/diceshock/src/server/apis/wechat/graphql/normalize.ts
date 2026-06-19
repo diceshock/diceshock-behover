@@ -36,14 +36,18 @@ const FIELD_ALIASES: Record<string, string> = {
   isWatching: "is_watching",
   createAt: "create_at",
   createdAt: "create_at",
+  created_at: "create_at",
   startTime: "start_time",
   endTime: "end_time",
   maxPlayers: "max_players",
   planType: "plan_type",
+  plan_name: "plan_type",
+  planName: "plan_type",
   startDate: "start_date",
   endDate: "end_date",
   updateAt: "update_at",
   updatedAt: "update_at",
+  updated_at: "update_at",
   sharePhone: "share_phone",
   customContent: "custom_content",
 };
@@ -76,6 +80,7 @@ const TABLE_ALIASES: Record<string, string> = {
   SearchGames: "boardGamesTable",
   events: "eventsTable",
   users: "usersTable",
+  usersTable: "userInfoTable",
   userInfo: "userInfoTable",
   user_info: "userInfoTable",
   userMembershipPlans: "userMembershipPlansTable",
@@ -218,6 +223,12 @@ export function normalizeQuery(
     Field: {
       enter(node: FieldNode) {
         const name = node.name.value;
+
+        if (name === "__type" || name === "__schema") {
+          result.errors.push(`不支持内省查询(${name})。请直接查询数据表。`);
+          return undefined;
+        }
+
         if (TABLE_ALIASES[name]) {
           result.corrections.push(
             `表名 "${name}" → "${TABLE_ALIASES[name]}"${loc(node)}`,
@@ -227,6 +238,17 @@ export function normalizeQuery(
             name: { ...node.name, value: TABLE_ALIASES[name] },
           };
         }
+
+        if (FIELD_ALIASES[name] && !node.selectionSet) {
+          result.corrections.push(
+            `选择字段 "${name}" → "${FIELD_ALIASES[name]}"${loc(node)}`,
+          );
+          return {
+            ...node,
+            name: { ...node.name, value: FIELD_ALIASES[name] },
+          };
+        }
+
         return undefined;
       },
     },
