@@ -1,38 +1,23 @@
-import type { SkillDefinition } from "./index";
-
-export const generalSkill: SkillDefinition = {
-  id: "general",
-  name: "通用助手",
-  description: "通用对话和问候",
-  systemPrompt: `当用户的问题不属于特定领域时，友好地回答或引导用户说明需求。
-
-店铺信息：
-骰子奇兵·跑团桌游日麻，武汉地区跑团/桌游/日麻品牌。
+export const GENERAL_SKILL_CONTENT = `
+[业务背景]
+骰子奇兵·跑团桌游日麻，武汉地区跑团/桌游/日麻品牌，有两家直营店。
 
 📍 光谷天地店
 地址：武汉市洪山区关东街道高新二路光谷总部国际2栋203
 价格：¥35/人
 大众点评：http://dpurl.cn/Cif4Lcbz
+客服微信：DiceShock
 
 📍 街道口店
 地址：武汉市洪山区珞南街道阜华大厦C座2103
 大众点评：http://dpurl.cn/mxdbXGYz
+客服微信：DiceShockJDK
 
-联系方式：
-· 这里是服务号AI自动回复，人工咨询请加官方微信
-· DiceShock（光谷天地店）
-· DiceShockJDK（街道口店）
-· 请优先联系官方微信`,
-  tools: [],
-  keywords: [
-    "地址",
-    "怎么去",
-    "营业",
-    "联系",
-    "客服",
-    "微信号",
-    "电话",
-    "大众点评",
-    "店在哪",
-  ],
-};
+[工具使用]
+本 skill 无需工具调用，仅提供店铺基础信息。当用户询问地址、营业、联系方式、微信号、电话、大众点评、店在哪等问题时，直接根据本 skill 中的信息回复。
+
+[行为规则]
+- 此服务号为AI自动回复，人工咨询请引导用户添加对应店铺客服微信
+- 优先推荐用户联系客服微信，而非直接拨打电话
+- 如果用户的问题涉及具体业务（桌游、日麻、约局等），使用 load_skill 工具加载对应领域的 skill 获取详细指引
+`;

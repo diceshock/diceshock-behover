@@ -14,21 +14,11 @@ import {
   saveMessage,
 } from "./conversationContext";
 import { chatWithAgent } from "./deepseekClient";
-import { detectIntent } from "./intentRouter";
-import { getRelatedLinks } from "./linkRegistry";
 import { generateAndSendMembershipCard } from "./membershipCard";
 import { addMemory, deleteAllMemories, searchMemory } from "./memory";
 import { dispatchMessages, parseAgentOutput } from "./messagePipeline";
-import {
-  clearPendingAction,
-  getPendingAction,
-  isCancellation,
-  isConfirmation,
-} from "./pendingAction";
 import { checkRateLimit, recordTokenUsage } from "./rateLimit";
-import { getSkillById } from "./skills";
 import { ERROR_MESSAGES } from "./statusMessages";
-import { executeAction } from "./tools/mutations";
 import { sendCustomerTextMessage } from "./wechatApi";
 import { buildTextReply } from "./xmlUtils";
 
@@ -61,54 +51,15 @@ async function processMessage(
   content: string,
 ): Promise<void> {
   const env = c.env as any;
-  const kv = env.KV as KVNamespace;
 
   try {
-    const pending = await getPendingAction(kv, openId);
-
-    if (pending && isConfirmation(content)) {
-      await clearPendingAction(kv, openId);
-      const result = await executeAction(c, pending, openId);
-      await sendCustomerTextMessage(env, openId, result.notification);
-      await saveMessage(
-        c,
-        openId,
-        "user",
-        content,
-        `{"confirm":"${pending.type}"}`,
-      );
-      await saveMessage(
-        c,
-        openId,
-        "assistant",
-        result.notification,
-        `{"action":"${pending.type}"}`,
-      );
-      return;
-    }
-
-    if (pending && isCancellation(content)) {
-      await clearPendingAction(kv, openId);
-      await sendCustomerTextMessage(env, openId, "已取消操作。");
-      await saveMessage(c, openId, "user", content, '{"cancel":true}');
-      return;
-    }
-
     const history = await getRecentHistory(c, openId);
     const memory = await searchMemory(env, openId, content);
-    const intent = detectIntent(content, history);
-    const skill = getSkillById(intent.skillId);
-
-    if (!skill) {
-      await sendCustomerTextMessage(env, openId, ERROR_MESSAGES.SERVER_ERROR);
-      return;
-    }
-
     const ragContext = await searchKnowledgeBase(c, content);
+
     const { rawOutput, tokensUsed } = await chatWithAgent(c, {
       userMessage: content,
       openId,
-      skill,
       conversationHistory: history,
       ragContext,
       memory,
@@ -120,19 +71,6 @@ async function processMessage(
 
     const messages = parseAgentOutput(rawOutput);
 
-    const mentionedUrls = new Set(
-      rawOutput.match(/https:\/\/diceshock\.com[^\s"}\]）]*/g) || [],
-    );
-    const relatedLinks = getRelatedLinks(intent.skillId).filter(
-      (link) => !mentionedUrls.has(link.url),
-    );
-    if (relatedLinks.length > 0) {
-      const linksText = relatedLinks
-        .map((link) => `🔗 ${link.title}: ${link.url}`)
-        .join("\n");
-      messages.push({ type: "text", content: `相关链接：\n${linksText}` });
-    }
-
     if (messages.length === 0) {
       messages.push({
         type: "text",
@@ -142,12 +80,8 @@ async function processMessage(
 
     await dispatchMessages(env, openId, messages);
 
-    const metadata = JSON.stringify({
-      skillId: intent.skillId,
-      confidence: intent.confidence,
-    });
-    await saveMessage(c, openId, "user", content, metadata);
-    await saveMessage(c, openId, "assistant", rawOutput, metadata);
+    await saveMessage(c, openId, "user", content, "{}");
+    await saveMessage(c, openId, "assistant", rawOutput, "{}");
 
     addMemory(env, openId, [
       { role: "user", content },
@@ -382,12 +316,10 @@ async function clearAllContext(
   openId: string,
 ): Promise<void> {
   const env = c.env as any;
-  const kv = env.KV as KVNamespace;
 
   await Promise.all([
     clearConversationHistory(c, openId),
     deleteAllMemories(env, openId),
-    clearPendingAction(kv, openId),
   ]);
 
   console.log("[wechat:clear] cleared all context", {

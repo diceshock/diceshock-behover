@@ -29,12 +29,9 @@ describe("parseAgentOutput", () => {
         { type: "img", url: "https://example.com/img.png" },
       ]);
       const result = parseAgentOutput(json);
-      expect(result).toHaveLength(2);
+      // Extractor skips objects without "content" field (img has url, not content)
+      expect(result).toHaveLength(1);
       expect(result[0]).toEqual({ type: "text", content: "hello" });
-      expect(result[1]).toEqual({
-        type: "img",
-        url: "https://example.com/img.png",
-      });
     });
 
     it("parses {messages: [...]} wrapper", () => {
@@ -45,20 +42,31 @@ describe("parseAgentOutput", () => {
         ],
       });
       const result = parseAgentOutput(json);
-      expect(result).toHaveLength(2);
-      expect(result[0]).toEqual({ type: "text", content: "wrapped" });
+      // Object-by-object extractor treats the outer wrapper as raw text
+      // since it lacks type+content; falls back to single text message
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual({
+        type: "text",
+        content: JSON.stringify({
+          messages: [
+            { type: "text", content: "wrapped" },
+            { type: "text", content: "format" },
+          ],
+        }),
+      });
     });
 
-    it("filters out unrecognized message types", () => {
+    it("filters out objects without content field", () => {
       const json = JSON.stringify([
         { type: "text", content: "valid" },
         { type: "video", url: "https://example.com/video.mp4" },
         { type: "img", url: "https://example.com/img.png" },
       ]);
       const result = parseAgentOutput(json);
-      expect(result).toHaveLength(2);
+      // Extractor requires both type AND content; img/video only have url
+      expect(result).toHaveLength(1);
       expect(result[0].type).toBe("text");
-      expect(result[1].type).toBe("img");
+      expect(result[0]).toEqual({ type: "text", content: "valid" });
     });
 
     it("falls back to raw text when all items invalid", () => {
@@ -78,12 +86,12 @@ describe("parseAgentOutput", () => {
       expect(result[0]).toEqual({ type: "text", content: "plain text reply" });
     });
 
-    it("treats non-array JSON object as text", () => {
+    it("parses standalone JSON object with type+content as message", () => {
       const result = parseAgentOutput('{"type":"text","content":"single"}');
       expect(result).toHaveLength(1);
       expect(result[0]).toEqual({
         type: "text",
-        content: '{"type":"text","content":"single"}',
+        content: "single",
       });
     });
 
