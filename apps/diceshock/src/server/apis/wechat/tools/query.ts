@@ -94,10 +94,20 @@ async function filterOrphanedActives(
   if (actives.length === 0) return actives;
 
   const ids = actives.map((a) => a.id as string).filter(Boolean);
-
   if (ids.length === 0) return actives;
 
   const d = db(d1);
+
+  const creators = await d
+    .select({
+      id: activesTable.id,
+      creator_id: activesTable.creator_id,
+    })
+    .from(activesTable)
+    .where(drizzle.inArray(activesTable.id, ids));
+
+  const creatorMap = new Map(creators.map((c) => [c.id, c.creator_id]));
+
   const regs = await d
     .select({
       active_id: activeRegistrationsTable.active_id,
@@ -109,9 +119,10 @@ async function filterOrphanedActives(
   const creatorRegSet = new Set(regs.map((r) => `${r.active_id}:${r.user_id}`));
 
   return actives.filter((a) => {
-    const creatorId = a.creator_id as string;
     const activeId = a.id as string;
-    if (!creatorId || !activeId) return true;
+    if (!activeId) return true;
+    const creatorId = creatorMap.get(activeId);
+    if (!creatorId) return false;
     return creatorRegSet.has(`${activeId}:${creatorId}`);
   });
 }
