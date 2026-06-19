@@ -19,10 +19,26 @@ import { addMemory, deleteAllMemories, searchMemory } from "./memory";
 import { dispatchMessages, parseAgentOutput } from "./messagePipeline";
 import { checkRateLimit, recordTokenUsage } from "./rateLimit";
 import { ERROR_MESSAGES } from "./statusMessages";
+import {
+  clearPendingAction,
+  executePendingAction,
+  getPendingAction,
+} from "./tools/mutate";
 import { sendCustomerTextMessage } from "./wechatApi";
 import { buildTextReply } from "./xmlUtils";
 
 const TYPING_REPLY = "收到，正在处理中...";
+const CONFIRM_KEYWORDS = new Set([
+  "确认",
+  "确定",
+  "是",
+  "好",
+  "ok",
+  "OK",
+  "Yes",
+  "yes",
+]);
+const CANCEL_KEYWORDS = new Set(["取消", "不", "算了", "cancel"]);
 
 export async function handleTextMessage(
   c: Context<HonoCtxEnv>,
@@ -35,7 +51,21 @@ export async function handleTextMessage(
 
   if (content === "清理上下文") {
     c.executionCtx.waitUntil(clearAllContext(c, openId));
-    return "✅ 已清理所有对话历史和记忆";
+    return "已清理所有对话历史和记忆";
+  }
+
+  const env = c.env as any;
+  const pending = await getPendingAction(env.KV, openId);
+  if (pending) {
+    if (CONFIRM_KEYWORDS.has(content)) {
+      c.executionCtx.waitUntil(executeConfirmedAction(c, openId, pending));
+      return "收到，正在执行...";
+    }
+    if (CANCEL_KEYWORDS.has(content)) {
+      await clearPendingAction(env.KV, openId);
+      return "已取消操作。";
+    }
+    await clearPendingAction(env.KV, openId);
   }
 
   const { allowed, reason } = await checkRateLimit(c, openId);
@@ -43,6 +73,31 @@ export async function handleTextMessage(
 
   c.executionCtx.waitUntil(processMessage(c, openId, content));
   return TYPING_REPLY;
+}
+
+async function executeConfirmedAction(
+  c: Context<HonoCtxEnv>,
+  openId: string,
+  pending: Awaited<ReturnType<typeof getPendingAction>> & {},
+): Promise<void> {
+  const env = c.env as any;
+  await clearPendingAction(env.KV, openId);
+
+  const toolContext = {
+    env: { DB: env.DB, KV: env.KV },
+    openId,
+  };
+
+  try {
+    const result = await executePendingAction(pending, toolContext);
+    await sendCustomerTextMessage(env, openId, result);
+  } catch (e) {
+    await sendCustomerTextMessage(
+      env,
+      openId,
+      `操作执行失败: ${String(e).slice(0, 100)}`,
+    );
+  }
 }
 
 async function processMessage(

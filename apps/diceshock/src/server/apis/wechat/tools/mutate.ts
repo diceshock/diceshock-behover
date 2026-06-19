@@ -88,6 +88,80 @@ function validateParams(
   return null;
 }
 
+// ─── Hard confirmation for destructive actions ──────────────────────
+
+const DESTRUCTIVE_ACTIONS: Set<MutateAction> = new Set([
+  "leave_active",
+  "update_active",
+]);
+
+interface PendingAction {
+  action: MutateAction;
+  params: Record<string, unknown>;
+  description: string;
+  summary: string;
+  createdAt: number;
+}
+
+async function storePendingAction(
+  kv: KVNamespace,
+  openId: string,
+  pending: PendingAction,
+): Promise<void> {
+  await kv.put(`pending_action:${openId}`, JSON.stringify(pending), {
+    expirationTtl: 300,
+  });
+}
+
+export async function getPendingAction(
+  kv: KVNamespace,
+  openId: string,
+): Promise<PendingAction | null> {
+  const raw = await kv.get(`pending_action:${openId}`);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as PendingAction;
+  } catch {
+    return null;
+  }
+}
+
+export async function clearPendingAction(
+  kv: KVNamespace,
+  openId: string,
+): Promise<void> {
+  await kv.delete(`pending_action:${openId}`);
+}
+
+export async function executePendingAction(
+  pending: PendingAction,
+  context: ToolContext,
+): Promise<string> {
+  return await executeMutateTool(
+    {
+      action: pending.action,
+      params: pending.params,
+      description: pending.description,
+    } as MutateArgs,
+    context,
+    true,
+  );
+}
+
+function buildConfirmationSummary(
+  action: MutateAction,
+  params: Record<string, unknown>,
+): string {
+  switch (action) {
+    case "leave_active":
+      return `将删除/退出约局 (ID: ${(params.active_id as string)?.slice(0, 8)}...)`;
+    case "update_active":
+      return `将修改约局 (ID: ${((params.id as string) || (params.active_id as string))?.slice(0, 8)}...)`;
+    default:
+      return `将执行 ${action}`;
+  }
+}
+
 // ─── Main executor ───────────────────────────────────────────────────
 
 const ACTION_ALIASES: Record<string, MutateAction> = {
@@ -146,6 +220,7 @@ function normalizeParams(
 export async function executeMutateTool(
   args: MutateArgs,
   context: ToolContext,
+  skipConfirmation = false,
 ): Promise<string> {
   let action = args.action as string;
   if (ACTION_ALIASES[action]) action = ACTION_ALIASES[action];
@@ -171,6 +246,19 @@ export async function executeMutateTool(
   const userId = await resolveUserId(context.env.DB, context.openId);
   if (!userId) {
     return "操作失败: 未找到账号，请先在网站注册";
+  }
+
+  if (!skipConfirmation && DESTRUCTIVE_ACTIONS.has(typedAction)) {
+    const summary = buildConfirmationSummary(typedAction, params);
+    const pending: PendingAction = {
+      action: typedAction,
+      params: params as Record<string, unknown>,
+      description: (args.description as string) || "",
+      summary,
+      createdAt: Date.now(),
+    };
+    await storePendingAction(context.env.KV, context.openId, pending);
+    return `[需要确认] ${summary}\n回复"确认"执行，回复其他内容取消。`;
   }
 
   const env = context.env as MutateEnv;
