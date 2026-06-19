@@ -10,12 +10,12 @@ interface RateLimitBucket {
 }
 
 const LIMITS = {
-  user_2h: { max: 8000, windowMs: 2 * 60 * 60 * 1000 },
-  user_5h: { max: 15000, windowMs: 5 * 60 * 60 * 1000 },
-  user_24h: { max: 30000, windowMs: 24 * 60 * 60 * 1000 },
-  global_2h: { max: 200000, windowMs: 2 * 60 * 60 * 1000 },
-  global_5h: { max: 400000, windowMs: 5 * 60 * 60 * 1000 },
-  global_24h: { max: 800000, windowMs: 24 * 60 * 60 * 1000 },
+  user_2h: { max: 50000, windowMs: 2 * 60 * 60 * 1000 },
+  user_5h: { max: 80000, windowMs: 5 * 60 * 60 * 1000 },
+  user_24h: { max: 150000, windowMs: 24 * 60 * 60 * 1000 },
+  global_2h: { max: 5000000, windowMs: 2 * 60 * 60 * 1000 },
+  global_5h: { max: 15000000, windowMs: 5 * 60 * 60 * 1000 },
+  global_24h: { max: 30000000, windowMs: 24 * 60 * 60 * 1000 },
 } as const;
 
 type LimitKey = keyof typeof LIMITS;
