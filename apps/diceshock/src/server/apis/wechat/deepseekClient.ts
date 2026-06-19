@@ -474,6 +474,41 @@ export async function chatWithAgent(
   }
 
   if (collectedReplies.length === 0) {
+    console.log("[deepseek] no text output after loop, forcing final call");
+    try {
+      messages.push({
+        role: "user",
+        content:
+          "工具调用已结束。请根据以上全部工具返回结果直接回复用户。如果所有查询都失败了，告知用户具体问题并建议解决方式。",
+      });
+      const finalRes = await fetch(`${baseUrl}/chat/completions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "deepseek-v4-flash",
+          messages,
+          max_tokens: 512,
+        }),
+      });
+      if (finalRes.ok) {
+        const finalData = (await finalRes.json()) as DeepSeekResponse;
+        totalTokens += finalData.usage?.total_tokens ?? 0;
+        const finalContent = finalData.choices?.[0]?.message?.content
+          ?.replace("[END]", "")
+          .trim();
+        if (finalContent) {
+          collectedReplies.push(finalContent);
+        }
+      }
+    } catch (e) {
+      console.error("[deepseek] forced final call failed:", e);
+    }
+  }
+
+  if (collectedReplies.length === 0) {
     collectedReplies.push("抱歉，我暂时无法处理这个请求，请稍后再试。");
   }
 
