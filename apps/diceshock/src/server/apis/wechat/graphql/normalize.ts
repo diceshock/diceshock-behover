@@ -35,8 +35,17 @@ const FIELD_ALIASES: Record<string, string> = {
   userId: "user_id",
   isWatching: "is_watching",
   createAt: "create_at",
+  createdAt: "create_at",
   startTime: "start_time",
   endTime: "end_time",
+  maxPlayers: "max_players",
+  planType: "plan_type",
+  startDate: "start_date",
+  endDate: "end_date",
+  updateAt: "update_at",
+  updatedAt: "update_at",
+  sharePhone: "share_phone",
+  customContent: "custom_content",
 };
 
 const TABLE_ALIASES: Record<string, string> = {
@@ -68,9 +77,21 @@ const TABLE_ALIASES: Record<string, string> = {
   events: "eventsTable",
   users: "usersTable",
   userInfo: "userInfoTable",
+  user_info: "userInfoTable",
+  userMembershipPlans: "userMembershipPlansTable",
+  user_membership_plans: "userMembershipPlansTable",
+  membershipPlans: "userMembershipPlansTable",
+  membership_plans: "userMembershipPlansTable",
+  membership: "userMembershipPlansTable",
+  userBusinessCard: "userBusinessCardTable",
+  user_business_card: "userBusinessCardTable",
+  businessCard: "userBusinessCardTable",
   leaderboard: "leaderboardSnapshotsTable",
+  leaderboardSnapshots: "leaderboardSnapshotsTable",
   mahjongMatches: "mahjongMatchesTable",
+  mahjong_matches: "mahjongMatchesTable",
   activeRegistrations: "activeRegistrationsTable",
+  active_registrations: "activeRegistrationsTable",
 };
 
 const ARG_ALIASES: Record<string, string> = {

@@ -50,6 +50,14 @@ const MOCK_BOARD_GAMES = [
   { id: "bg017", sch_name: "1817 (2020)", eng_name: "1817 (2020)", player_num: [3,4,5,6,7], best_player_num: [5], gstone_rating: 7.8, category: ["STRATEGY"], removeDate: 0 },
 ];
 
+const MOCK_MEMBERSHIP_PLANS = [
+  { id: "mp001", user_id: CURRENT_USER_ID, plan_type: "monthly", amount: null, start_date: 1748000000000, end_date: 1750592000000, create_at: 1748000000000 },
+];
+
+const MOCK_USER_INFO = [
+  { id: CURRENT_USER_ID, uid: "DS0042", nickname: "测试用户", phone: "13800138000" },
+];
+
 let mutateLog: Array<{action: string; params: any; description: string}> = [];
 
 function executeQuery(graphql: string): string {
@@ -108,7 +116,21 @@ function executeQuery(graphql: string): string {
     return JSON.stringify({ boardGamesTable: results }) + `\n[_meta: 本次返回${results.length}条]`;
   }
 
-  return `查询错误: 未识别的表名。可用表: boardGamesTable, activesTable, activeRegistrationsTable`;
+  if (n.includes("userMembershipPlansTable") || n.includes("membershipPlans")) {
+    let results = [...MOCK_MEMBERSHIP_PLANS];
+    const uidEq = n.match(/user_id:\s*\{eq:\s*"([^"]+)"\}/);
+    if (uidEq) results = results.filter(m => m.user_id === uidEq[1]);
+    return JSON.stringify({ userMembershipPlansTable: results }) + `\n[_meta: 本次返回${results.length}条]`;
+  }
+
+  if (n.includes("userInfoTable")) {
+    let results = [...MOCK_USER_INFO];
+    const idEq = n.match(/(?:^|[^_])id:\s*\{eq:\s*"([^"]+)"\}/);
+    if (idEq) results = results.filter(u => u.id === idEq[1]);
+    return JSON.stringify({ userInfoTable: results }) + `\n[_meta: 本次返回${results.length}条]`;
+  }
+
+  return `查询错误: 未识别的表名。可用表: boardGamesTable, activesTable, activeRegistrationsTable, userMembershipPlansTable, userInfoTable`;
 }
 
 const ACTION_ALIASES: Record<string, string> = {
@@ -291,6 +313,7 @@ const SCENARIOS: Scenario[] = [
   { name: "约局-退出", input: "我想退出act001那个约局", expect: { mutateAction: "leave_active" } },
   { name: "约局-删除自己的", input: "帮我把我创建的周五卡坦岛约局删了", expect: { mutateAction: "leave_active" } },
   { name: "联合-搜桌游+提方案", input: "帮我搜一下卡坦岛，然后创建一个明天晚上7点的3人约局", expect: { toolsCalled: ["query"], containsText: "光谷天地" } },
+  { name: "会员-查询", input: "查询会员信息", expect: { toolsCalled: ["query"] } },
 ];
 
 async function runAllScenarios() {
