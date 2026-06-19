@@ -1,4 +1,4 @@
-import db from "@lib/db";
+import db, { activeRegistrationsTable, drizzle } from "@lib/db";
 import { executeGraphQL, type GraphQLContext } from "../graphql/index";
 import { normalizeQuery } from "../graphql/normalize";
 import { validateQueryString } from "../graphql/queryValidation";
@@ -52,7 +52,18 @@ export async function executeQueryTool(
     return "查询无返回数据";
   }
 
-  const data = result.data as Record<string, unknown>;
+  let data = result.data as Record<string, unknown>;
+
+  if (data.activesTable && Array.isArray(data.activesTable)) {
+    data = {
+      ...data,
+      activesTable: await filterOrphanedActives(
+        context.env.DB,
+        data.activesTable as Array<Record<string, unknown>>,
+      ),
+    };
+  }
+
   const firstKey = Object.keys(data)[0];
   const value = data[firstKey];
 
@@ -61,11 +72,40 @@ export async function executeQueryTool(
     meta = `\n[_meta: 本次返回${value.length}条]`;
   }
 
-  const json = JSON.stringify(result.data);
+  const json = JSON.stringify(data);
   if (json.length > 4000) {
     const count = Array.isArray(value) ? value.length : "?";
     return `${json.slice(0, 4000)}\n[结果已截断, 共${count}条记录]`;
   }
 
   return json + meta;
+}
+
+async function filterOrphanedActives(
+  d1: D1Database,
+  actives: Array<Record<string, unknown>>,
+): Promise<Array<Record<string, unknown>>> {
+  if (actives.length === 0) return actives;
+
+  const ids = actives.map((a) => a.id as string).filter(Boolean);
+
+  if (ids.length === 0) return actives;
+
+  const d = db(d1);
+  const regs = await d
+    .select({
+      active_id: activeRegistrationsTable.active_id,
+      user_id: activeRegistrationsTable.user_id,
+    })
+    .from(activeRegistrationsTable)
+    .where(drizzle.inArray(activeRegistrationsTable.active_id, ids));
+
+  const creatorRegSet = new Set(regs.map((r) => `${r.active_id}:${r.user_id}`));
+
+  return actives.filter((a) => {
+    const creatorId = a.creator_id as string;
+    const activeId = a.id as string;
+    if (!creatorId || !activeId) return true;
+    return creatorRegSet.has(`${activeId}:${creatorId}`);
+  });
 }

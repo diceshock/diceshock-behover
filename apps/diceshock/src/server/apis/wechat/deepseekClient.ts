@@ -30,6 +30,7 @@ generate_totp - 生成签到码
 - 创建操作: 用户明确给全信息→直接创建; 有推断值(人数/店铺/时间)→先输出方案等确认再创建
 - 能推断的不问("明天下午"=明天14:00)
 - 纯文本回复,禁止markdown,300字内
+- 手机号脱敏用省略号: 155...5699, 禁止用星号(会被系统吃掉)
 
 [目录] 系统按关键词自动注入以下业务知识:
 ${renderDirectory()}`;
@@ -195,7 +196,8 @@ function ensureJsonArray(raw: string): string {
 
 function stripMarkdown(text: string): string {
   return text
-    .replace(/\*\*/g, "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
     .replace(/^#+\s/gm, "")
     .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
     .replace(/`/g, "")
@@ -299,37 +301,53 @@ export async function chatWithAgent(
       messageCount: messages.length,
     });
 
-    let response: Response;
-    try {
-      response = await fetch(`${baseUrl}/chat/completions`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "deepseek-v4-flash",
-          messages,
-          tools: TOOLS,
-          tool_choice: "auto",
-          max_tokens: 1024,
-        }),
-      });
-    } catch (fetchErr) {
-      console.log(`[deepseek] round ${round} fetch error`, {
-        error: String(fetchErr),
-      });
-      break;
+    let response: Response | null = null;
+    const MAX_RETRIES = 2;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        response = await fetch(`${baseUrl}/chat/completions`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "deepseek-v4-flash",
+            messages,
+            tools: TOOLS,
+            tool_choice: "auto",
+            max_tokens: 1024,
+          }),
+        });
+        if (response.ok) break;
+        const errText = await response.text();
+        console.error(
+          `[deepseek] round ${round} attempt ${attempt} API error`,
+          {
+            status: response.status,
+            body: errText.slice(0, 500),
+          },
+        );
+        if (
+          response.status >= 400 &&
+          response.status < 500 &&
+          response.status !== 429
+        )
+          break;
+      } catch (fetchErr) {
+        console.log(
+          `[deepseek] round ${round} attempt ${attempt} fetch error`,
+          {
+            error: String(fetchErr),
+          },
+        );
+      }
+      if (attempt < MAX_RETRIES) {
+        await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+      }
     }
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("[deepseek] API error", {
-        status: response.status,
-        body: errText.slice(0, 500),
-      });
-      break;
-    }
+    if (!response?.ok) break;
 
     const data = (await response.json()) as DeepSeekResponse;
     totalTokens += data.usage?.total_tokens ?? 0;

@@ -54,6 +54,13 @@ const create = protectedProcedure
         is_game: input.is_game,
       })
       .returning();
+
+    await tdb.insert(activeRegistrationsTable).values({
+      active_id: active.id,
+      user_id: ctx.userId,
+      is_watching: false,
+    });
+
     return active;
   });
 
@@ -122,19 +129,25 @@ const list = publicProcedure
       },
     });
 
+    const validActives = actives.filter((a) =>
+      a.registrations.some((r) => r.user_id === a.creator_id),
+    );
+
     const allGameIds = [
-      ...new Set(actives.flatMap((a) => parseBoardGameId(a.board_game_id))),
+      ...new Set(
+        validActives.flatMap((a) => parseBoardGameId(a.board_game_id)),
+      ),
     ];
     const games = await resolveBoardGames(tdb, allGameIds);
     const gameMap = new Map(games.map((g) => [g.id, g]));
 
     let nextCursor: string | undefined;
-    if (actives.length > limit) {
-      const last = actives.pop();
+    if (validActives.length > limit) {
+      const last = validActives.pop();
       nextCursor = last?.id;
     }
 
-    const items = actives.map((a) => ({
+    const items = validActives.map((a) => ({
       ...a,
       boardGames: parseBoardGameId(a.board_game_id)
         .map((id) => gameMap.get(id))
@@ -243,14 +256,32 @@ const leave = protectedProcedure
   .input(z.object({ active_id: z.string() }))
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
-    await tdb
-      .delete(activeRegistrationsTable)
-      .where(
-        drizzle.and(
-          drizzle.eq(activeRegistrationsTable.active_id, input.active_id),
-          drizzle.eq(activeRegistrationsTable.user_id, ctx.userId),
-        ),
-      );
+
+    const active = await tdb.query.activesTable.findFirst({
+      where: (a, { eq }) => eq(a.id, input.active_id),
+      columns: { creator_id: true },
+    });
+
+    if (!active) throw new Error("约局不存在");
+
+    if (active.creator_id === ctx.userId) {
+      await tdb
+        .delete(activeRegistrationsTable)
+        .where(drizzle.eq(activeRegistrationsTable.active_id, input.active_id));
+      await tdb
+        .delete(activesTable)
+        .where(drizzle.eq(activesTable.id, input.active_id));
+    } else {
+      await tdb
+        .delete(activeRegistrationsTable)
+        .where(
+          drizzle.and(
+            drizzle.eq(activeRegistrationsTable.active_id, input.active_id),
+            drizzle.eq(activeRegistrationsTable.user_id, ctx.userId),
+          ),
+        );
+    }
+
     return { success: true };
   });
 
