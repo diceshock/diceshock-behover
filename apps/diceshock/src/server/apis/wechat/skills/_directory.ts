@@ -168,8 +168,12 @@ leave_active: params={activeId} (创建者调用=删除整个约局)
 查名片: { userBusinessCardTable(where: {id: {eq: "当前userId"}}) { id share_phone wechat qq custom_content } }
 
 修改昵称: mutate action=update_profile params={nickname: "新昵称"}
-手机绑定两步: send_sms_code params={phone} → (等用户给码) → verify_phone params={phone,code}
-名片: mutate action=upsert_business_card
+创建/更新名片: mutate action=upsert_business_card params={wechat: "微信号", qq: "QQ号", custom_content: "简介", share_phone: false}
+  - 参数全部可选，只传需要修改的字段
+  - share_phone: true=公开手机号, false=不公开
+手机绑定两步: send_sms_code params={phone: "手机号"} → (等用户给码) → verify_phone params={phone: "手机号", code: "验证码"}
+
+重要: 查看名片/会员必须先调 query 查数据库,不要凭空编造内容
 个人中心: https://diceshock.com/me`,
   },
 

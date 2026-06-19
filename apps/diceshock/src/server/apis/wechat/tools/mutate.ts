@@ -559,19 +559,33 @@ async function handleUpsertBusinessCard(
 ): Promise<string> {
   const d = db(env.DB);
 
+  const sharePhone = (params.share_phone ??
+    params.sharePhone ??
+    params.share) as boolean | undefined;
+  const wechat = (params.wechat ?? params.wechatId ?? params.wx) as
+    | string
+    | undefined;
+  const qq = (params.qq ?? params.QQ) as string | undefined;
+  const customContent = (params.custom_content ??
+    params.customContent ??
+    params.bio ??
+    params.description) as string | undefined;
+
+  if (!wechat && !qq && !customContent && sharePhone === undefined) {
+    return "名片更新失败: 至少提供一项内容(wechat/qq/custom_content/share_phone)";
+  }
+
   const existing = await d
     .select({ id: userBusinessCardTable.id })
     .from(userBusinessCardTable)
     .where(eq(userBusinessCardTable.id, userId))
     .limit(1);
 
-  const data = {
-    share_phone: params.share_phone as boolean | undefined,
-    wechat: params.wechat as string | undefined,
-    qq: params.qq as string | undefined,
-    custom_content: params.custom_content as string | undefined,
-    update_at: new Date(),
-  };
+  const data: Record<string, unknown> = { update_at: new Date() };
+  if (sharePhone !== undefined) data.share_phone = sharePhone;
+  if (wechat !== undefined) data.wechat = wechat;
+  if (qq !== undefined) data.qq = qq;
+  if (customContent !== undefined) data.custom_content = customContent;
 
   if (existing.length > 0) {
     await d
@@ -579,10 +593,19 @@ async function handleUpsertBusinessCard(
       .set(data)
       .where(eq(userBusinessCardTable.id, userId));
   } else {
-    await d.insert(userBusinessCardTable).values({ id: userId, ...data });
+    await d
+      .insert(userBusinessCardTable)
+      .values({ id: userId, ...data } as any);
   }
 
-  return `[通知] 名片${existing.length > 0 ? "更新" : "创建"}成功\n${SITE_LINKS.me()}`;
+  const parts: string[] = [];
+  if (wechat) parts.push(`微信: ${wechat}`);
+  if (qq) parts.push(`QQ: ${qq}`);
+  if (customContent) parts.push(`简介: ${customContent}`);
+  if (sharePhone !== undefined)
+    parts.push(`手机${sharePhone ? "公开" : "不公开"}`);
+
+  return `[通知] 名片${existing.length > 0 ? "更新" : "创建"}成功\n${parts.join(" | ")}\n${SITE_LINKS.me()}`;
 }
 
 async function handleUpdateProfile(
