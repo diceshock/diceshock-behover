@@ -8,7 +8,11 @@ import { matchSkills } from "./skillRouter";
 import { renderDirectory } from "./skills/_directory";
 import { MUTATE_SYNTAX, QUERY_SYNTAX } from "./skills/_syntax";
 import { executeMutateTool } from "./tools/mutate";
-import { executeQueryTool } from "./tools/query";
+import {
+  executeQueryActiveParticipants,
+  executeQueryTool,
+  QUERY_PARTICIPANTS_TOOL_DEFINITION,
+} from "./tools/query";
 import { executeGenerateTotp, TOTP_TOOL_DEFINITION } from "./tools/totp";
 import type { ChatMessage } from "./types";
 
@@ -20,6 +24,7 @@ const BASE_SYSTEM_PROMPT = `骰子奇兵桌游吧微信客服。
 query - ${QUERY_SYNTAX}
 mutate - ${MUTATE_SYNTAX}
 generate_totp - 生成签到码
+query_active_participants - 查约局参与者名片(需active_id,仅创建者/参与者可用)
 
 [执行模式]
 文本输出直接发送给用户。工具调用可与文本同时发出。
@@ -58,6 +63,7 @@ const TOOLS: ToolDefinition[] = [
   QUERY_TOOL_DEFINITION,
   MUTATE_TOOL_DEFINITION,
   TOTP_TOOL_DEFINITION,
+  QUERY_PARTICIPANTS_TOOL_DEFINITION,
 ];
 
 interface ChatWithAgentParams {
@@ -219,6 +225,11 @@ async function executeToolCall(
       return await executeMutateTool(parsedArgs as never, toolContext);
     case "generate_totp":
       return await executeGenerateTotp(parsedArgs, toolContext);
+    case "query_active_participants":
+      return await executeQueryActiveParticipants(
+        parsedArgs as { active_id: string },
+        toolContext,
+      );
     default:
       return `未知工具: ${toolName}`;
   }

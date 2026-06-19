@@ -60,7 +60,12 @@ const NODES: Record<string, SkillNode> = {
 查我的约局: creator_id eq "当前userId"
 没有 delete_active, 删除 = 创建者 leave_active (触发硬确认)
 两家店: 光谷天地 / 街道口, 创建时必须确认
-链接: https://diceshock.com/actives/{id}`,
+链接: https://diceshock.com/actives/{id}
+
+查参与者名片: 调用 query_active_participants(active_id) 工具
+- 仅发起者可调用
+- 返回每人昵称+名片(微信/QQ/手机号等)
+- 用户问"谁加入了"/"参与者联系方式" → 先query找到约局id, 再调此工具`,
     children: ["active.create", "active.join", "active.list"],
   },
 
@@ -90,8 +95,19 @@ const NODES: Record<string, SkillNode> = {
 
   "active.join": {
     id: "active.join",
-    keywords: ["加入", "参加", "报名", "观望", "退出", "删除", "删了"],
-    description: "加入/观望/退出/删除约局",
+    keywords: [
+      "加入",
+      "参加",
+      "报名",
+      "观望",
+      "退出",
+      "删除",
+      "删了",
+      "谁加入",
+      "参与者",
+      "联系方式",
+    ],
+    description: "加入/观望/退出/删除约局 + 查参与者",
     content: () => `join_active: params={activeId}
 watch_active: params={activeId}
 leave_active: params={activeId} (创建者调用=删除整个约局)
@@ -99,7 +115,11 @@ leave_active: params={activeId} (创建者调用=删除整个约局)
 直接调用 mutate 执行! 系统会自动弹出硬确认让用户回复"确认"。
 你不需要在文本里问用户"确定吗", 直接调 leave_active 即可。
 
-批量删除: 先查自己约局(creator_id eq userId), 逐个调 leave_active`,
+批量删除: 先查自己约局(creator_id eq userId), 逐个调 leave_active
+
+查参与者名片: query_active_participants(active_id)
+- 需要先知道约局id(用query查或从上下文获取)
+- 仅发起者可查看`,
   },
 
   "active.list": {
