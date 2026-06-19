@@ -16,7 +16,7 @@ export async function executeQueryTool(
   args: { graphql: string; variables?: Record<string, unknown> },
   context: ToolContext,
 ): Promise<string> {
-  const norm = normalizeQuery(args.graphql);
+  const norm = normalizeQuery(args.graphql, args.variables);
 
   if (norm.errors.length > 0) {
     const errMsg = norm.errors.join("\n");

@@ -35,7 +35,8 @@ const NODES: Record<string, SkillNode> = {
 - 主题/类型 → 用桌游知识联想经典游戏名逐个搜
 - 先搜 sch_name, 再搜 eng_name
 - 搜不到缩短关键词或换同义词
-返回字段: id sch_name eng_name player_num best_player_num gstone_rating category`,
+返回字段: id sch_name eng_name player_num best_player_num gstone_rating category
+回复必须附链接: https://diceshock.com/inventory/{id}`,
   },
 
   "boardgame.recommend": {
@@ -71,11 +72,11 @@ const NODES: Record<string, SkillNode> = {
       () => `必填: title, date(YYYY-MM-DD), startTime(HH:mm), maxPlayers, location(光谷天地/街道口)
 可选: gameId(先搜桌游拿id), description
 
-智能补全流程:
-1. 搜桌游 → 拿 best_player_num 推断人数
-2. 从消息推断时间("明天下午"=明天14:00, "晚上"=19:00)
-3. 缺信息时一次性输出完整方案: 时间/人数/店铺, 让用户一句话确认
-4. 用户已给全部信息 → 直接创建不确认
+补全规则:
+- 用户未指定店铺 → 默认"光谷天地", 直接用, 不追问
+- 搜桌游后用 best_player_num 作为 maxPlayers
+- "明天下午"=明天14:00, "晚上"=19:00, "下午X点"=X:00
+- 能推断的全推断, 直接创建。只有完全无法推断时才追问(一次性列全)
 
 搜桌游返回字段: id sch_name best_player_num player_num
 创建: mutate action=create_active params={title,date,startTime,maxPlayers,location,gameId}`,
@@ -87,9 +88,12 @@ const NODES: Record<string, SkillNode> = {
     description: "加入/观望/退出/删除约局",
     content: () => `join_active: params={activeId}
 watch_active: params={activeId}
-leave_active: params={activeId} (创建者调用=删除整个约局, 触发硬确认)
+leave_active: params={activeId} (创建者调用=删除整个约局)
 
-批量删除: 先查自己约局(creator_id eq userId), 列出让用户选, 逐个 leave_active`,
+直接调用 mutate 执行! 系统会自动弹出硬确认让用户回复"确认"。
+你不需要在文本里问用户"确定吗", 直接调 leave_active 即可。
+
+批量删除: 先查自己约局(creator_id eq userId), 逐个调 leave_active`,
   },
 
   "active.list": {

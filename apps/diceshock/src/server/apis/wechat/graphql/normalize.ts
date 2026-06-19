@@ -9,6 +9,7 @@ import {
   parse,
   print,
   type StringValueNode,
+  type ValueNode,
   validate,
   visit,
 } from "graphql";
@@ -41,9 +42,29 @@ const FIELD_ALIASES: Record<string, string> = {
 const TABLE_ALIASES: Record<string, string> = {
   actives: "activesTable",
   active: "activesTable",
+  activeList: "activesTable",
+  active_list: "activesTable",
+  activities: "activesTable",
   boardGames: "boardGamesTable",
   boardgames: "boardGamesTable",
   board_games: "boardGamesTable",
+  boardgame: "boardGamesTable",
+  boardgame_search: "boardGamesTable",
+  boardgame_recommend: "boardGamesTable",
+  searchBoardGames: "boardGamesTable",
+  searchBoardgame: "boardGamesTable",
+  SearchBoardgame: "boardGamesTable",
+  SearchBoardGame: "boardGamesTable",
+  RecommendBoardGames: "boardGamesTable",
+  RecommendGames: "boardGamesTable",
+  GetBoardGames: "boardGamesTable",
+  GetActives: "activesTable",
+  GetActive: "activesTable",
+  GetActiveDetail: "activesTable",
+  games: "boardGamesTable",
+  PartyGames: "boardGamesTable",
+  BoardGames: "boardGamesTable",
+  SearchGames: "boardGamesTable",
   events: "eventsTable",
   users: "usersTable",
   userInfo: "userInfoTable",
@@ -109,6 +130,30 @@ function wrapLikeValue(op: string, raw: string): string {
   return raw;
 }
 
+function valueToASTNode(val: unknown): ValueNode {
+  if (val === null) return { kind: Kind.NULL };
+  if (typeof val === "string")
+    return { kind: Kind.STRING, value: val } as StringValueNode;
+  if (typeof val === "number") {
+    if (Number.isInteger(val)) return { kind: Kind.INT, value: String(val) };
+    return { kind: Kind.FLOAT, value: String(val) };
+  }
+  if (typeof val === "boolean") return { kind: Kind.BOOLEAN, value: val };
+  if (Array.isArray(val))
+    return { kind: Kind.LIST, values: val.map(valueToASTNode) };
+  if (typeof val === "object" && val !== null) {
+    return {
+      kind: Kind.OBJECT,
+      fields: Object.entries(val).map(([k, v]) => ({
+        kind: Kind.OBJECT_FIELD as const,
+        name: { kind: Kind.NAME as const, value: k },
+        value: valueToASTNode(v),
+      })),
+    };
+  }
+  return { kind: Kind.STRING, value: String(val) } as StringValueNode;
+}
+
 function loc(node: ASTNode): string {
   if (node.loc)
     return `(行${node.loc.startToken.line}:列${node.loc.startToken.column})`;
@@ -117,6 +162,7 @@ function loc(node: ASTNode): string {
 
 export function normalizeQuery(
   source: string,
+  variables?: Record<string, unknown>,
   schema?: GraphQLSchema,
 ): NormalizeResult {
   const result: NormalizeResult = {
@@ -221,8 +267,14 @@ export function normalizeQuery(
 
     Variable: {
       enter(node) {
+        const varName = node.name.value;
+        if (variables && varName in variables) {
+          const val = variables[varName];
+          result.corrections.push(`变量 $${varName} → 内联值`);
+          return valueToASTNode(val);
+        }
         result.errors.push(
-          `发现变量引用 $${node.name.value}${loc(node)}。请直接内联值，不要使用 $变量 语法。`,
+          `发现变量引用 $${varName}${loc(node)}。请直接内联值，不要使用 $变量 语法。`,
         );
         return undefined;
       },
