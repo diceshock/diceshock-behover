@@ -17,7 +17,8 @@ export type MutateAction =
   | "send_sms_code"
   | "verify_phone"
   | "bind_gsz"
-  | "upsert_business_card";
+  | "upsert_business_card"
+  | "update_profile";
 
 // ── Typed params interfaces ───────────────────────────────────────────
 
@@ -79,6 +80,10 @@ export interface UpsertBusinessCardParams {
   tags?: string[];
 }
 
+export interface UpdateProfileParams {
+  nickname?: string;
+}
+
 // ── Discriminated union ──────────────────────────────────────────────
 
 export type MutateArgs =
@@ -126,6 +131,11 @@ export type MutateArgs =
       action: "upsert_business_card";
       params: UpsertBusinessCardParams;
       description: string;
+    }
+  | {
+      action: "update_profile";
+      params: UpdateProfileParams;
+      description: string;
     };
 
 // ── OpenAI function-calling tool definition ──────────────────────────
@@ -140,6 +150,7 @@ export const MUTATE_ACTIONS = [
   "verify_phone",
   "bind_gsz",
   "upsert_business_card",
+  "update_profile",
 ] as const satisfies MutateAction[];
 
 export const MUTATE_TOOL_DEFINITION = {

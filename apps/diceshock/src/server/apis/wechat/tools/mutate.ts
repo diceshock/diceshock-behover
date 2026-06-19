@@ -68,6 +68,7 @@ const REQUIRED_PARAMS: Record<MutateAction, string[]> = {
   verify_phone: ["phone", "code"],
   bind_gsz: [],
   upsert_business_card: [],
+  update_profile: ["nickname"],
 };
 
 function validateParams(
@@ -313,6 +314,12 @@ export async function executeMutateTool(
         );
       case "upsert_business_card":
         return await handleUpsertBusinessCard(
+          env,
+          userId,
+          params as Record<string, unknown>,
+        );
+      case "update_profile":
+        return await handleUpdateProfile(
           env,
           userId,
           params as Record<string, unknown>,
@@ -576,6 +583,25 @@ async function handleUpsertBusinessCard(
   }
 
   return `[通知] 名片${existing.length > 0 ? "更新" : "创建"}成功\n${SITE_LINKS.me()}`;
+}
+
+async function handleUpdateProfile(
+  env: MutateEnv,
+  userId: string,
+  params: Record<string, unknown>,
+): Promise<string> {
+  const nickname = params.nickname as string;
+  if (!nickname || nickname.length > 30) {
+    return "修改失败: 昵称不能为空且不超过30字";
+  }
+
+  const d = db(env.DB);
+  await d
+    .update(userInfoTable)
+    .set({ nickname })
+    .where(eq(userInfoTable.id, userId));
+
+  return `[通知] 昵称已修改为: ${nickname}`;
 }
 
 async function handleSendSmsCode(

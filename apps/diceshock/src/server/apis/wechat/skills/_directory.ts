@@ -148,8 +148,18 @@ leave_active: params={activeId} (创建者调用=删除整个约局)
 
   account: {
     id: "account",
-    keywords: ["会员", "手机", "绑定", "名片", "余额", "储值", "验证码"],
-    description: "会员/手机绑定/名片管理",
+    keywords: [
+      "会员",
+      "手机",
+      "绑定",
+      "名片",
+      "余额",
+      "储值",
+      "验证码",
+      "昵称",
+      "改名",
+    ],
+    description: "会员/手机绑定/名片/昵称管理",
     content:
       () => `${renderSchema(["userMembershipPlansTable", "userInfoTable", "userBusinessCardTable"])}
 
@@ -157,6 +167,7 @@ leave_active: params={activeId} (创建者调用=删除整个约局)
 查用户资料: { userInfoTable(where: {id: {eq: "当前userId"}}) { id uid nickname phone } }
 查名片: { userBusinessCardTable(where: {id: {eq: "当前userId"}}) { id share_phone wechat qq custom_content } }
 
+修改昵称: mutate action=update_profile params={nickname: "新昵称"}
 手机绑定两步: send_sms_code params={phone} → (等用户给码) → verify_phone params={phone,code}
 名片: mutate action=upsert_business_card
 个人中心: https://diceshock.com/me`,
