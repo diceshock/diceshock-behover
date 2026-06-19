@@ -1,25 +1,101 @@
-export const ACTIVE_SKILL_CONTENT = `
-[业务背景]
-骰子奇兵提供约局功能，用户可以创建、加入、观望、退出各种类型的约局。两家店：
-· 光谷天地店（微信: DiceShock）
-· 街道口店（微信: DiceShockJDK）
+export const ACTIVE_INDEX = `[active] 约局查询/创建/加入/退出
+对应表: activesTable + activeRegistrationsTable
 
-[工具使用]
-查询约局使用 query 工具，主要查 activesTable 和 activeRegistrationsTable：
-- 约局列表：query({ graphql: '{ activesTable { id title date startTime maxPlayers currentPlayers location gameId } }' })
-- 约局详情：query({ graphql: '{ activesTable(where: {id: {eq: "约局ID"}}) { id title date startTime endTime maxPlayers currentPlayers location description creatorId } }' })
-- 我的约局：通过关联 activeRegistrationsTable 查询当前用户参与的约局
+[场景词条] 按需加载:
+- active.list     → 查看约局列表
+- active.create   → 创建新约局
+- active.join     → 加入/观望/退出约局
+- active.update   → 修改约局信息
 
-操作约局使用 mutate 工具：
-- 创建：mutate({ action: "create_active", params: { title, date, startTime, maxPlayers, location, description?, gameId?, endTime? } })
-- 加入：mutate({ action: "join_active", params: { activeId: "约局ID" } })
-- 观望：mutate({ action: "watch_active", params: { activeId: "约局ID" } })
-- 退出：mutate({ action: "leave_active", params: { activeId: "约局ID" } })
-- 修改（仅发起者）：mutate({ action: "update_active", params: { activeId: "约局ID", fields: { title?, date?, time?, max_players?, board_game_id? } } })
-
-[行为规则]
-- 用户说查/看/找约局，直接用 query 查询，不要先问要不要查
-- 用户说删除/退出约局，直接用 mutate 的 leave_active
-- 用户说创建/发起约局，收集齐标题+日期+人数后直接调 mutate 的 create_active
-- 回复约局信息时附链接：https://diceshock.com/actives/{id}
+[快速执行] 查最近约局:
+query({ graphql: "{ activesTable(orderBy: {create_at: DESC}, limit: 10) { id title date time maxPlayers creator_id board_game_id } }" })
 `;
+
+export const ACTIVE_LIST = `[active.list] 查看约局列表
+
+[场景A] 查所有最近约局:
+query({ graphql: "{ activesTable(orderBy: {create_at: DESC}, limit: 10) { id title date time maxPlayers creator_id board_game_id } }" })
+
+[场景B] 查某天的约局（把 DATE 替换为 YYYY-MM-DD）:
+query({ graphql: "{ activesTable(where: {date: {eq: \\"DATE\\"}}, limit: 10) { id title date time maxPlayers creator_id } }" })
+
+[场景C] 查某约局的报名情况（把 AID 替换为约局id）:
+query({ graphql: "{ activeRegistrationsTable(where: {active_id: {eq: \\"AID\\"}}) { id user_id is_watching create_at } }" })
+
+[回复模板]
+最近有X个约局:
+1. 标题 - 日期 时间，X人局
+...
+详情: https://diceshock.com/actives/{id}
+`;
+
+export const ACTIVE_CREATE = `[active.create] 创建新约局
+
+[所需信息] 创建前必须收集齐:
+- title: 约局标题（必填）
+- date: 日期 YYYY-MM-DD（必填）
+- startTime: 开始时间 HH:mm（必填）
+- maxPlayers: 最大人数（必填）
+- location: 店铺名（可选，光谷天地 或 街道口）
+- gameId: 关联桌游id（可选，先搜桌游获取id）
+- description: 描述（可选）
+
+[执行] 把大写占位符替换为实际值:
+mutate({ action: "create_active", params: { title: "TITLE", date: "DATE", startTime: "TIME", maxPlayers: NUM, location: "LOCATION" }, description: "创建约局" })
+
+[带桌游关联]
+mutate({ action: "create_active", params: { title: "TITLE", date: "DATE", startTime: "TIME", maxPlayers: NUM, location: "LOCATION", gameId: "GAME_ID" }, description: "创建桌游约局" })
+
+[回复模板]
+约局已创建! 标题: XXX，日期: YYYY-MM-DD HH:mm，X人局
+https://diceshock.com/actives/{id}
+
+[联合场景: 搜桌游+创建约局] 需要2次工具:
+1. query 搜桌游获取 id → boardgame.search
+2. mutate 创建约局带 gameId
+`;
+
+export const ACTIVE_JOIN = `[active.join] 加入/观望/退出/删除约局
+
+[删除约局] 系统没有 delete_active 操作。删除约局的方式是创建者调用 leave_active。
+mutate({ action: "leave_active", params: { activeId: "AID" }, description: "删除约局" })
+
+[加入约局]
+mutate({ action: "join_active", params: { activeId: "AID" }, description: "加入约局" })
+
+[观望约局]
+mutate({ action: "watch_active", params: { activeId: "AID" }, description: "观望约局" })
+
+[退出约局]
+mutate({ action: "leave_active", params: { activeId: "AID" }, description: "退出约局" })
+
+[查自己创建的约局再删除] 需要2轮:
+第1轮: query({ graphql: "{ activesTable(where: {creator_id: {eq: \\"USER_ID\\"}}, limit: 10) { id title date } }" })
+第2轮: mutate({ action: "leave_active", params: { activeId: "查到的ID" }, description: "删除约局" })
+
+[查约局再加入] 需要2轮:
+第1轮: query({ graphql: "{ activesTable(orderBy: {create_at: DESC}, limit: 10) { id title date time maxPlayers } }" })
+第2轮: mutate({ action: "join_active", params: { activeId: "选中的ID" }, description: "加入约局" })
+`;
+
+export const ACTIVE_UPDATE = `[active.update] 修改约局信息（仅创建者）
+
+[执行] 把 AID 和需要改的字段替换:
+mutate({ action: "update_active", params: { activeId: "AID", fields: { title: "新标题" } }, description: "修改约局标题" })
+
+[可修改字段]
+- title: 标题
+- date: 日期
+- time: 时间
+- max_players: 人数上限
+- board_game_id: 关联桌游
+
+[修改多个字段]
+mutate({ action: "update_active", params: { activeId: "AID", fields: { title: "新标题", date: "2025-01-25", max_players: 6 } }, description: "修改约局" })
+
+[注意] 只有创建者能修改，非创建者会返回权限错误
+`;
+
+export const ACTIVE_SCHEMA = ACTIVE_INDEX;
+export const ACTIVE_MUTATE = ACTIVE_INDEX;
+export const ACTIVE_RULES = ACTIVE_INDEX;

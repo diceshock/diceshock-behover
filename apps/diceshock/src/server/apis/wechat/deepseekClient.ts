@@ -4,44 +4,45 @@ import type { HonoCtxEnv } from "@/shared/types";
 import { MUTATE_TOOL_DEFINITION } from "./graphql/mutateActions";
 import { QUERY_TOOL_DEFINITION } from "./graphql/queryValidation";
 import { sendStatusMessage } from "./messagePipeline";
-import {
-  executeLoadSkillTool,
-  LOAD_SKILL_TOOL_DEFINITION,
-} from "./tools/loadSkill";
+import { matchSkills } from "./skillRouter";
 import { executeMutateTool } from "./tools/mutate";
 import { executeQueryTool } from "./tools/query";
 import { executeGenerateTotp, TOTP_TOOL_DEFINITION } from "./tools/totp";
 import type { ChatMessage } from "./types";
 
-const FINAL_CALL_TIMEOUT_MS = 15_000;
-const MAX_TOOL_CALLS = 10;
+const MAX_TOOL_CALLS = 3;
 
-const BASE_SYSTEM_PROMPT = `你是 Diceshock 桌游吧的AI助手，已接入店铺完整业务系统。
+const BASE_SYSTEM_PROMPT = `你是骰子奇兵桌游吧的微信客服。你能查询库存、约局、战绩，也能帮用户创建约局、绑定手机等。
 
-你有且只有四个工具：
-- query：执行 GraphQL 查询，用于查询桌游库存、约局、日麻战绩、会员资料等数据；可先用 introspection 发现 schema。
-- mutate：执行创建约局、参加约局、退出约局、绑定手机号、绑定公式战、更新名片等写操作。
-- load_skill：按需加载业务技能说明。遇到具体业务问题时，先加载最相关技能再查询或操作。
-- generate_totp：生成活动签到验证码。
+[工具]
+query  - 读数据库。参数 graphql: 查询字符串。
+mutate - 写数据库。参数 action + params + description。
+generate_totp - 生成签到码。无参数。
 
-技能目录：
-- boardgame：桌游库存查询、推荐、详情
-- active：约局创建、参加、查看
-- mahjong：日麻数据、PP排行、战绩查询
-- account：会员状态、手机绑定、名片管理
-- event：赛事活动公告查询
-- general：店铺信息、营业时间、服务价格
-- trpg：TRPG跑团服务
-- clocktower：血染钟楼服务
+[预算]
+${MAX_TOOL_CALLS} 轮。同一轮内多个并行调用只算 1 轮。
+注入的业务知识已包含完整答案时（地址、价格等），0 轮直接回复。
 
-重要规则：
-- 用户询问店铺业务、库存、活动、战绩或账号信息时，主动调用工具，不要声称无法操作。
-- 每轮对话最多调用${MAX_TOOL_CALLS}次工具。用完后必须根据已有信息回复用户。
-- 输出必须是 JSON 数组，格式：[{"type":"text","content":"回复内容"}]
-- 微信聊天不支持 Markdown，禁止使用 **、#、[链接](url)、反引号等格式。
-- 用中文回答，语气友好自然，控制在300字以内。
-- 工具返回的完整 URL 可以直接贴出。
-- 只有工具返回 [通知] 开头的结果才代表操作成功，绝不能虚构操作已完成。`;
+[查询语法]
+query 接受的字符串格式：
+{ 表名(where: {字段: {操作符: 值}}, orderBy: {字段: DESC}, limit: 数字) { 返回字段 } }
+
+操作符：eq ne gt gte lt lte like ilike notLike notIlike inArray notInArray isNull isNotNull
+组合：同层多字段 = AND。OR 用 {OR: [{条件1}, {条件2}]}。
+模式：ilike "%词%" = 包含，"词%" = 开头，"%词" = 结尾。
+
+示例：
+{ boardGamesTable(where: {sch_name: {ilike: "%卡坦%"}}, limit: 10) { id sch_name eng_name player_num gstone_rating category } }
+{ activesTable(where: {creator_id: {eq: "uid"}}, limit: 10) { id title date time } }
+
+字段名和表名严格按下方注入的业务知识中的写法。不要猜测、不要用下划线前缀操作符、不要用 GraphQL variables 语法。
+
+[输出]
+固定 JSON：[{"type":"text","content":"你的回复"}]
+微信纯文本，禁止 ** # \` [](url)。链接直接写 URL。300字内。
+
+示例：
+[{"type":"text","content":"找到了！卡坦岛（Catan），评分7.1，适合3-4人。\\n详情：https://diceshock.com/inventory/bg001"}]`;
 
 type ToolDefinition = {
   type: "function";
@@ -65,7 +66,6 @@ type ToolContext = {
 const TOOLS: ToolDefinition[] = [
   QUERY_TOOL_DEFINITION,
   MUTATE_TOOL_DEFINITION,
-  LOAD_SKILL_TOOL_DEFINITION,
   TOTP_TOOL_DEFINITION,
 ];
 
@@ -155,17 +155,24 @@ async function resolveUserId(
   return silent.length > 0 ? silent[0].userId : null;
 }
 
-function getToolStatusMessage(toolName: string): string | null {
-  switch (toolName) {
-    case "query":
-      return "正在查询数据...";
-    case "mutate":
-      return "正在执行操作...";
-    case "generate_totp":
-      return "正在生成验证码...";
-    default:
-      return null;
-  }
+function getToolStatusMessage(_toolName: string): string | null {
+  return null;
+}
+
+function ensureJsonArray(raw: string): string {
+  if (!raw.trim())
+    return '[{"type":"text","content":"抱歉，我暂时无法回答这个问题。"}]';
+  const trimmed = raw.trim();
+  if (trimmed.startsWith("[") && trimmed.includes('"type"')) return trimmed;
+  const content = trimmed
+    .replace(/\*\*/g, "")
+    .replace(/^#+\s/gm, "")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/`/g, "")
+    .replace(/---/g, "")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, "\\n");
+  return `[{"type":"text","content":"${content}"}]`;
 }
 
 async function executeToolCall(
@@ -181,11 +188,6 @@ async function executeToolCall(
       );
     case "mutate":
       return await executeMutateTool(parsedArgs as never, toolContext);
-    case "load_skill":
-      return await executeLoadSkillTool(
-        parsedArgs as { skill: string },
-        toolContext,
-      );
     case "generate_totp":
       return await executeGenerateTotp(parsedArgs, toolContext);
     default:
@@ -215,6 +217,12 @@ export async function chatWithAgent(
     : "https://api.deepseek.com/v1";
 
   let systemContent = BASE_SYSTEM_PROMPT;
+
+  const skillContent = matchSkills(params.userMessage);
+  if (skillContent) {
+    systemContent += `\n\n[已注入业务知识]\n${skillContent}`;
+  }
+
   if (params.skill?.systemPrompt) {
     systemContent += `\n\n${params.skill.systemPrompt}`;
   }
@@ -222,7 +230,7 @@ export async function chatWithAgent(
     systemContent += `\n\n${params.memory}`;
   }
   if (params.ragContext) {
-    systemContent += `\n\n相关知识库内容：\n${params.ragContext}`;
+    systemContent += `\n\n${params.ragContext}`;
   }
 
   const messages: DeepSeekMessage[] = [
@@ -238,23 +246,48 @@ export async function chatWithAgent(
   const toolContext = await buildToolContext(c, params.openId);
 
   let totalToolCalls = 0;
+  let round = 0;
+  const loopStart = Date.now();
+
+  console.log("[deepseek] start", {
+    openId: params.openId,
+    userMessage: params.userMessage,
+  });
 
   for (;;) {
+    round++;
+    const elapsed = Date.now() - loopStart;
     const hasToolBudget = totalToolCalls < MAX_TOOL_CALLS;
 
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "deepseek-v4-flash",
-        messages,
-        ...(hasToolBudget ? { tools: TOOLS, tool_choice: "auto" } : {}),
-        max_tokens: 1024,
-      }),
+    console.log(`[deepseek] round ${round}`, {
+      hasToolBudget,
+      totalToolCalls,
+      messageCount: messages.length,
+      elapsedMs: elapsed,
     });
+
+    let response: Response;
+    try {
+      response = await fetch(`${baseUrl}/chat/completions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "deepseek-v4-flash",
+          messages,
+          ...(hasToolBudget ? { tools: TOOLS, tool_choice: "auto" } : {}),
+          max_tokens: 1024,
+        }),
+      });
+    } catch (fetchErr) {
+      console.log(
+        `[deepseek] round ${round} fetch error after ${Date.now() - loopStart}ms`,
+        { error: String(fetchErr) },
+      );
+      break;
+    }
 
     if (!response.ok) {
       const errText = await response.text();
@@ -274,6 +307,7 @@ export async function chatWithAgent(
 
     const choice = data.choices?.[0];
     if (!choice) {
+      console.error("[deepseek] no choice in response");
       return {
         rawOutput: '[{"type":"text","content":"AI 返回异常，请稍后再试"}]',
         tokensUsed: totalTokens,
@@ -282,13 +316,29 @@ export async function chatWithAgent(
 
     const assistantMsg = choice.message;
     if (!assistantMsg.tool_calls?.length) {
+      const raw = assistantMsg.content || "";
+      console.log(`[deepseek] round ${round} FINAL TEXT`, { content: raw });
       return {
-        rawOutput:
-          assistantMsg.content ||
-          '[{"type":"text","content":"抱歉，我无法回答这个问题"}]',
+        rawOutput: ensureJsonArray(raw),
         tokensUsed: totalTokens,
       };
     }
+
+    if (assistantMsg.content) {
+      console.log(`[deepseek] round ${round} thinking`, {
+        content: assistantMsg.content,
+      });
+    }
+
+    console.log(
+      `[deepseek] round ${round} tool_calls`,
+      JSON.stringify(
+        assistantMsg.tool_calls.map((tc) => ({
+          name: tc.function.name,
+          args: tc.function.arguments,
+        })),
+      ),
+    );
 
     messages.push({
       role: "assistant",
@@ -296,15 +346,20 @@ export async function chatWithAgent(
       tool_calls: assistantMsg.tool_calls,
     });
 
+    let roundCounted = false;
     for (const toolCall of assistantMsg.tool_calls) {
-      totalToolCalls++;
+      const isSkillLoad = toolCall.function.name === "load_skill";
+      if (!isSkillLoad && !roundCounted) {
+        totalToolCalls++;
+        roundCounted = true;
+      }
+      const remaining = MAX_TOOL_CALLS - totalToolCalls;
 
-      if (totalToolCalls > MAX_TOOL_CALLS) {
+      if (!isSkillLoad && totalToolCalls > MAX_TOOL_CALLS) {
+        console.log(`[deepseek] budget exhausted at round ${round}`);
         messages.push({
           role: "tool",
-          content: JSON.stringify({
-            error: "工具调用次数已用完，请根据已有信息直接回复用户",
-          }),
+          content: `[错误]调用次数已用完。请立即根据已有数据回复用户。`,
           tool_call_id: toolCall.id,
         });
         continue;
@@ -315,36 +370,79 @@ export async function chatWithAgent(
         sendStatusMessage(env, params.openId, statusMessage).catch(() => {});
       }
 
-      const args = JSON.parse(toolCall.function.arguments || "{}");
-      const result = await executeToolCall(
-        toolCall.function.name,
-        args,
-        toolContext,
-      );
-      messages.push({
-        role: "tool",
-        content: result,
-        tool_call_id: toolCall.id,
+      let args: Record<string, unknown>;
+      try {
+        args = JSON.parse(toolCall.function.arguments || "{}");
+      } catch (parseErr) {
+        console.error(`[deepseek] tool args parse failed`, {
+          name: toolCall.function.name,
+          raw: toolCall.function.arguments.slice(0, 200),
+        });
+        messages.push({
+          role: "tool",
+          content: `参数解析失败[剩余调用:${remaining}]`,
+          tool_call_id: toolCall.id,
+        });
+        continue;
+      }
+
+      console.log(`[deepseek] exec tool #${totalToolCalls}`, {
+        name: toolCall.function.name,
+        args: JSON.stringify(args),
       });
+      const t0 = Date.now();
+
+      try {
+        const result = await executeToolCall(
+          toolCall.function.name,
+          args,
+          toolContext,
+        );
+        const suffix =
+          remaining <= 3
+            ? `[剩余调用:${remaining}/${MAX_TOOL_CALLS}。数据足够时请直接回复]`
+            : `[剩余:${remaining}]`;
+        console.log(`[deepseek] tool #${totalToolCalls} result`, {
+          name: toolCall.function.name,
+          ms: Date.now() - t0,
+          result,
+        });
+        messages.push({
+          role: "tool",
+          content: result + suffix,
+          tool_call_id: toolCall.id,
+        });
+      } catch (toolErr) {
+        console.error(`[deepseek] tool #${totalToolCalls} threw`, {
+          name: toolCall.function.name,
+          error: String(toolErr),
+        });
+        messages.push({
+          role: "tool",
+          content: `工具执行错误: ${String(toolErr).slice(0, 200)}[剩余:${remaining}]`,
+          tool_call_id: toolCall.id,
+        });
+      }
     }
 
-    if (totalToolCalls >= MAX_TOOL_CALLS) break;
+    if (totalToolCalls >= MAX_TOOL_CALLS) {
+      console.log(
+        "[deepseek] budget reached, forcing final round without tools",
+      );
+      break;
+    }
   }
-
-  const toolResults = messages
-    .filter((m) => m.role === "tool")
-    .map((m) => m.content);
 
   messages.push({
     role: "user",
     content:
-      '请根据以上工具返回的信息，直接用JSON数组格式回复用户。不要再调用工具。格式示例：[{"type":"text","content":"回复内容"}]',
+      '工具调用结束。请根据以上全部工具返回的数据，直接回复用户。格式：[{"type":"text","content":"你的回复"}]',
   });
 
   console.log("[deepseek] final call", {
     messageCount: messages.length,
-    toolResultCount: toolResults.length,
     totalToolCalls,
+    totalTokens,
   });
 
   try {
@@ -360,7 +458,6 @@ export async function chatWithAgent(
         tool_choice: "none",
         max_tokens: 1024,
       }),
-      signal: AbortSignal.timeout(FINAL_CALL_TIMEOUT_MS),
     });
 
     if (finalResponse.ok) {
@@ -368,17 +465,35 @@ export async function chatWithAgent(
       totalTokens += finalData.usage?.total_tokens ?? 0;
       const finalChoice = finalData.choices?.[0]?.message;
       if (finalChoice?.content) {
-        return { rawOutput: finalChoice.content, tokensUsed: totalTokens };
+        console.log("[deepseek] final call success", {
+          contentLen: finalChoice.content.length,
+          totalTokens,
+        });
+        return {
+          rawOutput: ensureJsonArray(finalChoice.content),
+          tokensUsed: totalTokens,
+        };
       }
+      console.error("[deepseek] final call empty content", {
+        choices: JSON.stringify(finalData.choices).slice(0, 200),
+      });
     } else {
+      const errBody = await finalResponse.text();
       console.error("[deepseek] final call failed", {
         status: finalResponse.status,
+        body: errBody.slice(0, 300),
       });
     }
   } catch (e) {
     console.error("[deepseek] final call timeout/error", { error: String(e) });
   }
 
+  const toolResults = messages
+    .filter((m) => m.role === "tool")
+    .map((m) => m.content);
+  console.log("[deepseek] using synthesize fallback", {
+    toolResultCount: toolResults.length,
+  });
   return {
     rawOutput: synthesizeFromToolResults(toolResults),
     tokensUsed: totalTokens,

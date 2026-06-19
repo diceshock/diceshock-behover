@@ -147,21 +147,24 @@ export const MUTATE_TOOL_DEFINITION = {
   function: {
     name: "mutate",
     description:
-      "执行数据修改操作。action 指定操作类型，params 提供参数，description 描述本次操作（给用户看）。",
+      "写数据库。action必须是枚举值之一。没有delete操作,删除约局=创建者调leave_active。create_active需要title/date/startTime/maxPlayers。join/watch/leave_active需要activeId。",
     parameters: {
       type: "object",
       properties: {
         action: {
           type: "string",
           enum: MUTATE_ACTIONS,
+          description:
+            "create_active/join_active/watch_active/leave_active(也用于删除)/update_active/send_sms_code/verify_phone/bind_gsz/upsert_business_card",
         },
         params: {
           type: "object",
-          description: "操作参数，根据 action 类型不同而不同",
+          description:
+            "create_active:{title,date,startTime,maxPlayers,location?,gameId?} join/watch/leave_active:{activeId} update_active:{activeId,fields:{...}}",
         },
         description: {
           type: "string",
-          description: "本次操作的自然语言描述",
+          description: "操作描述",
         },
       },
       required: ["action", "params", "description"],

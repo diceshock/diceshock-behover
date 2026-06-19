@@ -90,17 +90,69 @@ function validateParams(
 
 // ─── Main executor ───────────────────────────────────────────────────
 
+const ACTION_ALIASES: Record<string, MutateAction> = {
+  delete_active: "leave_active",
+  cancel_active: "leave_active",
+  remove_active: "leave_active",
+  quit_active: "leave_active",
+  exit_active: "leave_active",
+};
+
+function normalizeParams(
+  action: MutateAction,
+  raw: Record<string, unknown>,
+): Record<string, unknown> {
+  const p = { ...raw };
+  if (p.activeId && !p.active_id) {
+    p.active_id = p.activeId;
+    delete p.activeId;
+  }
+  if (
+    p.id &&
+    !p.active_id &&
+    (action === "leave_active" ||
+      action === "join_active" ||
+      action === "watch_active" ||
+      action === "update_active")
+  ) {
+    p.active_id = p.id;
+    delete p.id;
+  }
+  if (p.maxPlayers && !p.max_players) {
+    p.max_players = p.maxPlayers;
+    delete p.maxPlayers;
+  }
+  if (p.startTime && !p.start_time) {
+    p.start_time = p.startTime;
+    delete p.startTime;
+  }
+  if (p.gameId && !p.board_game_id) {
+    p.board_game_id = p.gameId;
+    delete p.gameId;
+  }
+  if (p.boardGameId && !p.board_game_id) {
+    p.board_game_id = p.boardGameId;
+    delete p.boardGameId;
+  }
+  return p;
+}
+
 export async function executeMutateTool(
   args: MutateArgs,
   context: ToolContext,
 ): Promise<string> {
-  const { action, params, description: _description } = args;
+  let action = args.action as string;
+  if (ACTION_ALIASES[action]) action = ACTION_ALIASES[action];
 
   if (!(MUTATE_ACTIONS as readonly string[]).includes(action)) {
     return `无效操作: ${action}。有效操作: ${MUTATE_ACTIONS.join(", ")}`;
   }
 
   const typedAction = action as MutateAction;
+  const params = normalizeParams(
+    typedAction,
+    args.params as Record<string, unknown>,
+  );
 
   const missingKey = validateParams(
     typedAction,

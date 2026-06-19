@@ -51,11 +51,29 @@ async function processMessage(
   content: string,
 ): Promise<void> {
   const env = c.env as any;
+  const t0 = Date.now();
+  const tag = openId.slice(-6);
 
   try {
+    console.log(`[pipeline:${tag}] start`, { content: content.slice(0, 50) });
+
     const history = await getRecentHistory(c, openId);
+    console.log(`[pipeline:${tag}] history loaded`, {
+      count: history.length,
+      ms: Date.now() - t0,
+    });
+
     const memory = await searchMemory(env, openId, content);
+    console.log(`[pipeline:${tag}] memory searched`, {
+      found: !!memory,
+      ms: Date.now() - t0,
+    });
+
     const ragContext = await searchKnowledgeBase(c, content);
+    console.log(`[pipeline:${tag}] rag done`, {
+      found: !!ragContext,
+      ms: Date.now() - t0,
+    });
 
     const { rawOutput, tokensUsed } = await chatWithAgent(c, {
       userMessage: content,
@@ -65,11 +83,21 @@ async function processMessage(
       memory,
     });
 
+    console.log(`[pipeline:${tag}] agent done`, {
+      tokensUsed,
+      rawOutputLen: rawOutput.length,
+      ms: Date.now() - t0,
+    });
+
     if (tokensUsed > 0) {
       await recordTokenUsage(c, openId, tokensUsed);
     }
 
     const messages = parseAgentOutput(rawOutput);
+    console.log(`[pipeline:${tag}] parsed`, {
+      messageCount: messages.length,
+      types: messages.map((m) => m.type),
+    });
 
     if (messages.length === 0) {
       messages.push({
@@ -79,6 +107,7 @@ async function processMessage(
     }
 
     await dispatchMessages(env, openId, messages);
+    console.log(`[pipeline:${tag}] dispatched`, { ms: Date.now() - t0 });
 
     await saveMessage(c, openId, "user", content, "{}");
     await saveMessage(c, openId, "assistant", rawOutput, "{}");
@@ -87,8 +116,13 @@ async function processMessage(
       { role: "user", content },
       { role: "assistant", content: rawOutput },
     ]).catch(() => {});
+
+    console.log(`[pipeline:${tag}] complete`, { totalMs: Date.now() - t0 });
   } catch (e) {
-    console.error("[wechat:process] pipeline error:", e);
+    console.error(`[pipeline:${tag}] error`, {
+      error: String(e),
+      ms: Date.now() - t0,
+    });
     try {
       await sendCustomerTextMessage(env, openId, ERROR_MESSAGES.AI_UNAVAILABLE);
     } catch {}

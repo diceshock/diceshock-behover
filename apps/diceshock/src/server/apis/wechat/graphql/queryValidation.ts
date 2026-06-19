@@ -33,12 +33,15 @@ export const QUERY_TOOL_DEFINITION = {
   function: {
     name: "query",
     description:
-      "执行 GraphQL 查询。支持 introspection (__schema, __type) 进行 schema 发现。使用 variables 传递动态值。",
+      '读数据库。graphql 参数格式: { 表名(where: {字段: {操作符: 值}}, limit: N) { 返回字段 } }。操作符: eq/ne/gte/lte/ilike/inArray/isNull。ilike用%通配: ilike "%词%"=包含。不要用 _eq/_contains/filter/variables 语法。',
     parameters: {
       type: "object",
       properties: {
-        graphql: { type: "string", description: "GraphQL 查询字符串" },
-        variables: { type: "object", description: "查询变量（可选）" },
+        graphql: {
+          type: "string",
+          description:
+            'GraphQL查询。示例: { boardGamesTable(where: {sch_name: {ilike: "%卡坦%"}}, limit: 10) { id sch_name gstone_rating } }',
+        },
       },
       required: ["graphql"],
     },
