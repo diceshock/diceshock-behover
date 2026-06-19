@@ -58,6 +58,10 @@ const MOCK_USER_INFO = [
   { id: CURRENT_USER_ID, uid: "DS0042", nickname: "测试用户", phone: "13800138000" },
 ];
 
+const MOCK_BUSINESS_CARDS = [
+  { id: CURRENT_USER_ID, share_phone: true, wechat: "test_wx_001", qq: "12345678", custom_content: "桌游爱好者，最爱18XX" },
+];
+
 let mutateLog: Array<{action: string; params: any; description: string}> = [];
 
 function executeQuery(graphql: string): string {
@@ -130,7 +134,14 @@ function executeQuery(graphql: string): string {
     return JSON.stringify({ userInfoTable: results }) + `\n[_meta: 本次返回${results.length}条]`;
   }
 
-  return `查询错误: 未识别的表名。可用表: boardGamesTable, activesTable, activeRegistrationsTable, userMembershipPlansTable, userInfoTable`;
+  if (n.includes("userBusinessCardTable") || n.includes("businessCard")) {
+    let results = [...MOCK_BUSINESS_CARDS];
+    const idEq = n.match(/(?:^|[^_])id:\s*\{eq:\s*"([^"]+)"\}/);
+    if (idEq) results = results.filter(c => c.id === idEq[1]);
+    return JSON.stringify({ userBusinessCardTable: results }) + `\n[_meta: 本次返回${results.length}条]`;
+  }
+
+  return `查询错误: 未识别的表名。可用表: boardGamesTable, activesTable, activeRegistrationsTable, userMembershipPlansTable, userInfoTable, userBusinessCardTable`;
 }
 
 const ACTION_ALIASES: Record<string, string> = {
@@ -163,8 +174,10 @@ function executeMutate(action: string, params: any, description: string): string
       return `[通知] 公式站账号 ${params.gszId} 绑定成功`;
     case "upsert_business_card":
       return `[通知] 名片已更新`;
+    case "update_profile":
+      return `[通知] 昵称已修改为: ${params.nickname}`;
     default:
-      return `错误: 未知操作 ${action}。有效: create_active/join_active/watch_active/leave_active/update_active/send_sms_code/verify_phone/bind_gsz/upsert_business_card`;
+      return `错误: 未知操作 ${action}。有效: create_active/join_active/watch_active/leave_active/update_active/send_sms_code/verify_phone/bind_gsz/upsert_business_card/update_profile`;
   }
 }
 
@@ -314,6 +327,8 @@ const SCENARIOS: Scenario[] = [
   { name: "约局-删除自己的", input: "帮我把我创建的周五卡坦岛约局删了", expect: { mutateAction: "leave_active" } },
   { name: "联合-搜桌游+提方案", input: "帮我搜一下卡坦岛，然后创建一个明天晚上7点的3人约局", expect: { toolsCalled: ["query"], containsText: "光谷天地" } },
   { name: "会员-查询", input: "查询我的会员信息", expect: { toolsCalled: ["query"] } },
+  { name: "名片-查询", input: "查看我的名片", expect: { toolsCalled: ["query"], containsText: "test_wx_001" } },
+  { name: "昵称-修改", input: "修改我的昵称到 孤独摇滚第二季制作决定", expect: { mutateAction: "update_profile" } },
 ];
 
 async function runAllScenarios() {
