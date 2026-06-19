@@ -14,8 +14,6 @@ const LIMITS = {
   user_5h: { max: 80000, windowMs: 5 * 60 * 60 * 1000 },
   user_24h: { max: 150000, windowMs: 24 * 60 * 60 * 1000 },
   global_2h: { max: 5000000, windowMs: 2 * 60 * 60 * 1000 },
-  global_5h: { max: 15000000, windowMs: 5 * 60 * 60 * 1000 },
-  global_24h: { max: 30000000, windowMs: 24 * 60 * 60 * 1000 },
 } as const;
 
 type LimitKey = keyof typeof LIMITS;
@@ -37,6 +35,14 @@ function isWindowExpired(bucket: RateLimitBucket, windowMs: number): boolean {
   return Date.now() - bucket.updatedAt > windowMs;
 }
 
+function formatRemaining(startedAt: number, windowMs: number): string {
+  const remainMs = windowMs - (Date.now() - startedAt);
+  if (remainMs <= 0) return "1分钟";
+  const mins = Math.ceil(remainMs / 60000);
+  if (mins >= 60) return `${Math.ceil(mins / 60)}小时`;
+  return `${mins}分钟`;
+}
+
 export async function checkRateLimit(
   c: Context<HonoCtxEnv>,
   openId: string,
@@ -54,8 +60,6 @@ export async function checkRateLimit(
     { key: kvKey(openId, "5h"), limitKey: "user_5h" },
     { key: kvKey(openId, "24h"), limitKey: "user_24h" },
     { key: kvKey("global", "2h"), limitKey: "global_2h" },
-    { key: kvKey("global", "5h"), limitKey: "global_5h" },
-    { key: kvKey("global", "24h"), limitKey: "global_24h" },
   ];
 
   for (const { key, limitKey } of checks) {
@@ -71,7 +75,10 @@ export async function checkRateLimit(
         tokens: bucket.tokens,
         max: limit.max,
       });
-      return { allowed: false, reason: "服务繁忙，稍后再试" };
+      const reason = limitKey.startsWith("global")
+        ? "系统繁忙，请稍后再试"
+        : `额度用尽，${formatRemaining(bucket.updatedAt, limit.windowMs)}后再来~`;
+      return { allowed: false, reason };
     }
   }
 
@@ -94,8 +101,6 @@ export async function recordTokenUsage(
       { scope: openId, window: "5h", limitKey: "user_5h" },
       { scope: openId, window: "24h", limitKey: "user_24h" },
       { scope: "global", window: "2h", limitKey: "global_2h" },
-      { scope: "global", window: "5h", limitKey: "global_5h" },
-      { scope: "global", window: "24h", limitKey: "global_24h" },
     ];
 
   await Promise.all(
