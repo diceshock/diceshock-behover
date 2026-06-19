@@ -254,6 +254,8 @@ export default function useSmsCode({
       instance.show();
     } else {
       // captcha SDK 未加载成功，直接发送短信（服务端 captchaDisabled 机制兜底）
+      // 重置标志位，防止 SDK 初始化完成后的自动静默验证回调再次发送短信
+      userRequestedRef.current = false;
       try {
         const result = await trpcClientPublic.auth.smsCode.mutate({
           botcheck: null,

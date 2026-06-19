@@ -42,12 +42,12 @@ export { SocketDO } from "./server/durableObjects/SocketDO";
 export const app = new Hono<{ Bindings: HonoCtxEnv }>();
 
 app.use(requestEndpoint);
+app.use(aliyunInj);
 
 app.get("/wechat", wechatVerify);
 app.post("/wechat", wechatMessage);
 app.post("/wechat/menu", wechatCreateMenu);
 
-app.use(aliyunInj);
 app.use(authInit);
 
 app.use(serverMetaInj);
