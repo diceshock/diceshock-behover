@@ -40,19 +40,22 @@ export const ACTIVE_CREATE = `[active.create] 创建新约局
 - gameId: 关联桌游id（可选，先搜桌游获取id）
 - description: 描述（可选）
 
-[执行] 把大写占位符替换为实际值:
+[执行]
 mutate({ action: "create_active", params: { title: "TITLE", date: "DATE", startTime: "TIME", maxPlayers: NUM, location: "LOCATION" }, description: "创建约局" })
 
-[带桌游关联]
-mutate({ action: "create_active", params: { title: "TITLE", date: "DATE", startTime: "TIME", maxPlayers: NUM, location: "LOCATION", gameId: "GAME_ID" }, description: "创建桌游约局" })
+[联合场景: 搜桌游+创建约局]
+用户说了桌游名时，先用 ilike 搜出 id 再创建:
+第1轮: query({ graphql: "{ boardGamesTable(where: {sch_name: {ilike: \\"%桌游名%\\"}}, limit: 5) { id sch_name } }" })
+第2轮: mutate({ action: "create_active", params: { title: "桌游名约局", date: "...", startTime: "...", maxPlayers: N, gameId: "搜到的id" }, description: "创建约局" })
 
-[回复模板]
-约局已创建! 标题: XXX，日期: YYYY-MM-DD HH:mm，X人局
-https://diceshock.com/actives/{id}
+[搜桌游注意]
+- 搜名字必须用 ilike + %通配符（如 ilike "%1817%"），不要用 eq 精确匹配
+- 桌游名可能带后缀（如 "1817 (2020)"），所以搜 "%1817%" 而非 eq "1817"
+- 搜不到也可以直接创建约局（gameId 是可选参数，不填也行）
 
-[联合场景: 搜桌游+创建约局] 需要2次工具:
-1. query 搜桌游获取 id → boardgame.search
-2. mutate 创建约局带 gameId
+[信息不全时]
+- 缺日期/时间/人数 → 追问用户
+- 有桌游名但搜不到 → 直接创建（不关联桌游），告知用户游戏不在系统中但约局已建
 `;
 
 export const ACTIVE_JOIN = `[active.join] 加入/观望/退出/删除约局

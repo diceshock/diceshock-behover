@@ -47,6 +47,7 @@ const MOCK_BOARD_GAMES = [
   { id: "bg014", sch_name: "铁路环游欧洲版", eng_name: "Ticket to Ride Europe", player_num: [2,3,4,5], best_player_num: [4], gstone_rating: 7.6, category: ["FAMILY","STRATEGY"], removeDate: 0 },
   { id: "bg015", sch_name: "蒸汽时代", eng_name: "Age of Steam", player_num: [3,4,5,6], best_player_num: [4,5], gstone_rating: 7.5, category: ["STRATEGY"], removeDate: 0 },
   { id: "bg016", sch_name: "铁路大亨", eng_name: "Railways of the World", player_num: [2,3,4,5,6], best_player_num: [4], gstone_rating: 7.3, category: ["STRATEGY"], removeDate: 0 },
+  { id: "bg017", sch_name: "1817 (2020)", eng_name: "1817 (2020)", player_num: [3,4,5,6,7], best_player_num: [5], gstone_rating: 7.8, category: ["STRATEGY"], removeDate: 0 },
 ];
 
 let mutateLog: Array<{action: string; params: any; description: string}> = [];

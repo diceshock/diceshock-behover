@@ -59,7 +59,16 @@ const ROUTES: SkillRoute[] = [
         content: ACTIVE_LIST,
       },
       {
-        keywords: ["创建", "发起", "新建", "开", "组"],
+        keywords: [
+          "创建",
+          "发起",
+          "新建",
+          "开",
+          "组",
+          "约一个",
+          "帮我约",
+          "约个",
+        ],
         content: ACTIVE_CREATE,
       },
       {

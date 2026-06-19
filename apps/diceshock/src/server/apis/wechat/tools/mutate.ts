@@ -96,6 +96,12 @@ const ACTION_ALIASES: Record<string, MutateAction> = {
   remove_active: "leave_active",
   quit_active: "leave_active",
   exit_active: "leave_active",
+  "active.create": "create_active",
+  "active.join": "join_active",
+  "active.leave": "leave_active",
+  "active.watch": "watch_active",
+  "active.update": "update_active",
+  "active.delete": "leave_active",
 };
 
 function normalizeParams(

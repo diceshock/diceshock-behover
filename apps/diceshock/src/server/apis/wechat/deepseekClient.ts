@@ -10,7 +10,7 @@ import { executeQueryTool } from "./tools/query";
 import { executeGenerateTotp, TOTP_TOOL_DEFINITION } from "./tools/totp";
 import type { ChatMessage } from "./types";
 
-const MAX_TOOL_CALLS = 3;
+const MAX_ROUNDS = 5;
 
 const BASE_SYSTEM_PROMPT = `你是骰子奇兵桌游吧的微信客服。你能查询库存、约局、战绩，也能帮用户创建约局、绑定手机等。
 
@@ -19,30 +19,23 @@ query  - 读数据库。参数 graphql: 查询字符串。
 mutate - 写数据库。参数 action + params + description。
 generate_totp - 生成签到码。无参数。
 
-[预算]
-${MAX_TOOL_CALLS} 轮。同一轮内多个并行调用只算 1 轮。
-注入的业务知识已包含完整答案时（地址、价格等），0 轮直接回复。
+[执行模式]
+你的文本输出会直接发送给用户。你可以：
+1. 先输出中间消息（如"正在搜索..."）同时调用工具
+2. 工具返回结果后继续输出最终回复
+3. 最终回复末尾加 [END] 表示对话结束
+
+如果你的输出不包含 [END]，系统会继续下一轮并注入更多业务知识。
+如果你的输出包含 [END]，对话立即结束，消息发送给用户。
 
 [查询语法]
-query 接受的字符串格式：
 { 表名(where: {字段: {操作符: 值}}, orderBy: {字段: DESC}, limit: 数字) { 返回字段 } }
-
 操作符：eq ne gt gte lt lte like ilike notLike notIlike inArray notInArray isNull isNotNull
-组合：同层多字段 = AND。OR 用 {OR: [{条件1}, {条件2}]}。
-模式：ilike "%词%" = 包含，"词%" = 开头，"%词" = 结尾。
+ilike "%词%" = 包含，"词%" = 开头，"%词" = 结尾。
+字段名严格按注入的业务知识中的写法。
 
-示例：
-{ boardGamesTable(where: {sch_name: {ilike: "%卡坦%"}}, limit: 10) { id sch_name eng_name player_num gstone_rating category } }
-{ activesTable(where: {creator_id: {eq: "uid"}}, limit: 10) { id title date time } }
-
-字段名和表名严格按下方注入的业务知识中的写法。不要猜测、不要用下划线前缀操作符、不要用 GraphQL variables 语法。
-
-[输出]
-固定 JSON：[{"type":"text","content":"你的回复"}]
-微信纯文本，禁止 ** # \` [](url)。链接直接写 URL。300字内。
-
-示例：
-[{"type":"text","content":"找到了！卡坦岛（Catan），评分7.1，适合3-4人。\\n详情：https://diceshock.com/inventory/bg001"}]`;
+[回复规则]
+纯文本，禁止 ** # \` [](url) markdown。链接直接写 URL。300字内。`;
 
 type ToolDefinition = {
   type: "function";
@@ -163,16 +156,31 @@ function ensureJsonArray(raw: string): string {
   if (!raw.trim())
     return '[{"type":"text","content":"抱歉，我暂时无法回答这个问题。"}]';
   const trimmed = raw.trim();
-  if (trimmed.startsWith("[") && trimmed.includes('"type"')) return trimmed;
-  const content = trimmed
+
+  if (trimmed.startsWith("[") && trimmed.includes('"type"')) {
+    try {
+      const arr = JSON.parse(trimmed) as Array<{
+        type: string;
+        content: string;
+      }>;
+      const cleaned = arr.map((m) => ({
+        type: m.type || "text",
+        content: stripMarkdown(m.content || ""),
+      }));
+      return JSON.stringify(cleaned);
+    } catch {}
+  }
+
+  return JSON.stringify([{ type: "text", content: stripMarkdown(trimmed) }]);
+}
+
+function stripMarkdown(text: string): string {
+  return text
     .replace(/\*\*/g, "")
     .replace(/^#+\s/gm, "")
     .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
     .replace(/`/g, "")
-    .replace(/---/g, "")
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, "\\n");
-  return `[{"type":"text","content":"${content}"}]`;
+    .replace(/---/g, "");
 }
 
 async function executeToolCall(
@@ -217,12 +225,10 @@ export async function chatWithAgent(
     : "https://api.deepseek.com/v1";
 
   let systemContent = BASE_SYSTEM_PROMPT;
-
   const skillContent = matchSkills(params.userMessage);
   if (skillContent) {
     systemContent += `\n\n[已注入业务知识]\n${skillContent}`;
   }
-
   if (params.skill?.systemPrompt) {
     systemContent += `\n\n${params.skill.systemPrompt}`;
   }
@@ -244,26 +250,16 @@ export async function chatWithAgent(
 
   let totalTokens = 0;
   const toolContext = await buildToolContext(c, params.openId);
-
-  let totalToolCalls = 0;
-  let round = 0;
-  const loopStart = Date.now();
+  const collectedReplies: string[] = [];
 
   console.log("[deepseek] start", {
     openId: params.openId,
     userMessage: params.userMessage,
   });
 
-  for (;;) {
-    round++;
-    const elapsed = Date.now() - loopStart;
-    const hasToolBudget = totalToolCalls < MAX_TOOL_CALLS;
-
+  for (let round = 1; round <= MAX_ROUNDS; round++) {
     console.log(`[deepseek] round ${round}`, {
-      hasToolBudget,
-      totalToolCalls,
       messageCount: messages.length,
-      elapsedMs: elapsed,
     });
 
     let response: Response;
@@ -277,15 +273,15 @@ export async function chatWithAgent(
         body: JSON.stringify({
           model: "deepseek-v4-flash",
           messages,
-          ...(hasToolBudget ? { tools: TOOLS, tool_choice: "auto" } : {}),
+          tools: TOOLS,
+          tool_choice: "auto",
           max_tokens: 1024,
         }),
       });
     } catch (fetchErr) {
-      console.log(
-        `[deepseek] round ${round} fetch error after ${Date.now() - loopStart}ms`,
-        { error: String(fetchErr) },
-      );
+      console.log(`[deepseek] round ${round} fetch error`, {
+        error: String(fetchErr),
+      });
       break;
     }
 
@@ -295,11 +291,7 @@ export async function chatWithAgent(
         status: response.status,
         body: errText.slice(0, 500),
       });
-      return {
-        rawOutput:
-          '[{"type":"text","content":"AI 服务暂时不可用，请稍后再试"}]',
-        tokensUsed: totalTokens,
-      };
+      break;
     }
 
     const data = (await response.json()) as DeepSeekResponse;
@@ -308,25 +300,36 @@ export async function chatWithAgent(
     const choice = data.choices?.[0];
     if (!choice) {
       console.error("[deepseek] no choice in response");
-      return {
-        rawOutput: '[{"type":"text","content":"AI 返回异常，请稍后再试"}]',
-        tokensUsed: totalTokens,
-      };
+      break;
     }
 
     const assistantMsg = choice.message;
+    const content = assistantMsg.content || "";
+    const hasEnd = content.includes("[END]");
+    const cleanContent = content.replace("[END]", "").trim();
+
+    if (cleanContent) {
+      console.log(`[deepseek] round ${round} output`, {
+        content: cleanContent,
+      });
+      collectedReplies.push(cleanContent);
+    }
+
+    if (hasEnd) {
+      console.log(`[deepseek] [END] received at round ${round}`);
+      break;
+    }
+
     if (!assistantMsg.tool_calls?.length) {
-      const raw = assistantMsg.content || "";
-      console.log(`[deepseek] round ${round} FINAL TEXT`, { content: raw });
-      return {
-        rawOutput: ensureJsonArray(raw),
-        tokensUsed: totalTokens,
-      };
+      console.log(
+        `[deepseek] round ${round} no tools, no [END], treating as final`,
+      );
+      break;
     }
 
     if (assistantMsg.content) {
       console.log(`[deepseek] round ${round} thinking`, {
-        content: assistantMsg.content,
+        content: assistantMsg.content.slice(0, 200),
       });
     }
 
@@ -346,49 +349,21 @@ export async function chatWithAgent(
       tool_calls: assistantMsg.tool_calls,
     });
 
-    let roundCounted = false;
     for (const toolCall of assistantMsg.tool_calls) {
-      const isSkillLoad = toolCall.function.name === "load_skill";
-      if (!isSkillLoad && !roundCounted) {
-        totalToolCalls++;
-        roundCounted = true;
-      }
-      const remaining = MAX_TOOL_CALLS - totalToolCalls;
-
-      if (!isSkillLoad && totalToolCalls > MAX_TOOL_CALLS) {
-        console.log(`[deepseek] budget exhausted at round ${round}`);
-        messages.push({
-          role: "tool",
-          content: `[错误]调用次数已用完。请立即根据已有数据回复用户。`,
-          tool_call_id: toolCall.id,
-        });
-        continue;
-      }
-
-      const statusMessage = getToolStatusMessage(toolCall.function.name);
-      if (statusMessage) {
-        sendStatusMessage(env, params.openId, statusMessage).catch(() => {});
-      }
-
       let args: Record<string, unknown>;
       try {
         args = JSON.parse(toolCall.function.arguments || "{}");
-      } catch (parseErr) {
-        console.error(`[deepseek] tool args parse failed`, {
-          name: toolCall.function.name,
-          raw: toolCall.function.arguments.slice(0, 200),
-        });
+      } catch {
         messages.push({
           role: "tool",
-          content: `参数解析失败[剩余调用:${remaining}]`,
+          content: "参数解析失败",
           tool_call_id: toolCall.id,
         });
         continue;
       }
 
-      console.log(`[deepseek] exec tool #${totalToolCalls}`, {
-        name: toolCall.function.name,
-        args: JSON.stringify(args),
+      console.log(`[deepseek] exec ${toolCall.function.name}`, {
+        args: JSON.stringify(args).slice(0, 200),
       });
       const t0 = Date.now();
 
@@ -398,106 +373,78 @@ export async function chatWithAgent(
           args,
           toolContext,
         );
-        const suffix =
-          remaining <= 3
-            ? `[剩余调用:${remaining}/${MAX_TOOL_CALLS}。数据足够时请直接回复]`
-            : `[剩余:${remaining}]`;
-        console.log(`[deepseek] tool #${totalToolCalls} result`, {
-          name: toolCall.function.name,
+        console.log(`[deepseek] ${toolCall.function.name} done`, {
           ms: Date.now() - t0,
-          result,
+          resultLen: result.length,
         });
         messages.push({
           role: "tool",
-          content: result + suffix,
+          content: result,
           tool_call_id: toolCall.id,
         });
       } catch (toolErr) {
-        console.error(`[deepseek] tool #${totalToolCalls} threw`, {
-          name: toolCall.function.name,
+        console.error(`[deepseek] ${toolCall.function.name} error`, {
           error: String(toolErr),
         });
         messages.push({
           role: "tool",
-          content: `工具执行错误: ${String(toolErr).slice(0, 200)}[剩余:${remaining}]`,
+          content: `工具错误: ${String(toolErr).slice(0, 200)}`,
           tool_call_id: toolCall.id,
         });
       }
     }
 
-    if (totalToolCalls >= MAX_TOOL_CALLS) {
-      console.log(
-        "[deepseek] budget reached, forcing final round without tools",
-      );
-      break;
+    const roundContext = collectRoundContext(assistantMsg, messages);
+    if (roundContext) {
+      const extraSkills = matchSkills(roundContext);
+      if (extraSkills) {
+        messages.push({
+          role: "system",
+          content: `[追加业务知识]\n${extraSkills}`,
+        });
+        console.log(`[deepseek] injected extra skills for round ${round + 1}`);
+      }
     }
   }
 
-  messages.push({
-    role: "user",
-    content:
-      '工具调用结束。请根据以上全部工具返回的数据，直接回复用户。格式：[{"type":"text","content":"你的回复"}]',
-  });
+  if (collectedReplies.length === 0) {
+    collectedReplies.push("抱歉，我暂时无法处理这个请求，请稍后再试。");
+  }
 
-  console.log("[deepseek] final call", {
-    messageCount: messages.length,
-    totalToolCalls,
+  const output = collectedReplies.map((text) => ({
+    type: "text",
+    content: stripMarkdown(text),
+  }));
+
+  console.log("[deepseek] complete", {
+    replies: collectedReplies.length,
     totalTokens,
   });
 
-  try {
-    const finalResponse = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "deepseek-v4-flash",
-        messages,
-        tool_choice: "none",
-        max_tokens: 1024,
-      }),
-    });
+  return { rawOutput: JSON.stringify(output), tokensUsed: totalTokens };
+}
 
-    if (finalResponse.ok) {
-      const finalData = (await finalResponse.json()) as DeepSeekResponse;
-      totalTokens += finalData.usage?.total_tokens ?? 0;
-      const finalChoice = finalData.choices?.[0]?.message;
-      if (finalChoice?.content) {
-        console.log("[deepseek] final call success", {
-          contentLen: finalChoice.content.length,
-          totalTokens,
-        });
-        return {
-          rawOutput: ensureJsonArray(finalChoice.content),
-          tokensUsed: totalTokens,
-        };
-      }
-      console.error("[deepseek] final call empty content", {
-        choices: JSON.stringify(finalData.choices).slice(0, 200),
-      });
-    } else {
-      const errBody = await finalResponse.text();
-      console.error("[deepseek] final call failed", {
-        status: finalResponse.status,
-        body: errBody.slice(0, 300),
-      });
+function collectRoundContext(
+  assistantMsg: {
+    content: string | null;
+    tool_calls?: Array<{ function: { name: string; arguments: string } }>;
+  },
+  messages: DeepSeekMessage[],
+): string {
+  const parts: string[] = [];
+  if (assistantMsg.content) parts.push(assistantMsg.content);
+  if (assistantMsg.tool_calls) {
+    for (const tc of assistantMsg.tool_calls) {
+      parts.push(`${tc.function.name} ${tc.function.arguments}`);
     }
-  } catch (e) {
-    console.error("[deepseek] final call timeout/error", { error: String(e) });
   }
-
-  const toolResults = messages
+  const lastToolResults = messages
+    .slice(-10)
     .filter((m) => m.role === "tool")
-    .map((m) => m.content);
-  console.log("[deepseek] using synthesize fallback", {
-    toolResultCount: toolResults.length,
-  });
-  return {
-    rawOutput: synthesizeFromToolResults(toolResults),
-    tokensUsed: totalTokens,
-  };
+    .map((m) => m.content)
+    .join(" ");
+  parts.push(lastToolResults);
+  return parts.join(" ");
 }
 
 function synthesizeFromToolResults(toolResults: string[]): string {
