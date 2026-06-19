@@ -45,6 +45,33 @@ export async function getWechatAccessToken(env: any): Promise<string> {
   return data.access_token;
 }
 
+export async function getUserUnionId(
+  env: any,
+  openId: string,
+): Promise<string | null> {
+  try {
+    const token = await getWechatAccessToken(env);
+    const url = `${WECHAT_API_BASE}/cgi-bin/user/info?access_token=${token}&openid=${openId}&lang=zh_CN`;
+    const res = await fetch(url);
+    const data = (await res.json()) as {
+      unionid?: string;
+      errcode?: number;
+      errmsg?: string;
+    };
+    if (data.errcode) {
+      console.error("[wechat:api] getUserUnionId failed", {
+        errcode: data.errcode,
+        errmsg: data.errmsg,
+      });
+      return null;
+    }
+    return data.unionid || null;
+  } catch (e) {
+    console.error("[wechat:api] getUserUnionId error:", e);
+    return null;
+  }
+}
+
 const TOKEN_EXPIRED_CODES = new Set([40001, 40014, 42001]);
 
 export async function sendCustomerTextMessage(

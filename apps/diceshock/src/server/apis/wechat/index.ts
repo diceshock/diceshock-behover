@@ -7,7 +7,11 @@ import { decryptMessage } from "./crypto";
 import { isDuplicate, markProcessed } from "./dedup";
 import { handleMenuEvent, handleTextMessage } from "./messageHandler";
 import { ERROR_MESSAGES } from "./statusMessages";
-import { getWechatAccessToken, sendCustomerTextMessage } from "./wechatApi";
+import {
+  getUserUnionId,
+  getWechatAccessToken,
+  sendCustomerTextMessage,
+} from "./wechatApi";
 import { buildEmptyReply, buildTextReply, parseXml } from "./xmlUtils";
 
 function extractCdataContent(xml: string, tag: string): string | undefined {
@@ -201,11 +205,56 @@ async function handleSubscribe(
       "[wechat:subscribe] user already exists:",
       existing[0].userId.slice(-8),
     );
+    const unionId = await getUserUnionId(env, openId);
+    if (unionId) {
+      await env.KV.put(`unionid:${unionId}`, existing[0].userId, {
+        expirationTtl: 86400 * 365,
+      });
+    }
     await sendWelcomeMessage(env, openId);
     return;
   }
 
-  const userId = crypto.randomUUID();
+  const unionId = await getUserUnionId(env, openId);
+
+  let userId: string | null = null;
+  if (unionId) {
+    userId = await env.KV.get(`unionid:${unionId}`);
+    if (!userId) {
+      const existingByUnionId = await tdb
+        .select({ userId: accounts.userId })
+        .from(accounts)
+        .where(
+          drizzle.and(
+            drizzle.eq(accounts.provider, "wechat-open"),
+            drizzle.eq(accounts.providerAccountId, unionId),
+          ),
+        )
+        .limit(1);
+      if (existingByUnionId.length > 0) {
+        userId = existingByUnionId[0].userId;
+      }
+    }
+  }
+
+  if (userId) {
+    console.log("[wechat:subscribe] merging via unionid:", userId.slice(-8));
+    await tdb.insert(accounts).values({
+      userId,
+      type: "oauth",
+      provider: "wechat-mp-silent",
+      providerAccountId: openId,
+    });
+    if (unionId) {
+      await env.KV.put(`unionid:${unionId}`, userId, {
+        expirationTtl: 86400 * 365,
+      });
+    }
+    await sendWelcomeMessage(env, openId);
+    return;
+  }
+
+  userId = crypto.randomUUID();
   const nickname = genNickname();
   const uid = nanoid();
 
@@ -229,9 +278,16 @@ async function handleSubscribe(
     meta: { auto_nickname: true },
   });
 
+  if (unionId) {
+    await env.KV.put(`unionid:${unionId}`, userId, {
+      expirationTtl: 86400 * 365,
+    });
+  }
+
   console.log("[wechat:subscribe] created user on follow:", {
     userId: userId.slice(-8),
     openId: openId.slice(-8),
+    unionId: unionId?.slice(-8) || "none",
     uid,
   });
 

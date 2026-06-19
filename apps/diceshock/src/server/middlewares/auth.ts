@@ -56,6 +56,47 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
           if ("phone" in user && user.phone) token.phone = user.phone;
         }
 
+        if (account && profile && token.sub) {
+          const unionid = (profile as any).unionid;
+          if (unionid) {
+            const existingUserId = await c.env.KV.get(`unionid:${unionid}`);
+            if (existingUserId && existingUserId !== token.sub) {
+              console.log("[auth:merge] unionid match, merging", {
+                newUserId: (token.sub as string).slice(-8),
+                existingUserId: existingUserId.slice(-8),
+                provider: account.provider,
+              });
+              const tdb = db(c.env.DB);
+              await tdb
+                .update(accounts)
+                .set({ userId: existingUserId })
+                .where(
+                  drizzle.and(
+                    drizzle.eq(accounts.provider, account.provider),
+                    drizzle.eq(
+                      accounts.providerAccountId,
+                      account.providerAccountId!,
+                    ),
+                  ),
+                );
+              const orphanedId = token.sub as string;
+              const orphanHasOtherAccounts = await tdb
+                .select({ userId: accounts.userId })
+                .from(accounts)
+                .where(drizzle.eq(accounts.userId, orphanedId))
+                .limit(1);
+              if (orphanHasOtherAccounts.length === 0) {
+                await tdb.delete(users).where(drizzle.eq(users.id, orphanedId));
+              }
+              token.sub = existingUserId;
+            } else if (!existingUserId) {
+              await c.env.KV.put(`unionid:${unionid}`, token.sub as string, {
+                expirationTtl: 86400 * 365,
+              });
+            }
+          }
+        }
+
         if (token.sub) {
           const tdb = db(c.env.DB);
           const dbUser = await tdb.query.users.findFirst({

@@ -207,7 +207,10 @@ function stripMarkdown(text: string): string {
     .replace(/^#+\s/gm, "")
     .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
     .replace(/`/g, "")
-    .replace(/---/g, "");
+    .replace(/---/g, "")
+    .replace(/<[｜|]+DSML[｜|]+[^>]*>[\s\S]*?<\/[｜|]*DSML[｜|]*[^>]*>/g, "")
+    .replace(/<[｜|]+DSML[｜|]+[^>]*>/g, "")
+    .trim();
 }
 
 async function executeToolCall(
