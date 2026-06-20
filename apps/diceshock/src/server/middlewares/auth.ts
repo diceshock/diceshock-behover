@@ -29,8 +29,32 @@ export type UserInfo = z.infer<typeof userInfoZ>;
 export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
   const aliyunClient = c.get("AliyunClient");
 
+  const WECHAT_PROVIDERS = ["wechat-open", "wechat-mp", "wechat-mp-silent"];
+  const baseAdapter = DrizzleAdapter(db(c.env.DB));
+  const adapter = {
+    ...baseAdapter,
+    async getUserByAccount(
+      providerAccount: Record<string, string>,
+    ): Promise<any> {
+      const result = await baseAdapter.getUserByAccount!(providerAccount);
+      if (result) return result;
+
+      if (WECHAT_PROVIDERS.includes(providerAccount.provider)) {
+        for (const altProvider of WECHAT_PROVIDERS) {
+          if (altProvider === providerAccount.provider) continue;
+          const altResult = await baseAdapter.getUserByAccount!({
+            ...providerAccount,
+            provider: altProvider,
+          });
+          if (altResult) return altResult;
+        }
+      }
+      return null;
+    },
+  };
+
   const config: AuthConfig = {
-    adapter: DrizzleAdapter(db(c.env.DB)),
+    adapter,
     secret:
       c.env.AUTH_SECRET ||
       (import.meta.env.DEV

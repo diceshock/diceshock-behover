@@ -51,8 +51,7 @@ export default function useAuth() {
       }
     } catch {}
 
-    await signOutAuthJs({ redirect: false });
-    window.location.href = "/";
+    await signOutAuthJs({ redirectTo: "/" });
   }, [session]);
 
   return useMemo(

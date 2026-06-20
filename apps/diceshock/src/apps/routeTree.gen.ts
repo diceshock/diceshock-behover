@@ -266,7 +266,7 @@ const DashOrdersIdSettleRoute = DashOrdersIdSettleRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/dash': typeof DashRouteWithChildren
-  '/{-$storeLocale}': typeof Char123StoreLocaleChar125WithHomeLoRouteWithChildren
+  '/{-$storeLocale}': typeof Char123StoreLocaleChar125RouteWithChildren
   '/dash/actives': typeof DashActivesRoute
   '/dash/crawler': typeof DashCrawlerRoute
   '/dash/events': typeof DashEventsRoute

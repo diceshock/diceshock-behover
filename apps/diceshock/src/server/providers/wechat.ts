@@ -130,7 +130,7 @@ export function WechatOpen(config: WechatProviderConfig) {
     },
     profile(profile: WechatProfile) {
       return {
-        id: profile.unionid || profile.openid,
+        id: profile.openid,
         name: profile.nickname,
         image: profile.headimgurl,
       };
@@ -196,7 +196,7 @@ export function WechatMP(config: WechatProviderConfig) {
     },
     profile(profile: WechatProfile) {
       return {
-        id: profile.unionid || profile.openid,
+        id: profile.openid,
         name: profile.nickname,
         image: profile.headimgurl,
       };

@@ -57,6 +57,12 @@
   },
   "overrides": {
     "jiti": "2.6.1",
-    "@auth/core": "^0.41.1"
+    "@auth/core": "^0.41.1",
+    "pg": "8.22.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "pg": "8.22.0"
+    }
   }
 }
