@@ -13,6 +13,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
+import { useTranslation } from "@/client/hooks/useTranslation";
+import { formatMessage } from "@/shared/i18n";
 import dayjs from "@/shared/utils/dayjs-config";
 import { trpcClientDash } from "@/shared/utils/trpc";
 
@@ -20,6 +22,7 @@ type ModeFilter = "all" | "3p" | "4p";
 type FormatFilter = "all" | "tonpuu" | "hanchan";
 type CompletionFilter = "all" | "completed" | "incomplete";
 type GszSyncFilter = "all" | "synced" | "unsynced";
+type Translator = ReturnType<typeof useTranslation>["t"];
 
 type MatchList = Awaited<
   ReturnType<typeof trpcClientDash.gszManagement.list.query>
@@ -33,29 +36,29 @@ type ActiveMatch = Awaited<
   ReturnType<typeof trpcClientDash.gszManagement.listActive.query>
 >[number];
 
-const MODE_LABELS: Record<string, string> = {
-  "3p": "三麻",
-  "4p": "四麻",
+const MODE_LABEL_KEYS: Record<string, string> = {
+  "3p": "dashGsz.modes.threePlayer",
+  "4p": "dashGsz.modes.fourPlayer",
 };
 
-const FORMAT_LABELS: Record<string, string> = {
-  tonpuu: "东风场",
-  hanchan: "半庄",
+const FORMAT_LABEL_KEYS: Record<string, string> = {
+  tonpuu: "dashGsz.formats.tonpuuRound",
+  hanchan: "dashGsz.formats.hanchan",
 };
 
-const TERMINATION_LABELS: Record<string, string> = {
-  score_complete: "录分完成",
-  vote: "投票结算",
-  admin_abort: "管理员终止",
-  order_invalid: "订单失效",
+const TERMINATION_LABEL_KEYS: Record<string, string> = {
+  score_complete: "dashGsz.terminations.scoreComplete",
+  vote: "dashGsz.terminations.vote",
+  admin_abort: "dashGsz.terminations.adminAbort",
+  order_invalid: "dashGsz.terminations.orderInvalid",
 };
 
-const PHASE_LABELS: Record<string, string> = {
-  seat_select: "选座中",
-  countdown: "倒计时",
-  playing: "对局中",
-  scoring: "录分中",
-  voting: "投票中",
+const PHASE_LABEL_KEYS: Record<string, string> = {
+  seat_select: "dashGsz.phases.seatSelect",
+  countdown: "dashGsz.phases.countdown",
+  playing: "dashGsz.phases.playing",
+  scoring: "dashGsz.phases.scoring",
+  voting: "dashGsz.phases.voting",
 };
 
 const INCOMPLETE_REASONS = new Set(["admin_abort", "order_invalid"]);
@@ -97,6 +100,7 @@ function formatTime(val: number | null | undefined): string {
 
 function RouteComponent() {
   const msg = useMsg();
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
   const {
     q,
@@ -176,11 +180,26 @@ function RouteComponent() {
       });
       setData(result);
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "获取对局列表失败");
+      msg.error(
+        err instanceof Error
+          ? err.message
+          : t("dashGsz.errors.fetchMatchesFailed"),
+      );
     } finally {
       setLoading(false);
     }
-  }, [mode, format, completion, gszSync, table, startDate, endDate, page, msg]);
+  }, [
+    mode,
+    format,
+    completion,
+    gszSync,
+    table,
+    startDate,
+    endDate,
+    page,
+    msg,
+    t,
+  ]);
 
   const fetchActive = useCallback(async () => {
     setActiveLoading(true);
@@ -218,9 +237,9 @@ function RouteComponent() {
   const handleCopy = (text: string) => {
     try {
       navigator.clipboard.writeText(text);
-      msg.success("已复制");
+      msg.success(t("dashGsz.messages.copied"));
     } catch {
-      msg.error("没有剪贴板访问权限");
+      msg.error(t("dashGsz.errors.clipboardDenied"));
     }
   };
 
@@ -230,11 +249,15 @@ function RouteComponent() {
         tableCode,
         reason: "admin_abort",
       });
-      msg.success("已终止");
+      msg.success(t("dashGsz.messages.terminated"));
       void fetchActive();
       void fetchMatches();
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "终止失败");
+      msg.error(
+        err instanceof Error
+          ? err.message
+          : t("dashGsz.errors.terminateFailed"),
+      );
     }
   };
 
@@ -245,13 +268,15 @@ function RouteComponent() {
         matchId,
       });
       if (result.success) {
-        msg.success("同步成功");
+        msg.success(t("dashGsz.messages.syncSuccess"));
         void fetchMatches();
       } else {
-        msg.error(result.error ?? "同步失败");
+        msg.error(result.error ?? t("dashGsz.errors.syncFailed"));
       }
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "同步失败");
+      msg.error(
+        err instanceof Error ? err.message : t("dashGsz.errors.syncFailed"),
+      );
     } finally {
       setSyncingId(null);
     }
@@ -265,12 +290,19 @@ function RouteComponent() {
         matchIds: [...selectedIds],
       });
       msg.success(
-        `批量同步完成: ${result.successCount} 成功, ${result.failCount} 失败`,
+        formatMessage(t("dashGsz.messages.batchSyncComplete"), {
+          successCount: result.successCount,
+          failCount: result.failCount,
+        }),
       );
       setSelectedIds(new Set());
       void fetchMatches();
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "批量同步失败");
+      msg.error(
+        err instanceof Error
+          ? err.message
+          : t("dashGsz.errors.batchSyncFailed"),
+      );
     } finally {
       setBatchSyncing(false);
     }
@@ -310,7 +342,7 @@ function RouteComponent() {
             <input
               type="text"
               className="grow min-w-0"
-              placeholder="搜索ID/玩家昵称/玩家ID/桌台..."
+              placeholder={t("dashGsz.searchPlaceholder")}
               value={q}
               onChange={(e) => setSearch({ q: e.target.value })}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -321,9 +353,9 @@ function RouteComponent() {
         <div className="flex flex-wrap items-center gap-1">
           {(
             [
-              ["all", "全部"],
-              ["3p", "三麻"],
-              ["4p", "四麻"],
+              ["all", t("dashGsz.filters.all")],
+              ["3p", t("dashGsz.modes.threePlayer")],
+              ["4p", t("dashGsz.modes.fourPlayer")],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -342,9 +374,9 @@ function RouteComponent() {
 
           {(
             [
-              ["all", "全部"],
-              ["hanchan", "半庄"],
-              ["tonpuu", "东风"],
+              ["all", t("dashGsz.filters.all")],
+              ["hanchan", t("dashGsz.formats.hanchan")],
+              ["tonpuu", t("dashGsz.formats.tonpuu")],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -363,9 +395,9 @@ function RouteComponent() {
 
           {(
             [
-              ["all", "全部"],
-              ["completed", "已完成"],
-              ["incomplete", "未完成"],
+              ["all", t("dashGsz.filters.all")],
+              ["completed", t("dashGsz.filters.completed")],
+              ["incomplete", t("dashGsz.filters.incomplete")],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -384,9 +416,9 @@ function RouteComponent() {
 
           {(
             [
-              ["all", "全部"],
-              ["synced", "已同步"],
-              ["unsynced", "未同步"],
+              ["all", t("dashGsz.filters.all")],
+              ["synced", t("dashGsz.filters.synced")],
+              ["unsynced", t("dashGsz.filters.unsynced")],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -413,7 +445,9 @@ function RouteComponent() {
               ) : (
                 <ArrowsClockwiseIcon className="size-3.5" />
               )}
-              批量同步 ({selectedIds.size})
+              {formatMessage(t("dashGsz.batchSyncWithCount"), {
+                count: selectedIds.size,
+              })}
             </button>
           )}
 
@@ -426,7 +460,7 @@ function RouteComponent() {
                   setSearch({ table: e.target.value, page: 1 });
                 }}
               >
-                <option value="">全部桌台</option>
+                <option value="">{t("dashGsz.allTables")}</option>
                 {tableOptions.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name}
@@ -442,7 +476,7 @@ function RouteComponent() {
               onChange={(e) => {
                 setSearch({ startDate: e.target.value, page: 1 });
               }}
-              title="开始日期"
+              title={t("dashGsz.startDate")}
             />
             <span className="text-xs text-base-content/50">~</span>
             <input
@@ -452,7 +486,7 @@ function RouteComponent() {
               onChange={(e) => {
                 setSearch({ endDate: e.target.value, page: 1 });
               }}
-              title="结束日期"
+              title={t("dashGsz.endDate")}
             />
           </div>
         </div>
@@ -462,6 +496,7 @@ function RouteComponent() {
         <ActiveMatchesSection
           matches={activeMatches}
           onTerminate={handleTerminate}
+          t={t}
         />
       )}
 
@@ -487,15 +522,29 @@ function RouteComponent() {
                 />
               </td>
               <td className="whitespace-nowrap">ID</td>
-              <td className="whitespace-nowrap">桌台</td>
-              <td className="whitespace-nowrap">模式</td>
-              <td className="whitespace-nowrap">场制</td>
-              <td className="whitespace-nowrap">开始时间</td>
-              <td className="whitespace-nowrap">结束时间</td>
-              <td className="whitespace-nowrap">玩家</td>
-              <td className="whitespace-nowrap">终止原因</td>
-              <td className="whitespace-nowrap">同步</td>
-              <th className="whitespace-nowrap">操作</th>
+              <td className="whitespace-nowrap">
+                {t("dashGsz.columns.table")}
+              </td>
+              <td className="whitespace-nowrap">{t("dashGsz.columns.mode")}</td>
+              <td className="whitespace-nowrap">
+                {t("dashGsz.columns.format")}
+              </td>
+              <td className="whitespace-nowrap">
+                {t("dashGsz.columns.startTime")}
+              </td>
+              <td className="whitespace-nowrap">
+                {t("dashGsz.columns.endTime")}
+              </td>
+              <td className="whitespace-nowrap">
+                {t("dashGsz.columns.players")}
+              </td>
+              <td className="whitespace-nowrap">
+                {t("dashGsz.columns.terminationReason")}
+              </td>
+              <td className="whitespace-nowrap">{t("dashGsz.columns.sync")}</td>
+              <th className="whitespace-nowrap">
+                {t("dashGsz.columns.actions")}
+              </th>
             </tr>
           </thead>
 
@@ -520,8 +569,8 @@ function RouteComponent() {
                   table ||
                   startDate ||
                   endDate
-                    ? "没有匹配的对局记录。"
-                    : "暂无立直麻将数据。"}
+                    ? t("dashGsz.noMatchedRecords")
+                    : t("dashGsz.noRiichiData")}
                 </td>
               </tr>
             ) : (
@@ -553,7 +602,7 @@ function RouteComponent() {
                         type="button"
                         className="btn btn-xs btn-ghost btn-square shrink-0"
                         onClick={() => handleCopy(match.id)}
-                        title="复制ID"
+                        title={t("dashGsz.copyId")}
                       >
                         <CopyIcon className="size-3.5" />
                       </button>
@@ -571,12 +620,16 @@ function RouteComponent() {
                     <span
                       className={`badge badge-sm ${match.mode === "4p" ? "badge-primary" : "badge-secondary"}`}
                     >
-                      {MODE_LABELS[match.mode] ?? match.mode}
+                      {MODE_LABEL_KEYS[match.mode]
+                        ? t(MODE_LABEL_KEYS[match.mode])
+                        : match.mode}
                     </span>
                   </td>
                   <td className="whitespace-nowrap">
                     <span className="badge badge-sm badge-outline">
-                      {FORMAT_LABELS[match.format] ?? match.format}
+                      {FORMAT_LABEL_KEYS[match.format]
+                        ? t(FORMAT_LABEL_KEYS[match.format])
+                        : match.format}
                     </span>
                   </td>
                   <td className="whitespace-nowrap">
@@ -600,23 +653,24 @@ function RouteComponent() {
                           : "badge-ghost",
                       )}
                     >
-                      {TERMINATION_LABELS[match.termination_reason] ??
-                        match.termination_reason}
+                      {TERMINATION_LABEL_KEYS[match.termination_reason]
+                        ? t(TERMINATION_LABEL_KEYS[match.termination_reason])
+                        : match.termination_reason}
                     </span>
                   </td>
                   <td className="whitespace-nowrap">
                     {match.match_type === "tournament" ? (
                       match.gsz_synced ? (
                         <span className="badge badge-sm badge-success">
-                          已同步
+                          {t("dashGsz.synced")}
                         </span>
                       ) : (
                         <div className="flex items-center gap-1">
                           <span
                             className="badge badge-sm badge-warning cursor-help"
-                            title={match.gsz_error ?? "未同步"}
+                            title={match.gsz_error ?? t("dashGsz.unsynced")}
                           >
-                            未同步
+                            {t("dashGsz.unsynced")}
                           </span>
                           {match.unsyncable_reasons.length > 0 && (
                             <button
@@ -626,7 +680,7 @@ function RouteComponent() {
                                 setUnsyncableReasons(match.unsyncable_reasons);
                                 unsyncableDialogRef.current?.showModal();
                               }}
-                              title="无法同步"
+                              title={t("dashGsz.unsyncable")}
                             >
                               <WarningCircleIcon className="size-4" />
                             </button>
@@ -636,7 +690,7 @@ function RouteComponent() {
                             className="btn btn-xs btn-ghost btn-square"
                             disabled={syncingId === match.id}
                             onClick={() => handleSync(match.id)}
-                            title="手动同步"
+                            title={t("dashGsz.manualSync")}
                           >
                             {syncingId === match.id ? (
                               <span className="loading loading-spinner loading-xs" />
@@ -670,7 +724,7 @@ function RouteComponent() {
                           <li>
                             <Link to="/dash/gsz/$id" params={{ id: match.id }}>
                               <EyeIcon className="size-4" />
-                              详情
+                              {t("dashGsz.details")}
                             </Link>
                           </li>
                         </ul>
@@ -682,7 +736,7 @@ function RouteComponent() {
                         className="btn btn-xs btn-ghost"
                       >
                         <EyeIcon className="size-4" />
-                        详情
+                        {t("dashGsz.details")}
                       </Link>
                     )}
                   </th>
@@ -701,7 +755,7 @@ function RouteComponent() {
             disabled={page <= 1}
             onClick={() => setSearch({ page: page - 1 })}
           >
-            上一页
+            {t("dashGsz.previousPage")}
           </button>
           <span className="text-sm font-medium">
             {page} / {totalPages}
@@ -712,14 +766,16 @@ function RouteComponent() {
             disabled={page >= totalPages}
             onClick={() => setSearch({ page: page + 1 })}
           >
-            下一页
+            {t("dashGsz.nextPage")}
           </button>
         </div>
       )}
 
       <dialog ref={unsyncableDialogRef} className="modal">
         <div className="modal-box max-w-sm">
-          <h3 className="text-lg font-bold mb-3">无法同步原因</h3>
+          <h3 className="text-lg font-bold mb-3">
+            {t("dashGsz.unsyncableReasons")}
+          </h3>
           <div className="flex flex-col gap-2">
             {unsyncableReasons.map((r) => (
               <div
@@ -729,7 +785,9 @@ function RouteComponent() {
                 <WarningCircleIcon className="size-4 text-error shrink-0" />
                 <span className="font-medium">{r.nickname}</span>
                 <span className="text-base-content/60">
-                  {r.reason === "temp_user" ? "临时用户" : "未绑定手机号"}
+                  {r.reason === "temp_user"
+                    ? t("dashGsz.tempUser")
+                    : t("dashGsz.noBoundPhone")}
                 </span>
               </div>
             ))}
@@ -737,7 +795,7 @@ function RouteComponent() {
           <div className="modal-action">
             <form method="dialog">
               <button type="submit" className="btn btn-sm">
-                关闭
+                {t("dashGsz.close")}
               </button>
             </form>
           </div>
@@ -753,9 +811,11 @@ function RouteComponent() {
 function ActiveMatchesSection({
   matches,
   onTerminate,
+  t,
 }: {
   matches: ActiveMatch[];
   onTerminate: (tableCode: string) => void;
+  t: Translator;
 }) {
   const [terminating, setTerminating] = useState<string | null>(null);
 
@@ -775,7 +835,7 @@ function ActiveMatchesSection({
           <span className="animate-ping absolute inline-flex size-full rounded-full bg-success opacity-75" />
           <span className="relative inline-flex rounded-full size-2 bg-success" />
         </span>
-        进行中 ({matches.length})
+        {formatMessage(t("dashGsz.activeWithCount"), { count: matches.length })}
       </div>
       <div className="flex flex-col gap-2">
         {matches.map((m) => (
@@ -789,13 +849,19 @@ function ActiveMatchesSection({
                 <span
                   className={`badge badge-xs ${m.mode === "4p" ? "badge-primary" : "badge-secondary"}`}
                 >
-                  {MODE_LABELS[m.mode] ?? m.mode}
+                  {MODE_LABEL_KEYS[m.mode]
+                    ? t(MODE_LABEL_KEYS[m.mode])
+                    : m.mode}
                 </span>
                 <span className="badge badge-xs badge-outline">
-                  {FORMAT_LABELS[m.format] ?? m.format}
+                  {FORMAT_LABEL_KEYS[m.format]
+                    ? t(FORMAT_LABEL_KEYS[m.format])
+                    : m.format}
                 </span>
                 <span className="badge badge-xs badge-info">
-                  {PHASE_LABELS[m.phase] ?? m.phase}
+                  {PHASE_LABEL_KEYS[m.phase]
+                    ? t(PHASE_LABEL_KEYS[m.phase])
+                    : m.phase}
                 </span>
               </div>
               <div className="text-xs text-base-content/50 mt-1 truncate">
@@ -813,7 +879,7 @@ function ActiveMatchesSection({
               ) : (
                 <StopIcon className="size-3.5" />
               )}
-              终止
+              {t("dashGsz.terminate")}
             </button>
           </div>
         ))}

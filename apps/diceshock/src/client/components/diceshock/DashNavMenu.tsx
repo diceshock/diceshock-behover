@@ -17,31 +17,38 @@ import { Link, useMatches } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useRef, useState } from "react";
 import ThemeSwap from "@/client/components/ThemeSwap";
+import { useTranslation } from "@/client/hooks/useTranslation";
+import type { TranslationKey } from "@/shared/i18n";
 import DashQRScannerDialog from "./DashQRScannerDialog";
 
 const NAV_ITEMS: ReadonlyArray<{
   to: string;
   icon: typeof GaugeIcon;
-  label: string;
+  labelKey: TranslationKey;
   exact?: boolean;
 }> = [
-  { to: "/dash", icon: GaugeIcon, label: "仪表盘", exact: true },
-  { to: "/dash/users", icon: UsersIcon, label: "用户" },
-  { to: "/dash/actives", icon: CalendarDotsIcon, label: "约局管理" },
-  { to: "/dash/events", icon: MegaphoneIcon, label: "活动管理" },
-  { to: "/dash/tables", icon: TableIcon, label: "桌台管理" },
-  { to: "/dash/orders", icon: ClipboardTextIcon, label: "订单管理" },
-  { to: "/dash/gsz", icon: SwordIcon, label: "立直麻将" },
-  { to: "/dash/pricing", icon: CurrencyDollarIcon, label: "价格计划" },
-  { to: "/dash/media", icon: ImageSquareIcon, label: "媒体库" },
+  { to: "/dash", icon: GaugeIcon, labelKey: "dashNav.dashboard", exact: true },
+  { to: "/dash/users", icon: UsersIcon, labelKey: "dashNav.users" },
+  { to: "/dash/actives", icon: CalendarDotsIcon, labelKey: "dashNav.actives" },
+  { to: "/dash/events", icon: MegaphoneIcon, labelKey: "dashNav.events" },
+  { to: "/dash/tables", icon: TableIcon, labelKey: "dashNav.tables" },
+  { to: "/dash/orders", icon: ClipboardTextIcon, labelKey: "dashNav.orders" },
+  { to: "/dash/gsz", icon: SwordIcon, labelKey: "dashNav.mahjong" },
+  {
+    to: "/dash/pricing",
+    icon: CurrencyDollarIcon,
+    labelKey: "dashNav.pricing",
+  },
+  { to: "/dash/media", icon: ImageSquareIcon, labelKey: "dashNav.media" },
 ];
 
 export function DashNavMenuButton() {
+  const { t } = useTranslation();
   return (
     <label
       htmlFor="dash-nav-drawer"
       className="btn btn-ghost btn-square btn-sm lg:hidden cursor-pointer"
-      aria-label="导航菜单"
+      aria-label={t("dashNav.menuLabel")}
     >
       <ListIcon className="size-5" />
     </label>
@@ -59,6 +66,7 @@ function SidebarContent({
   onScanClick: () => void;
   className?: string;
 }) {
+  const { t } = useTranslation();
   const isActive = (to: string, exact?: boolean) => {
     if (exact) return currentPath === to || currentPath === `${to}/`;
     return currentPath.startsWith(to);
@@ -77,7 +85,7 @@ function SidebarContent({
             onClick={close}
           >
             <item.icon className="size-6 shrink-0" />
-            <span className="whitespace-nowrap">{item.label}</span>
+            <span className="whitespace-nowrap">{t(item.labelKey)}</span>
           </Link>
         </li>
       ))}
@@ -92,14 +100,14 @@ function SidebarContent({
           }}
         >
           <ScanIcon className="size-6 shrink-0" />
-          <span className="whitespace-nowrap">扫码管理</span>
+          <span className="whitespace-nowrap">{t("dashNav.scan")}</span>
         </button>
       </li>
 
       <li>
         <label className="gap-12 flex-nowrap">
           <ThemeSwap />
-          <span className="whitespace-nowrap">主题</span>
+          <span className="whitespace-nowrap">{t("dashNav.theme")}</span>
         </label>
       </li>
 
@@ -109,7 +117,7 @@ function SidebarContent({
           className="gap-12 flex-nowrap"
         >
           <SignOutIcon className="size-6 shrink-0" />
-          <span className="whitespace-nowrap">登出</span>
+          <span className="whitespace-nowrap">{t("dashNav.logout")}</span>
         </a>
       </li>
     </ul>
@@ -165,7 +173,9 @@ export default function DashNavDrawer({
           />
           <div className="bg-base-200 min-h-full w-56 flex flex-col">
             <div className="flex items-center justify-between px-4 py-3 border-b border-base-300">
-              <span className="font-bold text-lg">导航</span>
+              <span className="font-bold text-lg">
+                {t("dashNav.navigation")}
+              </span>
               <button
                 type="button"
                 className="btn btn-ghost btn-square btn-sm"

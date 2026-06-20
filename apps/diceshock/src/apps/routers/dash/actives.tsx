@@ -13,6 +13,8 @@ import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import { useAdminStoreFilter } from "@/client/hooks/useAdminStoreFilter";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
+import { useTranslation } from "@/client/hooks/useTranslation";
+import { formatMessage } from "@/shared/i18n";
 import dayjs from "@/shared/utils/dayjs-config";
 import { trpcClientDash } from "@/shared/utils/trpc";
 
@@ -45,6 +47,7 @@ export const Route = createFileRoute("/dash/actives")({
 
 function RouteComponent() {
   const msg = useMsg();
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
   const { storeFilter } = useAdminStoreFilter();
   const [actives, setActives] = useState<ActiveItem[]>([]);
@@ -73,9 +76,9 @@ function RouteComponent() {
   const handleCopy = (text: string) => {
     try {
       navigator.clipboard.writeText(text);
-      msg.success("已复制");
+      msg.success(t("dashActives.copied"));
     } catch {
-      msg.error("没有剪贴板访问权限");
+      msg.error(t("dashActives.clipboardDenied"));
     }
   };
 
@@ -87,11 +90,13 @@ function RouteComponent() {
       const data = await trpcClientDash.activesManagement.list.query();
       setActives(data);
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "获取约局列表失败");
+      msg.error(
+        err instanceof Error ? err.message : t("dashActives.fetchFailed"),
+      );
     } finally {
       setLoading(false);
     }
-  }, [storeFilter, msg]);
+  }, [storeFilter, msg, t]);
 
   useEffect(() => {
     void refreshActives();
@@ -158,7 +163,7 @@ function RouteComponent() {
       await trpcClientDash.activesManagement.remove.mutate({
         id: pendingDelete.id,
       });
-      msg.success("约局已删除");
+      msg.success(t("dashActives.deleteSuccess"));
       deleteDialogRef.current?.close();
       setPendingDelete(null);
       setSelectedIds((prev) => {
@@ -168,7 +173,9 @@ function RouteComponent() {
       });
       await refreshActives();
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "删除失败");
+      msg.error(
+        err instanceof Error ? err.message : t("dashActives.deleteFailed"),
+      );
     } finally {
       setDeletePending(false);
     }
@@ -185,12 +192,18 @@ function RouteComponent() {
       await trpcClientDash.activesManagement.batchRemove.mutate({
         ids: [...selectedIds],
       });
-      msg.success(`已删除 ${selectedIds.size} 条约局`);
+      msg.success(
+        formatMessage(t("dashActives.batchDeleteSuccess"), {
+          count: selectedIds.size,
+        }),
+      );
       batchDeleteDialogRef.current?.close();
       setSelectedIds(new Set());
       await refreshActives();
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "批量删除失败");
+      msg.error(
+        err instanceof Error ? err.message : t("dashActives.batchDeleteFailed"),
+      );
     } finally {
       setBatchDeletePending(false);
     }
@@ -211,7 +224,7 @@ function RouteComponent() {
           <input
             type="text"
             className="grow"
-            placeholder="搜索标题/桌游..."
+            placeholder={t("dashActives.searchPlaceholder")}
             value={q}
             onChange={(e) => setSearch({ q: e.target.value })}
           />
@@ -221,9 +234,9 @@ function RouteComponent() {
         <div className="flex gap-1">
           {(
             [
-              ["all", "全部"],
-              ["active", "进行中"],
-              ["expired", "已过期"],
+              ["all", t("dashActives.statusAll")],
+              ["active", t("dashActives.statusActive")],
+              ["expired", t("dashActives.statusExpired")],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -253,17 +266,21 @@ function RouteComponent() {
                 />
               </th>
               <td className="whitespace-nowrap">ID</td>
-              <td className="whitespace-nowrap">标题</td>
-              <td className="whitespace-nowrap">桌游</td>
-              <td className="whitespace-nowrap">日期</td>
-              <td className="whitespace-nowrap">时间</td>
-              <td className="whitespace-nowrap">人数</td>
-              <td className="whitespace-nowrap">已报名</td>
-              <td className="whitespace-nowrap">观望</td>
-              <td className="whitespace-nowrap">发起人</td>
-              <td className="whitespace-nowrap">创建时间</td>
-              <td className="whitespace-nowrap">状态</td>
-              <th className="whitespace-nowrap">操作</th>
+              <td className="whitespace-nowrap">{t("dashActives.title")}</td>
+              <td className="whitespace-nowrap">
+                {t("dashActives.boardGame")}
+              </td>
+              <td className="whitespace-nowrap">{t("dashActives.date")}</td>
+              <td className="whitespace-nowrap">{t("dashActives.time")}</td>
+              <td className="whitespace-nowrap">{t("dashActives.players")}</td>
+              <td className="whitespace-nowrap">{t("dashActives.joined")}</td>
+              <td className="whitespace-nowrap">{t("dashActives.watching")}</td>
+              <td className="whitespace-nowrap">{t("dashActives.creator")}</td>
+              <td className="whitespace-nowrap">
+                {t("dashActives.createdAt")}
+              </td>
+              <td className="whitespace-nowrap">{t("dashActives.status")}</td>
+              <th className="whitespace-nowrap">{t("dashActives.actions")}</th>
             </tr>
           </thead>
 
@@ -281,8 +298,8 @@ function RouteComponent() {
                   className="py-12 text-center text-base-content/60"
                 >
                   {q.trim() || status !== "all"
-                    ? "没有匹配的约局。"
-                    : "暂无约局数据。"}
+                    ? t("dashActives.noMatch")
+                    : t("dashActives.noData")}
                 </td>
               </tr>
             ) : (
@@ -317,7 +334,7 @@ function RouteComponent() {
                           type="button"
                           className="btn btn-xs btn-ghost btn-square shrink-0"
                           onClick={() => handleCopy(active.id)}
-                          title="复制ID"
+                          title={t("dashActives.copyId")}
                         >
                           <CopyIcon className="size-3.5" />
                         </button>
@@ -350,11 +367,11 @@ function RouteComponent() {
                     <td className="whitespace-nowrap">
                       {isExpired ? (
                         <span className="badge badge-ghost badge-sm">
-                          已过期
+                          {t("dashActives.statusExpired")}
                         </span>
                       ) : (
                         <span className="badge badge-success badge-sm">
-                          进行中
+                          {t("dashActives.statusActive")}
                         </span>
                       )}
                     </td>
@@ -381,7 +398,7 @@ function RouteComponent() {
                                 params={{ id: active.id }}
                               >
                                 <EyeIcon className="size-4" />
-                                详情
+                                {t("dashActives.details")}
                               </Link>
                             </li>
                             <li>
@@ -391,7 +408,7 @@ function RouteComponent() {
                                 onClick={() => openDeleteDialog(active)}
                               >
                                 <TrashIcon className="size-4" />
-                                删除
+                                {t("dashActives.delete")}
                               </button>
                             </li>
                           </ul>
@@ -404,14 +421,14 @@ function RouteComponent() {
                             className="btn btn-xs btn-ghost"
                           >
                             <EyeIcon className="size-4" />
-                            详情
+                            {t("dashActives.details")}
                           </Link>
                           <button
                             type="button"
                             className="btn btn-xs btn-ghost btn-error"
                             onClick={() => openDeleteDialog(active)}
                           >
-                            删除
+                            {t("dashActives.delete")}
                             <TrashIcon />
                           </button>
                         </div>
@@ -433,7 +450,7 @@ function RouteComponent() {
           actions={[
             {
               key: "delete",
-              label: "批量删除",
+              label: t("dashActives.batchDelete"),
               icon: <TrashIcon className="size-4" />,
               className: "btn-error",
               onClick: openBatchDeleteDialog,
@@ -446,14 +463,18 @@ function RouteComponent() {
       <dialog ref={deleteDialogRef} className="modal">
         {pendingDelete && (
           <div className="modal-box">
-            <h3 className="font-bold text-lg mb-4">确认删除约局</h3>
-            <p>删除后将同时清除所有报名记录，此操作不可撤销。</p>
+            <h3 className="font-bold text-lg mb-4">
+              {t("dashActives.confirmDeleteTitle")}
+            </h3>
+            <p>{t("dashActives.confirmDeleteDescription")}</p>
             <div className="mt-4 p-4 bg-base-200 rounded-lg">
               <p className="text-sm">
-                <strong>标题:</strong> {pendingDelete.title}
+                <strong>{t("dashActives.titleLabel")}</strong>{" "}
+                {pendingDelete.title}
               </p>
               <p className="text-sm">
-                <strong>日期:</strong> {pendingDelete.date}
+                <strong>{t("dashActives.dateLabel")}</strong>{" "}
+                {pendingDelete.date}
               </p>
               <p className="text-sm">
                 <strong>ID:</strong> {pendingDelete.id}
@@ -470,7 +491,7 @@ function RouteComponent() {
                   setTimeout(() => setPendingDelete(null), 100);
                 }}
               >
-                取消
+                {t("dashActives.cancel")}
               </button>
               <button
                 type="button"
@@ -482,7 +503,9 @@ function RouteComponent() {
                 }}
                 disabled={deletePending}
               >
-                {deletePending ? "删除中..." : "确认删除"}
+                {deletePending
+                  ? t("dashActives.deleting")
+                  : t("dashActives.confirmDelete")}
               </button>
             </div>
           </div>
@@ -492,10 +515,13 @@ function RouteComponent() {
       {/* Batch delete dialog */}
       <dialog ref={batchDeleteDialogRef} className="modal">
         <div className="modal-box">
-          <h3 className="font-bold text-lg mb-4">确认批量删除</h3>
+          <h3 className="font-bold text-lg mb-4">
+            {t("dashActives.confirmBatchDeleteTitle")}
+          </h3>
           <p>
-            即将删除 <strong>{selectedIds.size}</strong>{" "}
-            条约局及其所有报名记录，此操作不可撤销。
+            {t("dashActives.batchDeletePrefix")}{" "}
+            <strong>{selectedIds.size}</strong>{" "}
+            {t("dashActives.batchDeleteSuffix")}
           </p>
           <div className="modal-action mt-6">
             <button
@@ -507,7 +533,7 @@ function RouteComponent() {
                 batchDeleteDialogRef.current?.close();
               }}
             >
-              取消
+              {t("dashActives.cancel")}
             </button>
             <button
               type="button"
@@ -520,8 +546,10 @@ function RouteComponent() {
               disabled={batchDeletePending}
             >
               {batchDeletePending
-                ? "删除中..."
-                : `确认删除 ${selectedIds.size} 项`}
+                ? t("dashActives.deleting")
+                : formatMessage(t("dashActives.confirmDeleteItems"), {
+                    count: selectedIds.size,
+                  })}
             </button>
           </div>
         </div>

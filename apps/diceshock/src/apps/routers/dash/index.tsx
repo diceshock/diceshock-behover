@@ -18,6 +18,8 @@ import { useCallback, useEffect, useState } from "react";
 import { DashNavMenuButton } from "@/client/components/diceshock/DashNavMenu";
 import DashQRScannerDialog from "@/client/components/diceshock/DashQRScannerDialog";
 import InventoryManagementCard from "@/client/components/diceshock/InventoryManagementCard";
+import { useTranslation } from "@/client/hooks/useTranslation";
+import { formatMessage } from "@/shared/i18n";
 import dayjs from "@/shared/utils/dayjs-config";
 import trpcClientPublic, { trpcClientDash } from "@/shared/utils/trpc";
 
@@ -45,6 +47,7 @@ function formatTime(val: number | null | undefined): string {
 }
 
 function RouteComponent() {
+  const { t } = useTranslation();
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -122,7 +125,7 @@ function RouteComponent() {
             onClick={() => setIsScannerOpen(true)}
           >
             <ScanIcon className="size-5" />
-            <span className="hidden sm:inline">扫码</span>
+            <span className="hidden sm:inline">{t("dashIndex.scan")}</span>
           </button>
         </div>
 
@@ -132,96 +135,100 @@ function RouteComponent() {
             className="btn btn-sm btn-ghost gap-1.5"
           >
             <HouseIcon className="size-4 text-primary" />
-            主页
+            {t("dashIndex.home")}
           </a>
           <a
             href="https://diceshock.com/inventory"
             className="btn btn-sm btn-ghost gap-1.5"
           >
             <PackageIcon className="size-4 text-info" />
-            库存查看
+            {t("dashIndex.inventoryView")}
           </a>
           <a
             href="https://diceshock.com/contact-us"
             className="btn btn-sm btn-ghost gap-1.5"
           >
             <EnvelopeIcon className="size-4 text-success" />
-            联系我们
+            {t("dashIndex.contactUs")}
           </a>
           <a
             href="https://diceshock.com/actives"
             className="btn btn-sm btn-ghost gap-1.5"
           >
             <CalendarDotsIcon className="size-4 text-error" />
-            活动&约局
+            {t("dashIndex.activitiesMeetups")}
           </a>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Link
             to="/dash/orders"
+            search={{}}
             className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold">订单管理</h3>
+                <h3 className="font-bold">{t("dashIndex.orderManagement")}</h3>
                 <div className="p-2 bg-info/10 rounded-lg">
                   <ClipboardTextIcon className="size-6 text-info" />
                 </div>
               </div>
               <p className="text-sm text-base-content/60 mt-1">
-                查看和管理使用订单
+                {t("dashIndex.orderManagementDesc")}
               </p>
             </div>
           </Link>
 
           <Link
             to="/dash/users"
+            search={{}}
             className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold">用户管理</h3>
+                <h3 className="font-bold">{t("dashIndex.userManagement")}</h3>
                 <div className="p-2 bg-accent/10 rounded-lg">
                   <UsersIcon className="size-6 text-accent" />
                 </div>
               </div>
               <p className="text-sm text-base-content/60 mt-1">
-                查看和管理用户信息
+                {t("dashIndex.userManagementDesc")}
               </p>
             </div>
           </Link>
 
           <Link
             to="/dash/tables"
+            search={{}}
             className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold">桌台管理</h3>
+                <h3 className="font-bold">{t("dashIndex.tableManagement")}</h3>
                 <div className="p-2 bg-secondary/10 rounded-lg">
                   <TableIcon className="size-6 text-secondary" />
                 </div>
               </div>
               <p className="text-sm text-base-content/60 mt-1">
-                管理桌台和座位信息
+                {t("dashIndex.tableManagementDesc")}
               </p>
             </div>
           </Link>
 
           <Link
             to="/dash/actives"
+            search={{}}
             className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold">约局管理</h3>
+                <h3 className="font-bold">{t("dashIndex.meetupManagement")}</h3>
                 <div className="p-2 bg-error/10 rounded-lg">
                   <CalendarDotsIcon className="size-6 text-error" />
                 </div>
               </div>
               <p className="text-sm text-base-content/60 mt-1">
-                管理活动和约局信息
+                {t("dashIndex.meetupManagementDesc")}
               </p>
             </div>
           </Link>
@@ -232,13 +239,13 @@ function RouteComponent() {
           >
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold">活动管理</h3>
+                <h3 className="font-bold">{t("dashIndex.eventManagement")}</h3>
                 <div className="p-2 bg-warning/10 rounded-lg">
                   <MegaphoneIcon className="size-6 text-warning" />
                 </div>
               </div>
               <p className="text-sm text-base-content/60 mt-1">
-                管理活动发布和编辑
+                {t("dashIndex.eventManagementDesc")}
               </p>
             </div>
           </Link>
@@ -249,47 +256,49 @@ function RouteComponent() {
           >
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold">价格计划</h3>
+                <h3 className="font-bold">{t("dashIndex.pricingPlans")}</h3>
                 <div className="p-2 bg-success/10 rounded-lg">
                   <CurrencyDollarIcon className="size-6 text-success" />
                 </div>
               </div>
               <p className="text-sm text-base-content/60 mt-1">
-                管理定价和收费规则
+                {t("dashIndex.pricingPlansDesc")}
               </p>
             </div>
           </Link>
 
           <Link
             to="/dash/gsz"
+            search={{}}
             className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold">立直麻将管理</h3>
+                <h3 className="font-bold">{t("dashIndex.riichiManagement")}</h3>
                 <div className="p-2 bg-primary/10 rounded-lg">
                   <SwordIcon className="size-6 text-primary" />
                 </div>
               </div>
               <p className="text-sm text-base-content/60 mt-1">
-                查看和管理立直麻将对局
+                {t("dashIndex.riichiManagementDesc")}
               </p>
             </div>
           </Link>
 
           <Link
             to="/dash/media"
+            search={{}}
             className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold">媒体库</h3>
+                <h3 className="font-bold">{t("dashIndex.mediaLibrary")}</h3>
                 <div className="p-2 bg-cyan-500/10 rounded-lg">
                   <ImageSquareIcon className="size-6 text-cyan-500" />
                 </div>
               </div>
               <p className="text-sm text-base-content/60 mt-1">
-                上传和管理媒体文件
+                {t("dashIndex.mediaLibraryDesc")}
               </p>
             </div>
           </Link>
@@ -299,15 +308,17 @@ function RouteComponent() {
           <div className="card-body p-4">
             <h3 className="font-bold flex items-center gap-2 mb-3">
               <ShieldCheckIcon className="size-5 text-warning" />
-              系统设置
+              {t("dashIndex.systemSettings")}
             </h3>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">人机校验 (Turnstile)</p>
+                <p className="text-sm font-medium">
+                  {t("dashIndex.turnstileCheck")}
+                </p>
                 <p className="text-xs text-base-content/60">
                   {captchaEnabled
-                    ? "已开启，发送短信验证码前需通过人机校验"
-                    : "已关闭，跳过人机校验直接发送短信验证码"}
+                    ? t("dashIndex.turnstileEnabledDesc")
+                    : t("dashIndex.turnstileDisabledDesc")}
                 </p>
                 {!captchaEnabled && captchaDisabledUntil && (
                   <CaptchaCountdown until={captchaDisabledUntil} />
@@ -330,10 +341,14 @@ function RouteComponent() {
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold flex items-center gap-2">
                   <ClipboardTextIcon className="size-5 text-info" />
-                  最近订单
+                  {t("dashIndex.recentOrders")}
                 </h3>
-                <Link to="/dash/orders" className="btn btn-xs btn-ghost">
-                  查看全部
+                <Link
+                  to="/dash/orders"
+                  search={{}}
+                  className="btn btn-xs btn-ghost"
+                >
+                  {t("dashIndex.viewAll")}
                 </Link>
               </div>
               {loading ? (
@@ -342,7 +357,7 @@ function RouteComponent() {
                 </div>
               ) : recentOrders.length === 0 ? (
                 <p className="text-sm text-base-content/50 text-center py-6">
-                  暂无订单
+                  {t("dashIndex.noOrders")}
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -350,6 +365,7 @@ function RouteComponent() {
                     <Link
                       key={order.id}
                       to="/dash/orders"
+                      search={{}}
                       className="flex items-center justify-between p-2 rounded-lg hover:bg-base-200 transition-colors"
                     >
                       <div className="flex items-center gap-2 min-w-0">
@@ -381,10 +397,14 @@ function RouteComponent() {
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold flex items-center gap-2">
                   <TableIcon className="size-5 text-secondary" />
-                  活跃桌台
+                  {t("dashIndex.activeTables")}
                 </h3>
-                <Link to="/dash/tables" className="btn btn-xs btn-ghost">
-                  查看全部
+                <Link
+                  to="/dash/tables"
+                  search={{}}
+                  className="btn btn-xs btn-ghost"
+                >
+                  {t("dashIndex.viewAll")}
                 </Link>
               </div>
               {loading ? (
@@ -393,7 +413,7 @@ function RouteComponent() {
                 </div>
               ) : activeTables.length === 0 ? (
                 <p className="text-sm text-base-content/50 text-center py-6">
-                  暂无活跃桌台
+                  {t("dashIndex.noActiveTables")}
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -418,10 +438,14 @@ function RouteComponent() {
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold flex items-center gap-2">
                   <UsersIcon className="size-5 text-accent" />
-                  活跃用户
+                  {t("dashIndex.activeUsers")}
                 </h3>
-                <Link to="/dash/users" className="btn btn-xs btn-ghost">
-                  查看全部
+                <Link
+                  to="/dash/users"
+                  search={{}}
+                  className="btn btn-xs btn-ghost"
+                >
+                  {t("dashIndex.viewAll")}
                 </Link>
               </div>
               {loading ? (
@@ -430,7 +454,7 @@ function RouteComponent() {
                 </div>
               ) : activeUsers.length === 0 ? (
                 <p className="text-sm text-base-content/50 text-center py-6">
-                  暂无活跃用户
+                  {t("dashIndex.noActiveUsers")}
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -463,6 +487,7 @@ function RouteComponent() {
 }
 
 function CaptchaCountdown({ until }: { until: number }) {
+  const { t } = useTranslation();
   const [remaining, setRemaining] = useState(() =>
     Math.max(0, Math.floor((until - Date.now()) / 1000)),
   );
@@ -485,7 +510,9 @@ function CaptchaCountdown({ until }: { until: number }) {
 
   return (
     <p className="text-xs text-warning mt-1">
-      {h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`} 后自动恢复
+      {formatMessage(t("dashIndex.autoRestoreAfter"), {
+        time: h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`,
+      })}
     </p>
   );
 }

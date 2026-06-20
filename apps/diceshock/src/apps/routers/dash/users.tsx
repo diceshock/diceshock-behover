@@ -15,6 +15,7 @@ import {
 } from "@/client/components/diceshock/MembershipBadge";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
+import { useTranslation } from "@/client/hooks/useTranslation";
 import dayjs from "@/shared/utils/dayjs-config";
 import { trpcClientDash } from "@/shared/utils/trpc";
 
@@ -33,6 +34,7 @@ export const Route = createFileRoute("/dash/users")({
 
 function RouteComponent() {
   const msg = useMsg();
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
   const { q, page } = Route.useSearch();
   const navigate = useNavigate();
@@ -56,9 +58,9 @@ function RouteComponent() {
   const handleCopy = (text: string) => {
     try {
       navigator.clipboard.writeText(text);
-      msg.success("已复制");
+      msg.success(t("dashUsers.copied"));
     } catch {
-      msg.error("没有剪贴板访问权限");
+      msg.error(t("dashUsers.clipboardDenied"));
     }
   };
 
@@ -81,11 +83,13 @@ function RouteComponent() {
 
       setUsers(data);
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "获取用户失败");
+      msg.error(
+        err instanceof Error ? err.message : t("dashUsers.fetchFailed"),
+      );
     } finally {
       setLoading(false);
     }
-  }, [q, page, msg]);
+  }, [q, page, msg, t]);
 
   useEffect(() => {
     void refreshUsers();
@@ -103,12 +107,14 @@ function RouteComponent() {
     setDisablePending(true);
     try {
       await trpcClientDash.users.disable.mutate({ id: pendingDisable.id });
-      msg.success("用户已关停");
+      msg.success(t("dashUsers.disableSuccess"));
       disableDialogRef.current?.close();
       setPendingDisable(null);
       await refreshUsers();
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "关停失败");
+      msg.error(
+        err instanceof Error ? err.message : t("dashUsers.disableFailed"),
+      );
     } finally {
       setDisablePending(false);
     }
@@ -130,7 +136,7 @@ function RouteComponent() {
             onChange={(evt) => {
               setSearch({ q: evt.target.value, page: 1 });
             }}
-            placeholder="搜索用户 ID、手机号、UID、邮箱、昵称..."
+            placeholder={t("dashUsers.searchPlaceholder")}
             className="input input-lg w-full"
           />
         </div>
@@ -142,15 +148,19 @@ function RouteComponent() {
             <tr className="z-20">
               <th></th>
               <td className="whitespace-nowrap">ID</td>
-              <td className="whitespace-nowrap">昵称</td>
-              <td className="whitespace-nowrap">姓名</td>
-              <td className="whitespace-nowrap">角色</td>
-              <td className="whitespace-nowrap">会员计划</td>
-              <td className="whitespace-nowrap">储值余额</td>
-              <td className="whitespace-nowrap">手机号</td>
+              <td className="whitespace-nowrap">{t("dashUsers.nickname")}</td>
+              <td className="whitespace-nowrap">{t("dashUsers.name")}</td>
+              <td className="whitespace-nowrap">{t("dashUsers.role")}</td>
+              <td className="whitespace-nowrap">
+                {t("dashUsers.membershipPlan")}
+              </td>
+              <td className="whitespace-nowrap">
+                {t("dashUsers.storedBalance")}
+              </td>
+              <td className="whitespace-nowrap">{t("dashUsers.phone")}</td>
               <td className="whitespace-nowrap">UID</td>
-              <td className="whitespace-nowrap">创建时间</td>
-              <th className="whitespace-nowrap">操作</th>
+              <td className="whitespace-nowrap">{t("dashUsers.createdAt")}</td>
+              <th className="whitespace-nowrap">{t("dashUsers.actions")}</th>
             </tr>
           </thead>
 
@@ -167,7 +177,7 @@ function RouteComponent() {
                   colSpan={12}
                   className="py-12 text-center text-base-content/60"
                 >
-                  暂无用户，尝试调整搜索条件。
+                  {t("dashUsers.noData")}
                 </td>
               </tr>
             ) : (
@@ -187,7 +197,7 @@ function RouteComponent() {
                           type="button"
                           className="btn btn-xs btn-ghost btn-square shrink-0"
                           onClick={() => handleCopy(user.id)}
-                          title="复制用户ID"
+                          title={t("dashUsers.copyUserId")}
                         >
                           <CopyIcon className="size-3.5" />
                         </button>
@@ -205,12 +215,16 @@ function RouteComponent() {
                     <td className="whitespace-nowrap">
                       {user.role === "admin" ? (
                         <span className="badge badge-sm badge-error">
-                          管理员
+                          {t("dashUsers.admin")}
                         </span>
                       ) : user.role === "staff" ? (
-                        <span className="badge badge-sm badge-info">店员</span>
+                        <span className="badge badge-sm badge-info">
+                          {t("dashUsers.staff")}
+                        </span>
                       ) : (
-                        <span className="badge badge-sm badge-ghost">顾客</span>
+                        <span className="badge badge-sm badge-ghost">
+                          {t("dashUsers.customer")}
+                        </span>
                       )}
                     </td>
                     <td className="relative group">
@@ -299,7 +313,7 @@ function RouteComponent() {
                                 params={{ id: user.id }}
                               >
                                 <EyeIcon className="size-4" />
-                                详情
+                                {t("dashUsers.details")}
                               </Link>
                             </li>
                             <li>
@@ -309,7 +323,7 @@ function RouteComponent() {
                                 onClick={() => openDisableDialog(user)}
                               >
                                 <UserMinusIcon className="size-4" />
-                                关停
+                                {t("dashUsers.disable")}
                               </button>
                             </li>
                           </ul>
@@ -321,7 +335,7 @@ function RouteComponent() {
                             params={{ id: user.id }}
                             className="btn btn-xs btn-ghost btn-primary"
                           >
-                            详情
+                            {t("dashUsers.details")}
                             <EyeIcon />
                           </Link>
 
@@ -330,7 +344,7 @@ function RouteComponent() {
                             className="btn btn-xs btn-ghost btn-error"
                             onClick={() => openDisableDialog(user)}
                           >
-                            关停
+                            {t("dashUsers.disable")}
                             <UserMinusIcon />
                           </button>
                         </div>
@@ -347,20 +361,22 @@ function RouteComponent() {
       <dialog ref={disableDialogRef} className="modal">
         {pendingDisable && (
           <div className="modal-box">
-            <h3 className="font-bold text-lg mb-4">确认关停用户</h3>
-            <p>
-              关停用户将删除该用户的所有登录会话，使其无法登录。此操作不会删除用户数据。
-            </p>
+            <h3 className="font-bold text-lg mb-4">
+              {t("dashUsers.confirmDisableTitle")}
+            </h3>
+            <p>{t("dashUsers.confirmDisableDescription")}</p>
             <div className="mt-4 p-4 bg-base-200 rounded-lg">
               <p className="text-sm">
-                <strong>用户 ID:</strong> {pendingDisable.id}
+                <strong>{t("dashUsers.userIdLabel")}</strong>{" "}
+                {pendingDisable.id}
               </p>
               <p className="text-sm">
-                <strong>昵称:</strong>{" "}
+                <strong>{t("dashUsers.nicknameLabel")}</strong>{" "}
                 {pendingDisable.userInfo?.nickname || "—"}
               </p>
               <p className="text-sm">
-                <strong>邮箱:</strong> {pendingDisable.email || "—"}
+                <strong>{t("dashUsers.emailLabel")}</strong>{" "}
+                {pendingDisable.email || "—"}
               </p>
             </div>
             <div className="modal-action mt-6">
@@ -376,7 +392,7 @@ function RouteComponent() {
                   }, 100);
                 }}
               >
-                取消
+                {t("dashUsers.cancel")}
               </button>
               <button
                 type="button"
@@ -388,7 +404,9 @@ function RouteComponent() {
                 }}
                 disabled={disablePending}
               >
-                {disablePending ? "关停中..." : "确认关停"}
+                {disablePending
+                  ? t("dashUsers.disabling")
+                  : t("dashUsers.confirmDisable")}
               </button>
             </div>
           </div>

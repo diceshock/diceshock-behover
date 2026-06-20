@@ -12,6 +12,7 @@ import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import { useAdminStoreFilter } from "@/client/hooks/useAdminStoreFilter";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
+import { useTranslation } from "@/client/hooks/useTranslation";
 import dayjs from "@/shared/utils/dayjs-config";
 import { trpcClientDash } from "@/shared/utils/trpc";
 
@@ -36,6 +37,7 @@ export const Route = createFileRoute("/dash/events")({
 
 function RouteComponent() {
   const msg = useMsg();
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
   const { storeFilter } = useAdminStoreFilter();
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -48,9 +50,9 @@ function RouteComponent() {
   const handleCopy = (text: string) => {
     try {
       navigator.clipboard.writeText(text);
-      msg.success("已复制");
+      msg.success(t("dashEvents.copied"));
     } catch {
-      msg.error("没有剪贴板访问权限");
+      msg.error(t("dashEvents.clipboardDenied"));
     }
   };
 
@@ -60,11 +62,13 @@ function RouteComponent() {
       const data = await trpcClientDash.eventsManagement.list.query();
       setEvents(data);
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "获取活动列表失败");
+      msg.error(
+        err instanceof Error ? err.message : t("dashEvents.fetchFailed"),
+      );
     } finally {
       setLoading(false);
     }
-  }, [storeFilter, msg]);
+  }, [storeFilter, msg, t]);
 
   useEffect(() => {
     void refreshEvents();
@@ -73,12 +77,14 @@ function RouteComponent() {
   const handleCreate = async () => {
     try {
       const event = await trpcClientDash.eventsManagement.create.mutate({
-        title: "新活动",
+        title: t("dashEvents.newEventTitle"),
       });
-      msg.success("活动已创建");
+      msg.success(t("dashEvents.createSuccess"));
       await refreshEvents();
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "创建失败");
+      msg.error(
+        err instanceof Error ? err.message : t("dashEvents.createFailed"),
+      );
     }
   };
 
@@ -87,10 +93,16 @@ function RouteComponent() {
       await trpcClientDash.eventsManagement.togglePublish.mutate({
         id: event.id,
       });
-      msg.success(event.is_published ? "已取消上架" : "已上架");
+      msg.success(
+        event.is_published
+          ? t("dashEvents.unpublishSuccess")
+          : t("dashEvents.publishSuccess"),
+      );
       await refreshEvents();
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "操作失败");
+      msg.error(
+        err instanceof Error ? err.message : t("dashEvents.operationFailed"),
+      );
     }
   };
 
@@ -108,12 +120,14 @@ function RouteComponent() {
       await trpcClientDash.eventsManagement.remove.mutate({
         id: pendingDelete.id,
       });
-      msg.success("活动已删除");
+      msg.success(t("dashEvents.deleteSuccess"));
       deleteDialogRef.current?.close();
       setPendingDelete(null);
       await refreshEvents();
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "删除失败");
+      msg.error(
+        err instanceof Error ? err.message : t("dashEvents.deleteFailed"),
+      );
     } finally {
       setDeletePending(false);
     }
@@ -132,7 +146,7 @@ function RouteComponent() {
           onClick={handleCreate}
         >
           <PlusIcon className="size-4" weight="bold" />
-          新建活动
+          {t("dashEvents.createEvent")}
         </button>
       </div>
 
@@ -142,13 +156,17 @@ function RouteComponent() {
             <tr className="z-20">
               <th />
               <td className="whitespace-nowrap">ID</td>
-              <td className="whitespace-nowrap">标题</td>
-              <td className="whitespace-nowrap">描述</td>
-              <td className="whitespace-nowrap">头图</td>
-              <td className="whitespace-nowrap">状态</td>
-              <td className="whitespace-nowrap">创建时间</td>
-              <td className="whitespace-nowrap">更新时间</td>
-              <th className="whitespace-nowrap">操作</th>
+              <td className="whitespace-nowrap">{t("dashEvents.title")}</td>
+              <td className="whitespace-nowrap">
+                {t("dashEvents.description")}
+              </td>
+              <td className="whitespace-nowrap">
+                {t("dashEvents.coverImage")}
+              </td>
+              <td className="whitespace-nowrap">{t("dashEvents.status")}</td>
+              <td className="whitespace-nowrap">{t("dashEvents.createdAt")}</td>
+              <td className="whitespace-nowrap">{t("dashEvents.updatedAt")}</td>
+              <th className="whitespace-nowrap">{t("dashEvents.actions")}</th>
             </tr>
           </thead>
 
@@ -165,7 +183,7 @@ function RouteComponent() {
                   colSpan={10}
                   className="py-12 text-center text-base-content/60"
                 >
-                  暂无活动数据。
+                  {t("dashEvents.noData")}
                 </td>
               </tr>
             ) : (
@@ -181,7 +199,7 @@ function RouteComponent() {
                         type="button"
                         className="btn btn-xs btn-ghost btn-square shrink-0"
                         onClick={() => handleCopy(event.id)}
-                        title="复制ID"
+                        title={t("dashEvents.copyId")}
                       >
                         <CopyIcon className="size-3.5" />
                       </button>
@@ -212,10 +230,12 @@ function RouteComponent() {
                   <td className="whitespace-nowrap">
                     {event.is_published ? (
                       <span className="badge badge-success badge-sm">
-                        已上架
+                        {t("dashEvents.published")}
                       </span>
                     ) : (
-                      <span className="badge badge-ghost badge-sm">未上架</span>
+                      <span className="badge badge-ghost badge-sm">
+                        {t("dashEvents.unpublished")}
+                      </span>
                     )}
                   </td>
                   <td className="whitespace-nowrap">
@@ -247,7 +267,7 @@ function RouteComponent() {
                               params={{ id: event.id }}
                             >
                               <EyeIcon className="size-4" />
-                              详情
+                              {t("dashEvents.details")}
                             </Link>
                           </li>
                           <li>
@@ -255,7 +275,9 @@ function RouteComponent() {
                               type="button"
                               onClick={() => handleTogglePublish(event)}
                             >
-                              {event.is_published ? "取消上架" : "上架"}
+                              {event.is_published
+                                ? t("dashEvents.unpublish")
+                                : t("dashEvents.publish")}
                             </button>
                           </li>
                           <li>
@@ -265,7 +287,7 @@ function RouteComponent() {
                               onClick={() => openDeleteDialog(event)}
                             >
                               <TrashIcon className="size-4" />
-                              删除
+                              {t("dashEvents.delete")}
                             </button>
                           </li>
                         </ul>
@@ -278,21 +300,23 @@ function RouteComponent() {
                           className="btn btn-xs btn-ghost"
                         >
                           <EyeIcon className="size-4" />
-                          详情
+                          {t("dashEvents.details")}
                         </Link>
                         <button
                           type="button"
                           className="btn btn-xs btn-ghost"
                           onClick={() => handleTogglePublish(event)}
                         >
-                          {event.is_published ? "取消上架" : "上架"}
+                          {event.is_published
+                            ? t("dashEvents.unpublish")
+                            : t("dashEvents.publish")}
                         </button>
                         <button
                           type="button"
                           className="btn btn-xs btn-ghost btn-error"
                           onClick={() => openDeleteDialog(event)}
                         >
-                          删除
+                          {t("dashEvents.delete")}
                           <TrashIcon />
                         </button>
                       </div>
@@ -308,11 +332,14 @@ function RouteComponent() {
       <dialog ref={deleteDialogRef} className="modal">
         {pendingDelete && (
           <div className="modal-box">
-            <h3 className="font-bold text-lg mb-4">确认删除活动</h3>
-            <p>删除后此操作不可撤销。</p>
+            <h3 className="font-bold text-lg mb-4">
+              {t("dashEvents.confirmDeleteTitle")}
+            </h3>
+            <p>{t("dashEvents.confirmDeleteDescription")}</p>
             <div className="mt-4 p-4 bg-base-200 rounded-lg">
               <p className="text-sm">
-                <strong>标题:</strong> {pendingDelete.title}
+                <strong>{t("dashEvents.titleLabel")}</strong>{" "}
+                {pendingDelete.title}
               </p>
               <p className="text-sm">
                 <strong>ID:</strong> {pendingDelete.id}
@@ -329,7 +356,7 @@ function RouteComponent() {
                   setTimeout(() => setPendingDelete(null), 100);
                 }}
               >
-                取消
+                {t("dashEvents.cancel")}
               </button>
               <button
                 type="button"
@@ -341,7 +368,9 @@ function RouteComponent() {
                 }}
                 disabled={deletePending}
               >
-                {deletePending ? "删除中..." : "确认删除"}
+                {deletePending
+                  ? t("dashEvents.deleting")
+                  : t("dashEvents.confirmDelete")}
               </button>
             </div>
           </div>

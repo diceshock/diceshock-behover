@@ -1,9 +1,12 @@
 import { ArrowUpIcon } from "@phosphor-icons/react/dist/ssr";
 import { Link } from "@tanstack/react-router";
 import Logo from "@/client/assets/svg/black-simplify-with-text-logo.svg?react";
+import { useTranslation } from "@/client/hooks/useTranslation";
 import Gradient from "./Gradient";
 
 const Footer = () => {
+  const { t } = useTranslation();
+
   return (
     <>
       <Gradient
@@ -20,11 +23,11 @@ const Footer = () => {
           <Logo className="w-32" />
 
           <p>
-            武汉奇兵文化有限公司
+            {t("footer.companyName")}
             <br />
-            Wuhan DiceShock Culture Co., Ltd.
+            {t("footer.companyNameEn")}
             <br />
-            位于光谷总部国际2栋 203 室
+            {t("footer.address")}
           </p>
           <p>
             <a
@@ -38,34 +41,34 @@ const Footer = () => {
           </p>
         </aside>
         <nav>
-          <h6 className="footer-title">服务</h6>
+          <h6 className="footer-title">{t("footer.services")}</h6>
           <Link to="/" className="link link-hover">
-            库存
+            {t("footer.inventory")}
           </Link>
           <Link to="/" className="link link-hover">
-            DiceShock Agents
+            {t("footer.agents")}
           </Link>
           <a href="/dash" className="link link-hover">
-            后台
+            {t("footer.dashboard")}
           </a>
         </nav>
         <nav>
-          <h6 className="footer-title">关于我们</h6>
+          <h6 className="footer-title">{t("footer.aboutUs")}</h6>
           <Link to="/contact-us" className="link link-hover">
-            联系我们
+            {t("footer.contactUs")}
           </Link>
           <Link to="/" className="link link-hover">
-            加入我们
+            {t("footer.joinUs")}
           </Link>
           <Link to="/" className="link link-hover">
-            服务条款
+            {t("footer.termsOfService")}
           </Link>
           <Link to="/" className="link link-hover">
-            Cookie policy
+            {t("footer.cookiePolicy")}
           </Link>
         </nav>
         <nav>
-          <h6 className="footer-title">友情连接</h6>
+          <h6 className="footer-title">{t("footer.friendlyLinks")}</h6>
           <a href="https://goddessfantasy.net" className="link link-hover">
             纯美苹果园
           </a>
@@ -88,7 +91,9 @@ const Footer = () => {
         }
         className="w-full h-16 bg-primary hover:bg-base-100 hover:[&>h5]:text-base-content flex justify-between items-center"
       >
-        <h5 className="mx-auto text-base-200 text-xl">返回顶部</h5>
+        <h5 className="mx-auto text-base-200 text-xl">
+          {t("footer.backToTop")}
+        </h5>
         <div className="w-16 h-full bg-base-100 flex justify-center items-center">
           <ArrowUpIcon className="size-10" />
         </div>

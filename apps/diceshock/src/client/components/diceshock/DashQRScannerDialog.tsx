@@ -9,6 +9,8 @@ import {
 import { useNavigate } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "@/client/hooks/useTranslation";
+import { formatMessage } from "@/shared/i18n";
 import { trpcClientDash } from "@/shared/utils/trpc";
 import Modal from "../modal";
 
@@ -78,6 +80,7 @@ export default function DashQRScannerDialog({
   isOpen: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const videoRef = useRef<HTMLVideoElement>(null);
   const scannerRef = useRef<import("qr-scanner").default | null>(null);
   const [scanState, setScanState] = useState<ScanState>({ status: "scanning" });
@@ -96,63 +99,74 @@ export default function DashQRScannerDialog({
     scannerRef.current?.start();
   }, []);
 
-  const handleScanResult = useCallback(async (data: string) => {
-    scannerRef.current?.stop();
-    setScanState({ status: "resolving", raw: data });
+  const handleScanResult = useCallback(
+    async (data: string) => {
+      scannerRef.current?.stop();
+      setScanState({ status: "resolving", raw: data });
 
-    const tableCode = tryParseTableCode(data);
-    if (tableCode) {
-      try {
-        const table = await trpcClientDash.tablesManagement.getByCode.query({
-          code: tableCode,
-        });
-        setScanState({
-          status: "resolved",
-          type: "table",
-          tableId: table.id,
-          label: table.name,
-        });
-      } catch (err) {
-        setScanState({
-          status: "error",
-          message: err instanceof Error ? err.message : "桌台查询失败",
-        });
-      }
-      return;
-    }
-
-    const totpPayload = tryParseTotpPayload(data);
-    if (totpPayload) {
-      try {
-        const result =
-          await trpcClientDash.users.verifyTotp.mutate(totpPayload);
-        if (result.success) {
+      const tableCode = tryParseTableCode(data);
+      if (tableCode) {
+        try {
+          const table = await trpcClientDash.tablesManagement.getByCode.query({
+            code: tableCode,
+          });
           setScanState({
             status: "resolved",
-            type: "user",
-            userId: result.userId,
-            label: `用户 ${result.userId.slice(0, 8)}...`,
+            type: "table",
+            tableId: table.id,
+            label: table.name,
           });
-        } else {
+        } catch (err) {
           setScanState({
             status: "error",
-            message: result.message,
+            message:
+              err instanceof Error
+                ? err.message
+                : t("dashScan.tableLookupFailed"),
           });
         }
-      } catch (err) {
-        setScanState({
-          status: "error",
-          message: err instanceof Error ? err.message : "验证失败",
-        });
+        return;
       }
-      return;
-    }
 
-    setScanState({
-      status: "error",
-      message: `无法识别的二维码格式: ${data.length > 100 ? `${data.slice(0, 100)}...` : data}`,
-    });
-  }, []);
+      const totpPayload = tryParseTotpPayload(data);
+      if (totpPayload) {
+        try {
+          const result =
+            await trpcClientDash.users.verifyTotp.mutate(totpPayload);
+          if (result.success) {
+            setScanState({
+              status: "resolved",
+              type: "user",
+              userId: result.userId,
+              label: formatMessage(t("dashScan.userLabel"), {
+                id: result.userId.slice(0, 8),
+              }),
+            });
+          } else {
+            setScanState({
+              status: "error",
+              message: result.message,
+            });
+          }
+        } catch (err) {
+          setScanState({
+            status: "error",
+            message:
+              err instanceof Error ? err.message : t("dashScan.verifyFailed"),
+          });
+        }
+        return;
+      }
+
+      setScanState({
+        status: "error",
+        message: formatMessage(t("dashScan.unsupportedQrFormat"), {
+          data: data.length > 100 ? `${data.slice(0, 100)}...` : data,
+        }),
+      });
+    },
+    [t],
+  );
 
   const handleNavigate = useCallback(() => {
     if (scanState.status !== "resolved") return;
@@ -195,8 +209,10 @@ export default function DashQRScannerDialog({
             status: "error",
             message:
               err instanceof Error
-                ? `摄像头访问失败: ${err.message}`
-                : "摄像头访问失败，请检查权限设置",
+                ? formatMessage(t("dashScan.cameraAccessFailedWithMessage"), {
+                    message: err.message,
+                  })
+                : t("dashScan.cameraAccessFailed"),
           });
         }
       }
@@ -210,7 +226,7 @@ export default function DashQRScannerDialog({
       scannerRef.current?.destroy();
       scannerRef.current = null;
     };
-  }, [isOpen, handleScanResult]);
+  }, [isOpen, handleScanResult, t]);
 
   return (
     <Modal
@@ -230,7 +246,7 @@ export default function DashQRScannerDialog({
         <div className="flex items-center justify-between px-7 pb-4">
           <h3 className="text-base font-bold flex items-center gap-2">
             <CameraIcon weight="fill" className="size-5" />
-            扫描二维码
+            {t("dashScan.title")}
           </h3>
 
           <button onClick={handleClose} className="btn btn-sm btn-circle">
@@ -257,13 +273,13 @@ export default function DashQRScannerDialog({
         <div className="px-7 pt-4">
           {scanState.status === "scanning" && (
             <p className="text-sm text-base-content/60 text-center">
-              将用户或桌台二维码对准摄像头
+              {t("dashScan.scanHint")}
             </p>
           )}
 
           {scanState.status === "resolving" && (
             <p className="text-sm text-base-content/60 text-center">
-              正在识别...
+              {t("dashScan.resolving")}
             </p>
           )}
 
@@ -277,7 +293,7 @@ export default function DashQRScannerDialog({
                 onClick={handleRescan}
                 className="btn btn-sm btn-ghost self-center"
               >
-                重新扫描
+                {t("dashScan.rescan")}
               </button>
             </div>
           )}
@@ -301,7 +317,9 @@ export default function DashQRScannerDialog({
                 </div>
                 <div className="flex flex-col">
                   <span className="text-xs text-base-content/60">
-                    {scanState.type === "user" ? "用户" : "桌台"}
+                    {scanState.type === "user"
+                      ? t("dashScan.user")
+                      : t("dashScan.table")}
                   </span>
                   <span className="font-medium text-sm">{scanState.label}</span>
                 </div>
@@ -313,11 +331,11 @@ export default function DashQRScannerDialog({
                   className="btn btn-sm btn-primary"
                 >
                   <ScanIcon className="size-4" />
-                  前往详情
+                  {t("dashScan.goToDetails")}
                 </button>
 
                 <button onClick={handleRescan} className="btn btn-sm btn-ghost">
-                  重新扫描
+                  {t("dashScan.rescan")}
                 </button>
               </div>
             </div>

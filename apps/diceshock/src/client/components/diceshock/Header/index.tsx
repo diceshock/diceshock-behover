@@ -5,6 +5,9 @@ import { useCallback, useMemo, useState } from "react";
 import LongTextLogo from "@/client/assets/svg/black-simplify-with-text-logo.svg?react";
 import StoreLocaleDropdown from "@/client/components/StoreLocaleDropdown";
 import useCrossData from "@/client/hooks/useCrossData";
+import { useStoreContext } from "@/client/hooks/useStoreContext";
+import { useTranslation } from "@/client/hooks/useTranslation";
+import { STORES } from "@/shared/store-locale";
 import AvatarMenu from "./AvataMenu";
 
 type PageType = {
@@ -13,29 +16,6 @@ type PageType = {
   children?: PageType[];
   spa?: boolean; // 默认为 true，为 false 时使用 a 标签跳转
 };
-
-const PAGES: PageType[] = [
-  {
-    title: "立直麻将",
-    href: `/riichi`,
-  },
-  {
-    title: "库存",
-    href: `/inventory`,
-  },
-  {
-    title: "活动&约局",
-    href: `/actives`,
-  },
-  {
-    title: "DiceShock Agents©",
-    href: `/diceshock-agents`,
-  },
-  {
-    title: "联系我们",
-    href: `/contact-us`,
-  },
-];
 
 const getSideMenu = (pages: PageType[]) =>
   pages
@@ -93,7 +73,21 @@ const getMidMenu = (pages: PageType[]) =>
 
 function Header() {
   const crossData = useCrossData();
+  const { storeCode } = useStoreContext();
+  const { t } = useTranslation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  const PAGES: PageType[] = useMemo(
+    () => [
+      { title: t("headerNav.riichi"), href: `/riichi` },
+      { title: t("headerNav.inventory"), href: `/inventory` },
+      { title: t("headerNav.actives"), href: `/actives` },
+      { title: t("headerNav.agents"), href: `/diceshock-agents` },
+      { title: t("headerNav.contact"), href: `/contact-us` },
+    ],
+    [t],
+  );
+
   const isInWechat = useMemo(() => {
     const ua =
       crossData?.UserAgentMeta?.userAgent ??
@@ -132,6 +126,9 @@ function Header() {
               className="btn btn-ghost px-0"
             >
               <LongTextLogo className="h-full" />
+              <span className="badge badge-sm badge-primary absolute -top-1 -right-2">
+                {STORES[storeCode].shortName}
+              </span>
             </button>
             <StoreLocaleDropdown
               isOpen={dropdownOpen}

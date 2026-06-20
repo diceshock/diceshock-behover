@@ -1,14 +1,20 @@
+import {
+  CheckIcon,
+  HouseIcon,
+  TranslateIcon,
+} from "@phosphor-icons/react/dist/ssr";
 import { useLocation } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef } from "react";
+import clsx from "clsx";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useStoreContext } from "@/client/hooks/useStoreContext";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import {
   buildStoreLocalePrefix,
-  LOCALES,
   type LocaleCode,
   STORES,
   type StoreCode,
 } from "@/shared/store-locale";
+import LanguageSelectorModal from "./LanguageSelectorModal";
 
 interface StoreLocaleDropdownProps {
   isOpen: boolean;
@@ -20,6 +26,7 @@ function StoreLocaleDropdown({ isOpen, onClose }: StoreLocaleDropdownProps) {
   const { storeCode } = useStoreContext();
   const location = useLocation();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [langModalOpen, setLangModalOpen] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -40,7 +47,6 @@ function StoreLocaleDropdown({ isOpen, onClose }: StoreLocaleDropdownProps) {
         onClose();
       }
     };
-    // Delay listener registration to prevent the opening click from immediately closing
     const timer = setTimeout(
       () => document.addEventListener("mousedown", handleClick),
       0,
@@ -67,77 +73,79 @@ function StoreLocaleDropdown({ isOpen, onClose }: StoreLocaleDropdownProps) {
     window.location.href = `/${prefix}/`;
   };
 
+  const handleLocaleSelect = useCallback(
+    (loc: LocaleCode) => {
+      navigateTo(storeCode, loc);
+    },
+    [storeCode, getRestOfPath],
+  );
+
   if (!isOpen) return null;
 
   return (
-    <div
-      ref={dropdownRef}
-      className="absolute left-0 top-full mt-1 z-[60] w-64 rounded-lg bg-base-100 shadow-xl border border-base-300 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
-    >
-      <div className="px-3 py-2 border-b border-base-200">
-        <button
-          type="button"
-          onClick={navigateHome}
-          className="w-full text-left px-2 py-1.5 rounded-md hover:bg-base-200 transition-colors text-sm font-medium"
-        >
-          🏠 回到主页
-        </button>
-      </div>
+    <>
+      <div
+        ref={dropdownRef}
+        className="absolute left-0 top-full mt-1 z-[60] w-56 rounded-lg bg-base-100 shadow-xl border border-base-300 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+      >
+        <div className="px-2 py-1.5">
+          <button
+            type="button"
+            onClick={navigateHome}
+            className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-md hover:bg-base-200 transition-colors text-sm font-medium"
+          >
+            <HouseIcon className="size-4 shrink-0" weight="bold" />
+            <span>回到主页</span>
+          </button>
 
-      <div className="px-3 py-2 border-b border-base-200">
-        <h3 className="text-xs font-semibold text-base-content/50 uppercase tracking-wide mb-1 px-2">
-          Languages
-        </h3>
-        <div className="grid grid-cols-2 gap-0.5">
-          {(Object.values(LOCALES) as Array<(typeof LOCALES)[LocaleCode]>).map(
-            (entry) => (
-              <button
-                key={entry.code}
-                type="button"
-                onClick={() => navigateTo(storeCode, entry.code)}
-                className={`text-left px-2 py-1 rounded text-sm transition-colors ${
-                  entry.code === locale
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "hover:bg-base-200 text-base-content"
-                }`}
-              >
-                {entry.code === locale && (
-                  <span className="mr-1 text-primary">✓</span>
-                )}
-                {entry.name}
-              </button>
-            ),
-          )}
+          <button
+            type="button"
+            onClick={() => setLangModalOpen(true)}
+            className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-md hover:bg-base-200 transition-colors text-sm font-medium"
+          >
+            <TranslateIcon className="size-4 shrink-0" weight="bold" />
+            <span>Languages</span>
+          </button>
         </div>
-      </div>
 
-      <div className="px-3 py-2">
-        <h3 className="text-xs font-semibold text-base-content/50 uppercase tracking-wide mb-1 px-2">
-          Stores
-        </h3>
-        <div className="space-y-0.5">
+        <div className="border-t border-base-200" />
+
+        <div className="px-2 py-1.5">
           {(Object.values(STORES) as Array<(typeof STORES)[StoreCode]>).map(
-            (entry) => (
-              <button
-                key={entry.code}
-                type="button"
-                onClick={() => navigateTo(entry.code, locale)}
-                className={`w-full text-left px-2 py-1.5 rounded text-sm transition-colors ${
-                  entry.code === storeCode
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "hover:bg-base-200 text-base-content"
-                }`}
-              >
-                {entry.name}
-                {entry.code === storeCode && (
-                  <span className="ml-1.5 text-xs text-primary/70">[当前]</span>
-                )}
-              </button>
-            ),
+            (entry) => {
+              const isCurrent = entry.code === storeCode;
+              return (
+                <button
+                  key={entry.code}
+                  type="button"
+                  onClick={() => navigateTo(entry.code, locale)}
+                  className={clsx(
+                    "flex items-center gap-2.5 w-full px-2.5 py-2 rounded-md text-sm transition-colors",
+                    isCurrent
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "hover:bg-base-200 text-base-content",
+                  )}
+                >
+                  <span className="w-4 shrink-0 flex items-center justify-center">
+                    {isCurrent && (
+                      <CheckIcon className="size-3.5" weight="bold" />
+                    )}
+                  </span>
+                  <span>{entry.name}</span>
+                </button>
+              );
+            },
           )}
         </div>
       </div>
-    </div>
+
+      <LanguageSelectorModal
+        isOpen={langModalOpen}
+        onClose={() => setLangModalOpen(false)}
+        currentLocale={locale}
+        onSelect={handleLocaleSelect}
+      />
+    </>
   );
 }
 

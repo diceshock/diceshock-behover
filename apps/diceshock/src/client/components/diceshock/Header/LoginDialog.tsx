@@ -3,6 +3,8 @@ import { WarningIcon, XIcon } from "@phosphor-icons/react/dist/ssr";
 import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import WechatIcon from "@/client/assets/svg/wechat.svg?react";
+import { useTranslation } from "@/client/hooks/useTranslation";
+import { formatMessage } from "@/shared/i18n";
 import trpcClientPublic from "../../../../shared/utils/trpc";
 import useSmsCode from "../../../hooks/useSmsCode";
 import useTempIdentity from "../../../hooks/useTempIdentity";
@@ -14,6 +16,7 @@ function isWechatBrowser(): boolean {
 }
 
 function WechatQREmbed({ onFallback }: { onFallback: () => void }) {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const [appId, setAppId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -72,10 +75,10 @@ function WechatQREmbed({ onFallback }: { onFallback: () => void }) {
         ref={containerRef}
         className="cursor-pointer rounded-lg overflow-hidden"
         onClick={() => setKey((k) => k + 1)}
-        title="点击刷新二维码"
+        title={t("login.wechatQrRefresh")}
       />
       <p className="text-xs text-base-content/60 text-center">
-        使用微信扫码登录 · 点击二维码刷新
+        {t("login.wechatQrHint")}
       </p>
     </div>
   );
@@ -91,6 +94,7 @@ export default function LoginDialog({
   isSeatPage?: boolean;
 }) {
   const isInWechat = useMemo(() => isWechatBrowser(), []);
+  const { t, locale } = useTranslation();
 
   const [activeTab, setActiveTab] = useState<"wechat" | "phonenumber">(
     isInWechat ? "phonenumber" : "wechat",
@@ -169,8 +173,10 @@ export default function LoginDialog({
         return window.location.reload();
       }
 
-      setError(`登录失败，请稍后重试: ${result?.error ?? "未知错误"}`);
-      console.error(`登录失败，请稍后重试: ${result?.error ?? "未知错误"}`);
+      setError(
+        `${t("login.loginFailed")}: ${result?.error ?? t("login.unknownError")}`,
+      );
+      console.error(`Login failed: ${result?.error ?? "unknown"}`);
     },
     [phone, smsForm.code, setError, isSeatPage],
   );
@@ -204,7 +210,9 @@ export default function LoginDialog({
       await createTempIdentity();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "创建临时身份失败");
+      setError(
+        err instanceof Error ? err.message : t("login.tempCreateFailed"),
+      );
     } finally {
       setCreatingTemp(false);
     }
@@ -235,7 +243,7 @@ export default function LoginDialog({
         </button>
 
         <h3 className="text-base font-bold px-7 pb-4 flex items-center gap-1">
-          登录/注册
+          {t("login.title")}
         </h3>
 
         {/* Tab 切换 */}
@@ -245,14 +253,14 @@ export default function LoginDialog({
             className={clsx("tab", activeTab === "wechat" && "tab-active")}
             onClick={() => setActiveTab("wechat")}
           >
-            微信登录
+            {t("login.tabWechat")}
           </button>
           <button
             type="button"
             className={clsx("tab", activeTab === "phonenumber" && "tab-active")}
             onClick={() => setActiveTab("phonenumber")}
           >
-            手机号登录
+            {t("login.tabPhone")}
           </button>
         </div>
 
@@ -268,12 +276,12 @@ export default function LoginDialog({
               onClick={handleWechatLogin}
             >
               <WechatIcon className="size-5" />
-              微信登录
+              {t("login.wechatButton")}
             </button>
             <p className="text-xs text-base-content/60 text-center">
               {isInWechat
-                ? "点击后将通过微信授权获取您的公开信息"
-                : "点击后唤起微信授权登录"}
+                ? t("login.wechatAuthPublic")
+                : t("login.wechatAuthRedirect")}
             </p>
 
             {isSeatPage && (
@@ -286,7 +294,7 @@ export default function LoginDialog({
                 {creatingTemp ? (
                   <span className="loading loading-spinner loading-xs" />
                 ) : (
-                  "临时使用（无需登录）"
+                  t("login.tempUse")
                 )}
               </button>
             )}
@@ -306,9 +314,11 @@ export default function LoginDialog({
             )}
 
             <label className="flex flex-row gap-2">
-              <span className="label text-sm min-w-20">手机号:</span>
+              <span className="label text-sm min-w-20">
+                {t("login.phoneLabel")}
+              </span>
               <input
-                placeholder="用以收发短信验证码"
+                placeholder={t("login.phonePlaceholder")}
                 type="tel"
                 inputMode="numeric"
                 autoComplete="tel"
@@ -324,10 +334,12 @@ export default function LoginDialog({
             </label>
 
             <label className="flex flex-row gap-2">
-              <span className="label text-sm min-w-20">短信验证码:</span>
+              <span className="label text-sm min-w-20">
+                {t("login.codeLabel")}
+              </span>
               <input
                 type="text"
-                placeholder="六位数字短信验证码"
+                placeholder={t("login.codePlaceholder")}
                 className="input input-sm flex-1"
                 value={smsForm.code}
                 onChange={(e) => {
@@ -347,7 +359,9 @@ export default function LoginDialog({
                 onClick={getSmsCode}
                 disabled={countdown > 0}
               >
-                {countdown > 0 ? `${countdown}秒后重试` : "获取验证码"}
+                {countdown > 0
+                  ? formatMessage(t("login.retryIn"), { countdown })
+                  : t("login.getCode")}
               </button>
             </label>
 
@@ -358,7 +372,7 @@ export default function LoginDialog({
             )}
 
             <button type="submit" className="btn btn-primary btn-sm">
-              登录
+              {t("login.submit")}
             </button>
 
             {isSeatPage && (
@@ -371,7 +385,7 @@ export default function LoginDialog({
                 {creatingTemp ? (
                   <span className="loading loading-spinner loading-xs" />
                 ) : (
-                  "临时使用（无需登录）"
+                  t("login.tempUse")
                 )}
               </button>
             )}

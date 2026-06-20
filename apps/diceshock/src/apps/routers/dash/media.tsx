@@ -15,6 +15,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import { useTranslation } from "@/client/hooks/useTranslation";
+import { formatMessage } from "@/shared/i18n";
 import dayjs from "@/shared/utils/dayjs-config";
 import { trpcClientDash } from "@/shared/utils/trpc";
 
@@ -53,22 +55,22 @@ export const Route = createFileRoute("/dash/media")({
   }),
 });
 
-const SORT_OPTIONS: { label: string; value: SortKey }[] = [
-  { label: "最新上传", value: "uploaded-desc" },
-  { label: "最早上传", value: "uploaded-asc" },
-  { label: "名称 A-Z", value: "name-asc" },
-  { label: "名称 Z-A", value: "name-desc" },
-  { label: "大小 ↑", value: "size-asc" },
-  { label: "大小 ↓", value: "size-desc" },
+const SORT_OPTIONS: { labelKey: string; value: SortKey }[] = [
+  { labelKey: "dashMedia.sortNewest", value: "uploaded-desc" },
+  { labelKey: "dashMedia.sortOldest", value: "uploaded-asc" },
+  { labelKey: "dashMedia.sortNameAsc", value: "name-asc" },
+  { labelKey: "dashMedia.sortNameDesc", value: "name-desc" },
+  { labelKey: "dashMedia.sortSizeAsc", value: "size-asc" },
+  { labelKey: "dashMedia.sortSizeDesc", value: "size-desc" },
 ];
 
-const TYPE_FILTERS = [
-  { label: "全部", value: "" },
-  { label: "图片", value: "image/" },
-  { label: "视频", value: "video/" },
-  { label: "音频", value: "audio/" },
-  { label: "文档", value: "text/" },
-  { label: "PDF", value: "application/pdf" },
+const TYPE_FILTERS: { labelKey: string; value: string }[] = [
+  { labelKey: "dashMedia.all", value: "" },
+  { labelKey: "dashMedia.images", value: "image/" },
+  { labelKey: "dashMedia.videos", value: "video/" },
+  { labelKey: "dashMedia.audio", value: "audio/" },
+  { labelKey: "dashMedia.documents", value: "text/" },
+  { labelKey: "dashMedia.pdf", value: "application/pdf" },
 ];
 
 function formatSize(bytes: number): string {
@@ -121,6 +123,7 @@ function sortItems(items: MediaItem[], sortKey: SortKey): MediaItem[] {
 
 function RouteComponent() {
   const msg = useMsg();
+  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const renameDialogRef = useRef<HTMLDialogElement>(null);
   const deleteDialogRef = useRef<HTMLDialogElement>(null);
@@ -154,7 +157,7 @@ function RouteComponent() {
       });
       setAllItems(result.items);
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "获取媒体列表失败");
+      msg.error(err instanceof Error ? err.message : t("dashMedia.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -191,20 +194,31 @@ function RouteComponent() {
             body: formData,
           });
           if (!res.ok) {
-            const data = await res.json().catch(() => ({ error: "上传失败" }));
+            const data = await res
+              .json()
+              .catch(() => ({ error: t("dashMedia.uploadFailed") }));
             msg.error(
-              (data as { error?: string }).error ?? `上传 ${file.name} 失败`,
+              (data as { error?: string }).error ??
+                formatMessage(t("dashMedia.uploadFileFailed"), {
+                  name: file.name,
+                }),
             );
           } else {
             successCount++;
           }
         } catch {
-          msg.error(`上传 ${file.name} 失败`);
+          msg.error(
+            formatMessage(t("dashMedia.uploadFileFailed"), {
+              name: file.name,
+            }),
+          );
         }
       }
       setUploading(false);
       if (successCount > 0) {
-        msg.success(`成功上传 ${successCount} 个文件`);
+        msg.success(
+          formatMessage(t("dashMedia.uploadSuccess"), { count: successCount }),
+        );
         void fetchItems();
       }
     },
@@ -236,9 +250,9 @@ function RouteComponent() {
     (url: string) => {
       try {
         navigator.clipboard.writeText(url);
-        msg.success("链接已复制");
+        msg.success(t("dashMedia.linkCopied"));
       } catch {
-        msg.error("没有剪贴板访问权限");
+        msg.error(t("dashMedia.clipboardDenied"));
       }
     },
     [msg],
@@ -258,12 +272,14 @@ function RouteComponent() {
         oldKey: pendingRename.key,
         newName: renameValue.trim(),
       });
-      msg.success("重命名成功");
+      msg.success(t("dashMedia.renameSuccess"));
       renameDialogRef.current?.close();
       setPendingRename(null);
       void fetchItems();
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "重命名失败");
+      msg.error(
+        err instanceof Error ? err.message : t("dashMedia.renameFailed"),
+      );
     } finally {
       setRenamePending(false);
     }
@@ -281,12 +297,14 @@ function RouteComponent() {
       await trpcClientDash.mediaManagement.remove.mutate({
         key: pendingDelete.key,
       });
-      msg.success("文件已删除");
+      msg.success(t("dashMedia.fileDeleted"));
       deleteDialogRef.current?.close();
       setPendingDelete(null);
       void fetchItems();
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "删除失败");
+      msg.error(
+        err instanceof Error ? err.message : t("dashMedia.deleteFailed"),
+      );
     } finally {
       setDeletePending(false);
     }
@@ -303,7 +321,7 @@ function RouteComponent() {
           disabled={uploading}
         >
           <UploadSimpleIcon className="size-4" weight="bold" />
-          上传文件
+          {t("dashMedia.uploadFile")}
         </button>
         <input
           ref={fileInputRef}
@@ -334,13 +352,15 @@ function RouteComponent() {
         {uploading ? (
           <div className="flex flex-col items-center gap-2">
             <span className="loading loading-spinner loading-md text-primary" />
-            <span className="text-sm text-base-content/60">上传中...</span>
+            <span className="text-sm text-base-content/60">
+              {t("dashMedia.uploading")}
+            </span>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
             <CloudArrowUpIcon className="size-10 text-base-content/30" />
             <span className="text-sm text-base-content/60">
-              拖拽文件到此处，或点击选择文件
+              {t("dashMedia.dropHint")}
             </span>
           </div>
         )}
@@ -351,7 +371,7 @@ function RouteComponent() {
           <MagnifyingGlassIcon className="size-4 text-base-content/40" />
           <input
             type="text"
-            placeholder="搜索文件名..."
+            placeholder={t("dashMedia.searchPlaceholder")}
             className="grow w-32"
             value={q}
             onChange={(e) => setSearch({ q: e.target.value })}
@@ -365,7 +385,7 @@ function RouteComponent() {
         >
           {TYPE_FILTERS.map((f) => (
             <option key={f.value} value={f.value}>
-              {f.label}
+              {t(f.labelKey)}
             </option>
           ))}
         </select>
@@ -377,13 +397,15 @@ function RouteComponent() {
         >
           {SORT_OPTIONS.map((s) => (
             <option key={s.value} value={s.value}>
-              {s.label}
+              {t(s.labelKey)}
             </option>
           ))}
         </select>
 
         <span className="text-xs text-base-content/50 ml-auto">
-          共 {filteredItems.length} 个文件
+          {formatMessage(t("dashMedia.fileCount"), {
+            count: filteredItems.length,
+          })}
         </span>
       </div>
 
@@ -394,7 +416,7 @@ function RouteComponent() {
           </div>
         ) : filteredItems.length === 0 ? (
           <div className="text-center py-12 text-base-content/50">
-            暂无媒体文件
+            {t("dashMedia.noMedia")}
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
@@ -434,7 +456,7 @@ function RouteComponent() {
                     <button
                       type="button"
                       className="btn btn-xs btn-ghost btn-square"
-                      title="复制链接"
+                      title={t("dashMedia.copyLink")}
                       onClick={() => handleCopy(item.url)}
                     >
                       <CopyIcon className="size-3.5" />
@@ -442,7 +464,7 @@ function RouteComponent() {
                     <button
                       type="button"
                       className="btn btn-xs btn-ghost btn-square"
-                      title="重命名"
+                      title={t("dashMedia.rename")}
                       onClick={() => openRenameDialog(item)}
                     >
                       <PencilSimpleIcon className="size-3.5" />
@@ -450,7 +472,7 @@ function RouteComponent() {
                     <button
                       type="button"
                       className="btn btn-xs btn-ghost btn-square text-error"
-                      title="删除"
+                      title={t("dashMedia.delete")}
                       onClick={() => openDeleteDialog(item)}
                     >
                       <TrashIcon className="size-3.5" />
@@ -466,7 +488,9 @@ function RouteComponent() {
       <dialog ref={renameDialogRef} className="modal">
         {pendingRename && (
           <div className="modal-box">
-            <h3 className="font-bold text-lg mb-4">重命名文件</h3>
+            <h3 className="font-bold text-lg mb-4">
+              {t("dashMedia.renameFile")}
+            </h3>
             <input
               type="text"
               className="input input-bordered w-full"
@@ -485,7 +509,7 @@ function RouteComponent() {
                   setPendingRename(null);
                 }}
               >
-                取消
+                {t("dashMedia.cancel")}
               </button>
               <button
                 type="button"
@@ -493,7 +517,7 @@ function RouteComponent() {
                 onClick={() => void confirmRename()}
                 disabled={renamePending || !renameValue.trim()}
               >
-                {renamePending ? "保存中..." : "保存"}
+                {renamePending ? t("dashMedia.saving") : t("dashMedia.save")}
               </button>
             </div>
           </div>
@@ -503,14 +527,18 @@ function RouteComponent() {
       <dialog ref={deleteDialogRef} className="modal">
         {pendingDelete && (
           <div className="modal-box">
-            <h3 className="font-bold text-lg mb-4">确认删除文件</h3>
-            <p>删除后此操作不可撤销。</p>
+            <h3 className="font-bold text-lg mb-4">
+              {t("dashMedia.confirmDeleteTitle")}
+            </h3>
+            <p>{t("dashMedia.confirmDeleteDesc")}</p>
             <div className="mt-4 p-4 bg-base-200 rounded-lg">
               <p className="text-sm">
-                <strong>文件名:</strong> {pendingDelete.name}
+                <strong>{t("dashMedia.fileNameLabel")}</strong>{" "}
+                {pendingDelete.name}
               </p>
               <p className="text-sm">
-                <strong>大小:</strong> {formatSize(pendingDelete.size)}
+                <strong>{t("dashMedia.sizeLabel")}</strong>{" "}
+                {formatSize(pendingDelete.size)}
               </p>
             </div>
             <div className="modal-action mt-6">
@@ -522,7 +550,7 @@ function RouteComponent() {
                   setTimeout(() => setPendingDelete(null), 100);
                 }}
               >
-                取消
+                {t("dashMedia.cancel")}
               </button>
               <button
                 type="button"
@@ -530,7 +558,9 @@ function RouteComponent() {
                 onClick={() => void confirmDelete()}
                 disabled={deletePending}
               >
-                {deletePending ? "删除中..." : "确认删除"}
+                {deletePending
+                  ? t("dashMedia.deleting")
+                  : t("dashMedia.confirmDelete")}
               </button>
             </div>
           </div>

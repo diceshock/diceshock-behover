@@ -8,6 +8,7 @@ import {
   PhoneIcon,
   ScanIcon,
   SignOutIcon,
+  TranslateIcon,
   TrophyIcon,
   UsersIcon,
   WarningIcon,
@@ -26,6 +27,7 @@ import {
   type MembershipPlan,
 } from "@/client/components/diceshock/MembershipBadge";
 import TOTPCard from "@/client/components/diceshock/TOTPCard";
+import LanguageSelectorModal from "@/client/components/LanguageSelectorModal";
 import Modal from "@/client/components/modal";
 import useAuth from "@/client/hooks/useAuth";
 import useCrossData from "@/client/hooks/useCrossData";
@@ -33,7 +35,7 @@ import { useMessages } from "@/client/hooks/useMessages";
 import useSmsCode from "@/client/hooks/useSmsCode";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import { copyToClipboard } from "@/server/utils";
-import { LOCALES, STORES } from "@/shared/store-locale";
+import { LOCALES, type LocaleCode, STORES } from "@/shared/store-locale";
 import dayjs from "@/shared/utils/dayjs-config";
 import trpcClientPublic from "@/shared/utils/trpc";
 
@@ -230,6 +232,7 @@ function RouteComponent() {
   const [preferredLocale, setPreferredLocale] = useState("");
   const [preferredStore, setPreferredStore] = useState("");
   const [isSavingPrefs, setIsSavingPrefs] = useState(false);
+  const [isLangModalOpen, setIsLangModalOpen] = useState(false);
 
   useEffect(() => {
     trpcClientPublic.mahjong.checkRegistration
@@ -573,24 +576,24 @@ function RouteComponent() {
             <SectionHeader title={t("me.preferences")} />
             <div className="bg-base-200 rounded-2xl border border-base-content/5 p-4">
               <div className="flex flex-col gap-3">
-                <label className="flex items-center gap-3">
+                <div className="flex items-center gap-3">
                   <span className="text-sm font-medium min-w-16">
                     {t("me.preferredLang")}
                   </span>
-                  <select
-                    className="select select-sm flex-1"
-                    value={preferredLocale}
-                    onChange={(e) => setPreferredLocale(e.target.value)}
+                  <button
+                    type="button"
+                    className="btn btn-sm flex-1 justify-between font-normal"
+                    onClick={() => setIsLangModalOpen(true)}
                     disabled={isSavingPrefs}
                   >
-                    <option value="">{t("me.defaultOption")}</option>
-                    {Object.values(LOCALES).map((loc) => (
-                      <option key={loc.code} value={loc.code}>
-                        {loc.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    <span>
+                      {preferredLocale
+                        ? LOCALES[preferredLocale as LocaleCode]?.name
+                        : t("me.defaultOption")}
+                    </span>
+                    <TranslateIcon className="size-4 opacity-60" />
+                  </button>
+                </div>
                 <label className="flex items-center gap-3">
                   <span className="text-sm font-medium min-w-16">
                     {t("me.preferredStore")}
@@ -910,6 +913,13 @@ function RouteComponent() {
       <QRScannerDialog
         isOpen={isQRScannerOpen}
         onClose={() => setIsQRScannerOpen(false)}
+      />
+
+      <LanguageSelectorModal
+        isOpen={isLangModalOpen}
+        onClose={() => setIsLangModalOpen(false)}
+        currentLocale={(preferredLocale as LocaleCode) || "zh_Hans"}
+        onSelect={(loc) => setPreferredLocale(loc)}
       />
     </>
   );

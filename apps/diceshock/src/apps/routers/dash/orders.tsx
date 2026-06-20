@@ -26,6 +26,8 @@ import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import { useAdminStoreFilter } from "@/client/hooks/useAdminStoreFilter";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
+import { useTranslation } from "@/client/hooks/useTranslation";
+import { formatMessage } from "@/shared/i18n";
 import dayjs from "@/shared/utils/dayjs-config";
 import {
   calculatePrice,
@@ -82,6 +84,7 @@ function RouteComponent() {
   const msg = useMsg();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { t } = useTranslation();
   const { storeFilter } = useAdminStoreFilter();
   const [data, setData] = useState<OrdersList | null>(null);
   const [loading, setLoading] = useState(true);
@@ -136,7 +139,9 @@ function RouteComponent() {
       setSelectedIds(new Set());
       setPricingSnapshot(published?.data ?? null);
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "获取订单列表失败");
+      msg.error(
+        err instanceof Error ? err.message : t("dashOrders.loadFailed"),
+      );
     } finally {
       setLoading(false);
     }
@@ -159,9 +164,9 @@ function RouteComponent() {
   const handleCopy = (text: string) => {
     try {
       navigator.clipboard.writeText(text);
-      msg.success("已复制");
+      msg.success(t("dashOrders.copied"));
     } catch {
-      msg.error("没有剪贴板访问权限");
+      msg.error(t("dashOrders.clipboardDenied"));
     }
   };
 
@@ -184,10 +189,12 @@ function RouteComponent() {
     setActionPending(id);
     try {
       await trpcClientDash.ordersManagement.pauseOrder.mutate({ id });
-      msg.success("已暂停");
+      msg.success(t("dashOrders.paused"));
       await fetchOrders();
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "暂停失败");
+      msg.error(
+        err instanceof Error ? err.message : t("dashOrders.pauseFailed"),
+      );
     } finally {
       setActionPending(null);
     }
@@ -197,10 +204,12 @@ function RouteComponent() {
     setActionPending(id);
     try {
       await trpcClientDash.ordersManagement.resumeOrder.mutate({ id });
-      msg.success("已继续");
+      msg.success(t("dashOrders.resumed"));
       await fetchOrders();
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "继续失败");
+      msg.error(
+        err instanceof Error ? err.message : t("dashOrders.resumeFailed"),
+      );
     } finally {
       setActionPending(null);
     }
@@ -254,11 +263,15 @@ function RouteComponent() {
       await trpcClientDash.ordersManagement.batchPause.mutate({
         ids: activeIds,
       });
-      msg.success(`已暂停 ${activeIds.length} 个订单`);
+      msg.success(
+        formatMessage(t("dashOrders.batchPaused"), { count: activeIds.length }),
+      );
       setSelectedIds(new Set());
       await fetchOrders();
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "批量暂停失败");
+      msg.error(
+        err instanceof Error ? err.message : t("dashOrders.batchPauseFailed"),
+      );
     } finally {
       setActionPending(null);
     }
@@ -274,11 +287,17 @@ function RouteComponent() {
       await trpcClientDash.ordersManagement.batchResume.mutate({
         ids: pausedIds,
       });
-      msg.success(`已继续 ${pausedIds.length} 个订单`);
+      msg.success(
+        formatMessage(t("dashOrders.batchResumed"), {
+          count: pausedIds.length,
+        }),
+      );
       setSelectedIds(new Set());
       await fetchOrders();
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "批量继续失败");
+      msg.error(
+        err instanceof Error ? err.message : t("dashOrders.batchResumeFailed"),
+      );
     } finally {
       setActionPending(null);
     }
@@ -303,7 +322,7 @@ function RouteComponent() {
       let key: string;
       switch (groupBy) {
         case "table":
-          key = item.table?.name ?? "未知桌台";
+          key = item.table?.name ?? t("dashOrders.unknownTable");
           break;
         case "user":
           key = item.nickname;
@@ -311,7 +330,7 @@ function RouteComponent() {
         case "date":
           key = item.start_at
             ? dayjs.tz(item.start_at, "Asia/Shanghai").format("YYYY/MM/DD")
-            : "未知日期";
+            : t("dashOrders.unknownDate");
           break;
         default:
           key = "";
@@ -325,11 +344,11 @@ function RouteComponent() {
   const groupLabel = (key: string): string => {
     switch (groupBy) {
       case "table":
-        return `桌台: ${key}`;
+        return formatMessage(t("dashOrders.groupTable"), { value: key });
       case "user":
-        return `用户: ${key}`;
+        return formatMessage(t("dashOrders.groupUser"), { value: key });
       case "date":
-        return `日期: ${key}`;
+        return formatMessage(t("dashOrders.groupDate"), { value: key });
       default:
         return key;
     }
@@ -346,7 +365,7 @@ function RouteComponent() {
             <input
               type="text"
               className="grow min-w-0"
-              placeholder="搜索订单号/桌台/用户..."
+              placeholder={t("dashOrders.searchPlaceholder")}
               value={q}
               onChange={(e) => setSearch({ q: e.target.value })}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -357,10 +376,10 @@ function RouteComponent() {
         <div className="flex items-center gap-1">
           {(
             [
-              ["all", "全部"],
-              ["active", "进行中"],
-              ["paused", "已暂停"],
-              ["ended", "已结束"],
+              ["all", t("dashOrders.all")],
+              ["active", t("dashOrders.active")],
+              ["paused", t("dashOrders.statusPaused")],
+              ["ended", t("dashOrders.ended")],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -381,14 +400,14 @@ function RouteComponent() {
               className="btn btn-xs btn-ghost"
               onClick={() => selectAllByStatus("active")}
             >
-              选全部活跃
+              {t("dashOrders.selectAllActive")}
             </button>
             <button
               type="button"
               className="btn btn-xs btn-ghost"
               onClick={() => selectAllByStatus("paused")}
             >
-              选全部暂停
+              {t("dashOrders.selectAllPaused")}
             </button>
           </div>
 
@@ -400,15 +419,19 @@ function RouteComponent() {
                 setSearch({ sortBy: e.target.value as SortBy, page: 1 });
               }}
             >
-              <option value="start_at">开始时间</option>
-              <option value="end_at">结束时间</option>
+              <option value="start_at">{t("dashOrders.startTime")}</option>
+              <option value="end_at">{t("dashOrders.endTime")}</option>
             </select>
 
             <button
               type="button"
               className="btn btn-xs btn-ghost btn-square"
               onClick={toggleSortOrder}
-              title={sortOrder === "asc" ? "升序" : "降序"}
+              title={
+                sortOrder === "asc"
+                  ? t("dashOrders.ascending")
+                  : t("dashOrders.descending")
+              }
             >
               {sortOrder === "asc" ? (
                 <ArrowUpIcon className="size-4" />
@@ -424,10 +447,10 @@ function RouteComponent() {
                 setSearch({ groupBy: e.target.value as GroupBy, page: 1 });
               }}
             >
-              <option value="none">无分组</option>
-              <option value="table">按桌台</option>
-              <option value="user">按用户</option>
-              <option value="date">按日期</option>
+              <option value="none">{t("dashOrders.noGrouping")}</option>
+              <option value="table">{t("dashOrders.groupByTable")}</option>
+              <option value="user">{t("dashOrders.groupByUser")}</option>
+              <option value="date">{t("dashOrders.groupByDate")}</option>
             </select>
           </div>
         </div>
@@ -448,14 +471,16 @@ function RouteComponent() {
                   onChange={toggleSelectAll}
                 />
               </td>
-              <td className="whitespace-nowrap">订单号</td>
-              <td className="whitespace-nowrap">状态</td>
-              <td className="whitespace-nowrap">开始时间</td>
-              <td className="whitespace-nowrap">结束时间</td>
-              <td className="whitespace-nowrap">桌台</td>
-              <td className="whitespace-nowrap">用户</td>
-              <td className="whitespace-nowrap">费用</td>
-              <th className="whitespace-nowrap">操作</th>
+              <td className="whitespace-nowrap">
+                {t("dashOrders.orderNumber")}
+              </td>
+              <td className="whitespace-nowrap">{t("dashOrders.status")}</td>
+              <td className="whitespace-nowrap">{t("dashOrders.startTime")}</td>
+              <td className="whitespace-nowrap">{t("dashOrders.endTime")}</td>
+              <td className="whitespace-nowrap">{t("dashOrders.table")}</td>
+              <td className="whitespace-nowrap">{t("dashOrders.user")}</td>
+              <td className="whitespace-nowrap">{t("dashOrders.cost")}</td>
+              <th className="whitespace-nowrap">{t("dashOrders.actions")}</th>
             </tr>
           </thead>
 
@@ -473,8 +498,8 @@ function RouteComponent() {
                   className="py-12 text-center text-base-content/60"
                 >
                   {q.trim() || status !== "all"
-                    ? "没有匹配的订单。"
-                    : "暂无订单数据。"}
+                    ? t("dashOrders.noMatchedOrders")
+                    : t("dashOrders.noOrders")}
                 </td>
               </tr>
             ) : (
@@ -509,7 +534,7 @@ function RouteComponent() {
                             type="button"
                             className="btn btn-xs btn-ghost btn-square shrink-0"
                             onClick={() => handleCopy(order.id)}
-                            title="复制订单号"
+                            title={t("dashOrders.copyOrderNumber")}
                           >
                             <CopyIcon className="size-3.5" />
                           </button>
@@ -523,15 +548,15 @@ function RouteComponent() {
                       <td className="whitespace-nowrap">
                         {order.status === "active" ? (
                           <span className="badge badge-success badge-sm">
-                            进行中
+                            {t("dashOrders.active")}
                           </span>
                         ) : order.status === "paused" ? (
                           <span className="badge badge-neutral badge-sm">
-                            已暂停
+                            {t("dashOrders.statusPaused")}
                           </span>
                         ) : (
                           <span className="badge badge-ghost badge-sm">
-                            已结束
+                            {t("dashOrders.ended")}
                           </span>
                         )}
                       </td>
@@ -573,7 +598,7 @@ function RouteComponent() {
                           >
                             {order.nickname}
                             <span className="badge badge-outline badge-xs ml-1">
-                              临时
+                              {t("dashOrders.temporary")}
                             </span>
                           </span>
                         )}
@@ -627,7 +652,7 @@ function RouteComponent() {
                                       disabled={actionPending === order.id}
                                     >
                                       <PauseIcon className="size-3" />
-                                      暂停
+                                      {t("dashOrders.pause")}
                                     </button>
                                   </li>
                                   <li>
@@ -643,7 +668,7 @@ function RouteComponent() {
                                       disabled={actionPending === order.id}
                                     >
                                       <StopIcon className="size-3" />
-                                      终止
+                                      {t("dashOrders.terminate")}
                                     </button>
                                   </li>
                                 </>
@@ -659,7 +684,7 @@ function RouteComponent() {
                                       disabled={actionPending === order.id}
                                     >
                                       <PlayIcon className="size-3" />
-                                      继续
+                                      {t("dashOrders.resume")}
                                     </button>
                                   </li>
                                   <li>
@@ -675,7 +700,7 @@ function RouteComponent() {
                                       disabled={actionPending === order.id}
                                     >
                                       <StopIcon className="size-3" />
-                                      终止
+                                      {t("dashOrders.terminate")}
                                     </button>
                                   </li>
                                 </>
@@ -687,7 +712,7 @@ function RouteComponent() {
                                     params={{ id: order.id }}
                                   >
                                     <EyeIcon className="size-3" />
-                                    详情
+                                    {t("dashOrders.details")}
                                   </Link>
                                 </li>
                               )}
@@ -710,7 +735,7 @@ function RouteComponent() {
                                   disabled={actionPending === order.id}
                                 >
                                   <PauseIcon className="size-3" />
-                                  暂停
+                                  {t("dashOrders.pause")}
                                 </button>
                                 <button
                                   type="button"
@@ -725,7 +750,7 @@ function RouteComponent() {
                                   disabled={actionPending === order.id}
                                 >
                                   <StopIcon className="size-3" />
-                                  终止
+                                  {t("dashOrders.terminate")}
                                 </button>
                               </>
                             )}
@@ -744,7 +769,7 @@ function RouteComponent() {
                                   disabled={actionPending === order.id}
                                 >
                                   <PlayIcon className="size-3" />
-                                  继续
+                                  {t("dashOrders.resume")}
                                 </button>
                                 <button
                                   type="button"
@@ -759,7 +784,7 @@ function RouteComponent() {
                                   disabled={actionPending === order.id}
                                 >
                                   <StopIcon className="size-3" />
-                                  终止
+                                  {t("dashOrders.terminate")}
                                 </button>
                               </>
                             )}
@@ -770,7 +795,7 @@ function RouteComponent() {
                                 className="btn btn-xs btn-ghost"
                               >
                                 <EyeIcon className="size-3" />
-                                详情
+                                {t("dashOrders.details")}
                               </Link>
                             )}
                           </div>
@@ -794,7 +819,7 @@ function RouteComponent() {
             disabled={page <= 1}
             onClick={() => setSearch({ page: page - 1 })}
           >
-            上一页
+            {t("dashOrders.previousPage")}
           </button>
           <span className="text-sm font-medium">
             {page} / {totalPages}
@@ -805,21 +830,24 @@ function RouteComponent() {
             disabled={page >= totalPages}
             onClick={() => setSearch({ page: page + 1 })}
           >
-            下一页
+            {t("dashOrders.nextPage")}
           </button>
         </div>
       )}
       {selectedIds.size > 0 && (
         <BatchActionBar
           count={selectedIds.size}
-          unit="个订单"
+          unit={t("dashOrders.orderUnit")}
           onClear={() => setSelectedIds(new Set())}
           actions={[
             ...(hasActiveSelected
               ? [
                   {
                     key: "pause",
-                    label: `批量暂停 (${selectedItems.filter((o) => o.status === "active").length})`,
+                    label: formatMessage(t("dashOrders.batchPause"), {
+                      count: selectedItems.filter((o) => o.status === "active")
+                        .length,
+                    }),
                     icon: <PauseIcon className="size-4" />,
                     className: "btn-ghost",
                     disabled: actionPending === "batch",
@@ -831,7 +859,10 @@ function RouteComponent() {
               ? [
                   {
                     key: "resume",
-                    label: `批量继续 (${selectedItems.filter((o) => o.status === "paused").length})`,
+                    label: formatMessage(t("dashOrders.batchResume"), {
+                      count: selectedItems.filter((o) => o.status === "paused")
+                        .length,
+                    }),
                     icon: <PlayIcon className="size-4" />,
                     className: "btn-success",
                     disabled: actionPending === "batch",
@@ -843,7 +874,10 @@ function RouteComponent() {
               ? [
                   {
                     key: "settle",
-                    label: `批量结算 (${selectedItems.filter((o) => o.status !== "ended").length})`,
+                    label: formatMessage(t("dashOrders.batchSettle"), {
+                      count: selectedItems.filter((o) => o.status !== "ended")
+                        .length,
+                    }),
                     icon: <StopIcon className="size-4" />,
                     className: "btn-primary",
                     disabled: actionPending === "batch",
