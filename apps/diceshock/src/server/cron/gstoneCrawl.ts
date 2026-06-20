@@ -53,34 +53,3 @@ export async function dispatchGstoneCrawl(env: {
     await env.GSTONE_CRAWL_QUEUE.sendBatch(messages.slice(i, i + 100));
   }
 }
-return;
-}
-
-const [row] = await db
-  .select({ maxId: max(gstoneGamesTable.gstone_id) })
-  .from(gstoneGamesTable);
-
-const nextId = (row?.maxId ?? 0) + 1;
-if (nextId >= MAX_GAME_ID) return;
-
-const endId = Math.min(nextId + BATCH_SIZE, MAX_GAME_ID);
-
-const newRows = Array.from({ length: endId - nextId }, (_, i) => ({
-  gstone_id: nextId + i,
-  created_at: now,
-  updated_at: now,
-}));
-
-for (let i = 0; i < newRows.length; i += 20) {
-  await db
-    .insert(gstoneGamesTable)
-    .values(newRows.slice(i, i + 20))
-    .onConflictDoNothing();
-}
-
-const messages = newRows.map((r) => ({ body: { game_id: r.gstone_id } }));
-// sendBatch max 100 messages per call
-for (let i = 0; i < messages.length; i += 100) {
-  await env.GSTONE_CRAWL_QUEUE.sendBatch(messages.slice(i, i + 100));
-}
-}

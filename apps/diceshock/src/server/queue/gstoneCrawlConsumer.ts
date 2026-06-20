@@ -73,7 +73,7 @@ export async function handleGstoneImageQueue(
 }
 
 async function crawlGstoneGame(
-  db: ReturnType<typeof gstoneDb>,
+  _db: ReturnType<typeof gstoneDb>,
   env: Cloudflare.Env,
   gameId: number,
 ): Promise<void> {
@@ -99,25 +99,44 @@ async function crawlGstoneGame(
   const coverUrl = getStringField(gameInfo, ["cover_url", "cover", "image"]);
   const now = new Date().toISOString();
 
-  await db
-    .update(gstoneGamesTable)
-    .set({
-      name: getStringField(gameInfo, ["name", "game_name", "cn_name", "title"]),
-      eng_name: getStringField(gameInfo, ["p_name", "eng_name", "en_name"]),
-      rating: getNumberField(gameInfo, ["gstone_rating", "rating", "score"]),
-      player_num: getArrayField<number>(gameInfo, ["player_num", "players"]),
-      category: getArrayField<{ id: number; value: string }>(gameInfo, [
-        "category",
-        "categories",
-      ]),
-      description: getStringField(gameInfo, ["description", "desc", "intro"]),
-      cover_url: coverUrl,
-      full_data: result.data,
-      error: null,
-      crawled_at: now,
-      updated_at: now,
-    })
-    .where(eq(gstoneGamesTable.gstone_id, gameId));
+  await env.GSTONE_DB.prepare(
+    `INSERT INTO games (gstone_id, name, eng_name, rating, player_num, category, description, cover_url, full_data, error, retry_count, created_at, crawled_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 0, ?, ?, ?)
+     ON CONFLICT(gstone_id) DO UPDATE SET
+       name = excluded.name,
+       eng_name = excluded.eng_name,
+       rating = excluded.rating,
+       player_num = excluded.player_num,
+       category = excluded.category,
+       description = excluded.description,
+       cover_url = CASE WHEN games.r2_cover_url IS NOT NULL THEN games.cover_url ELSE excluded.cover_url END,
+       full_data = excluded.full_data,
+       error = NULL,
+       crawled_at = excluded.crawled_at,
+       updated_at = excluded.updated_at`,
+  )
+    .bind(
+      gameId,
+      getStringField(gameInfo, ["name", "game_name", "cn_name", "title"]),
+      getStringField(gameInfo, ["p_name", "eng_name", "en_name"]),
+      getNumberField(gameInfo, ["gstone_rating", "rating", "score"]),
+      JSON.stringify(
+        getArrayField<number>(gameInfo, ["player_num", "players"]),
+      ),
+      JSON.stringify(
+        getArrayField<{ id: number; value: string }>(gameInfo, [
+          "category",
+          "categories",
+        ]),
+      ),
+      getStringField(gameInfo, ["description", "desc", "intro"]),
+      coverUrl,
+      JSON.stringify(result.data),
+      now,
+      now,
+      now,
+    )
+    .run();
 
   if (coverUrl) {
     await env.GSTONE_IMAGE_QUEUE.send({ game_id: gameId, cover_url: coverUrl });
