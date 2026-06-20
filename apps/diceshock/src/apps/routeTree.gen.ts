@@ -23,6 +23,7 @@ import { Route as DashOrdersRouteImport } from './routers/dash/orders'
 import { Route as DashMediaRouteImport } from './routers/dash/media'
 import { Route as DashGszRouteImport } from './routers/dash/gsz'
 import { Route as DashEventsRouteImport } from './routers/dash/events'
+import { Route as DashCrawlerRouteImport } from './routers/dash/crawler'
 import { Route as DashActivesRouteImport } from './routers/dash/actives'
 import { Route as Char123StoreLocaleChar125WithHomeLoIndexRouteImport } from './routers/{-$storeLocale}/_with-home-lo/index'
 import { Route as Char123StoreLocaleChar125TCodeRouteImport } from './routers/{-$storeLocale}/t/$code'
@@ -120,6 +121,11 @@ const DashGszRoute = DashGszRouteImport.update({
 const DashEventsRoute = DashEventsRouteImport.update({
   id: '/events',
   path: '/events',
+  getParentRoute: () => DashRoute,
+} as any)
+const DashCrawlerRoute = DashCrawlerRouteImport.update({
+  id: '/crawler',
+  path: '/crawler',
   getParentRoute: () => DashRoute,
 } as any)
 const DashActivesRoute = DashActivesRouteImport.update({
@@ -262,6 +268,7 @@ export interface FileRoutesByFullPath {
   '/dash': typeof DashRouteWithChildren
   '/{-$storeLocale}': typeof Char123StoreLocaleChar125WithHomeLoRouteWithChildren
   '/dash/actives': typeof DashActivesRoute
+  '/dash/crawler': typeof DashCrawlerRoute
   '/dash/events': typeof DashEventsRoute
   '/dash/gsz': typeof DashGszRoute
   '/dash/media': typeof DashMediaRoute
@@ -300,6 +307,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/{-$storeLocale}': typeof Char123StoreLocaleChar125WithHomeLoIndexRoute
   '/dash/actives': typeof DashActivesRoute
+  '/dash/crawler': typeof DashCrawlerRoute
   '/dash/events': typeof DashEventsRoute
   '/dash/gsz': typeof DashGszRoute
   '/dash/media': typeof DashMediaRoute
@@ -339,6 +347,7 @@ export interface FileRoutesById {
   '/dash': typeof DashRouteWithChildren
   '/{-$storeLocale}': typeof Char123StoreLocaleChar125RouteWithChildren
   '/dash/actives': typeof DashActivesRoute
+  '/dash/crawler': typeof DashCrawlerRoute
   '/dash/events': typeof DashEventsRoute
   '/dash/gsz': typeof DashGszRoute
   '/dash/media': typeof DashMediaRoute
@@ -381,6 +390,7 @@ export interface FileRouteTypes {
     | '/dash'
     | '/{-$storeLocale}'
     | '/dash/actives'
+    | '/dash/crawler'
     | '/dash/events'
     | '/dash/gsz'
     | '/dash/media'
@@ -419,6 +429,7 @@ export interface FileRouteTypes {
   to:
     | '/{-$storeLocale}'
     | '/dash/actives'
+    | '/dash/crawler'
     | '/dash/events'
     | '/dash/gsz'
     | '/dash/media'
@@ -457,6 +468,7 @@ export interface FileRouteTypes {
     | '/dash'
     | '/{-$storeLocale}'
     | '/dash/actives'
+    | '/dash/crawler'
     | '/dash/events'
     | '/dash/gsz'
     | '/dash/media'
@@ -597,6 +609,13 @@ declare module '@tanstack/react-router' {
       path: '/events'
       fullPath: '/dash/events'
       preLoaderRoute: typeof DashEventsRouteImport
+      parentRoute: typeof DashRoute
+    }
+    '/dash/crawler': {
+      id: '/dash/crawler'
+      path: '/crawler'
+      fullPath: '/dash/crawler'
+      preLoaderRoute: typeof DashCrawlerRouteImport
       parentRoute: typeof DashRoute
     }
     '/dash/actives': {
@@ -772,6 +791,7 @@ declare module '@tanstack/react-router' {
 
 interface DashRouteChildren {
   DashActivesRoute: typeof DashActivesRoute
+  DashCrawlerRoute: typeof DashCrawlerRoute
   DashEventsRoute: typeof DashEventsRoute
   DashGszRoute: typeof DashGszRoute
   DashMediaRoute: typeof DashMediaRoute
@@ -792,6 +812,7 @@ interface DashRouteChildren {
 
 const DashRouteChildren: DashRouteChildren = {
   DashActivesRoute: DashActivesRoute,
+  DashCrawlerRoute: DashCrawlerRoute,
   DashEventsRoute: DashEventsRoute,
   DashGszRoute: DashGszRoute,
   DashMediaRoute: DashMediaRoute,

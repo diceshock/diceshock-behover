@@ -445,7 +445,7 @@ function SeatTimerPage() {
               </button>
             )}
             <Link
-              to="/inventory"
+              to="/{-$storeLocale}/inventory"
               className="card bg-base-200 hover:bg-base-300 transition-colors cursor-pointer"
             >
               <div className="card-body p-4 flex-row items-center gap-3">
@@ -459,7 +459,7 @@ function SeatTimerPage() {
               </div>
             </Link>
             <Link
-              to="/actives"
+              to="/{-$storeLocale}/actives"
               className="card bg-base-200 hover:bg-base-300 transition-colors cursor-pointer"
             >
               <div className="card-body p-4 flex-row items-center gap-3">

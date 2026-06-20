@@ -248,7 +248,10 @@ function BoardGameDetailPage() {
           <p className="text-lg text-base-content/60">
             {t("inventory.gameNotFound")}
           </p>
-          <Link to="/inventory" className="btn btn-ghost mt-4">
+          <Link
+            to="/{-$storeLocale}/inventory"
+            className="btn btn-ghost mt-4"
+          >
             {t("inventory.backToInventory")}
           </Link>
         </div>
@@ -284,7 +287,10 @@ function BoardGameDetailPage() {
   return (
     <main className="min-h-[calc(100vh-32rem)] w-full mt-20 sm:mt-32 md:mt-40 px-4 pb-20">
       <div className="mx-auto w-full max-w-5xl">
-        <Link to="/inventory" className="btn btn-ghost btn-sm mb-6 -ml-2 gap-1">
+        <Link
+          to="/{-$storeLocale}/inventory"
+          className="btn btn-ghost btn-sm mb-6 -ml-2 gap-1"
+        >
           <ArrowLeftIcon className="size-4" />
           {t("inventory.backToInventory")}
         </Link>

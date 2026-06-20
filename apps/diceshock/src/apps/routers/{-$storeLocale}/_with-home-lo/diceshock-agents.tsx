@@ -51,7 +51,10 @@ function RouteComponent() {
           {t("agents.choosePlan")}
         </p>
 
-        <Link to="/contact-us" className="btn btn-sm btn-primary mb-6">
+        <Link
+          to="/{-$storeLocale}/contact-us"
+          className="btn btn-sm btn-primary mb-6"
+        >
           {t("agents.contactForDetails")}
         </Link>
 
@@ -91,7 +94,10 @@ function RouteComponent() {
           </p>
         </div>
 
-        <Link to="/contact-us" className="btn btn-sm btn-primary mt-6">
+        <Link
+          to="/{-$storeLocale}/contact-us"
+          className="btn btn-sm btn-primary mt-6"
+        >
           {t("agents.contactUs")}
         </Link>
       </div>

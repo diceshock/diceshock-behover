@@ -66,12 +66,6 @@ const storeLocaleMiddleware = FACTORY.createMiddleware(async (c, next) => {
     return await next();
   }
 
-  // If the first segment contains a dash, it looks like a store-locale prefix
-  // but failed validation — return 404 for invalid store or locale.
-  if (firstSegment.includes("-")) {
-    return c.text("404 Not Found - Invalid store or locale in URL", 404);
-  }
-
   const injectCrossData = c.get("InjectCrossData");
   const userInfo = injectCrossData?.UserInfo as UserInfoWithPrefs | undefined;
 
@@ -86,6 +80,10 @@ const storeLocaleMiddleware = FACTORY.createMiddleware(async (c, next) => {
     DEFAULT_LOCALE;
 
   setStoreLocaleContext(c, store, locale);
+
+  if (userInfo) {
+    return await next();
+  }
 
   // Redirect prefix-less public routes to the store-locale prefixed URL.
   // Query string is preserved. Uses 302 (temporary) because user preferences

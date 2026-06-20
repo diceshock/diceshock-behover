@@ -89,7 +89,8 @@ const Agents: React.FC<{ className?: string }> = ({ className }) => {
                   <p>充值福利, 付费折扣.</p>
                   <div className="card-actions justify-end">
                     <Link
-                      to="/contact-us"
+                      to="/$storeLocale/contact-us"
+                      params={(prev: any) => prev}
                       className="btn bg-black text-primary"
                     >
                       联系我们
@@ -121,7 +122,8 @@ const Agents: React.FC<{ className?: string }> = ({ className }) => {
                   <p>超低廉价格, 办理20个工作日畅玩.</p>
                   <div className="card-actions justify-end">
                     <Link
-                      to="/contact-us"
+                      to="/$storeLocale/contact-us"
+                      params={(prev: any) => prev}
                       className="btn bg-black text-primary"
                     >
                       联系我们
@@ -155,7 +157,8 @@ const Agents: React.FC<{ className?: string }> = ({ className }) => {
                   <p>办理30天畅玩无限!</p>
                   <div className="card-actions justify-end">
                     <Link
-                      to="/contact-us"
+                      to="/$storeLocale/contact-us"
+                      params={(prev: any) => prev}
                       className="btn bg-black text-primary"
                     >
                       联系我们
@@ -187,7 +190,8 @@ const Agents: React.FC<{ className?: string }> = ({ className }) => {
                   <p>办理365天畅玩无限</p>
                   <div className="card-actions justify-end">
                     <Link
-                      to="/contact-us"
+                      to="/$storeLocale/contact-us"
+                      params={(prev: any) => prev}
                       className="btn bg-black text-primary"
                     >
                       联系我们

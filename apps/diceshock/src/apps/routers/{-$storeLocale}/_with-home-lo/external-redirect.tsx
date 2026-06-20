@@ -49,7 +49,10 @@ function ExternalRedirect() {
           <WarningIcon weight="fill" className="size-16 text-error" />
           <h1 className="text-2xl font-bold">{t("errors.invalidLink")}</h1>
           <p className="text-base-content/60">{t("errors.invalidLinkDesc")}</p>
-          <Link to="/" className="btn btn-primary">
+          <Link
+            to="/{-$storeLocale}/"
+            className="btn btn-primary"
+          >
             {t("common.backToHome")}
           </Link>
         </div>
@@ -89,7 +92,10 @@ function ExternalRedirect() {
         </div>
 
         <div className="flex gap-3">
-          <Link to="/" className="btn btn-ghost">
+          <Link
+            to="/{-$storeLocale}/"
+            className="btn btn-ghost"
+          >
             {t("common.backToHome")}
           </Link>
 

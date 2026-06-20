@@ -42,10 +42,18 @@ const Footer = () => {
         </aside>
         <nav>
           <h6 className="footer-title">{t("footer.services")}</h6>
-          <Link to="/" className="link link-hover">
+          <Link
+            to="/$storeLocale/inventory"
+            params={(prev: any) => prev}
+            className="link link-hover"
+          >
             {t("footer.inventory")}
           </Link>
-          <Link to="/" className="link link-hover">
+          <Link
+            to="/$storeLocale/diceshock-agents"
+            params={(prev: any) => prev}
+            className="link link-hover"
+          >
             {t("footer.agents")}
           </Link>
           <a href="/dash" className="link link-hover">
@@ -54,16 +62,32 @@ const Footer = () => {
         </nav>
         <nav>
           <h6 className="footer-title">{t("footer.aboutUs")}</h6>
-          <Link to="/contact-us" className="link link-hover">
+          <Link
+            to="/$storeLocale/contact-us"
+            params={(prev: any) => prev}
+            className="link link-hover"
+          >
             {t("footer.contactUs")}
           </Link>
-          <Link to="/" className="link link-hover">
+          <Link
+            to="/$storeLocale/"
+            params={(prev: any) => prev}
+            className="link link-hover"
+          >
             {t("footer.joinUs")}
           </Link>
-          <Link to="/" className="link link-hover">
+          <Link
+            to="/$storeLocale/"
+            params={(prev: any) => prev}
+            className="link link-hover"
+          >
             {t("footer.termsOfService")}
           </Link>
-          <Link to="/" className="link link-hover">
+          <Link
+            to="/$storeLocale/"
+            params={(prev: any) => prev}
+            className="link link-hover"
+          >
             {t("footer.cookiePolicy")}
           </Link>
         </nav>

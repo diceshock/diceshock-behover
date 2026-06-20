@@ -35,6 +35,11 @@ database_name = "diceshock"
 database_id = "24c01d5e-c4d7-4b13-bb59-5ad3373971e9"
 migrations_dir = "../../drizzle"
 
+[[d1_databases]]
+binding = "GSTONE_DB"
+database_name = "gstone-games"
+database_id = "fbe99ba3-8b12-4bf6-ab4b-93031a0f95a2"
+
 [[r2_buckets]]
 binding = "R2"
 bucket_name = "diceshock"
@@ -64,6 +69,14 @@ queue = "diceshock-image-processing"
 binding = "NOTIFICATION_QUEUE"
 queue = "diceshock-notifications"
 
+[[queues.producers]]
+binding = "GSTONE_CRAWL_QUEUE"
+queue = "diceshock-gstone-crawl"
+
+[[queues.producers]]
+binding = "GSTONE_IMAGE_QUEUE"
+queue = "diceshock-gstone-images"
+
 [[queues.consumers]]
 queue = "diceshock-image-processing"
 max_batch_size = 1
@@ -76,12 +89,24 @@ max_batch_size = 10
 max_batch_timeout = 5
 max_retries = 3
 
+[[queues.consumers]]
+queue = "diceshock-gstone-crawl"
+max_batch_size = 1
+max_batch_timeout = 3
+max_retries = 3
+
+[[queues.consumers]]
+queue = "diceshock-gstone-images"
+max_batch_size = 1
+max_batch_timeout = 3
+max_retries = 3
+
 [[routes]]
 pattern = "origin.runespark.fun"
 custom_domain = true
 
 [triggers]
-crons = ["0 4-22 * * *"]
+crons = ["*/5 * * * *", "0 4-22 * * *"]
 
 [vars]
 AUTH_URL = "https://diceshock.com"

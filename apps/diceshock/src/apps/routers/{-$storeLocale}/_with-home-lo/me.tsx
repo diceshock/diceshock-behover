@@ -683,7 +683,7 @@ function RouteComponent() {
             myPlans.length === 0 && (
               <section className="mb-4">
                 <Link
-                  to="/diceshock-agents"
+                  to="/{-$storeLocale}/diceshock-agents"
                   className="flex items-center gap-3 bg-base-200 hover:bg-base-300 rounded-2xl px-4 py-4 border border-base-content/5 transition-colors"
                 >
                   <div className="shrink-0 p-2 bg-primary/10 rounded-lg">

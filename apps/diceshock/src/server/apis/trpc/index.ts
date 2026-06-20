@@ -3,6 +3,7 @@ import activesManagement from "./activesManagement";
 import auth from "./auth";
 import { router } from "./baseTRPC";
 import businessCard from "./businessCard";
+import crawlerManagement from "./crawlerManagement";
 import events from "./events";
 import eventsManagement from "./eventsManagement";
 import gsz from "./gsz";
@@ -29,6 +30,7 @@ export const appRouterDash = router({
   tablesManagement,
   ordersManagement,
   mediaManagement,
+  crawlerManagement,
   users,
   membershipPlans,
   pricingPlansManagement,

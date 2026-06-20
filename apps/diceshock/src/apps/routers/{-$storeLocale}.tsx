@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import useCrossData from "@/client/hooks/useCrossData";
 import { StoreProvider } from "@/client/hooks/useStoreContext";
 import { I18nProvider } from "@/client/providers/I18nProvider";
@@ -11,6 +11,15 @@ import {
 } from "@/shared/store-locale";
 
 export const Route = createFileRoute("/{-$storeLocale}")({
+  beforeLoad: ({ params }) => {
+    if (params.storeLocale) {
+      const parsed = parseStoreLocalePrefix(params.storeLocale);
+
+      if (!parsed) {
+        throw redirect({ to: "/" });
+      }
+    }
+  },
   component: StoreLocaleLayout,
 });
 

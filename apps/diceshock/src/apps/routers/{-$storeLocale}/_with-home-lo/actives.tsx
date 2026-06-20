@@ -118,8 +118,8 @@ type FlatCard = {
 function EventCard({ event }: { event: EventItem }) {
   return (
     <Link
-      to="/events/$id"
-      params={{ id: event.id }}
+      to="/{-$storeLocale}/events/$id"
+      params={(prev: any) => ({ ...prev, id: event.id })}
       className="card bg-base-200 border border-base-content/10 hover:border-primary/30 transition-all hover:shadow-md overflow-hidden cursor-pointer"
     >
       {event.cover_image_url && (
@@ -243,7 +243,7 @@ function ActivesPage() {
             <div className="flex items-center gap-2">
               {userInfo && (
                 <Link
-                  to="/actives/new"
+                  to="/{-$storeLocale}/actives/new"
                   className="btn btn-primary btn-sm gap-1"
                 >
                   <PlusIcon className="size-4" weight="bold" />
@@ -550,8 +550,8 @@ function SmActiveCard({
         />
 
         <Link
-          to="/actives/$id"
-          params={{ id: active.id }}
+          to="/{-$storeLocale}/actives/$id"
+          params={(prev: any) => ({ ...prev, id: active.id })}
           className="block flex-1 card bg-base-200 border border-base-content/10 rounded-lg ml-5 my-1 hover:border-primary/30 transition-all hover:shadow-md cursor-pointer"
         >
           <div className="card-body p-4">
@@ -642,8 +642,8 @@ function ActiveCard({
       )}
 
       <Link
-        to="/actives/$id"
-        params={{ id: active.id }}
+        to="/{-$storeLocale}/actives/$id"
+        params={(prev: any) => ({ ...prev, id: active.id })}
         className={clsx(
           "block h-full pt-4 card bg-base-200 border border-base-content/10 border-t-0 rounded-lg rounded-t-none mx-2 mt-2 hover:border-primary/30 transition-all hover:shadow-md cursor-pointer",
         )}

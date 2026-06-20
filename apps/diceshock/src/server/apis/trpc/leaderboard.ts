@@ -104,7 +104,7 @@ const getMyRankings = protectedProcedure.query(async ({ ctx }) => {
   return rankings;
 });
 
-interface VirtualBadge {
+export interface VirtualBadge {
   id: string;
   badge_type: string;
   badge_rank: number;

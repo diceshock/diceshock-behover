@@ -124,17 +124,25 @@ app.delete("/apis/*", apisRoot);
 export default {
   fetch: app.fetch,
   scheduled: async (
-    _event: ScheduledEvent,
+    event: ScheduledEvent,
     env: HonoCtxEnv["Bindings"],
     _ctx: ExecutionContext,
   ) => {
-    const { computeLeaderboards } = await import("./server/cron/leaderboard");
-    await computeLeaderboards({ DB: env.DB as unknown as D1Database });
+    const { dispatchGstoneCrawl } = await import("./server/cron/gstoneCrawl");
+    await dispatchGstoneCrawl({
+      GSTONE_DB: env.GSTONE_DB,
+      GSTONE_CRAWL_QUEUE: env.GSTONE_CRAWL_QUEUE,
+    });
 
-    const { checkPassExpiration } = await import(
-      "./server/cron/passExpiration"
-    );
-    await checkPassExpiration({ DB: env.DB, KV: env.KV });
+    if (event.cron === "0 4-22 * * *") {
+      const { computeLeaderboards } = await import("./server/cron/leaderboard");
+      await computeLeaderboards({ DB: env.DB as unknown as D1Database });
+
+      const { checkPassExpiration } = await import(
+        "./server/cron/passExpiration"
+      );
+      await checkPassExpiration({ DB: env.DB, KV: env.KV });
+    }
   },
   async queue(
     batch: MessageBatch<unknown>,
@@ -147,6 +155,20 @@ export default {
         "./server/queue/notificationConsumer"
       );
       await handleNotificationQueue(batch as any, env as any);
+      return;
+    }
+    if (queueName === "diceshock-gstone-crawl") {
+      const { handleGstoneCrawlQueue } = await import(
+        "./server/queue/gstoneCrawlConsumer"
+      );
+      await handleGstoneCrawlQueue(batch as any, env as any);
+      return;
+    }
+    if (queueName === "diceshock-gstone-images") {
+      const { handleGstoneImageQueue } = await import(
+        "./server/queue/gstoneCrawlConsumer"
+      );
+      await handleGstoneImageQueue(batch as any, env as any);
       return;
     }
     const { handleImageQueue } = await import(

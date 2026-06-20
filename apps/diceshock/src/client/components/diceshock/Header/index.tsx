@@ -14,7 +14,7 @@ type PageType = {
   title: React.ReactNode;
   href?: string;
   children?: PageType[];
-  spa?: boolean; // 默认为 true，为 false 时使用 a 标签跳转
+  spa?: boolean;
 };
 
 const getSideMenu = (pages: PageType[]) =>
@@ -79,11 +79,14 @@ function Header() {
 
   const PAGES: PageType[] = useMemo(
     () => [
-      { title: t("headerNav.riichi"), href: `/riichi` },
-      { title: t("headerNav.inventory"), href: `/inventory` },
-      { title: t("headerNav.actives"), href: `/actives` },
-      { title: t("headerNav.agents"), href: `/diceshock-agents` },
-      { title: t("headerNav.contact"), href: `/contact-us` },
+      { title: t("headerNav.riichi"), href: "/{-$storeLocale}/riichi" },
+      { title: t("headerNav.inventory"), href: "/{-$storeLocale}/inventory" },
+      { title: t("headerNav.actives"), href: "/{-$storeLocale}/actives" },
+      {
+        title: t("headerNav.agents"),
+        href: "/{-$storeLocale}/diceshock-agents",
+      },
+      { title: t("headerNav.contact"), href: "/{-$storeLocale}/contact-us" },
     ],
     [t],
   );

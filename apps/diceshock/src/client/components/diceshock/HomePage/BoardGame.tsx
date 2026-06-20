@@ -147,7 +147,11 @@ const BoardGame = () => {
         <div className="absolute top-0 size-full bg-gradient-to-b from-transparent to-base-100 pointer-events-none" />
 
         <div className="absolute -bottom-8 left-1/2 -translate-x-1/2">
-          <Link to="/inventory" className="btn btn-lg btn-primary">
+          <Link
+            to="/$storeLocale/inventory"
+            params={(prev: any) => prev}
+            className="btn btn-lg btn-primary"
+          >
             查看库存 <ArrowRightIcon weight="bold" size={24} />
           </Link>
         </div>

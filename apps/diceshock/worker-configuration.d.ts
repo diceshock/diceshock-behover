@@ -10,7 +10,10 @@ declare namespace Cloudflare {
 		KV: KVNamespace;
 		R2: R2Bucket;
 		DB: D1Database;
+		GSTONE_DB: D1Database;
 		IMAGE_QUEUE: Queue;
+		GSTONE_CRAWL_QUEUE: Queue;
+		GSTONE_IMAGE_QUEUE: Queue;
 		BROWSER: Fetcher;
 		CF_VERSION_METADATA: WorkerVersionMetadata;
 		AUTH_URL: "https://diceshock.com";
