@@ -1,15 +1,16 @@
 import db, {
   accounts,
+  drizzle,
   mahjongMatchesTable,
   mahjongRegistrationsTable,
   userInfoTable,
 } from "@lib/db";
 import { TRPCError } from "@trpc/server";
-import { eq, like } from "drizzle-orm";
 import z from "zod/v4";
 import { getSmsTmpCodeKey } from "@/server/utils/auth";
 import { protectedProcedure } from "./baseTRPC";
 import { type GszPageResult, gszFetch } from "./gszApi";
+import { storeFilter } from "./storeScope";
 
 const saveMatch = protectedProcedure
   .input(
@@ -47,6 +48,7 @@ const saveMatch = protectedProcedure
       .insert(mahjongMatchesTable)
       .values({
         table_id: input.tableId ?? null,
+        store_id: ctx.storeCode ?? undefined,
         match_type: input.matchType,
         mode: input.mode,
         format: input.format,
@@ -63,7 +65,11 @@ const saveMatch = protectedProcedure
 const getMyMatches = protectedProcedure.query(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
   const matches = await tdb.query.mahjongMatchesTable.findMany({
-    where: (m) => like(m.players, `%"userId":"${ctx.userId}"%`),
+    where: (m, { and, eq, like }) =>
+      and(
+        like(m.players, `%"userId":"${ctx.userId}"%`),
+        storeFilter(m, ctx.storeCode, eq),
+      ),
     orderBy: (m, { desc }) => desc(m.created_at),
     limit: 50,
   });
@@ -75,7 +81,8 @@ const getMatchById = protectedProcedure
   .query(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
     return tdb.query.mahjongMatchesTable.findFirst({
-      where: (m, { eq }) => eq(m.id, input.id),
+      where: (m, { and, eq }) =>
+        and(eq(m.id, input.id), storeFilter(m, ctx.storeCode)),
     });
   });
 
@@ -136,7 +143,7 @@ const register = protectedProcedure
 
     const hasPhone = !!userInfo?.phone;
     if (!hasPhone) {
-      const devSmsCode = ctx.env.DEV_SMS_CODE;
+      const devSmsCode = (ctx.env as any).DEV_SMS_CODE as string | undefined;
       const kvKey = getSmsTmpCodeKey(input.phone);
       const storedCode = devSmsCode || (await KV.get(kvKey));
       if (!storedCode || storedCode !== input.smsCode) {
@@ -181,7 +188,7 @@ const register = protectedProcedure
       await tdb
         .update(userInfoTable)
         .set({ phone: phoneToUse })
-        .where(eq(userInfoTable.id, ctx.userId));
+        .where(drizzle.eq(userInfoTable.id, ctx.userId));
 
       const existingAccount = await tdb.query.accounts.findFirst({
         where: (acc, { eq, and }) =>
@@ -191,7 +198,7 @@ const register = protectedProcedure
         await tdb
           .update(accounts)
           .set({ providerAccountId: phoneToUse })
-          .where(eq(accounts.userId, ctx.userId));
+          .where(drizzle.eq(accounts.userId, ctx.userId));
       } else {
         await tdb.insert(accounts).values({
           userId: ctx.userId,
@@ -220,7 +227,7 @@ const register = protectedProcedure
       await tdb
         .update(userInfoTable)
         .set({ nickname: gszName })
-        .where(eq(userInfoTable.id, ctx.userId));
+        .where(drizzle.eq(userInfoTable.id, ctx.userId));
       nicknameSynced = true;
     }
 

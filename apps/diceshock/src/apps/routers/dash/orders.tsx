@@ -19,10 +19,12 @@ import {
   useRef,
   useState,
 } from "react";
+import AdminStoreFilter from "@/client/components/AdminStoreFilter";
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import { useAdminStoreFilter } from "@/client/hooks/useAdminStoreFilter";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
 import dayjs from "@/shared/utils/dayjs-config";
 import {
@@ -80,6 +82,7 @@ function RouteComponent() {
   const msg = useMsg();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { storeFilter } = useAdminStoreFilter();
   const [data, setData] = useState<OrdersList | null>(null);
   const [loading, setLoading] = useState(true);
   const [pricingSnapshot, setPricingSnapshot] = useState<SnapshotData | null>(
@@ -137,7 +140,7 @@ function RouteComponent() {
     } finally {
       setLoading(false);
     }
-  }, [status, sortBy, sortOrder, groupBy, page, msg]);
+  }, [status, sortBy, sortOrder, groupBy, page, storeFilter, msg]);
 
   useEffect(() => {
     void fetchOrders();
@@ -337,6 +340,7 @@ function RouteComponent() {
       <div className="px-4 pt-4 flex flex-col gap-3 shrink-0">
         <div className="flex items-center gap-3">
           <DashBackButton />
+          <AdminStoreFilter />
           <label className="input input-bordered input-sm flex items-center gap-2 flex-1 min-w-0">
             <MagnifyingGlassIcon className="size-4 opacity-50 shrink-0" />
             <input

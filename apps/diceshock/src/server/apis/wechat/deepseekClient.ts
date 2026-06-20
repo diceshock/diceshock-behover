@@ -1,5 +1,11 @@
-import db, { accounts, drizzle, userInfoTable } from "@lib/db";
+import db, { accounts, drizzle, storesTable, userInfoTable } from "@lib/db";
 import type { Context } from "hono";
+import {
+  LOCALES,
+  type LocaleCode,
+  STORES,
+  type StoreCode,
+} from "@/shared/store-locale";
 import type { HonoCtxEnv } from "@/shared/types";
 import { MUTATE_TOOL_DEFINITION } from "./graphql/mutateActions";
 import { QUERY_TOOL_DEFINITION } from "./graphql/queryValidation";
@@ -57,6 +63,7 @@ type ToolContext = {
   };
   openId: string;
   userId: string | null;
+  preferredStoreId: string | null;
 };
 
 const TOOLS: ToolDefinition[] = [
@@ -120,12 +127,18 @@ async function buildToolContext(
     },
     openId,
     userId: identity.userId,
+    preferredStoreId: identity.preferredStoreId,
   };
 }
 
 interface UserIdentity {
   userId: string | null;
   nickname: string | null;
+  preferredStoreId: string | null;
+  preferredStoreCode: StoreCode | null;
+  preferredStoreName: string | null;
+  preferredStoreAddress: string | null;
+  preferredLocale: LocaleCode | null;
 }
 
 async function resolveUserIdentity(
@@ -160,17 +173,71 @@ async function resolveUserIdentity(
     userId = silent.length > 0 ? silent[0].userId : null;
   }
 
-  if (!userId) return { userId: null, nickname: null };
+  if (!userId) {
+    return {
+      userId: null,
+      nickname: null,
+      preferredStoreId: null,
+      preferredStoreCode: null,
+      preferredStoreName: null,
+      preferredStoreAddress: null,
+      preferredLocale: null,
+    };
+  }
 
   const info = await d
-    .select({ nickname: userInfoTable.nickname })
+    .select({
+      nickname: userInfoTable.nickname,
+      preferred_store_id: userInfoTable.preferred_store_id,
+      preferred_locale: userInfoTable.preferred_locale,
+    })
     .from(userInfoTable)
     .where(drizzle.eq(userInfoTable.id, userId))
     .limit(1);
 
+  const nickname = info.length > 0 ? info[0].nickname : null;
+  const preferredStoreId =
+    info.length > 0 ? (info[0].preferred_store_id ?? null) : null;
+  const rawLocale = info.length > 0 ? (info[0].preferred_locale ?? null) : null;
+
+  let preferredLocale: LocaleCode | null = null;
+  if (rawLocale && rawLocale in LOCALES) {
+    preferredLocale = rawLocale as LocaleCode;
+  }
+
+  let preferredStoreCode: StoreCode | null = null;
+  let preferredStoreName: string | null = null;
+  let preferredStoreAddress: string | null = null;
+
+  if (preferredStoreId) {
+    const store = await d
+      .select({
+        code: storesTable.code,
+        name: storesTable.name,
+        address: storesTable.address,
+      })
+      .from(storesTable)
+      .where(drizzle.eq(storesTable.id, preferredStoreId))
+      .limit(1);
+
+    if (store.length > 0) {
+      const code = store[0].code;
+      if (code && code in STORES) {
+        preferredStoreCode = code as StoreCode;
+        preferredStoreName = store[0].name;
+        preferredStoreAddress = store[0].address ?? null;
+      }
+    }
+  }
+
   return {
     userId,
-    nickname: info.length > 0 ? info[0].nickname : null,
+    nickname,
+    preferredStoreId,
+    preferredStoreCode,
+    preferredStoreName,
+    preferredStoreAddress,
+    preferredLocale,
   };
 }
 
@@ -274,8 +341,25 @@ export async function chatWithAgent(
       systemContent += ` | 昵称: ${identity.nickname}`;
     }
     systemContent += `\n用户说"我的"时，用 creator_id eq "${identity.userId}" 或 user_id eq "${identity.userId}" 查询。不要再问手机号。`;
+
+    const storeName = identity.preferredStoreName || STORES.gg.name;
+    const storeAddress = identity.preferredStoreAddress || STORES.gg.address;
+    const storeId = identity.preferredStoreId || null;
+    systemContent += `\n\n[关联店铺] ${storeName}（${storeAddress}）`;
+    if (storeId) {
+      systemContent += `\n查询库存/约局时，必须用 store_id eq "${storeId}" 过滤，只能查该店铺数据。`;
+    } else {
+      systemContent += `\n查询库存/约局时，用 store_id eq "光谷店" 作为默认店铺。`;
+    }
+
+    const locale = identity.preferredLocale || "zh_Hans";
+    const localeName = LOCALES[locale]?.name || "简体中文";
+    if (locale !== "zh_Hans") {
+      systemContent += `\n\n[语言] 请使用${localeName}回复用户。`;
+    }
   } else {
     systemContent += `\n\n[当前用户] 未注册用户（openId: ${params.openId.slice(-8)}）。需要写操作时提示先注册。`;
+    systemContent += `\n[关联店铺] ${STORES.gg.name}（${STORES.gg.address}）`;
   }
 
   const skillContent = matchSkills(params.userMessage);

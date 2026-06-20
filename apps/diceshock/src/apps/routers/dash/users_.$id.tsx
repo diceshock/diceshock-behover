@@ -270,6 +270,28 @@ function UserDetailPage() {
     }
   };
 
+  const [notifySlot, setNotifySlot] = useState("order_start");
+  const [notifyPending, setNotifyPending] = useState(false);
+
+  const handleSendTestNotify = async () => {
+    setNotifyPending(true);
+    try {
+      const res = await trpcClientDash.wechatTemplate.sendTest.mutate({
+        userId: id,
+        slot: notifySlot as any,
+      });
+      if (res.success) {
+        msg.success("通知已发送");
+      } else {
+        msg.error((res as any).error ?? "发送失败");
+      }
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "发送失败");
+    } finally {
+      setNotifyPending(false);
+    }
+  };
+
   const [activeMatches, setActiveMatches] = useState<ActiveMatch[]>([]);
   const [activeMatchesLoading, setActiveMatchesLoading] = useState(false);
 
@@ -752,107 +774,148 @@ function UserDetailPage() {
           </div>
 
           {activeTab === "basic" && (
-            <form onSubmit={handleBasicSubmit} className="flex flex-col gap-6">
-              <label className="flex flex-col gap-2">
-                <span className="label text-sm font-semibold">用户 ID</span>
-                <input
-                  type="text"
-                  className="input input-bordered w-full"
-                  value={user.id}
-                  disabled
-                />
-              </label>
+            <>
+              <form
+                onSubmit={handleBasicSubmit}
+                className="flex flex-col gap-6"
+              >
+                <label className="flex flex-col gap-2">
+                  <span className="label text-sm font-semibold">用户 ID</span>
+                  <input
+                    type="text"
+                    className="input input-bordered w-full"
+                    value={user.id}
+                    disabled
+                  />
+                </label>
 
-              <label className="flex flex-col gap-2">
-                <span className="label text-sm font-semibold">姓名</span>
-                <input
-                  type="text"
-                  className="input input-bordered w-full"
-                  value={editForm.name}
-                  onChange={(e) =>
-                    setEditForm((p) => ({ ...p, name: e.target.value }))
-                  }
-                  placeholder="用户姓名"
-                />
-              </label>
+                <label className="flex flex-col gap-2">
+                  <span className="label text-sm font-semibold">姓名</span>
+                  <input
+                    type="text"
+                    className="input input-bordered w-full"
+                    value={editForm.name}
+                    onChange={(e) =>
+                      setEditForm((p) => ({ ...p, name: e.target.value }))
+                    }
+                    placeholder="用户姓名"
+                  />
+                </label>
 
-              <label className="flex flex-col gap-2">
-                <span className="label text-sm font-semibold">昵称</span>
-                <input
-                  type="text"
-                  className="input input-bordered w-full"
-                  value={editForm.nickname}
-                  onChange={(e) =>
-                    setEditForm((p) => ({ ...p, nickname: e.target.value }))
-                  }
-                  placeholder="用户昵称"
-                />
-              </label>
+                <label className="flex flex-col gap-2">
+                  <span className="label text-sm font-semibold">昵称</span>
+                  <input
+                    type="text"
+                    className="input input-bordered w-full"
+                    value={editForm.nickname}
+                    onChange={(e) =>
+                      setEditForm((p) => ({ ...p, nickname: e.target.value }))
+                    }
+                    placeholder="用户昵称"
+                  />
+                </label>
 
-              <label className="flex flex-col gap-2">
-                <span className="label text-sm font-semibold">手机号</span>
-                <input
-                  type="tel"
-                  className="input input-bordered w-full"
-                  value={editForm.phone}
-                  onChange={(e) =>
-                    setEditForm((p) => ({ ...p, phone: e.target.value }))
-                  }
-                  placeholder="手机号"
-                />
-              </label>
+                <label className="flex flex-col gap-2">
+                  <span className="label text-sm font-semibold">手机号</span>
+                  <input
+                    type="tel"
+                    className="input input-bordered w-full"
+                    value={editForm.phone}
+                    onChange={(e) =>
+                      setEditForm((p) => ({ ...p, phone: e.target.value }))
+                    }
+                    placeholder="手机号"
+                  />
+                </label>
 
-              <label className="flex flex-col gap-2">
-                <span className="label text-sm font-semibold">角色</span>
-                <select
-                  className="select select-bordered w-full"
-                  value={user.role ?? "customer"}
-                  onChange={(e) => handleRoleChange(e.target.value)}
-                  disabled={rolePending}
-                >
-                  <option value="customer">顾客</option>
-                  <option value="staff">店员</option>
-                  <option value="admin">管理员</option>
-                </select>
-              </label>
+                <label className="flex flex-col gap-2">
+                  <span className="label text-sm font-semibold">角色</span>
+                  <select
+                    className="select select-bordered w-full"
+                    value={user.role ?? "customer"}
+                    onChange={(e) => handleRoleChange(e.target.value)}
+                    disabled={rolePending}
+                  >
+                    <option value="customer">顾客</option>
+                    <option value="staff">店员</option>
+                    <option value="admin">管理员</option>
+                  </select>
+                </label>
 
-              <label className="flex flex-col gap-2">
-                <span className="label text-sm font-semibold">邮箱</span>
-                <input
-                  type="email"
-                  className="input input-bordered w-full"
-                  value={user.email ?? ""}
-                  disabled
-                />
-              </label>
+                <label className="flex flex-col gap-2">
+                  <span className="label text-sm font-semibold">邮箱</span>
+                  <input
+                    type="email"
+                    className="input input-bordered w-full"
+                    value={user.email ?? ""}
+                    disabled
+                  />
+                </label>
 
-              <label className="flex flex-col gap-2">
-                <span className="label text-sm font-semibold">UID</span>
-                <input
-                  type="text"
-                  className="input input-bordered w-full font-mono"
-                  value={user.userInfo?.uid ?? ""}
-                  disabled
-                />
-              </label>
+                <label className="flex flex-col gap-2">
+                  <span className="label text-sm font-semibold">UID</span>
+                  <input
+                    type="text"
+                    className="input input-bordered w-full font-mono"
+                    value={user.userInfo?.uid ?? ""}
+                    disabled
+                  />
+                </label>
 
-              <div className="flex justify-end gap-3 mt-4">
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  onClick={() => navigate({ to: "/dash/users" })}
-                >
-                  取消
-                </button>
-                <button
-                  type="submit"
-                  className={clsx("btn btn-primary", editPending && "loading")}
-                  disabled={editPending}
-                >
-                  {editPending ? "保存中..." : "保存"}
-                </button>
+                <div className="flex justify-end gap-3 mt-4">
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    onClick={() => navigate({ to: "/dash/users" })}
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="submit"
+                    className={clsx(
+                      "btn btn-primary",
+                      editPending && "loading",
+                    )}
+                    disabled={editPending}
+                  >
+                    {editPending ? "保存中..." : "保存"}
+                  </button>
+                </div>
+              </form>
+
+              <div className="divider" />
+
+              <div className="flex flex-col gap-3">
+                <h3 className="text-lg font-semibold">发送模板通知测试</h3>
+                <div className="flex items-center gap-3">
+                  <select
+                    className="select select-bordered flex-1"
+                    value={notifySlot}
+                    onChange={(e) => setNotifySlot(e.target.value)}
+                  >
+                    <option value="order_start">计时开始</option>
+                    <option value="table_transfer">换桌</option>
+                    <option value="mahjong_start">日麻开局</option>
+                    <option value="mahjong_gsz_sync">公式站同步</option>
+                    <option value="phone_bound">手机号绑定</option>
+                    <option value="order_settled">订单结算</option>
+                    <option value="membership_change">会员变更</option>
+                    <option value="pass_expiring">通行卡到期</option>
+                  </select>
+                  <button
+                    type="button"
+                    className={clsx(
+                      "btn btn-secondary",
+                      notifyPending && "loading",
+                    )}
+                    disabled={notifyPending}
+                    onClick={() => void handleSendTestNotify()}
+                  >
+                    {notifyPending ? "发送中..." : "发送"}
+                  </button>
+                </div>
               </div>
-            </form>
+            </>
           )}
 
           {activeTab === "membership" && (

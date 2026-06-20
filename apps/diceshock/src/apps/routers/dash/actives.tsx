@@ -7,9 +7,11 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import AdminStoreFilter from "@/client/components/AdminStoreFilter";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import { useAdminStoreFilter } from "@/client/hooks/useAdminStoreFilter";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
 import dayjs from "@/shared/utils/dayjs-config";
 import { trpcClientDash } from "@/shared/utils/trpc";
@@ -44,6 +46,7 @@ export const Route = createFileRoute("/dash/actives")({
 function RouteComponent() {
   const msg = useMsg();
   const isMobile = useIsMobile();
+  const { storeFilter } = useAdminStoreFilter();
   const [actives, setActives] = useState<ActiveItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -88,7 +91,7 @@ function RouteComponent() {
     } finally {
       setLoading(false);
     }
-  }, [msg]);
+  }, [storeFilter, msg]);
 
   useEffect(() => {
     void refreshActives();
@@ -197,7 +200,10 @@ function RouteComponent() {
     <main className="size-full flex flex-col">
       {/* Header */}
       <div className="px-4 pt-4 flex items-center justify-between gap-3">
-        <DashBackButton />
+        <div className="flex items-center gap-3">
+          <DashBackButton />
+          <AdminStoreFilter />
+        </div>
 
         {/* Search */}
         <label className="input input-bordered input-sm flex items-center gap-2 flex-1 max-w-xs">

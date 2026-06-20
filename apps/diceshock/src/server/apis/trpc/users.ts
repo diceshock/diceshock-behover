@@ -2,13 +2,19 @@ import db, {
   drizzle,
   pagedZ,
   sessions,
+  storesTable,
   userInfoTable,
   userRoles,
   users,
 } from "@lib/db";
 import z4, { z } from "zod/v4";
 import { generateTOTP } from "@/shared/utils/totp";
-import { adminProcedure, publicProcedure, staffProcedure } from "./baseTRPC";
+import {
+  adminProcedure,
+  protectedProcedure,
+  publicProcedure,
+  staffProcedure,
+} from "./baseTRPC";
 
 export const getFilterZ = z4.object({
   searchWords: z4.string().nonempty().optional(),
@@ -305,4 +311,33 @@ const updateRole = adminProcedure
     return { success: true as const };
   });
 
-export default { get, getById, mutation, disable, verifyTotp, updateRole };
+const updatePreferencesZ = z.object({
+  preferred_locale: z.string().nullable(),
+  preferred_store_id: z.string().nullable(),
+});
+
+const updatePreferences = protectedProcedure
+  .input(updatePreferencesZ)
+  .mutation(async ({ ctx, input }) => {
+    const tdb = db(ctx.env.DB);
+
+    await tdb
+      .update(userInfoTable)
+      .set({
+        preferred_locale: input.preferred_locale,
+        preferred_store_id: input.preferred_store_id,
+      })
+      .where(drizzle.eq(userInfoTable.id, ctx.userId!));
+
+    return { success: true };
+  });
+
+export default {
+  get,
+  getById,
+  mutation,
+  disable,
+  verifyTotp,
+  updateRole,
+  updatePreferences,
+};

@@ -43,6 +43,7 @@ export const appRouterDash = router({
     listSlots: wechatTemplateAdmin.listSlots,
     assignSlot: wechatTemplateAdmin.assignSlot,
     removeTemplate: wechatTemplateAdmin.removeTemplate,
+    sendTest: wechatTemplateAdmin.sendTest,
   },
 });
 
@@ -54,6 +55,9 @@ export const appRouterPublic = router({
     smsCode: auth.smsCode,
     updateUserInfo: auth.updateUserInfo,
     getTotpSecret: auth.getTotpSecret,
+  },
+  users: {
+    updatePreferences: users.updatePreferences,
   },
   businessCard: {
     getMyBusinessCard: businessCard.getMyBusinessCard,

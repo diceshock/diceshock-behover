@@ -1,4 +1,15 @@
 import z from "zod/v4";
+import {
+  notifyGszSync,
+  notifyMahjongStart,
+  notifyMembershipChange,
+  notifyOrderSettled,
+  notifyOrderStart,
+  notifyPassExpiring,
+  notifyPhoneBound,
+  notifyTableTransfer,
+  resolveUserOpenId,
+} from "@/server/apis/wechat/templateMessage";
 import { getWechatAccessToken } from "@/server/apis/wechat/wechatApi";
 import { staffProcedure } from "./baseTRPC";
 
@@ -165,10 +176,108 @@ const removeTemplate = staffProcedure
     return { success: true };
   });
 
+const NOTIFICATION_SLOTS = [
+  "order_start",
+  "table_transfer",
+  "mahjong_start",
+  "mahjong_gsz_sync",
+  "phone_bound",
+  "order_settled",
+  "membership_change",
+  "pass_expiring",
+] as const;
+
+type NotificationSlot = (typeof NOTIFICATION_SLOTS)[number];
+
+const sendTest = staffProcedure
+  .input((v: unknown) =>
+    z
+      .object({
+        userId: z.string().min(1),
+        slot: z.enum(NOTIFICATION_SLOTS),
+      })
+      .parse(v),
+  )
+  .mutation(async ({ ctx, input }) => {
+    const openId = await resolveUserOpenId(ctx.env, input.userId);
+    if (!openId) {
+      return { success: false, error: "用户未绑定微信" };
+    }
+
+    const now = new Date().toISOString().slice(0, 16).replace("T", " ");
+    let result: { success: boolean; errmsg?: string } | null = null;
+
+    switch (input.slot as NotificationSlot) {
+      case "order_start":
+        result = await notifyOrderStart(ctx.env, openId, {
+          tableName: "A1桌",
+          startTime: now,
+          seats: 4,
+        });
+        break;
+      case "table_transfer":
+        result = await notifyTableTransfer(ctx.env, openId, {
+          fromTable: "A1桌",
+          toTable: "B2桌",
+          transferTime: now,
+        });
+        break;
+      case "mahjong_start":
+        result = await notifyMahjongStart(ctx.env, openId, {
+          mode: "4p",
+          format: "半庄",
+          tableName: "雀桌1",
+          startTime: now,
+        });
+        break;
+      case "mahjong_gsz_sync":
+        result = await notifyGszSync(ctx.env, openId, {
+          success: true,
+          matchInfo: "测试对局 #0",
+        });
+        break;
+      case "phone_bound":
+        result = await notifyPhoneBound(ctx.env, openId, {
+          phone: "138****0000",
+          bindTime: now,
+        });
+        break;
+      case "order_settled":
+        result = await notifyOrderSettled(ctx.env, openId, {
+          tableName: "A1桌",
+          duration: "2h30m",
+          price: "¥45.00",
+          settledTime: now,
+          payMethod: "微信支付",
+        });
+        break;
+      case "membership_change":
+        result = await notifyMembershipChange(ctx.env, openId, {
+          action: "开通",
+          planName: "桌面通行证",
+          detail: "30天",
+        });
+        break;
+      case "pass_expiring":
+        result = await notifyPassExpiring(ctx.env, openId, {
+          planName: "桌面通行证",
+          endDate: "2025-01-01",
+          status: "expiring_5d",
+        });
+        break;
+    }
+
+    if (!result) return { success: false, error: "模板未配置" };
+    if (!result.success)
+      return { success: false, error: result.errmsg || "发送失败" };
+    return { success: true };
+  });
+
 export const wechatTemplateAdmin = {
   addFromLibrary,
   listTemplates,
   listSlots,
   assignSlot,
   removeTemplate,
+  sendTest,
 };

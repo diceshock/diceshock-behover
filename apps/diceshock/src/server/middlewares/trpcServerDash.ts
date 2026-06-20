@@ -17,6 +17,9 @@ const trpcServerDash = trpcServer({
       userInfo: UserInfo,
       userId: id,
       userRole: role,
+      storeCode:
+        c.req.header("X-Store-Code") ?? c.get("StoreCode") ?? undefined,
+      locale: c.get("LocaleCode") ?? undefined,
     };
   },
   onError({ error, path, input, ctx: _ctx, type }) {

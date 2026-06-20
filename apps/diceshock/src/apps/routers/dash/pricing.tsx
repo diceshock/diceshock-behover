@@ -14,8 +14,10 @@ import {
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useAtom } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
+import AdminStoreFilter from "@/client/components/AdminStoreFilter";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import { useAdminStoreFilter } from "@/client/hooks/useAdminStoreFilter";
 import { trpcClientDash } from "@/shared/utils/trpc";
 import { pricingDataAtom } from "./pricing_.$id";
 
@@ -175,6 +177,7 @@ const EMPTY_DATA: SnapshotData = {
 function PricingPage() {
   const msg = useMsg();
   const navigate = useNavigate();
+  const { storeFilter } = useAdminStoreFilter();
 
   const [data, setData] = useAtom(pricingDataAtom);
   const [savedData, setSavedData] = useState<SnapshotData>(EMPTY_DATA);
@@ -204,7 +207,7 @@ function PricingPage() {
     } finally {
       setLoading(false);
     }
-  }, [msg]);
+  }, [storeFilter, msg]);
 
   useEffect(() => {
     void refreshData();
@@ -447,7 +450,10 @@ function PricingPage() {
   return (
     <main className="size-full overflow-y-auto">
       <div className="px-4 pt-4 flex items-center justify-between">
-        <DashBackButton />
+        <div className="flex items-center gap-3">
+          <DashBackButton />
+          <AdminStoreFilter />
+        </div>
         <div className="flex items-center gap-2">
           {hasChanges && (
             <span className="badge badge-warning badge-sm">未保存</span>

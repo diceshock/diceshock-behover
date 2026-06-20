@@ -22,6 +22,52 @@ export const boardGamesTable = sqlite.sqliteTable("board_games_table", {
     .$default(() => new Date(0)),
 });
 
+export const storesTable = sqlite.sqliteTable("stores", {
+  id: sqlite.text().$defaultFn(createId).primaryKey(),
+  code: sqlite.text().unique(),
+  name: sqlite.text().notNull(),
+  address: sqlite.text(),
+  is_active: sqlite.integer().default(1),
+  created_at: sqlite
+    .integer("created_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date(Date.now())),
+});
+
+export const storeInventoryTable = sqlite.sqliteTable(
+  "store_inventory",
+  {
+    id: sqlite.text().$defaultFn(createId).primaryKey(),
+    store_id: sqlite.text().references(() => storesTable.id),
+    board_game_id: sqlite.text().references(() => boardGamesTable.id),
+    quantity: sqlite.integer().default(0),
+    status: sqlite
+      .text("status", { enum: ["available", "unavailable", "damaged"] })
+      .default("available"),
+    notes: sqlite.text(),
+    created_at: sqlite
+      .integer("created_at", { mode: "timestamp_ms" })
+      .$defaultFn(() => new Date(Date.now())),
+  },
+  (table) => [
+    sqlite.index("idx_store_inventory_store_id").on(table.store_id),
+    sqlite.index("idx_store_inventory_board_game_id").on(table.board_game_id),
+  ],
+);
+
+export const storeInventoryRelations = relations(
+  storeInventoryTable,
+  ({ one }) => ({
+    store: one(storesTable, {
+      fields: [storeInventoryTable.store_id],
+      references: [storesTable.id],
+    }),
+    boardGame: one(boardGamesTable, {
+      fields: [storeInventoryTable.board_game_id],
+      references: [boardGamesTable.id],
+    }),
+  }),
+);
+
 export const userRoles = ["customer", "admin", "staff"] as const;
 export type UserRole = (typeof userRoles)[number];
 
@@ -51,6 +97,10 @@ export const userInfoTable = sqlite.sqliteTable("user_info", {
   meta: sqlite
     .text("meta", { mode: "json" })
     .$type<{ auto_nickname?: boolean } | null>(),
+  preferred_store_id: sqlite
+    .text("preferred_store_id")
+    .references(() => storesTable.id),
+  preferred_locale: sqlite.text("preferred_locale"),
 });
 
 export const userBusinessCardTable = sqlite.sqliteTable("user_business_card", {
@@ -75,6 +125,10 @@ export const userInfoRelations = relations(userInfoTable, ({ one }) => ({
     fields: [userInfoTable.id],
     references: [users.id],
   }),
+  preferredStore: one(storesTable, {
+    fields: [userInfoTable.preferred_store_id],
+    references: [storesTable.id],
+  }),
 }));
 
 export const userBusinessCardRelations = relations(
@@ -98,28 +152,33 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   tableOccupancies: many(tableOccupancyTable),
 }));
 
-export const activesTable = sqlite.sqliteTable("actives", {
-  id: sqlite.text().$defaultFn(createId).primaryKey(),
-  creator_id: sqlite
-    .text()
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  title: sqlite.text().notNull(),
-  board_game_id: sqlite
-    .text("board_game_id")
-    .references(() => boardGamesTable.id),
-  date: sqlite.text().notNull(), // "YYYY-MM-DD"
-  time: sqlite.text(), // "HH:mm"
-  max_players: sqlite.int().notNull(),
-  content: sqlite.text(), // tiptap JSON
-  is_game: sqlite.int({ mode: "boolean" }).$default(() => true),
-  create_at: sqlite
-    .integer("create_at", { mode: "timestamp_ms" })
-    .$defaultFn(() => new Date(Date.now())),
-  update_at: sqlite
-    .integer("update_at", { mode: "timestamp_ms" })
-    .$defaultFn(() => new Date(Date.now())),
-});
+export const activesTable = sqlite.sqliteTable(
+  "actives",
+  {
+    id: sqlite.text().$defaultFn(createId).primaryKey(),
+    creator_id: sqlite
+      .text()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: sqlite.text().notNull(),
+    board_game_id: sqlite
+      .text("board_game_id")
+      .references(() => boardGamesTable.id),
+    store_id: sqlite.text("store_id").references(() => storesTable.id),
+    date: sqlite.text().notNull(), // "YYYY-MM-DD"
+    time: sqlite.text(), // "HH:mm"
+    max_players: sqlite.int().notNull(),
+    content: sqlite.text(), // tiptap JSON
+    is_game: sqlite.int({ mode: "boolean" }).$default(() => true),
+    create_at: sqlite
+      .integer("create_at", { mode: "timestamp_ms" })
+      .$defaultFn(() => new Date(Date.now())),
+    update_at: sqlite
+      .integer("update_at", { mode: "timestamp_ms" })
+      .$defaultFn(() => new Date(Date.now())),
+  },
+  (table) => [sqlite.index("idx_actives_store_id").on(table.store_id)],
+);
 
 export const activeRegistrationsTable = sqlite.sqliteTable(
   "active_registrations",
@@ -149,6 +208,10 @@ export const activesRelations = relations(activesTable, ({ one, many }) => ({
     fields: [activesTable.board_game_id],
     references: [boardGamesTable.id],
   }),
+  store: one(storesTable, {
+    fields: [activesTable.store_id],
+    references: [storesTable.id],
+  }),
   registrations: many(activeRegistrationsTable),
 }));
 
@@ -166,22 +229,32 @@ export const activeRegistrationsRelations = relations(
   }),
 );
 
-export const eventsTable = sqlite.sqliteTable("events", {
-  id: sqlite.text().$defaultFn(createId).primaryKey(),
-  title: sqlite.text().notNull(),
-  description: sqlite.text(),
-  cover_image_url: sqlite.text(),
-  content: sqlite.text(),
-  is_published: sqlite.int({ mode: "boolean" }).$default(() => false),
-  create_at: sqlite
-    .integer("create_at", { mode: "timestamp_ms" })
-    .$defaultFn(() => new Date(Date.now())),
-  update_at: sqlite
-    .integer("update_at", { mode: "timestamp_ms" })
-    .$defaultFn(() => new Date(Date.now())),
-});
+export const eventsTable = sqlite.sqliteTable(
+  "events",
+  {
+    id: sqlite.text().$defaultFn(createId).primaryKey(),
+    title: sqlite.text().notNull(),
+    description: sqlite.text(),
+    cover_image_url: sqlite.text(),
+    content: sqlite.text(),
+    store_id: sqlite.text("store_id").references(() => storesTable.id),
+    is_published: sqlite.int({ mode: "boolean" }).$default(() => false),
+    create_at: sqlite
+      .integer("create_at", { mode: "timestamp_ms" })
+      .$defaultFn(() => new Date(Date.now())),
+    update_at: sqlite
+      .integer("update_at", { mode: "timestamp_ms" })
+      .$defaultFn(() => new Date(Date.now())),
+  },
+  (table) => [sqlite.index("idx_events_store_id").on(table.store_id)],
+);
 
-export const eventsRelations = relations(eventsTable, () => ({}));
+export const eventsRelations = relations(eventsTable, ({ one }) => ({
+  store: one(storesTable, {
+    fields: [eventsTable.store_id],
+    references: [storesTable.id],
+  }),
+}));
 
 export const accounts = sqlite.sqliteTable(
   "account",
@@ -269,28 +342,33 @@ export const userMembershipPlansRelations = relations(
   }),
 );
 
-export const tablesTable = sqlite.sqliteTable("tables", {
-  id: sqlite.text().$defaultFn(createId).primaryKey(),
-  name: sqlite.text().notNull(),
-  type: sqlite.text("type", { enum: ["fixed", "solo"] }).notNull(),
-  scope: sqlite
-    .text("scope", { enum: ["trpg", "boardgame", "console", "mahjong"] })
-    .notNull()
-    .$default(() => "boardgame"),
-  status: sqlite
-    .text("status", { enum: ["active", "inactive"] })
-    .notNull()
-    .$default(() => "active"),
-  capacity: sqlite.int().notNull(),
-  description: sqlite.text(),
-  code: sqlite.text().notNull(),
-  create_at: sqlite
-    .integer("create_at", { mode: "timestamp_ms" })
-    .$defaultFn(() => new Date(Date.now())),
-  update_at: sqlite
-    .integer("update_at", { mode: "timestamp_ms" })
-    .$defaultFn(() => new Date(Date.now())),
-});
+export const tablesTable = sqlite.sqliteTable(
+  "tables",
+  {
+    id: sqlite.text().$defaultFn(createId).primaryKey(),
+    name: sqlite.text().notNull(),
+    type: sqlite.text("type", { enum: ["fixed", "solo"] }).notNull(),
+    scope: sqlite
+      .text("scope", { enum: ["trpg", "boardgame", "console", "mahjong"] })
+      .notNull()
+      .$default(() => "boardgame"),
+    status: sqlite
+      .text("status", { enum: ["active", "inactive"] })
+      .notNull()
+      .$default(() => "active"),
+    capacity: sqlite.int().notNull(),
+    description: sqlite.text(),
+    code: sqlite.text().notNull(),
+    store_id: sqlite.text("store_id").references(() => storesTable.id),
+    create_at: sqlite
+      .integer("create_at", { mode: "timestamp_ms" })
+      .$defaultFn(() => new Date(Date.now())),
+    update_at: sqlite
+      .integer("update_at", { mode: "timestamp_ms" })
+      .$defaultFn(() => new Date(Date.now())),
+  },
+  (table) => [sqlite.index("idx_tables_store_id").on(table.store_id)],
+);
 
 export const tableOccupancyTable = sqlite.sqliteTable("table_occupancy", {
   id: sqlite.text().$defaultFn(createId).primaryKey(),
@@ -419,7 +497,11 @@ export const orderPauseLogsTable = sqlite.sqliteTable("order_pause_logs", {
     .default("manual"),
 });
 
-export const tablesRelations = relations(tablesTable, ({ many }) => ({
+export const tablesRelations = relations(tablesTable, ({ one, many }) => ({
+  store: one(storesTable, {
+    fields: [tablesTable.store_id],
+    references: [storesTable.id],
+  }),
   occupancies: many(tableOccupancyTable),
 }));
 
@@ -486,41 +568,58 @@ export const wechatConversationsTable = sqlite.sqliteTable(
 
 // ─── Pricing Plans ──────────────────────────────────────────────
 
-export const pricingSnapshotsTable = sqlite.sqliteTable("pricing_snapshots", {
-  id: sqlite.text().$defaultFn(createId).primaryKey(),
-  name: sqlite
-    .text("name")
-    .notNull()
-    .$default(() => "未命名"),
-  data: sqlite.text("data", { mode: "json" }).$type<{
-    config: {
-      daytime_start: string;
-      daytime_end: string;
-    };
-    plans: Array<{
-      plan_type: "fallback" | "conditional";
-      name: string;
-      sort_order: number;
-      enabled: boolean;
-      conditions: unknown;
-      billing_type: "hourly" | "fixed";
-      price: number;
-      cap_enabled: boolean;
-      cap_unit: "per_day" | "split_day_night" | null;
-      cap_price: number | null;
-      cap_price_day: number | null;
-      cap_price_night: number | null;
-    }>;
-  }>(),
-  status: sqlite
-    .text("status", { enum: ["draft", "published"] })
-    .notNull()
-    .$default(() => "draft"),
-  created_at: sqlite
-    .integer("created_at", { mode: "timestamp_ms" })
-    .$defaultFn(() => new Date(Date.now())),
-  published_at: sqlite.integer("published_at", { mode: "timestamp_ms" }),
-});
+export const pricingSnapshotsTable = sqlite.sqliteTable(
+  "pricing_snapshots",
+  {
+    id: sqlite.text().$defaultFn(createId).primaryKey(),
+    name: sqlite
+      .text("name")
+      .notNull()
+      .$default(() => "未命名"),
+    store_id: sqlite.text("store_id").references(() => storesTable.id),
+    data: sqlite.text("data", { mode: "json" }).$type<{
+      config: {
+        daytime_start: string;
+        daytime_end: string;
+      };
+      plans: Array<{
+        plan_type: "fallback" | "conditional";
+        name: string;
+        sort_order: number;
+        enabled: boolean;
+        conditions: unknown;
+        billing_type: "hourly" | "fixed";
+        price: number;
+        cap_enabled: boolean;
+        cap_unit: "per_day" | "split_day_night" | null;
+        cap_price: number | null;
+        cap_price_day: number | null;
+        cap_price_night: number | null;
+      }>;
+    }>(),
+    status: sqlite
+      .text("status", { enum: ["draft", "published"] })
+      .notNull()
+      .$default(() => "draft"),
+    created_at: sqlite
+      .integer("created_at", { mode: "timestamp_ms" })
+      .$defaultFn(() => new Date(Date.now())),
+    published_at: sqlite.integer("published_at", { mode: "timestamp_ms" }),
+  },
+  (table) => [
+    sqlite.index("idx_pricing_snapshots_store_id").on(table.store_id),
+  ],
+);
+
+export const pricingSnapshotsRelations = relations(
+  pricingSnapshotsTable,
+  ({ one }) => ({
+    store: one(storesTable, {
+      fields: [pricingSnapshotsTable.store_id],
+      references: [storesTable.id],
+    }),
+  }),
+);
 
 // ─── Authenticators ─────────────────────────────────────────────
 
@@ -550,52 +649,71 @@ export const authenticators = sqlite.sqliteTable(
   ],
 );
 
-export const mahjongMatchesTable = sqlite.sqliteTable("mahjong_matches", {
-  id: sqlite.text().$defaultFn(createId).primaryKey(),
-  table_id: sqlite.text().references(() => tablesTable.id),
-  match_type: sqlite.text().$type<"store" | "tournament">(),
-  gsz_record_id: sqlite.integer("gsz_record_id"),
-  mode: sqlite.text().$type<"3p" | "4p">().notNull(),
-  format: sqlite.text().$type<"tonpuu" | "hanchan">().notNull(),
-  started_at: sqlite.integer({ mode: "timestamp_ms" }).notNull(),
-  ended_at: sqlite.integer({ mode: "timestamp_ms" }).notNull(),
-  termination_reason: sqlite
-    .text()
-    .$type<"score_complete" | "vote" | "admin_abort" | "order_invalid">()
-    .notNull(),
-  players: sqlite.text({ mode: "json" }).$type<
-    Array<{
-      userId: string;
-      nickname: string;
-      seat: string | null;
-      finalScore: number;
-    }>
-  >(),
-  round_history: sqlite.text({ mode: "json" }).$type<
-    Array<{
-      round: number;
-      wind: string;
-      honba: number;
-      dealerUserId: string;
-      scores: Record<string, number>;
-      result: string;
-    }>
-  >(),
-  config: sqlite.text({ mode: "json" }).$type<{
-    type?: string;
-    mode: string;
-    format: string;
-  }>(),
-  gsz_synced: sqlite
-    .integer("gsz_synced", { mode: "boolean" })
-    .notNull()
-    .default(false),
-  gsz_error: sqlite.text("gsz_error"),
-  gsz_synced_at: sqlite.integer("gsz_synced_at", { mode: "timestamp_ms" }),
-  created_at: sqlite
-    .integer("created_at", { mode: "timestamp_ms" })
-    .$defaultFn(() => new Date(Date.now())),
-});
+export const mahjongMatchesTable = sqlite.sqliteTable(
+  "mahjong_matches",
+  {
+    id: sqlite.text().$defaultFn(createId).primaryKey(),
+    table_id: sqlite.text().references(() => tablesTable.id),
+    store_id: sqlite.text("store_id").references(() => storesTable.id),
+    match_type: sqlite.text().$type<"store" | "tournament">(),
+    gsz_record_id: sqlite.integer("gsz_record_id"),
+    mode: sqlite.text().$type<"3p" | "4p">().notNull(),
+    format: sqlite.text().$type<"tonpuu" | "hanchan">().notNull(),
+    started_at: sqlite.integer({ mode: "timestamp_ms" }).notNull(),
+    ended_at: sqlite.integer({ mode: "timestamp_ms" }).notNull(),
+    termination_reason: sqlite
+      .text()
+      .$type<"score_complete" | "vote" | "admin_abort" | "order_invalid">()
+      .notNull(),
+    players: sqlite.text({ mode: "json" }).$type<
+      Array<{
+        userId: string;
+        nickname: string;
+        seat: string | null;
+        finalScore: number;
+      }>
+    >(),
+    round_history: sqlite.text({ mode: "json" }).$type<
+      Array<{
+        round: number;
+        wind: string;
+        honba: number;
+        dealerUserId: string;
+        scores: Record<string, number>;
+        result: string;
+      }>
+    >(),
+    config: sqlite.text({ mode: "json" }).$type<{
+      type?: string;
+      mode: string;
+      format: string;
+    }>(),
+    gsz_synced: sqlite
+      .integer("gsz_synced", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    gsz_error: sqlite.text("gsz_error"),
+    gsz_synced_at: sqlite.integer("gsz_synced_at", { mode: "timestamp_ms" }),
+    created_at: sqlite
+      .integer("created_at", { mode: "timestamp_ms" })
+      .$defaultFn(() => new Date(Date.now())),
+  },
+  (table) => [sqlite.index("idx_mahjong_matches_store_id").on(table.store_id)],
+);
+
+export const mahjongMatchesRelations = relations(
+  mahjongMatchesTable,
+  ({ one }) => ({
+    table: one(tablesTable, {
+      fields: [mahjongMatchesTable.table_id],
+      references: [tablesTable.id],
+    }),
+    store: one(storesTable, {
+      fields: [mahjongMatchesTable.store_id],
+      references: [storesTable.id],
+    }),
+  }),
+);
 
 export const mahjongRegistrationsTable = sqlite.sqliteTable(
   "mahjong_registrations",
@@ -627,6 +745,7 @@ export const leaderboardSnapshotsTable = sqlite.sqliteTable(
   "leaderboard_snapshots",
   {
     id: sqlite.text().$defaultFn(createId).primaryKey(),
+    store_id: sqlite.text("store_id").references(() => storesTable.id),
     category: sqlite
       .text()
       .$type<
@@ -654,6 +773,19 @@ export const leaderboardSnapshotsTable = sqlite.sqliteTable(
       .integer("created_at", { mode: "timestamp_ms" })
       .$defaultFn(() => new Date(Date.now())),
   },
+  (table) => [
+    sqlite.index("idx_leaderboard_snapshots_store_id").on(table.store_id),
+  ],
+);
+
+export const leaderboardSnapshotsRelations = relations(
+  leaderboardSnapshotsTable,
+  ({ one }) => ({
+    store: one(storesTable, {
+      fields: [leaderboardSnapshotsTable.store_id],
+      references: [storesTable.id],
+    }),
+  }),
 );
 
 export const userBadgesTable = sqlite.sqliteTable("user_badges", {
@@ -684,3 +816,14 @@ export const userBadgesTable = sqlite.sqliteTable("user_badges", {
     .integer("created_at", { mode: "timestamp_ms" })
     .$defaultFn(() => new Date(Date.now())),
 });
+
+export const storesRelations = relations(storesTable, ({ many }) => ({
+  inventory: many(storeInventoryTable),
+  tables: many(tablesTable),
+  pricingSnapshots: many(pricingSnapshotsTable),
+  events: many(eventsTable),
+  actives: many(activesTable),
+  mahjongMatches: many(mahjongMatchesTable),
+  leaderboardSnapshots: many(leaderboardSnapshotsTable),
+  preferredByUsers: many(userInfoTable),
+}));

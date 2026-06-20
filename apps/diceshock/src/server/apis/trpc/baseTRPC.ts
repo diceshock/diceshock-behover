@@ -24,6 +24,8 @@ const t = initTRPC
     userInfo?: UserInfo;
     userId?: string;
     userRole?: UserRole;
+    storeCode?: string;
+    locale?: string;
   }>()
   .create();
 

@@ -1,9 +1,11 @@
 import db, { activeRegistrationsTable, activesTable, drizzle } from "@lib/db";
 import { staffProcedure, unwrapInput } from "./baseTRPC";
+import { storeFilter } from "./storeScope";
 
 const list = staffProcedure.query(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
   const actives = await tdb.query.activesTable.findMany({
+    where: (a, { eq }) => storeFilter(a, ctx.storeCode, eq),
     orderBy: (a, { desc }) => desc(a.create_at),
     with: {
       creator: { columns: { id: true, name: true } },
@@ -25,7 +27,8 @@ const getById = staffProcedure
   .query(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
     const active = await tdb.query.activesTable.findFirst({
-      where: (a, { eq }) => eq(a.id, input.id),
+      where: (a, { and, eq }) =>
+        and(eq(a.id, input.id), storeFilter(a, ctx.storeCode, eq)),
       with: {
         creator: { columns: { id: true, name: true } },
         registrations: true,

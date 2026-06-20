@@ -9,8 +9,10 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import AdminStoreFilter from "@/client/components/AdminStoreFilter";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import { useAdminStoreFilter } from "@/client/hooks/useAdminStoreFilter";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
 import dayjs from "@/shared/utils/dayjs-config";
 import { trpcClientDash } from "@/shared/utils/trpc";
@@ -51,6 +53,7 @@ export const Route = createFileRoute("/dash/tables")({
 function RouteComponent() {
   const msg = useMsg();
   const isMobile = useIsMobile();
+  const { storeFilter } = useAdminStoreFilter();
   const { q, type, status } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const setSearch = useCallback(
@@ -84,7 +87,7 @@ function RouteComponent() {
     } finally {
       setLoading(false);
     }
-  }, [msg]);
+  }, [storeFilter, msg]);
 
   useEffect(() => {
     void refreshTables();
@@ -191,6 +194,7 @@ function RouteComponent() {
       <div className="px-4 pt-4 flex flex-col gap-3">
         <div className="flex items-center gap-3">
           <DashBackButton />
+          <AdminStoreFilter />
           <label className="input input-bordered input-sm flex items-center gap-2 flex-1 min-w-0">
             <MagnifyingGlassIcon className="size-4 opacity-50 shrink-0" />
             <input

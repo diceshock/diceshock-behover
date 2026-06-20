@@ -29,17 +29,19 @@ import aliyunInj from "./server/middlewares/aliyunInj";
 import {
   authGuard,
   authInit,
+  dashGuard,
   userInjMiddleware,
 } from "./server/middlewares/auth";
 import requestEndpoint from "./server/middlewares/requestEndpoint";
 import serverMetaInj from "./server/middlewares/serverMetaInj";
+import storeLocaleMiddleware from "./server/middlewares/storeLocale";
 import trpcServerDash from "./server/middlewares/trpcServerDash";
 import trpcServerPublic from "./server/middlewares/trpcServerPublic";
 import { wechatSilentAuth } from "./server/middlewares/wechatSilentAuth";
 
 export { SocketDO } from "./server/durableObjects/SocketDO";
 
-export const app = new Hono<{ Bindings: HonoCtxEnv }>();
+export const app = new Hono<HonoCtxEnv>();
 
 app.use(requestEndpoint);
 app.use(aliyunInj);
@@ -104,9 +106,13 @@ app.post("/action/seat/:code", async (c) => {
 });
 
 app.use("*", userInjMiddleware);
+app.use("*", storeLocaleMiddleware);
 app.use("*", authGuard);
 
 app.use("/t/:code", seatRedirect);
+
+app.use("/dash/*", dashGuard);
+app.use("/dash", dashGuard);
 
 app.get("/*", fileRoute);
 

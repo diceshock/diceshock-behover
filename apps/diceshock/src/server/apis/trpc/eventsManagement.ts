@@ -1,10 +1,12 @@
 import db, { drizzle, eventsTable } from "@lib/db";
 import { z } from "zod/v4";
 import { staffProcedure, unwrapInput } from "./baseTRPC";
+import { storeFilter } from "./storeScope";
 
 const list = staffProcedure.query(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
   const events = await tdb.query.eventsTable.findMany({
+    where: (e, { eq }) => storeFilter(e, ctx.storeCode, eq),
     orderBy: (e, { desc }) => desc(e.create_at),
   });
   return events;
@@ -28,6 +30,7 @@ const create = staffProcedure
         description: input.description ?? null,
         cover_image_url: input.cover_image_url ?? null,
         content: input.content ?? null,
+        store_id: ctx.storeCode ?? undefined,
         is_published: false,
       })
       .returning();
@@ -81,7 +84,8 @@ const togglePublish = staffProcedure
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
     const event = await tdb.query.eventsTable.findFirst({
-      where: (e, { eq }) => eq(e.id, input.id),
+      where: (e, { and, eq }) =>
+        and(eq(e.id, input.id), storeFilter(e, ctx.storeCode, eq)),
     });
     if (!event) throw new Error("活动不存在");
     const [updated] = await tdb

@@ -1,6 +1,7 @@
 import db, { drizzle, pricingSnapshotsTable } from "@lib/db";
 import { customAlphabet } from "nanoid/non-secure";
-import { staffProcedure, publicProcedure, unwrapInput } from "./baseTRPC";
+import { publicProcedure, staffProcedure, unwrapInput } from "./baseTRPC";
+import { storeFilter } from "./storeScope";
 
 type SnapshotData = NonNullable<typeof pricingSnapshotsTable.$inferSelect.data>;
 
@@ -14,9 +15,11 @@ const EMPTY_DATA: SnapshotData = {
 async function deduplicateName(
   tdb: ReturnType<typeof db>,
   name: string,
+  storeCode?: string,
 ): Promise<string> {
   const existing = await tdb.query.pricingSnapshotsTable.findFirst({
-    where: (s, { eq }) => eq(s.name, name),
+    where: (s, { and, eq }) =>
+      and(eq(s.name, name), storeFilter(s, storeCode, eq)),
     columns: { id: true },
   });
   return existing ? `${name}-${nanoid()}` : name;
@@ -25,6 +28,7 @@ async function deduplicateName(
 const load = staffProcedure.query(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
   const latest = await tdb.query.pricingSnapshotsTable.findFirst({
+    where: (s, { eq }) => storeFilter(s, ctx.storeCode, eq),
     orderBy: (s, { desc }) => desc(s.created_at),
   });
   return {
@@ -45,11 +49,12 @@ const save = staffProcedure
   })
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
-    const finalName = await deduplicateName(tdb, input.name);
+    const finalName = await deduplicateName(tdb, input.name, ctx.storeCode);
     const [row] = await tdb
       .insert(pricingSnapshotsTable)
       .values({
         name: finalName,
+        store_id: ctx.storeCode ?? undefined,
         data: input.data,
         status: "draft",
         created_at: new Date(),
@@ -62,7 +67,8 @@ const publish = staffProcedure.mutation(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
 
   const latestDraft = await tdb.query.pricingSnapshotsTable.findFirst({
-    where: (s, { eq }) => eq(s.status, "draft"),
+    where: (s, { and, eq }) =>
+      and(eq(s.status, "draft"), storeFilter(s, ctx.storeCode, eq)),
     orderBy: (s, { desc }) => desc(s.created_at),
   });
   if (!latestDraft) throw new Error("没有可发布的草稿，请先保存");
@@ -96,6 +102,7 @@ function buildSummary(d: SnapshotData | null): string {
 const listSnapshots = staffProcedure.query(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
   const rows = await tdb.query.pricingSnapshotsTable.findMany({
+    where: (s, { eq }) => storeFilter(s, ctx.storeCode, eq),
     orderBy: (s, { desc }) => desc(s.created_at),
   });
   return rows.map((row) => ({
@@ -117,15 +124,17 @@ const restoreSnapshot = staffProcedure
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
     const snapshot = await tdb.query.pricingSnapshotsTable.findFirst({
-      where: (s, { eq }) => eq(s.id, input.id),
+      where: (s, { and, eq }) =>
+        and(eq(s.id, input.id), storeFilter(s, ctx.storeCode, eq)),
     });
     if (!snapshot?.data) throw new Error("快照不存在");
 
-    const finalName = await deduplicateName(tdb, snapshot.name);
+    const finalName = await deduplicateName(tdb, snapshot.name, ctx.storeCode);
     const [row] = await tdb
       .insert(pricingSnapshotsTable)
       .values({
         name: finalName,
+        store_id: ctx.storeCode ?? undefined,
         data: snapshot.data,
         status: "draft",
         created_at: new Date(),
@@ -138,7 +147,8 @@ const restoreSnapshot = staffProcedure
 const getPublished = publicProcedure.query(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
   const published = await tdb.query.pricingSnapshotsTable.findFirst({
-    where: (s, { eq }) => eq(s.status, "published"),
+    where: (s, { and, eq }) =>
+      and(eq(s.status, "published"), storeFilter(s, ctx.storeCode, eq)),
     orderBy: (s, { desc }) => desc(s.created_at),
   });
   if (!published) return null;
@@ -157,7 +167,8 @@ const getSnapshotDetail = staffProcedure
   .query(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
     const snapshot = await tdb.query.pricingSnapshotsTable.findFirst({
-      where: (s, { eq }) => eq(s.id, input.id),
+      where: (s, { and, eq }) =>
+        and(eq(s.id, input.id), storeFilter(s, ctx.storeCode, eq)),
     });
     if (!snapshot) throw new Error("快照不存在");
     return {

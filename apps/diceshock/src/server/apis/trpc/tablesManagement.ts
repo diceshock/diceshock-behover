@@ -7,6 +7,7 @@ import db, {
 import { createId } from "@paralleldrive/cuid2";
 import { fetchTableStateForDO, notifySocketDO } from "@/server/utils/seatTimer";
 import { staffProcedure, unwrapInput } from "./baseTRPC";
+import { storeFilter } from "./storeScope";
 
 const SHORT_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -38,6 +39,7 @@ async function generateUniqueCode(
 const list = staffProcedure.query(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
   const tables = await tdb.query.tablesTable.findMany({
+    where: (t, { eq }) => storeFilter(t, ctx.storeCode, eq),
     orderBy: (t, { desc }) => desc(t.create_at),
     with: {
       occupancies: {
@@ -79,6 +81,7 @@ const create = staffProcedure
       capacity: input.type === "solo" ? 0 : input.capacity!,
       description: input.description?.trim() || null,
       code,
+      store_id: ctx.storeCode ?? undefined,
       create_at: now,
       update_at: now,
     });
@@ -94,7 +97,8 @@ const getById = staffProcedure
   .query(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
     const table = await tdb.query.tablesTable.findFirst({
-      where: (t, { eq }) => eq(t.id, input.id),
+      where: (t, { and, eq }) =>
+        and(eq(t.id, input.id), storeFilter(t, ctx.storeCode, eq)),
       with: {
         occupancies: {
           with: {
@@ -183,7 +187,8 @@ const toggleStatus = staffProcedure
   .mutation(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
     const table = await tdb.query.tablesTable.findFirst({
-      where: (t, { eq }) => eq(t.id, input.id),
+      where: (t, { and, eq }) =>
+        and(eq(t.id, input.id), storeFilter(t, ctx.storeCode, eq)),
       columns: { status: true },
     });
     if (!table) throw new Error("桌台不存在");
@@ -299,7 +304,8 @@ const removeOccupancy = staffProcedure
 
     if (occ) {
       const table = await tdb.query.tablesTable.findFirst({
-        where: (t, { eq }) => eq(t.id, occ.table_id),
+        where: (t, { and, eq }) =>
+          and(eq(t.id, occ.table_id), storeFilter(t, ctx.storeCode, eq)),
         columns: { id: true, code: true },
       });
       if (table) {
@@ -344,7 +350,8 @@ const getByCode = staffProcedure
   .query(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
     const table = await tdb.query.tablesTable.findFirst({
-      where: (t, { eq }) => eq(t.code, input.code),
+      where: (t, { and, eq }) =>
+        and(eq(t.code, input.code), storeFilter(t, ctx.storeCode, eq)),
       columns: { id: true, name: true, type: true, status: true },
     });
     if (!table) throw new Error("桌台不存在");

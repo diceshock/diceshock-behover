@@ -7,8 +7,10 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+import AdminStoreFilter from "@/client/components/AdminStoreFilter";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import { useAdminStoreFilter } from "@/client/hooks/useAdminStoreFilter";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
 import dayjs from "@/shared/utils/dayjs-config";
 import { trpcClientDash } from "@/shared/utils/trpc";
@@ -35,6 +37,7 @@ export const Route = createFileRoute("/dash/events")({
 function RouteComponent() {
   const msg = useMsg();
   const isMobile = useIsMobile();
+  const { storeFilter } = useAdminStoreFilter();
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -61,7 +64,7 @@ function RouteComponent() {
     } finally {
       setLoading(false);
     }
-  }, [msg]);
+  }, [storeFilter, msg]);
 
   useEffect(() => {
     void refreshEvents();
@@ -119,7 +122,10 @@ function RouteComponent() {
   return (
     <main className="size-full flex flex-col">
       <div className="px-4 pt-4 flex items-center justify-between">
-        <DashBackButton />
+        <div className="flex items-center gap-3">
+          <DashBackButton />
+          <AdminStoreFilter />
+        </div>
         <button
           type="button"
           className="btn btn-primary btn-sm gap-1"

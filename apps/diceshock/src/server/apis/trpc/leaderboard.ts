@@ -1,14 +1,10 @@
-import db, {
-  leaderboardSnapshotsTable,
-  mahjongMatchesTable,
-  userBadgesTable,
-} from "@lib/db";
-import { eq, gte, like, lte } from "drizzle-orm";
+import db, { leaderboardSnapshotsTable, userBadgesTable } from "@lib/db";
 import z from "zod/v4";
 import type { PPCategory } from "@/shared/mahjong/pp";
 import { aggregatePP, PP_CATEGORY_LABELS } from "@/shared/mahjong/pp";
 import type { MatchType } from "@/shared/mahjong/types";
 import { protectedProcedure, publicProcedure } from "./baseTRPC";
+import { storeFilter } from "./storeScope";
 
 const categoryZ = z.enum([
   "tournament",
@@ -31,7 +27,11 @@ const getLeaderboard = publicProcedure
     const tdb = db(ctx.env.DB);
     const snapshot = await tdb.query.leaderboardSnapshotsTable.findFirst({
       where: (s, { and, eq }) =>
-        and(eq(s.category, input.category), eq(s.period, input.period)),
+        and(
+          eq(s.category, input.category),
+          eq(s.period, input.period),
+          storeFilter(s, ctx.storeCode, eq),
+        ),
       orderBy: (s, { desc }) => desc(s.computed_at),
     });
 
@@ -70,7 +70,11 @@ const getMyRankings = protectedProcedure.query(async ({ ctx }) => {
     for (const period of periods) {
       const snapshot = await tdb.query.leaderboardSnapshotsTable.findFirst({
         where: (s, { and, eq }) =>
-          and(eq(s.category, category), eq(s.period, period)),
+          and(
+            eq(s.category, category),
+            eq(s.period, period),
+            storeFilter(s, ctx.storeCode, eq),
+          ),
         orderBy: (s, { desc }) => desc(s.computed_at),
       });
 
@@ -152,7 +156,11 @@ const getMyBadges = protectedProcedure.query(async ({ ctx }) => {
     }),
     tdb.query.mahjongMatchesTable
       .findMany({
-        where: (m) => like(m.players, `%"userId":"${ctx.userId}"%`),
+        where: (m, { and, eq, like }) =>
+          and(
+            like(m.players, `%"userId":"${ctx.userId}"%`),
+            storeFilter(m, ctx.storeCode, eq),
+          ),
         columns: { id: true },
         limit: 1,
       })
@@ -172,7 +180,11 @@ const getUserBadges = publicProcedure
       }),
       tdb.query.mahjongMatchesTable
         .findMany({
-          where: (m) => like(m.players, `%"userId":"${input.userId}"%`),
+          where: (m, { and, eq, like }) =>
+            and(
+              like(m.players, `%"userId":"${input.userId}"%`),
+              storeFilter(m, ctx.storeCode, eq),
+            ),
           columns: { id: true },
           limit: 1,
         })
@@ -184,7 +196,11 @@ const getUserBadges = publicProcedure
 const getMyPPStats = protectedProcedure.query(async ({ ctx }) => {
   const tdb = db(ctx.env.DB);
   const matches = await tdb.query.mahjongMatchesTable.findMany({
-    where: (m) => like(m.players, `%"userId":"${ctx.userId}"%`),
+    where: (m, { and, eq, like }) =>
+      and(
+        like(m.players, `%"userId":"${ctx.userId}"%`),
+        storeFilter(m, ctx.storeCode, eq),
+      ),
     orderBy: (m, { desc }) => desc(m.created_at),
   });
 
@@ -222,44 +238,36 @@ const getMatchHistory = protectedProcedure
     const targetUserId = input?.userId ?? ctx.userId;
     const limitCount = input?.limit ?? 20;
 
-    const conditions = [
-      like(mahjongMatchesTable.players, `%"userId":"${targetUserId}"%`),
-    ];
-    if (input?.cursor) {
-      conditions.push(
-        lte(mahjongMatchesTable.created_at, new Date(input.cursor)),
-      );
-    }
-    if (input?.matchType) {
-      conditions.push(eq(mahjongMatchesTable.match_type, input.matchType));
-    }
-    if (input?.mode) {
-      conditions.push(eq(mahjongMatchesTable.mode, input.mode));
-    }
-    if (input?.format) {
-      conditions.push(eq(mahjongMatchesTable.format, input.format));
-    }
-    if (input?.startDate) {
-      conditions.push(
-        gte(mahjongMatchesTable.started_at, new Date(input.startDate)),
-      );
-    }
-    if (input?.endDate) {
-      conditions.push(
-        lte(mahjongMatchesTable.started_at, new Date(input.endDate)),
-      );
-    }
-    if (input?.search?.trim()) {
-      conditions.push(
-        like(
-          mahjongMatchesTable.players,
-          `%"nickname":"%${input.search.trim()}%"%`,
-        ),
-      );
-    }
-
     const matches = await tdb.query.mahjongMatchesTable.findMany({
-      where: (_m, { and }) => and(...conditions),
+      where: (m, { and, eq, gte, like, lte }) => {
+        const conditions = [like(m.players, `%"userId":"${targetUserId}"%`)];
+        const storeCondition = storeFilter(m, ctx.storeCode, eq);
+        if (storeCondition) conditions.push(storeCondition);
+        if (input?.cursor) {
+          conditions.push(lte(m.created_at, new Date(input.cursor)));
+        }
+        if (input?.matchType) {
+          conditions.push(eq(m.match_type, input.matchType));
+        }
+        if (input?.mode) {
+          conditions.push(eq(m.mode, input.mode));
+        }
+        if (input?.format) {
+          conditions.push(eq(m.format, input.format));
+        }
+        if (input?.startDate) {
+          conditions.push(gte(m.started_at, new Date(input.startDate)));
+        }
+        if (input?.endDate) {
+          conditions.push(lte(m.started_at, new Date(input.endDate)));
+        }
+        if (input?.search?.trim()) {
+          conditions.push(
+            like(m.players, `%"nickname":"%${input.search.trim()}%"%`),
+          );
+        }
+        return and(...conditions);
+      },
       orderBy: (m, { desc }) => desc(m.created_at),
       limit: limitCount + 1,
     });
@@ -287,7 +295,11 @@ const getHeatmapData = protectedProcedure
     const targetUserId = input?.userId ?? ctx.userId;
 
     const matches = await tdb.query.mahjongMatchesTable.findMany({
-      where: (m) => like(m.players, `%"userId":"${targetUserId}"%`),
+      where: (m, { and, eq, like }) =>
+        and(
+          like(m.players, `%"userId":"${targetUserId}"%`),
+          storeFilter(m, ctx.storeCode, eq),
+        ),
       columns: { ended_at: true },
     });
 

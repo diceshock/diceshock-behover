@@ -1,5 +1,5 @@
-import { trpcServer } from "@hono/trpc-server";
 import { getAuthUser } from "@hono/auth-js";
+import { trpcServer } from "@hono/trpc-server";
 import db, { userInfoTable } from "@lib/db";
 import { appRouterPublic } from "../apis/trpc";
 
@@ -31,6 +31,8 @@ const trpcServerPublic = trpcServer({
       aliyunClient: c.get("AliyunClient"),
       userInfo,
       userId: id,
+      storeCode: c.get("StoreCode") ?? undefined,
+      locale: c.get("LocaleCode") ?? undefined,
     };
   },
   onError({ error, path, input, ctx: _ctx, type }) {

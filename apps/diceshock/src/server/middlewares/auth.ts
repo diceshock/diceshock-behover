@@ -4,6 +4,7 @@ import { type AuthConfig, getAuthUser, initAuthConfig } from "@hono/auth-js";
 import db, {
   accounts,
   drizzle,
+  storesTable,
   type UserRole,
   userInfoTable,
   users,
@@ -375,6 +376,23 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
 
     const uid = nanoid();
 
+    // Set preferred store/locale from the current page context.
+    // These are set by the storeLocale middleware on store-prefixed paths
+    // (e.g. /jdk-ja/...). During OAuth callbacks (/api/auth/*) the middleware
+    // skips, so these will be undefined — preferences stay null until the
+    // user visits a store page.
+    const storeCode = c.get("StoreCode");
+    const localeCode = c.get("LocaleCode");
+    let preferredStoreId: string | null = null;
+
+    if (storeCode) {
+      const tdb = db(c.env.DB);
+      const store = await tdb.query.storesTable.findFirst({
+        where: (s: any, { eq }: any) => eq(s.code, storeCode),
+      });
+      preferredStoreId = store?.id ?? null;
+    }
+
     const [userInfo] = await db(c.env.DB)
       .insert(userInfoTable)
       .values({
@@ -383,6 +401,8 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
         nickname,
         phone,
         meta: isAutoNickname ? { auto_nickname: true } : null,
+        preferred_store_id: preferredStoreId,
+        preferred_locale: localeCode ?? null,
       })
       .returning();
 
@@ -448,4 +468,15 @@ export const authGuard = FACTORY.createMiddleware(async (c, next) => {
   if (UserInfo) return next();
 
   c.redirect("/");
+});
+
+export const dashGuard = FACTORY.createMiddleware(async (c, next) => {
+  const authUser = await getAuthUser(c);
+  const role = (authUser?.token?.role as UserRole) ?? "customer";
+
+  if (role !== "admin" && role !== "staff") {
+    return c.redirect("/");
+  }
+
+  return next();
 });

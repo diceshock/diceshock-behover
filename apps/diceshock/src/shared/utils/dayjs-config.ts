@@ -1,7 +1,13 @@
 import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
+import utc from "dayjs/plugin/utc";
 import "dayjs/locale/zh-cn";
+import "dayjs/locale/ja";
+import "dayjs/locale/de";
+import "dayjs/locale/fr";
+import "dayjs/locale/es";
+import "dayjs/locale/pt";
+import "dayjs/locale/ru";
 
 // 扩展 dayjs 插件
 dayjs.extend(utc);
@@ -9,9 +15,6 @@ dayjs.extend(timezone);
 
 // 设置默认时区为上海时间
 dayjs.tz.setDefault("Asia/Shanghai");
-
-// 设置默认语言为中文
-dayjs.locale("zh-cn");
 
 /**
  * 获取上海时区的当前时间
@@ -31,3 +34,24 @@ export function toShanghai(date?: dayjs.ConfigType) {
 }
 
 export default dayjs;
+
+const localeMap: Record<string, string> = {
+  zh_Hans: "zh-cn",
+  zh_Hant: "zh-tw",
+  en: "en",
+  ja: "ja",
+  ru: "ru",
+  es: "es",
+  pt: "pt",
+  fr: "fr",
+  de: "de",
+};
+
+/**
+ * Set dayjs locale dynamically from the app's LocaleCode.
+ * Call this when the user switches language.
+ */
+export function setDayjsLocale(locale: string): void {
+  const mapped = localeMap[locale] ?? "en";
+  dayjs.locale(mapped);
+}

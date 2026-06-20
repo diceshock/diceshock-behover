@@ -4,9 +4,17 @@ import db, {
   activesTable,
   boardGamesTable,
   drizzle,
+  storesTable,
+  userInfoTable,
 } from "@lib/db";
 import dayjs from "dayjs";
 import type { Context } from "hono";
+import {
+  LOCALES,
+  type LocaleCode,
+  STORES,
+  type StoreCode,
+} from "@/shared/store-locale";
 import type { HonoCtxEnv } from "@/shared/types";
 import {
   clearConversationHistory,
@@ -40,6 +48,10 @@ const CONFIRM_KEYWORDS = new Set([
 ]);
 const CANCEL_KEYWORDS = new Set(["取消", "不", "算了", "cancel"]);
 
+const PREF_LANG_KEYWORDS = new Set(["切换语言", "change language"]);
+const PREF_STORE_KEYWORDS = new Set(["切换店铺", "change store"]);
+const PREF_SHOW_KEYWORDS = new Set(["我的偏好", "my preferences"]);
+
 export async function handleTextMessage(
   c: Context<HonoCtxEnv>,
   msg: Record<string, string>,
@@ -67,6 +79,10 @@ export async function handleTextMessage(
     }
     await clearPendingAction(env.KV, openId);
   }
+
+  // ─── Preference commands ─────────────────────────────────────────
+  const prefResult = await handlePreferenceCommand(c, openId, content);
+  if (prefResult) return prefResult;
 
   const { allowed, reason } = await checkRateLimit(c, openId);
   if (!allowed) return reason || ERROR_MESSAGES.RATE_LIMITED;
@@ -397,6 +413,258 @@ async function buildActivesReply(c: Context<HonoCtxEnv>): Promise<string> {
     return `本周有 ${upcomingActives.length} 个约局：\n\n${lines.join("\n")}\n\n想加入？直接告诉我约局名称即可！\n发起新约局：告诉我"我想发起约局"\n\nhttps://diceshock.com/actives`;
   } catch {
     return `想约局？直接告诉我"最近有什么约局"或"我想发起约局"即可！\n\nhttps://diceshock.com/actives`;
+  }
+}
+
+// ─── Preference helpers ─────────────────────────────────────────────
+
+const PREF_MENU_TTL = 300;
+
+async function resolveUserId(
+  dbEnv: D1Database,
+  openId: string,
+): Promise<string | null> {
+  const d = db(dbEnv);
+  const { and, eq } = drizzle;
+
+  const account = await d
+    .select({ userId: accounts.userId })
+    .from(accounts)
+    .where(
+      and(
+        eq(accounts.provider, "wechat-mp"),
+        eq(accounts.providerAccountId, openId),
+      ),
+    )
+    .limit(1);
+  if (account.length > 0) return account[0].userId;
+
+  const silent = await d
+    .select({ userId: accounts.userId })
+    .from(accounts)
+    .where(
+      and(
+        eq(accounts.provider, "wechat-mp-silent"),
+        eq(accounts.providerAccountId, openId),
+      ),
+    )
+    .limit(1);
+  return silent.length > 0 ? silent[0].userId : null;
+}
+
+function buildLanguageOptions(): string {
+  const entries = Object.entries(LOCALES);
+  const lines = entries.map(
+    ([, loc], i) => `${i + 1}. ${loc.name} (${loc.code})`,
+  );
+  return `请选择语言:\n${lines.join("\n")}\n\n回复数字或语言名称`;
+}
+
+function buildStoreOptions(): string {
+  const entries = Object.entries(STORES);
+  const lines = entries.map(([, store], i) => `${i + 1}. ${store.name}`);
+  return `请选择店铺:\n${lines.join("\n")}\n\n回复数字或店铺名称`;
+}
+
+async function buildPreferenceDisplay(
+  d1: D1Database,
+  userId: string,
+): Promise<string> {
+  const d = db(d1);
+  const { eq } = drizzle;
+
+  const info = await d
+    .select({
+      preferred_locale: userInfoTable.preferred_locale,
+      preferred_store_id: userInfoTable.preferred_store_id,
+    })
+    .from(userInfoTable)
+    .where(eq(userInfoTable.id, userId))
+    .limit(1);
+
+  if (info.length === 0) {
+    return "暂未设置偏好";
+  }
+
+  const pl = info[0].preferred_locale;
+  const ps = info[0].preferred_store_id;
+
+  let storeName = "未设置";
+  if (ps) {
+    const store = await d
+      .select({ name: storesTable.name })
+      .from(storesTable)
+      .where(eq(storesTable.id, ps))
+      .limit(1);
+    if (store.length > 0) storeName = store[0].name;
+  }
+
+  const localeName = pl
+    ? ((LOCALES as Record<string, { name: string }>)[pl]?.name ?? pl)
+    : "未设置";
+
+  return `当前偏好设置\n语言: ${localeName}\n店铺: ${storeName}\n\n回复"切换语言"或"切换店铺"修改设置`;
+}
+
+function resolveLanguageChoice(input: string): LocaleCode | null {
+  const num = Number(input);
+  const codes = Object.keys(LOCALES) as LocaleCode[];
+  if (num >= 1 && num <= codes.length) {
+    return codes[num - 1];
+  }
+
+  const lower = input.toLowerCase();
+  for (const code of codes) {
+    const loc = LOCALES[code];
+    if (
+      lower === loc.name.toLowerCase() ||
+      lower === loc.code.toLowerCase() ||
+      lower === loc.bcp47.toLowerCase()
+    ) {
+      return code;
+    }
+  }
+
+  return null;
+}
+
+function resolveStoreChoice(input: string): StoreCode | null {
+  const num = Number(input);
+  const codes = Object.keys(STORES) as StoreCode[];
+  if (num >= 1 && num <= codes.length) {
+    return codes[num - 1];
+  }
+
+  const lower = input.toLowerCase();
+  for (const code of codes) {
+    const store = STORES[code];
+    if (
+      lower === store.name.toLowerCase() ||
+      lower === store.shortName.toLowerCase()
+    ) {
+      return code;
+    }
+  }
+
+  return null;
+}
+
+async function handlePreferenceCommand(
+  c: Context<HonoCtxEnv>,
+  openId: string,
+  content: string,
+): Promise<string | null> {
+  const lower = content.toLowerCase();
+
+  if (PREF_SHOW_KEYWORDS.has(lower)) {
+    const env = c.env as any;
+    const userId = await resolveUserId(env.DB, openId);
+    if (!userId)
+      return "请先在骰子奇兵注册账号，再设置偏好~\nhttps://diceshock.com/me";
+    return await buildPreferenceDisplay(env.DB, userId);
+  }
+
+  if (PREF_LANG_KEYWORDS.has(lower)) {
+    const env = c.env as any;
+    const userId = await resolveUserId(env.DB, openId);
+    if (!userId)
+      return "请先在骰子奇兵注册账号，再设置偏好~\nhttps://diceshock.com/me";
+    await (env.KV as KVNamespace).put(`preference_menu:${openId}`, "language", {
+      expirationTtl: PREF_MENU_TTL,
+    });
+    return buildLanguageOptions();
+  }
+
+  if (PREF_STORE_KEYWORDS.has(lower)) {
+    const env = c.env as any;
+    const userId = await resolveUserId(env.DB, openId);
+    if (!userId)
+      return "请先在骰子奇兵注册账号，再设置偏好~\nhttps://diceshock.com/me";
+    await (env.KV as KVNamespace).put(`preference_menu:${openId}`, "store", {
+      expirationTtl: PREF_MENU_TTL,
+    });
+    return buildStoreOptions();
+  }
+
+  const env = c.env as any;
+  const pendingPref = await (env.KV as KVNamespace).get(
+    `preference_menu:${openId}`,
+  );
+
+  if (pendingPref === "language") {
+    await (env.KV as KVNamespace).delete(`preference_menu:${openId}`);
+    const choice = resolveLanguageChoice(content);
+    if (!choice) {
+      await (env.KV as KVNamespace).put(
+        `preference_menu:${openId}`,
+        "language",
+        { expirationTtl: PREF_MENU_TTL },
+      );
+      return `无法识别"${content}"，请输入数字或语言名称:\n${buildLanguageOptions()}`;
+    }
+    return await updatePreference(env.DB, openId, "language", choice);
+  }
+
+  if (pendingPref === "store") {
+    await (env.KV as KVNamespace).delete(`preference_menu:${openId}`);
+    const choice = resolveStoreChoice(content);
+    if (!choice) {
+      await (env.KV as KVNamespace).put(`preference_menu:${openId}`, "store", {
+        expirationTtl: PREF_MENU_TTL,
+      });
+      return `无法识别"${content}"，请输入数字或店铺名称:\n${buildStoreOptions()}`;
+    }
+    return await updatePreference(env.DB, openId, "store", choice);
+  }
+
+  return null;
+}
+
+async function updatePreference(
+  d1: D1Database,
+  openId: string,
+  type: "language" | "store",
+  value: string,
+): Promise<string> {
+  const userId = await resolveUserId(d1, openId);
+  if (!userId) return "请先在骰子奇兵注册账号";
+
+  const d = db(d1);
+  const { eq } = drizzle;
+
+  try {
+    const updates: Record<string, string | null> = {};
+    let label = "";
+
+    if (type === "language") {
+      updates.preferred_locale = value;
+      label =
+        (LOCALES as Record<string, { name: string }>)[value]?.name ?? value;
+    } else {
+      const storeEntry = await d
+        .select({ name: storesTable.name, id: storesTable.id })
+        .from(storesTable)
+        .where(eq(storesTable.code, value as StoreCode))
+        .limit(1);
+
+      if (storeEntry.length > 0) {
+        updates.preferred_store_id = storeEntry[0].id;
+        label = storeEntry[0].name;
+      } else {
+        return "店铺不存在，请联系管理员";
+      }
+    }
+
+    await d
+      .update(userInfoTable)
+      .set(updates)
+      .where(eq(userInfoTable.id, userId));
+
+    const typeLabel = type === "language" ? "语言" : "店铺";
+    return `已更新偏好设置: ${typeLabel} → ${label}`;
+  } catch (e) {
+    console.error(`[pref:${type}] update failed:`, e);
+    return `设置失败: ${String(e).slice(0, 100)}`;
   }
 }
 

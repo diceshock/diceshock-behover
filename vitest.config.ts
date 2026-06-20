@@ -10,7 +10,10 @@ export default defineConfig({
     },
   },
   test: {
-    include: ["apps/**/src/**/__tests__/**/*.test.ts"],
+    include: [
+      "apps/**/src/**/__tests__/**/*.test.ts",
+      "libs/**/src/**/__tests__/**/*.test.ts",
+    ],
     globals: true,
   },
 });

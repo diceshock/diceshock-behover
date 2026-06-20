@@ -14,9 +14,27 @@ import {
 import { createRouter } from "@/apps/router";
 import { CrossDataProvider } from "@/client/hooks/useCrossData";
 import { ServerCtxProvider } from "@/client/hooks/useServerCtx";
+import {
+  buildStoreLocalePrefix,
+  LOCALES,
+  type LocaleCode,
+  type StoreCode,
+} from "@/shared/store-locale";
 import type { HonoCtxEnv } from "@/shared/types";
 import { getOgMeta } from "../utils/ogMeta";
 import themeGet from "../utils/themeGet";
+
+const ALL_LOCALE_CODES: LocaleCode[] = [
+  "zh_Hans",
+  "zh_Hant",
+  "en",
+  "ja",
+  "ru",
+  "es",
+  "pt",
+  "fr",
+  "de",
+];
 
 export default async function fileRoute(c: Context<HonoCtxEnv>) {
   const handler = createRequestHandler({
@@ -27,8 +45,21 @@ export default async function fileRoute(c: Context<HonoCtxEnv>) {
   c.header("Content-Type", "text/html");
 
   const [themeEl, theme] = themeGet(c);
-  const pathname = new URL(c.req.url).pathname;
+  const url = new URL(c.req.url);
+  const pathname = url.pathname;
   const og = getOgMeta(pathname);
+
+  const store = c.var.StoreCode as StoreCode | undefined;
+  const locale = c.var.LocaleCode as LocaleCode | undefined;
+  const htmlLang = store && locale ? LOCALES[locale].bcp47 : "zh-Hans";
+
+  let remainingPath = pathname;
+  if (store && locale) {
+    const prefix = `/${buildStoreLocalePrefix(store, locale)}`;
+    if (pathname.startsWith(prefix)) {
+      remainingPath = pathname.slice(prefix.length) || "/";
+    }
+  }
 
   const res = handler(({ request, responseHeaders, router }) => {
     router.history.replace(c.req.url);
@@ -39,7 +70,7 @@ export default async function fileRoute(c: Context<HonoCtxEnv>) {
       router,
       children: (
         <html
-          lang="zh-CN-Hans"
+          lang={htmlLang}
           className={clsx({ dark: theme === "dark" }, "antialiased")}
         >
           <head>
@@ -61,6 +92,23 @@ export default async function fileRoute(c: Context<HonoCtxEnv>) {
             <meta name="twitter:title" content={og.title} />
             <meta name="twitter:description" content={og.description} />
             <meta name="twitter:image" content={og.image} />
+
+            {store &&
+              ALL_LOCALE_CODES.map((loc) => (
+                <link
+                  key={loc}
+                  rel="alternate"
+                  hrefLang={LOCALES[loc].bcp47}
+                  href={`/${buildStoreLocalePrefix(store, loc)}${remainingPath}`}
+                />
+              ))}
+            {store && (
+              <link
+                rel="alternate"
+                hrefLang="x-default"
+                href={`/${buildStoreLocalePrefix(store, "zh_Hans")}${remainingPath}`}
+              />
+            )}
 
             <ViteClient />
             <ReactRefresh />

@@ -4,6 +4,7 @@ import { queueNotification } from "@/server/apis/wechat/templateMessage";
 import { pauseWithReason } from "@/server/utils/pauseOrder";
 import { fetchTableStateForDO, notifySocketDO } from "@/server/utils/seatTimer";
 import { protectedProcedure, publicProcedure, unwrapInput } from "./baseTRPC";
+import { storeFilter } from "./storeScope";
 
 const getByCode = publicProcedure
   .input((v: unknown) => {
@@ -14,7 +15,8 @@ const getByCode = publicProcedure
   .query(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
     const table = await tdb.query.tablesTable.findFirst({
-      where: (t, { eq }) => eq(t.code, input.code),
+      where: (t, { and, eq }) =>
+        and(eq(t.code, input.code), storeFilter(t, ctx.storeCode, eq)),
       with: {
         occupancies: {
           where: (o, { ne }) => ne(o.status, "ended"),
@@ -111,7 +113,8 @@ const occupy = protectedProcedure
     }
 
     const table = await tdb.query.tablesTable.findFirst({
-      where: (t, { eq }) => eq(t.code, input.code),
+      where: (t, { and, eq }) =>
+        and(eq(t.code, input.code), storeFilter(t, ctx.storeCode, eq)),
       with: {
         occupancies: {
           where: (o, { ne }) => ne(o.status, "ended"),
@@ -192,7 +195,8 @@ const leave = protectedProcedure
       .where(drizzle.eq(tableOccupancyTable.id, input.occupancyId));
 
     const table = await tdb.query.tablesTable.findFirst({
-      where: (t, { eq }) => eq(t.code, input.code),
+      where: (t, { and, eq }) =>
+        and(eq(t.code, input.code), storeFilter(t, ctx.storeCode, eq)),
     });
     if (table) {
       const fresh = await fetchTableStateForDO(tdb, table.id);
@@ -236,13 +240,15 @@ const getMyActiveOccupancy = protectedProcedure.query(async ({ ctx }) => {
   const occs = await tdb.query.tableOccupancyTable.findMany({
     where: (o, { eq, ne, and }) =>
       and(eq(o.user_id, ctx.userId), ne(o.status, "ended")),
-    with: { table: { columns: { code: true, name: true } } },
+    with: { table: { columns: { code: true, name: true, store_id: true } } },
   });
-  return occs.map((occ) => ({
-    code: occ.table.code,
-    name: occ.table.name,
-    status: occ.status,
-  }));
+  return occs
+    .filter((occ) => !ctx.storeCode || occ.table.store_id === ctx.storeCode)
+    .map((occ) => ({
+      code: occ.table.code,
+      name: occ.table.name,
+      status: occ.status,
+    }));
 });
 
 export default {

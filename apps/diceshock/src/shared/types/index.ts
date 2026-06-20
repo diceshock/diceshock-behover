@@ -10,6 +10,8 @@ import { userAgentMetaZ } from "@/server/middlewares/serverMetaInj";
 export const injectCrossDataZ = z.object({
   UserAgentMeta: userAgentMetaZ.optional(),
   UserInfo: userInfoZ.optional(),
+  StoreCode: z.string().optional(),
+  LocaleCode: z.string().optional(),
   RequestId: z.string(),
 });
 export type InjectCrossData = z.infer<typeof injectCrossDataZ>;
@@ -19,6 +21,8 @@ export interface HonoCtxEnv extends Env {
   Variables: {
     InjectCrossData?: InjectCrossData;
     AliyunClient?: Dysmsapi20170525;
+    StoreCode?: string;
+    LocaleCode?: string;
   };
 }
 

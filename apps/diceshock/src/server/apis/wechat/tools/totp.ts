@@ -15,6 +15,8 @@ export interface ToolContext {
     KV: KVNamespace;
   };
   openId: string;
+  userId?: string | null;
+  preferredStoreId?: string | null;
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────

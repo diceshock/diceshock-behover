@@ -1,8 +1,9 @@
 import { CaretDownIcon } from "@phosphor-icons/react/dist/ssr";
 import { Link } from "@tanstack/react-router";
 import type React from "react";
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import LongTextLogo from "@/client/assets/svg/black-simplify-with-text-logo.svg?react";
+import StoreLocaleDropdown from "@/client/components/StoreLocaleDropdown";
 import useCrossData from "@/client/hooks/useCrossData";
 import AvatarMenu from "./AvataMenu";
 
@@ -92,6 +93,7 @@ const getMidMenu = (pages: PageType[]) =>
 
 function Header() {
   const crossData = useCrossData();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const isInWechat = useMemo(() => {
     const ua =
       crossData?.UserAgentMeta?.userAgent ??
@@ -99,7 +101,13 @@ function Header() {
     return /MicroMessenger/i.test(ua);
   }, [crossData?.UserAgentMeta?.userAgent]);
 
-  const logoTo = isInWechat ? "/me" : "/";
+  const toggleDropdown = useCallback(() => {
+    setDropdownOpen((prev) => !prev);
+  }, []);
+
+  const closeDropdown = useCallback(() => {
+    setDropdownOpen(false);
+  }, []);
 
   return (
     <header className="sticky w-full top-0 left-0 z-50">
@@ -117,9 +125,19 @@ function Header() {
             </ul>
           </div>
 
-          <Link to={logoTo} className="btn btn-ghost px-0">
-            <LongTextLogo className="h-full" />
-          </Link>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={toggleDropdown}
+              className="btn btn-ghost px-0"
+            >
+              <LongTextLogo className="h-full" />
+            </button>
+            <StoreLocaleDropdown
+              isOpen={dropdownOpen}
+              onClose={closeDropdown}
+            />
+          </div>
         </div>
 
         <div className="navbar-center hidden lg:flex">

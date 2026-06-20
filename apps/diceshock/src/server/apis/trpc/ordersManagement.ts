@@ -52,6 +52,7 @@ const list = staffProcedure
             type: true,
             scope: true,
             code: true,
+            store_id: true,
           },
         },
         user: {
@@ -126,7 +127,9 @@ const list = staffProcedure
       }),
     );
 
-    let filtered = enriched;
+    let filtered = ctx.storeCode
+      ? enriched.filter((o) => o.table.store_id === ctx.storeCode)
+      : enriched;
     if (input.status !== "all") {
       filtered = filtered.filter((o) => o.status === input.status);
     }
@@ -177,6 +180,7 @@ const getById = staffProcedure
             type: true,
             scope: true,
             code: true,
+            store_id: true,
           },
         },
         user: {
@@ -193,7 +197,11 @@ const getById = staffProcedure
       type: "fixed" as const,
       scope: "boardgame" as const,
       code: "DELETED",
+      store_id: null,
     };
+    if (ctx.storeCode && tableInfo.store_id !== ctx.storeCode) {
+      throw new Error("订单不存在");
+    }
 
     let nickname = "Anonymous";
     let uid: string | null = null;
@@ -342,12 +350,20 @@ const endOrder = staffProcedure
 async function buildSettlementData(
   tdb: ReturnType<typeof db>,
   occupancyId: string,
+  storeCode?: string,
 ) {
   const occ = await tdb.query.tableOccupancyTable.findFirst({
     where: (o, { eq }) => eq(o.id, occupancyId),
     with: {
       table: {
-        columns: { id: true, name: true, type: true, scope: true, code: true },
+        columns: {
+          id: true,
+          name: true,
+          type: true,
+          scope: true,
+          code: true,
+          store_id: true,
+        },
       },
       user: { columns: { id: true, name: true } },
     },
@@ -360,7 +376,11 @@ async function buildSettlementData(
     type: "fixed" as const,
     scope: "boardgame" as const,
     code: "DELETED",
+    store_id: null,
   };
+  if (storeCode && tableInfo.store_id !== storeCode) {
+    throw new Error("订单不存在");
+  }
 
   let nickname = "Anonymous";
   let uid: string | null = null;
@@ -551,7 +571,7 @@ const getSettlementPreview = staffProcedure
   })
   .query(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
-    return buildSettlementData(tdb, input.id);
+    return buildSettlementData(tdb, input.id, ctx.storeCode);
   });
 
 const settleOrder = staffProcedure

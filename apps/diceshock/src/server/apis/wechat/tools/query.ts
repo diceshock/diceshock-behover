@@ -16,6 +16,7 @@ export interface ToolContext {
   };
   openId: string;
   userId: string | null;
+  preferredStoreId: string | null;
 }
 
 export async function executeQueryTool(
