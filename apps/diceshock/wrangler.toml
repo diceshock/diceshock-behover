@@ -114,7 +114,7 @@ AUTH_URL = "https://diceshock.com"
 # AI Search instance
 [[ai_search]]
 binding = "AI_SEARCH"
-instance_name = "diceshock-kb"
+instance_name = "nameless-resonance-0d56"
 
 # Workers AI (embeddings, etc.)
 [ai]
