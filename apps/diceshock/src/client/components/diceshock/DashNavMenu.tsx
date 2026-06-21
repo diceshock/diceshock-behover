@@ -1,5 +1,6 @@
 import {
   CalendarDotsIcon,
+  CheckIcon,
   ClipboardTextIcon,
   CurrencyDollarIcon,
   GaugeIcon,
@@ -31,9 +32,7 @@ import {
   type StoreCode,
 } from "@/shared/store-locale";
 import trpcClientPublic from "@/shared/utils/trpc";
-import LanguageSelectorModal from "../LanguageSelectorModal";
 import Modal from "../modal";
-import StoreSelectorModal from "../StoreSelectorModal";
 import { themeA } from "../ThemeSwap";
 import DashQRScannerDialog from "./DashQRScannerDialog";
 
@@ -75,6 +74,7 @@ function AccountButton({ onClick }: { onClick: () => void }) {
   const { userInfo, session } = useAuth();
   const name = userInfo?.nickname ?? "Anonymous";
   const uid = userInfo?.uid ?? "";
+  const shortUid = uid.length > 6 ? `${uid.slice(0, 6)}…` : uid;
   const role = (session?.user as any)?.role as string | undefined;
 
   const roleBadge =
@@ -84,21 +84,21 @@ function AccountButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-base-300 active:bg-base-300 transition-colors text-left"
+      className="gap-12 flex-nowrap w-full"
     >
       <div className="avatar avatar-placeholder shrink-0">
-        <div className="bg-primary text-gray-900 w-9 rounded-full overflow-hidden">
-          <span className="text-sm font-bold">
+        <div className="bg-primary text-gray-900 size-6 rounded-full overflow-hidden">
+          <span className="text-[10px] font-bold">
             {/^[\x20-\x7E\u00A0-\u024F\u0400-\u04FF]/.test(name)
               ? name.slice(0, 2)
               : name.slice(0, 1)}
           </span>
         </div>
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">{name}</p>
-        <p className="text-[10px] text-base-content/50 truncate flex items-center gap-1">
-          <span>{uid}</span>
+      <div className="min-w-0 whitespace-nowrap">
+        <p className="text-sm font-medium truncate leading-tight">{name}</p>
+        <p className="text-[10px] text-base-content/50 truncate leading-tight flex items-center gap-1">
+          <span>{shortUid}</span>
           {roleBadge && (
             <span className="badge badge-xs badge-primary">{roleBadge}</span>
           )}
@@ -108,6 +108,8 @@ function AccountButton({ onClick }: { onClick: () => void }) {
   );
 }
 
+type SettingsTab = "theme" | "language" | "store" | null;
+
 function AccountSettingsModal({
   isOpen,
   onClose,
@@ -116,16 +118,9 @@ function AccountSettingsModal({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const { userInfo, session } = useAuth();
+  const { userInfo } = useAuth();
   const [theme, setTheme] = useAtom(themeA);
-  const [langModalOpen, setLangModalOpen] = useState(false);
-  const [storeModalOpen, setStoreModalOpen] = useState(false);
-
-  const name = userInfo?.nickname ?? "Anonymous";
-  const uid = userInfo?.uid ?? "";
-  const role = (session?.user as any)?.role as string | undefined;
-  const roleBadge =
-    role === "admin" ? "管理员" : role === "staff" ? "店员" : "";
+  const [activeTab, setActiveTab] = useState<SettingsTab>(null);
 
   const preferredLocale =
     typeof userInfo?.preferred_locale === "string"
@@ -137,10 +132,10 @@ function AccountSettingsModal({
       : "";
 
   const handleLocaleSelect = useCallback(
-    async (loc: LocaleCode) => {
+    async (loc: string) => {
       try {
         await trpcClientPublic.users.updatePreferences.mutate({
-          preferred_locale: loc,
+          preferred_locale: loc || null,
           preferred_store_id: preferredStore || null,
         });
         window.location.reload();
@@ -162,147 +157,237 @@ function AccountSettingsModal({
     [preferredLocale],
   );
 
-  const toggleTheme = useCallback(() => {
-    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
-  }, [setTheme]);
+  const menuItems: Array<{
+    key: SettingsTab;
+    icon: React.ElementType;
+    label: string;
+    sublabel: string;
+    danger?: boolean;
+  }> = [
+    {
+      key: "theme",
+      icon: theme === "dark" ? MoonIcon : SunIcon,
+      label: t("dashNav.theme"),
+      sublabel: theme === "dark" ? "深色" : "浅色",
+    },
+    {
+      key: "language",
+      icon: TranslateIcon,
+      label: t("me.preferredLang"),
+      sublabel: preferredLocale
+        ? (LOCALES[preferredLocale as LocaleCode]?.name ?? "默认")
+        : "默认",
+    },
+    {
+      key: "store",
+      icon: StorefrontIcon,
+      label: t("me.preferredStore"),
+      sublabel: preferredStore
+        ? (STORES[preferredStore as StoreCode]?.shortName ?? "默认")
+        : "默认",
+    },
+  ];
 
   return (
-    <>
-      <Modal
-        isCloseOnClick
-        isOpen={isOpen}
-        onToggle={(evt) => {
-          if (!evt.open) onClose();
-        }}
+    <Modal
+      isCloseOnClick
+      isOpen={isOpen}
+      onToggle={(evt) => {
+        if (!evt.open) {
+          onClose();
+          setActiveTab(null);
+        }
+      }}
+    >
+      <div
+        className={clsx(
+          "modal-box max-w-none md:max-w-md min-h-64 max-h-[80vh] rounded-xl px-0 pb-0 flex flex-col",
+          "absolute not-md:bottom-0 not-md:left-0 not-md:w-full not-md:rounded-none overflow-hidden",
+          "border border-base-content/30",
+        )}
       >
-        <div
-          className={clsx(
-            "modal-box max-w-none md:max-w-lg min-h-56 max-h-[80vh] rounded-xl px-0 pb-0 flex flex-col",
-            "absolute not-md:bottom-0 not-md:left-0 not-md:w-full not-md:rounded-none overflow-hidden",
-            "border border-base-content/30",
-          )}
+        <button
+          onClick={() => {
+            onClose();
+            setActiveTab(null);
+          }}
+          className="btn btn-sm btn-circle absolute top-3 right-3 z-10"
+          aria-label="关闭"
         >
-          <button
-            onClick={onClose}
-            className="btn btn-sm btn-circle absolute top-3 right-3 z-10"
-            aria-label="关闭"
-          >
-            <XIcon className="size-4" weight="bold" />
-          </button>
+          <XIcon className="size-4" weight="bold" />
+        </button>
 
-          <div className="flex flex-col sm:flex-row flex-1 overflow-hidden">
-            <div className="sm:w-44 shrink-0 flex flex-col items-center justify-center gap-2 px-6 py-6 sm:border-r border-b sm:border-b-0 border-base-content/10 bg-base-200/50">
-              <div className="avatar avatar-placeholder">
-                <div className="bg-primary text-gray-900 w-14 rounded-full overflow-hidden">
-                  <span className="text-xl font-bold">
-                    {/^[\x20-\x7E\u00A0-\u024F\u0400-\u04FF]/.test(name)
-                      ? name.slice(0, 2)
-                      : name.slice(0, 1)}
-                  </span>
-                </div>
-              </div>
-              <div className="text-center">
-                <p className="text-sm font-bold truncate max-w-32">{name}</p>
-                <p className="text-[10px] text-base-content/50">{uid}</p>
-                {roleBadge && (
-                  <span className="badge badge-sm badge-primary mt-1">
-                    {roleBadge}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="flex-1 flex flex-col gap-1 p-4 overflow-y-auto">
-              <button
-                type="button"
-                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg hover:bg-base-200 transition-colors text-left"
-                onClick={toggleTheme}
-              >
-                <div className="p-1.5 bg-primary/10 rounded-lg">
-                  {theme === "dark" ? (
-                    <MoonIcon className="size-4 text-primary" weight="fill" />
-                  ) : (
-                    <SunIcon className="size-4 text-primary" weight="fill" />
+        <div className="flex flex-1 overflow-hidden min-h-0">
+          <div className="w-40 shrink-0 flex flex-col border-r border-base-content/10 py-3 overflow-y-auto">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.key;
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() =>
+                    setActiveTab(isActive ? null : (item.key as SettingsTab))
+                  }
+                  className={clsx(
+                    "flex items-center gap-2.5 w-full px-4 py-2.5 text-left transition-colors",
+                    isActive
+                      ? "bg-primary/10 text-primary"
+                      : "hover:bg-base-200 text-base-content",
                   )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">{t("dashNav.theme")}</p>
-                  <p className="text-xs text-base-content/50">
-                    {theme === "dark" ? "深色" : "浅色"}
-                  </p>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg hover:bg-base-200 transition-colors text-left"
-                onClick={() => setLangModalOpen(true)}
-              >
-                <div className="p-1.5 bg-primary/10 rounded-lg">
-                  <TranslateIcon className="size-4 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">{t("me.preferredLang")}</p>
-                  <p className="text-xs text-base-content/50">
-                    {preferredLocale
-                      ? LOCALES[preferredLocale as LocaleCode]?.name
-                      : "默认"}
-                  </p>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg hover:bg-base-200 transition-colors text-left"
-                onClick={() => setStoreModalOpen(true)}
-              >
-                <div className="p-1.5 bg-primary/10 rounded-lg">
-                  <StorefrontIcon className="size-4 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">
-                    {t("me.preferredStore")}
-                  </p>
-                  <p className="text-xs text-base-content/50">
-                    {preferredStore
-                      ? STORES[preferredStore as StoreCode]?.shortName
-                      : "默认"}
-                  </p>
-                </div>
-              </button>
-
-              <div className="border-t border-base-content/10 mt-2 pt-2">
-                <a
-                  href="https://diceshock.cloudflareaccess.com/cdn-cgi/access/logout"
-                  className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg hover:bg-error/10 transition-colors text-left"
                 >
-                  <div className="p-1.5 bg-error/10 rounded-lg">
-                    <SignOutIcon className="size-4 text-error" />
+                  <Icon
+                    className="size-4 shrink-0"
+                    weight={isActive ? "fill" : "regular"}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium truncate">{item.label}</p>
+                    <p className="text-[10px] text-base-content/50 truncate">
+                      {item.sublabel}
+                    </p>
                   </div>
-                  <p className="text-sm font-medium text-error">
-                    {t("dashNav.logout")}
-                  </p>
-                </a>
-              </div>
+                </button>
+              );
+            })}
+
+            <div className="border-t border-base-content/10 mt-auto pt-2">
+              <a
+                href="https://diceshock.cloudflareaccess.com/cdn-cgi/access/logout"
+                className="flex items-center gap-2.5 w-full px-4 py-2.5 text-left hover:bg-error/10 transition-colors"
+              >
+                <SignOutIcon className="size-4 shrink-0 text-error" />
+                <p className="text-xs font-medium text-error">
+                  {t("dashNav.logout")}
+                </p>
+              </a>
             </div>
           </div>
+
+          <div className="flex-1 overflow-y-auto py-3 px-2">
+            {activeTab === null && (
+              <div className="flex flex-col items-center justify-center h-full text-base-content/30 text-xs">
+                选择左侧选项
+              </div>
+            )}
+
+            {activeTab === "theme" && (
+              <div className="flex flex-col gap-0.5">
+                {(["light", "dark"] as const).map((t) => {
+                  const isActive = theme === t;
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setTheme(t)}
+                      className={clsx(
+                        "flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-sm transition-colors text-left",
+                        isActive
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "hover:bg-base-200 text-base-content",
+                      )}
+                    >
+                      <span className="w-5 shrink-0 flex items-center justify-center">
+                        {isActive && (
+                          <CheckIcon className="size-4" weight="bold" />
+                        )}
+                      </span>
+                      {t === "light" ? (
+                        <span className="flex items-center gap-2">
+                          <SunIcon className="size-4" weight="fill" />
+                          浅色
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-2">
+                          <MoonIcon className="size-4" weight="fill" />
+                          深色
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {activeTab === "language" && (
+              <div className="flex flex-col gap-0.5">
+                {(
+                  Object.values(LOCALES) as Array<(typeof LOCALES)[LocaleCode]>
+                ).map((entry) => {
+                  const isActive = entry.code === preferredLocale;
+                  return (
+                    <button
+                      key={entry.code}
+                      type="button"
+                      onClick={() => handleLocaleSelect(entry.code)}
+                      className={clsx(
+                        "flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm transition-colors text-left",
+                        isActive
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "hover:bg-base-200 text-base-content",
+                      )}
+                    >
+                      <span className="w-5 shrink-0 flex items-center justify-center">
+                        {isActive && (
+                          <CheckIcon className="size-3.5" weight="bold" />
+                        )}
+                      </span>
+                      <span>{entry.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {activeTab === "store" && (
+              <div className="flex flex-col gap-0.5">
+                <button
+                  type="button"
+                  onClick={() => handleStoreSelect("")}
+                  className={clsx(
+                    "flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-sm transition-colors text-left",
+                    preferredStore === ""
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "hover:bg-base-200 text-base-content",
+                  )}
+                >
+                  <span className="w-5 shrink-0 flex items-center justify-center">
+                    {preferredStore === "" && (
+                      <CheckIcon className="size-3.5" weight="bold" />
+                    )}
+                  </span>
+                  <span>默认</span>
+                </button>
+                {(
+                  Object.values(STORES) as Array<(typeof STORES)[StoreCode]>
+                ).map((entry) => {
+                  const isActive = entry.code === preferredStore;
+                  return (
+                    <button
+                      key={entry.code}
+                      type="button"
+                      onClick={() => handleStoreSelect(entry.code)}
+                      className={clsx(
+                        "flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-sm transition-colors text-left",
+                        isActive
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "hover:bg-base-200 text-base-content",
+                      )}
+                    >
+                      <span className="w-5 shrink-0 flex items-center justify-center">
+                        {isActive && (
+                          <CheckIcon className="size-3.5" weight="bold" />
+                        )}
+                      </span>
+                      <span>{entry.shortName}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
-      </Modal>
-
-      <LanguageSelectorModal
-        isOpen={langModalOpen}
-        onClose={() => setLangModalOpen(false)}
-        currentLocale={(preferredLocale as LocaleCode) || "zh_Hans"}
-        onSelect={handleLocaleSelect}
-      />
-
-      <StoreSelectorModal
-        isOpen={storeModalOpen}
-        onClose={() => setStoreModalOpen(false)}
-        currentStore={(preferredStore as StoreCode | "") || ""}
-        onSelect={handleStoreSelect}
-      />
-    </>
+      </div>
+    </Modal>
   );
 }
 
@@ -358,9 +443,7 @@ function SidebarContent({
       </li>
 
       <li>
-        <div className="px-0 py-0 hover:bg-transparent active:bg-transparent">
-          <AccountButton onClick={onAccountClick} />
-        </div>
+        <AccountButton onClick={onAccountClick} />
       </li>
     </ul>
   );
