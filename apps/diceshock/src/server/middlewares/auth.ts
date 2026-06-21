@@ -19,10 +19,15 @@ import { WechatMP, WechatMPSilent, WechatOpen } from "../providers/wechat";
 import { injectCrossDataToCtx } from "../utils";
 import { genNickname, getSmsTmpCodeKey } from "../utils/auth";
 
-export const userInfoZ = createSelectSchema(userInfoTable).omit({
-  id: true,
-  create_at: true,
-});
+export const userInfoZ = createSelectSchema(userInfoTable)
+  .omit({
+    id: true,
+    create_at: true,
+  })
+  .extend({
+    preferred_store_id: z.string().nullable().optional(),
+    preferred_locale: z.string().nullable().optional(),
+  });
 
 export type UserInfo = z.infer<typeof userInfoZ>;
 
