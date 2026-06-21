@@ -18,7 +18,8 @@ export type MutateAction =
   | "verify_phone"
   | "bind_gsz"
   | "upsert_business_card"
-  | "update_profile";
+  | "update_profile"
+  | "update_preferences";
 
 // ── Typed params interfaces ───────────────────────────────────────────
 
@@ -151,6 +152,7 @@ export const MUTATE_ACTIONS = [
   "bind_gsz",
   "upsert_business_card",
   "update_profile",
+  "update_preferences",
 ] as const satisfies MutateAction[];
 
 export const MUTATE_TOOL_DEFINITION = {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import {
   formatCurrency,
   formatDate,
@@ -9,8 +9,42 @@ import {
   getMissingKeys,
   getTranslation,
   SUPPORTED_LOCALES,
+  setTranslations,
 } from "../i18n";
+import { loadLocale } from "../i18n/loader";
 import type { LocaleCode } from "../store-locale";
+
+const TEST_LOCALES: LocaleCode[] = [
+  "zh_Hans",
+  "zh_Hant",
+  "en",
+  "ja",
+  "ru",
+  "es",
+  "pt",
+  "fr",
+  "de",
+];
+
+beforeAll(async () => {
+  await Promise.all(
+    TEST_LOCALES.filter((locale) => locale !== "zh_Hans").map(
+      async (locale) => {
+        setTranslations(locale, await loadLocale(locale));
+      },
+    ),
+  );
+});
+
+async function withPartialGermanTranslations(run: () => void): Promise<void> {
+  const de = await loadLocale("de");
+  setTranslations("de", { nav: { home: "Startseite" } });
+  try {
+    run();
+  } finally {
+    setTranslations("de", de);
+  }
+}
 
 describe("getTranslation", () => {
   it("returns zh_Hans translations", () => {
@@ -25,9 +59,10 @@ describe("getTranslation", () => {
     expect(getTranslation("ja", "nav.home")).toBe("ホーム");
   });
 
-  it("falls back to zh_Hans when locale key is missing", () => {
-    // de is missing me.defaultOption but zh_Hans has it
-    expect(getTranslation("de", "me.defaultOption")).toBe("不设置");
+  it("falls back to zh_Hans when locale key is missing", async () => {
+    await withPartialGermanTranslations(() => {
+      expect(getTranslation("de", "me.defaultOption")).toBe("不设置");
+    });
   });
 
   it("returns key literal when key is missing everywhere", () => {
@@ -53,27 +88,17 @@ describe("translation dictionaries", () => {
     expect(en.nav).toMatchObject({ home: "Home" });
   });
 
-  it("reports keys only present in zh_Hans", () => {
-    const missing = getMissingKeys("de");
-    expect(missing).toContain("me.defaultOption");
-    expect(missing).toContain("me.preferencesSaved");
+  it("reports keys only present in zh_Hans", async () => {
+    await withPartialGermanTranslations(() => {
+      const missing = getMissingKeys("de");
+      expect(missing).toContain("me.defaultOption");
+      expect(missing).toContain("me.preferencesSaved");
+    });
   });
 
   it("loads all 9 locales without error", () => {
-    const locales: LocaleCode[] = [
-      "zh_Hans",
-      "zh_Hant",
-      "en",
-      "ja",
-      "ru",
-      "es",
-      "pt",
-      "fr",
-      "de",
-    ];
-
     expect(SUPPORTED_LOCALES).toHaveLength(9);
-    for (const locale of locales) {
+    for (const locale of TEST_LOCALES) {
       expect(getAllTranslations(locale)).toBeTruthy();
       expect(getTranslation(locale, "nav.home")).toBeTruthy();
     }
@@ -87,9 +112,10 @@ describe("getTranslation edge cases", () => {
     );
   });
 
-  it("falls back to zh_Hans when locale key is missing", () => {
-    // de is missing me.defaultOption but zh_Hans has it
-    expect(getTranslation("de", "me.defaultOption")).toBe("不设置");
+  it("falls back to zh_Hans when locale key is missing", async () => {
+    await withPartialGermanTranslations(() => {
+      expect(getTranslation("de", "me.defaultOption")).toBe("不设置");
+    });
   });
 
   it("returns base locale value directly from zh_Hans", () => {
@@ -102,10 +128,12 @@ describe("getMissingKeys", () => {
     expect(getMissingKeys("zh_Hans")).toEqual([]);
   });
 
-  it("includes keys present only in zh_Hans", () => {
-    const missing = getMissingKeys("de");
-    expect(missing).toContain("me.defaultOption");
-    expect(missing).toContain("me.preferencesSaved");
+  it("includes keys present only in zh_Hans", async () => {
+    await withPartialGermanTranslations(() => {
+      const missing = getMissingKeys("de");
+      expect(missing).toContain("me.defaultOption");
+      expect(missing).toContain("me.preferencesSaved");
+    });
   });
 
   it("does not include keys that exist in target locale", () => {

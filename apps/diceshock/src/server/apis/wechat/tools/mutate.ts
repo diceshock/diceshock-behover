@@ -69,6 +69,7 @@ const REQUIRED_PARAMS: Record<MutateAction, string[]> = {
   bind_gsz: [],
   upsert_business_card: [],
   update_profile: ["nickname"],
+  update_preferences: [],
 };
 
 function validateParams(
@@ -320,6 +321,12 @@ export async function executeMutateTool(
         );
       case "update_profile":
         return await handleUpdateProfile(
+          env,
+          userId,
+          params as Record<string, unknown>,
+        );
+      case "update_preferences":
+        return await handleUpdatePreferences(
           env,
           userId,
           params as Record<string, unknown>,
@@ -625,6 +632,124 @@ async function handleUpdateProfile(
     .where(eq(userInfoTable.id, userId));
 
   return `[通知] 昵称已修改为: ${nickname}`;
+}
+
+const VALID_LOCALES: Record<string, string> = {
+  zh_Hans: "简体中文",
+  zh_Hant: "繁體中文",
+  en: "English",
+  ja: "日本語",
+  ru: "Русский",
+  es: "Español",
+  pt: "Português",
+  fr: "Français",
+  de: "Deutsch",
+};
+
+const VALID_STORES: Record<string, string> = {
+  gg: "光谷店",
+  jdk: "街道口店",
+};
+
+const STORE_ALIASES: Record<string, string> = {
+  光谷: "gg",
+  光谷店: "gg",
+  光谷天地: "gg",
+  gg: "gg",
+  GG: "gg",
+  街道口: "jdk",
+  街道口店: "jdk",
+  jdk: "jdk",
+  JDK: "jdk",
+};
+
+const LOCALE_ALIASES: Record<string, string> = {
+  中文: "zh_Hans",
+  简体: "zh_Hans",
+  简体中文: "zh_Hans",
+  chinese: "zh_Hans",
+  "zh-CN": "zh_Hans",
+  繁体: "zh_Hant",
+  繁體: "zh_Hant",
+  繁体中文: "zh_Hant",
+  "zh-TW": "zh_Hant",
+  英文: "en",
+  英语: "en",
+  english: "en",
+  English: "en",
+  日文: "ja",
+  日语: "ja",
+  日本語: "ja",
+  japanese: "ja",
+  Japanese: "ja",
+  韩文: "ko",
+  韩语: "ko",
+  korean: "ko",
+  俄文: "ru",
+  俄语: "ru",
+  Russian: "ru",
+  russian: "ru",
+  西班牙语: "es",
+  Spanish: "es",
+  spanish: "es",
+  葡萄牙语: "pt",
+  Portuguese: "pt",
+  法语: "fr",
+  French: "fr",
+  french: "fr",
+  德语: "de",
+  German: "de",
+  german: "de",
+};
+
+async function handleUpdatePreferences(
+  env: MutateEnv,
+  userId: string,
+  params: Record<string, unknown>,
+): Promise<string> {
+  const rawLocale = (params.locale ?? params.language ?? params.lang) as
+    | string
+    | undefined;
+  const rawStore = (params.store_id ?? params.store ?? params.location) as
+    | string
+    | undefined;
+
+  if (!rawLocale && !rawStore) {
+    return "设置失败: 请提供 locale(语言) 或 store_id(店铺) 至少一项";
+  }
+
+  const updates: Record<string, unknown> = {};
+  const confirmParts: string[] = [];
+
+  if (rawLocale) {
+    const resolvedLocale = LOCALE_ALIASES[rawLocale] || rawLocale;
+    if (!VALID_LOCALES[resolvedLocale]) {
+      return `语言设置失败: 不支持 "${rawLocale}"。可选: ${Object.entries(
+        VALID_LOCALES,
+      )
+        .map(([k, v]) => `${k}(${v})`)
+        .join(", ")}`;
+    }
+    updates.preferred_locale = resolvedLocale;
+    confirmParts.push(`语言: ${VALID_LOCALES[resolvedLocale]}`);
+  }
+
+  if (rawStore) {
+    const resolvedStore = STORE_ALIASES[rawStore] || rawStore;
+    if (!VALID_STORES[resolvedStore]) {
+      return `店铺设置失败: 不支持 "${rawStore}"。可选: gg(光谷店), jdk(街道口店)`;
+    }
+    updates.preferred_store_id = resolvedStore;
+    confirmParts.push(`店铺: ${VALID_STORES[resolvedStore]}`);
+  }
+
+  const d = db(env.DB);
+  await d
+    .update(userInfoTable)
+    .set(updates)
+    .where(eq(userInfoTable.id, userId));
+
+  return `[通知] 偏好设置已更新\n${confirmParts.join(" | ")}`;
 }
 
 async function handleSendSmsCode(

@@ -195,11 +195,35 @@ leave_active: params={activeId} (创建者调用=删除整个约局)
 
   trpg: {
     id: "trpg",
-    keywords: ["跑团", "TRPG", "trpg", "DND", "COC"],
-    description: "TRPG跑团信息",
+    keywords: [
+      "跑团",
+      "TRPG",
+      "trpg",
+      "DND",
+      "COC",
+      "法术",
+      "职业",
+      "怪物",
+      "规则",
+      "5e",
+      "5E",
+      "战斗",
+      "施法",
+      "技能检定",
+      "先攻",
+      "豁免",
+      "攻击",
+      "伤害",
+    ],
+    description: "TRPG跑团规则查询/预约",
     content: () => `跑团服务在光谷天地店, 需提前预约DM
 预约方式: 加客服微信 DiceShock 或在约局系统发起
-DM费用另计, 具体咨询客服`,
+DM费用另计, 具体咨询客服
+
+[规则查询]
+用 search_rules 工具查询DND5E规则(职业、法术、怪物、物品、战斗等)
+用户问规则相关问题 → 调 search_rules(query="关键词") → 用搜索结果简洁回答
+回答时: 用自己的话总结,标注来源,不要复制大段原文`,
   },
 
   clocktower: {
@@ -219,6 +243,44 @@ DM费用另计, 具体咨询客服`,
       () => `查最新活动: eventsTable where is_published eq true, orderBy create_at DESC, limit 5
 返回: id title description create_at
 链接: https://diceshock.com/events/{id}`,
+  },
+
+  settings: {
+    id: "settings",
+    keywords: [
+      "设置",
+      "语言",
+      "language",
+      "lang",
+      "locale",
+      "店铺",
+      "切换",
+      "switch",
+      "English",
+      "日本語",
+      "japanese",
+      "chinese",
+      "Deutsch",
+      "French",
+      "Russian",
+      "偏好",
+    ],
+    description: "语言/店铺偏好设置",
+    content:
+      () => `设置语言: mutate action=update_preferences params={locale: "CODE"}
+设置店铺: mutate action=update_preferences params={store_id: "CODE"}
+同时设置: mutate action=update_preferences params={locale: "CODE", store_id: "CODE"}
+
+语言代码: zh_Hans(简体中文) zh_Hant(繁體中文) en(English) ja(日本語) ru(Русский) es(Español) pt(Português) fr(Français) de(Deutsch)
+店铺代码: gg(光谷店) jdk(街道口店)
+
+用户可能用自然语言表达:
+- "switch to English" / "I want English" → locale: "en"
+- "日本語でお願いします" → locale: "ja"
+- "切换到街道口店" → store_id: "jdk"
+- "change language to Japanese" → locale: "ja"
+
+设置后用新语言确认: "Language set to English." / "言語を日本語に設定しました。"`,
   },
 };
 

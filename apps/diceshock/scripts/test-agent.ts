@@ -176,6 +176,12 @@ function executeMutate(action: string, params: any, description: string): string
       return `[通知] 名片已更新`;
     case "update_profile":
       return `[通知] 昵称已修改为: ${params.nickname}`;
+    case "update_preferences": {
+      const parts: string[] = [];
+      if (params.locale || params.language || params.lang) parts.push(`语言: ${params.locale || params.language || params.lang}`);
+      if (params.store_id || params.store) parts.push(`店铺: ${params.store_id || params.store}`);
+      return `[通知] 偏好设置已更新\n${parts.join(" | ")}`;
+    }
     default:
       return `错误: 未知操作 ${action}。有效: create_active/join_active/watch_active/leave_active/update_active/send_sms_code/verify_phone/bind_gsz/upsert_business_card/update_profile`;
   }
@@ -329,6 +335,8 @@ const SCENARIOS: Scenario[] = [
   { name: "会员-查询", input: "查询我的会员信息", expect: { toolsCalled: ["query"] } },
   { name: "名片-查询", input: "查看我的名片", expect: { toolsCalled: ["query"], containsText: "test_wx_001" } },
   { name: "昵称-修改", input: "修改我的昵称到 孤独摇滚第二季制作决定", expect: { mutateAction: "update_profile" } },
+  { name: "设置-切换英文", input: "Switch to English", expect: { mutateAction: "update_preferences" } },
+  { name: "设置-切换店铺", input: "切换到街道口店", expect: { mutateAction: "update_preferences" } },
 ];
 
 async function runAllScenarios() {

@@ -1,13 +1,5 @@
 import type { LocaleCode } from "../store-locale";
-import de from "./locales/de.json";
-import en from "./locales/en.json";
-import es from "./locales/es.json";
-import fr from "./locales/fr.json";
-import ja from "./locales/ja.json";
-import pt from "./locales/pt.json";
-import ru from "./locales/ru.json";
 import zhHans from "./locales/zh_Hans.json";
-import zhHant from "./locales/zh_Hant.json";
 import type { TranslationDict, TranslationKey } from "./types";
 
 export type {
@@ -16,19 +8,32 @@ export type {
   TranslationValue,
 } from "./types";
 
-const TRANSLATIONS: Record<LocaleCode, TranslationDict> = {
+const BASE_LOCALE: LocaleCode = "zh_Hans";
+
+const TRANSLATIONS: Partial<Record<LocaleCode, TranslationDict>> & {
+  zh_Hans: TranslationDict;
+} = {
   zh_Hans: zhHans,
-  zh_Hant: zhHant,
-  en,
-  ja,
-  ru,
-  es,
-  pt,
-  fr,
-  de,
 };
 
-const BASE_LOCALE: LocaleCode = "zh_Hans";
+export const SUPPORTED_LOCALES: LocaleCode[] = [
+  "zh_Hans",
+  "zh_Hant",
+  "en",
+  "ja",
+  "ru",
+  "es",
+  "pt",
+  "fr",
+  "de",
+];
+
+export function setTranslations(
+  locale: LocaleCode,
+  dict: TranslationDict,
+): void {
+  TRANSLATIONS[locale] = dict;
+}
 
 function resolvePath(dict: TranslationDict, key: string): string | undefined {
   let current: string | TranslationDict | undefined = dict;
@@ -52,7 +57,10 @@ export function getTranslation(
   locale: LocaleCode,
   key: TranslationKey,
 ): string {
-  const translation = resolvePath(TRANSLATIONS[locale], key);
+  const translationDict = TRANSLATIONS[locale];
+  const translation = translationDict
+    ? resolvePath(translationDict, key)
+    : undefined;
   if (translation !== undefined) return translation;
 
   const fallback = resolvePath(TRANSLATIONS[BASE_LOCALE], key);
@@ -82,18 +90,16 @@ export function formatMessage(
 }
 
 export function getAllTranslations(locale: LocaleCode): TranslationDict {
-  return TRANSLATIONS[locale];
+  return TRANSLATIONS[locale] ?? TRANSLATIONS[BASE_LOCALE];
 }
 
 export function getMissingKeys(locale: LocaleCode): string[] {
   if (locale === BASE_LOCALE) return [];
 
   return collectKeys(TRANSLATIONS[BASE_LOCALE]).filter(
-    (key) => resolvePath(TRANSLATIONS[locale], key) === undefined,
+    (key) => resolvePath(getAllTranslations(locale), key) === undefined,
   );
 }
-
-export const SUPPORTED_LOCALES = Object.keys(TRANSLATIONS) as LocaleCode[];
 
 export {
   formatCurrency,

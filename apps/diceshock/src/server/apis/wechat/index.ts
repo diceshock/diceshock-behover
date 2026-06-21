@@ -294,21 +294,26 @@ async function handleSubscribe(
   await sendWelcomeMessage(env, openId);
 }
 
-const WELCOME_MESSAGE = `欢迎关注 Diceshock 骰子奇兵！
+const WELCOME_MESSAGE = `Welcome to Diceshock!
+欢迎关注骰子奇兵!
 
-我是骰子奇兵 AI 助手，一个 LLM Agent，可以通过对话为你提供实时服务。
+I'm the AI assistant. Send me a message anytime.
+我是 AI 助手，随时发消息给我。
 
-我们是武汉地区的跑团/桌游/日麻品牌，目前有两家店铺：
-📍 光谷店（光谷天地）
-📍 街道口店
+Default: Simplified Chinese / Guanggu Store
+默认: 简体中文 / 光谷店
 
-你可以直接发消息问我：
-• 查询桌游库存
-• 查看日麻战绩和排行
-• 了解约局和活动信息
-• 查询会员信息
+To change language or store, just tell me:
+切换语言或店铺，直接告诉我:
+- "Switch to English"
+- "日本語に切換"
+- "切换到街道口店"
 
-有任何问题，直接发消息即可。`;
+Available / 可用:
+- Board game search 桌游查询
+- Session booking 约局
+- Mahjong rankings 日麻排行
+- Membership info 会员信息`;
 
 async function sendWelcomeMessage(env: any, openId: string): Promise<void> {
   try {
@@ -335,9 +340,11 @@ const WECHAT_MENU = {
       ],
     },
     {
-      name: "帮助指南",
+      name: "帮助/Help",
       sub_button: [
-        { type: "click", name: "如何对话", key: "MENU_HELP" },
+        { type: "click", name: "如何使用", key: "MENU_HELP" },
+        { type: "click", name: "设置语言 Language", key: "MENU_LANGUAGE" },
+        { type: "click", name: "切换店铺 Store", key: "MENU_STORE_SWITCH" },
         { type: "click", name: "进入店铺", key: "MENU_STORE" },
       ],
     },

@@ -209,22 +209,27 @@ async function searchKnowledgeBase(
 
   try {
     const results = await aiSearch.search({
-      messages: [{ role: "user", content: query }],
-      ai_search_options: {
-        retrieval: {
-          retrieval_type: "hybrid",
-          max_num_results: 5,
-        },
-      },
+      query,
+      max_num_results: 3,
     });
 
-    if (!results?.data?.length) return undefined;
+    const chunks: string[] = [];
 
-    const chunks = results.data
-      .map((d: any) => d.text || d.content || "")
-      .filter(Boolean);
+    if (results?.chunks?.length) {
+      for (const chunk of results.chunks) {
+        const text = chunk.text || "";
+        if (text) chunks.push(text.slice(0, 500));
+      }
+    } else if (results?.data?.length) {
+      for (const d of results.data) {
+        const text = d.text || d.content || "";
+        if (text) chunks.push(text.slice(0, 500));
+      }
+    }
 
-    return chunks.length > 0 ? chunks.join("\n\n") : undefined;
+    return chunks.length > 0
+      ? `[参考资料]\n${chunks.join("\n---\n")}`
+      : undefined;
   } catch (e) {
     console.error("[AI Search] error:", e);
     return undefined;
@@ -269,7 +274,23 @@ export async function handleMenuEvent(
         xml: buildTextReply(
           toUser,
           fromUser,
-          `我是骰子奇兵 AI 助手，直接发送文字消息即可对话。\n\n你可以问我：\n· 查桌游库存\n· 看日麻战绩和排行\n· 查约局、发起约局\n· 查会员信息\n· 绑定手机号/名片\n\n有任何问题直接发消息就好！`,
+          `I'm Diceshock AI assistant. Send text to chat.\n我是骰子奇兵 AI 助手，直接发消息对话。\n\nYou can ask / 你可以问:\n- Board games 桌游库存\n- Mahjong rankings 日麻排行\n- Sessions 约局\n- Membership 会员\n- Settings 设置\n\nTo change language, say "Switch to English"\n切换语言: 直接说"设置语言为XX"`,
+        ),
+      };
+    case "MENU_LANGUAGE":
+      return {
+        xml: buildTextReply(
+          toUser,
+          fromUser,
+          `Language / 语言设置\n\nSend me a message to switch:\n发消息切换:\n\n- "Switch to English"\n- "切换为繁體中文"\n- "日本語に設定"\n- "Auf Deutsch umstellen"\n- "Cambiar a Español"\n\nAvailable / 可选:\nzh_Hans(简体中文) zh_Hant(繁體) en(English) ja(日本語) ru(Русский) es(Español) pt(Português) fr(Français) de(Deutsch)`,
+        ),
+      };
+    case "MENU_STORE_SWITCH":
+      return {
+        xml: buildTextReply(
+          toUser,
+          fromUser,
+          `Store / 店铺切换\n\nSend me a message:\n发消息切换:\n\n- "切换到街道口店"\n- "Switch to Guanggu store"\n\nAvailable / 可选:\n- 光谷店 (Guanggu) - default\n- 街道口店 (Jiedaokou)`,
         ),
       };
     case "MEMBERSHIP_PLAN":

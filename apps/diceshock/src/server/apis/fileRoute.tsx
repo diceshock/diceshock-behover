@@ -13,9 +13,13 @@ import {
 } from "vite-ssr-components/react";
 import { createRouter } from "@/apps/router";
 import { CrossDataProvider } from "@/client/hooks/useCrossData";
+import { I18nScript } from "@/client/hooks/useI18nData";
 import { ServerCtxProvider } from "@/client/hooks/useServerCtx";
+import { setTranslations } from "@/shared/i18n";
+import { loadLocale } from "@/shared/i18n/loader";
 import {
   buildStoreLocalePrefix,
+  DEFAULT_LOCALE,
   LOCALES,
   type LocaleCode,
   type StoreCode,
@@ -51,7 +55,11 @@ export default async function fileRoute(c: Context<HonoCtxEnv>) {
 
   const store = c.var.StoreCode as StoreCode | undefined;
   const locale = c.var.LocaleCode as LocaleCode | undefined;
+  const activeLocale = locale ?? DEFAULT_LOCALE;
   const htmlLang = store && locale ? LOCALES[locale].bcp47 : "zh-Hans";
+
+  const dict = await loadLocale(activeLocale);
+  setTranslations(activeLocale, dict);
 
   let remainingPath = pathname;
   if (store && locale) {
@@ -130,6 +138,7 @@ export default async function fileRoute(c: Context<HonoCtxEnv>) {
           </head>
 
           <body>
+            <I18nScript locale={activeLocale} />
             <div id="root">
               <ServerCtxProvider c={c}>
                 <CrossDataProvider c={c}>

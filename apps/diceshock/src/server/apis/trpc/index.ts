@@ -16,6 +16,7 @@ import ordersManagement from "./ordersManagement";
 import owned from "./owned";
 import ownedManagement from "./ownedManagement";
 import pricingPlansManagement from "./pricingPlansManagement";
+import rules from "./rules";
 import settingsManagement from "./settingsManagement";
 import tables from "./tables";
 import tablesManagement from "./tablesManagement";
@@ -108,5 +109,8 @@ export const appRouterPublic = router({
     getMyPPStats: leaderboard.getMyPPStats,
     getMatchHistory: leaderboard.getMatchHistory,
     getHeatmapData: leaderboard.getHeatmapData,
+  },
+  rules: {
+    searchRules: rules.searchRules,
   },
 });
