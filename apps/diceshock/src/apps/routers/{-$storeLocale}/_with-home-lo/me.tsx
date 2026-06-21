@@ -8,6 +8,7 @@ import {
   PhoneIcon,
   ScanIcon,
   SignOutIcon,
+  StorefrontIcon,
   TranslateIcon,
   TrophyIcon,
   UsersIcon,
@@ -29,13 +30,19 @@ import {
 import TOTPCard from "@/client/components/diceshock/TOTPCard";
 import LanguageSelectorModal from "@/client/components/LanguageSelectorModal";
 import Modal from "@/client/components/modal";
+import StoreSelectorModal from "@/client/components/StoreSelectorModal";
 import useAuth from "@/client/hooks/useAuth";
 import useCrossData from "@/client/hooks/useCrossData";
 import { useMessages } from "@/client/hooks/useMessages";
 import useSmsCode from "@/client/hooks/useSmsCode";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import { copyToClipboard } from "@/server/utils";
-import { LOCALES, type LocaleCode, STORES } from "@/shared/store-locale";
+import {
+  LOCALES,
+  type LocaleCode,
+  STORES,
+  type StoreCode,
+} from "@/shared/store-locale";
 import dayjs from "@/shared/utils/dayjs-config";
 import trpcClientPublic from "@/shared/utils/trpc";
 
@@ -427,32 +434,66 @@ function RouteComponent() {
     [phone, smsForm.code, setUserInfoIm, messages, handleClosePhone],
   );
 
-  const handleSavePreferences = useCallback(async () => {
-    setIsSavingPrefs(true);
-    try {
-      const result = await trpcClientPublic.users.updatePreferences.mutate({
-        preferred_locale: preferredLocale || null,
-        preferred_store_id: preferredStore || null,
-      });
-      if (result.success) {
-        setUserInfoIm((draft) => {
-          if (!draft) return undefined;
-          (draft as Record<string, unknown>).preferred_locale =
-            preferredLocale || null;
-          (draft as Record<string, unknown>).preferred_store_id =
-            preferredStore || null;
-          return draft;
+  const [isStoreSelectorOpen, setIsStoreSelectorOpen] = useState(false);
+
+  const handleSaveLocale = useCallback(
+    async (locale: string) => {
+      setPreferredLocale(locale);
+      setIsSavingPrefs(true);
+      try {
+        const result = await trpcClientPublic.users.updatePreferences.mutate({
+          preferred_locale: locale || null,
+          preferred_store_id: preferredStore || null,
         });
-        messages.success(t("me.preferencesSaved"));
-      } else {
-        messages.error(t("me.updateFailed"));
+        if (result.success) {
+          setUserInfoIm((draft) => {
+            if (!draft) return undefined;
+            (draft as Record<string, unknown>).preferred_locale =
+              locale || null;
+            return draft;
+          });
+          messages.success(t("me.preferencesSaved"));
+        } else {
+          messages.error(t("me.updateFailed"));
+        }
+      } catch {
+        messages.error(t("me.networkError"));
+      } finally {
+        setIsSavingPrefs(false);
       }
-    } catch {
-      messages.error(t("me.networkError"));
-    } finally {
-      setIsSavingPrefs(false);
-    }
-  }, [preferredLocale, preferredStore, messages, setUserInfoIm, t]);
+    },
+    [preferredStore, messages, setUserInfoIm, t],
+  );
+
+  const handleSaveStore = useCallback(
+    async (store: string) => {
+      setPreferredStore(store);
+      setIsStoreSelectorOpen(false);
+      setIsSavingPrefs(true);
+      try {
+        const result = await trpcClientPublic.users.updatePreferences.mutate({
+          preferred_locale: preferredLocale || null,
+          preferred_store_id: store || null,
+        });
+        if (result.success) {
+          setUserInfoIm((draft) => {
+            if (!draft) return undefined;
+            (draft as Record<string, unknown>).preferred_store_id =
+              store || null;
+            return draft;
+          });
+          messages.success(t("me.preferencesSaved"));
+        } else {
+          messages.error(t("me.updateFailed"));
+        }
+      } catch {
+        messages.error(t("me.networkError"));
+      } finally {
+        setIsSavingPrefs(false);
+      }
+    },
+    [preferredLocale, messages, setUserInfoIm, t],
+  );
 
   return (
     <>
@@ -574,55 +615,48 @@ function RouteComponent() {
 
           <section className="mb-4">
             <SectionHeader title={t("me.preferences")} />
-            <div className="bg-base-200 rounded-2xl border border-base-content/5 p-4">
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium min-w-16">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                className="flex flex-col items-center gap-2 bg-base-200 rounded-2xl border border-base-content/5 p-4 hover:bg-base-300 active:bg-base-300 transition-colors"
+                onClick={() => setIsLangModalOpen(true)}
+                disabled={isSavingPrefs}
+              >
+                <div className="p-2.5 bg-primary/10 rounded-xl">
+                  <TranslateIcon className="size-5 text-primary" />
+                </div>
+                <div className="text-center min-w-0 w-full">
+                  <p className="text-xs text-base-content/50">
                     {t("me.preferredLang")}
-                  </span>
-                  <button
-                    type="button"
-                    className="btn btn-sm flex-1 justify-between font-normal"
-                    onClick={() => setIsLangModalOpen(true)}
-                    disabled={isSavingPrefs}
-                  >
-                    <span>
-                      {preferredLocale
-                        ? LOCALES[preferredLocale as LocaleCode]?.name
-                        : t("me.defaultOption")}
-                    </span>
-                    <TranslateIcon className="size-4 opacity-60" />
-                  </button>
+                  </p>
+                  <p className="text-sm font-medium truncate">
+                    {preferredLocale
+                      ? LOCALES[preferredLocale as LocaleCode]?.name
+                      : t("me.defaultOption")}
+                  </p>
                 </div>
-                <label className="flex items-center gap-3">
-                  <span className="text-sm font-medium min-w-16">
+              </button>
+
+              <button
+                type="button"
+                className="flex flex-col items-center gap-2 bg-base-200 rounded-2xl border border-base-content/5 p-4 hover:bg-base-300 active:bg-base-300 transition-colors"
+                onClick={() => setIsStoreSelectorOpen(true)}
+                disabled={isSavingPrefs}
+              >
+                <div className="p-2.5 bg-primary/10 rounded-xl">
+                  <StorefrontIcon className="size-5 text-primary" />
+                </div>
+                <div className="text-center min-w-0 w-full">
+                  <p className="text-xs text-base-content/50">
                     {t("me.preferredStore")}
-                  </span>
-                  <select
-                    className="select select-sm flex-1"
-                    value={preferredStore}
-                    onChange={(e) => setPreferredStore(e.target.value)}
-                    disabled={isSavingPrefs}
-                  >
-                    <option value="">{t("me.defaultOption")}</option>
-                    {Object.values(STORES).map((st) => (
-                      <option key={st.code} value={st.code}>
-                        {st.shortName}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    className="btn btn-primary btn-sm"
-                    onClick={handleSavePreferences}
-                    disabled={isSavingPrefs}
-                  >
-                    {isSavingPrefs ? t("common.saving") : t("common.confirm")}
-                  </button>
+                  </p>
+                  <p className="text-sm font-medium truncate">
+                    {preferredStore
+                      ? STORES[preferredStore as StoreCode]?.shortName
+                      : t("me.defaultOption")}
+                  </p>
                 </div>
-              </div>
+              </button>
             </div>
           </section>
 
@@ -919,7 +953,14 @@ function RouteComponent() {
         isOpen={isLangModalOpen}
         onClose={() => setIsLangModalOpen(false)}
         currentLocale={(preferredLocale as LocaleCode) || "zh_Hans"}
-        onSelect={(loc) => setPreferredLocale(loc)}
+        onSelect={(loc) => handleSaveLocale(loc)}
+      />
+
+      <StoreSelectorModal
+        isOpen={isStoreSelectorOpen}
+        onClose={() => setIsStoreSelectorOpen(false)}
+        currentStore={preferredStore as StoreCode | ""}
+        onSelect={(store) => handleSaveStore(store)}
       />
     </>
   );

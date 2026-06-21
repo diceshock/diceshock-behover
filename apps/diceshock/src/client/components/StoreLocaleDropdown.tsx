@@ -6,6 +6,7 @@ import {
 import { useLocation } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useEffect, useRef, useState } from "react";
+import useAuth from "@/client/hooks/useAuth";
 import { useStoreContext } from "@/client/hooks/useStoreContext";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import {
@@ -14,6 +15,7 @@ import {
   STORES,
   type StoreCode,
 } from "@/shared/store-locale";
+import trpcClientPublic from "@/shared/utils/trpc";
 import LanguageSelectorModal from "./LanguageSelectorModal";
 
 interface StoreLocaleDropdownProps {
@@ -24,6 +26,7 @@ interface StoreLocaleDropdownProps {
 function StoreLocaleDropdown({ isOpen, onClose }: StoreLocaleDropdownProps) {
   const { locale } = useTranslation();
   const { storeCode } = useStoreContext();
+  const { session } = useAuth();
   const location = useLocation();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [langModalOpen, setLangModalOpen] = useState(false);
@@ -62,22 +65,36 @@ function StoreLocaleDropdown({ isOpen, onClose }: StoreLocaleDropdownProps) {
     return segments.length > 1 ? segments.slice(1).join("/") : "";
   }, [location.pathname]);
 
-  const navigateTo = (store: StoreCode, loc: LocaleCode) => {
-    const rest = getRestOfPath();
-    const prefix = buildStoreLocalePrefix(store, loc);
-    window.location.href = `/${prefix}/${rest}`;
-  };
+  const navigateTo = useCallback(
+    async (store: StoreCode, loc: LocaleCode) => {
+      const rest = getRestOfPath();
+      const prefix = buildStoreLocalePrefix(store, loc);
+      const target = `/${prefix}/${rest}`;
 
-  const navigateHome = () => {
+      if (session?.user) {
+        try {
+          await trpcClientPublic.users.updatePreferences.mutate({
+            preferred_locale: loc,
+            preferred_store_id: store,
+          });
+        } catch {}
+      }
+
+      window.location.href = target;
+    },
+    [session, getRestOfPath],
+  );
+
+  const navigateHome = useCallback(() => {
     const prefix = buildStoreLocalePrefix(storeCode, locale);
     window.location.href = `/${prefix}/`;
-  };
+  }, [storeCode, locale]);
 
   const handleLocaleSelect = useCallback(
     (loc: LocaleCode) => {
       navigateTo(storeCode, loc);
     },
-    [storeCode, getRestOfPath],
+    [storeCode, navigateTo],
   );
 
   if (!isOpen) return null;
