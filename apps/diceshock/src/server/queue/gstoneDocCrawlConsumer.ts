@@ -81,13 +81,23 @@ async function fetchDocumentPages(docId: number): Promise<string[]> {
   }
 
   const html = await resp.text();
-  const matches = html.matchAll(/data-original="([^"]+)"/g);
+  const seen = new Set<string>();
   const urls: string[] = [];
 
-  for (const match of matches) {
-    let url = match[1];
-    if (url.startsWith("//")) url = "https:" + url;
-    urls.push(url);
+  const patterns = [
+    /data-original="([^"]+)"/g,
+    /src="([^"]*\/image\/document\/[^"]+)"/g,
+  ];
+
+  for (const pattern of patterns) {
+    for (const match of html.matchAll(pattern)) {
+      let url = match[1];
+      if (url.startsWith("//")) url = "https:" + url;
+      if (url.includes("x-oss-process")) continue;
+      if (seen.has(url)) continue;
+      seen.add(url);
+      urls.push(url);
+    }
   }
 
   if (urls.length === 0) {

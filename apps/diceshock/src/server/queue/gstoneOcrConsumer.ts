@@ -81,7 +81,12 @@ async function ocrImage(
   if (!imageResp.ok) throw new Error(`Image fetch failed: ${imageResp.status}`);
 
   const imageData = await imageResp.arrayBuffer();
-  const base64 = btoa(String.fromCharCode(...new Uint8Array(imageData)));
+  const bytes = new Uint8Array(imageData);
+  let base64 = "";
+  for (let i = 0; i < bytes.length; i += 8192) {
+    base64 += String.fromCharCode(...bytes.subarray(i, i + 8192));
+  }
+  base64 = btoa(base64);
 
   const result = (await env.AI.run(
     "@cf/google/gemma-4-26b-a4b-it" as any,
