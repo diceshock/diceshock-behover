@@ -16,6 +16,7 @@ class ForbiddenError extends Error {
 
 export const Route = createFileRoute("/dash")({
   beforeLoad: async () => {
+    if (typeof window === "undefined") return;
     const res = await fetch("/api/auth/session");
     const session: any = await res.json();
     const role = session?.user?.role;
