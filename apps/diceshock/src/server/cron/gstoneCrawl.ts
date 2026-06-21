@@ -163,12 +163,19 @@ export async function dispatchGstoneOcr(env: {
   GSTONE_DB: D1Database;
   GSTONE_OCR_QUEUE: Queue;
 }): Promise<void> {
+  const inflight = await env.GSTONE_DB.prepare(
+    `SELECT COUNT(*) as c FROM documents
+     WHERE crawled_at IS NOT NULL AND ocr_at IS NULL AND error IS NULL AND ocr_pages IS NOT NULL`,
+  ).first<{ c: number }>();
+
+  if ((inflight?.c ?? 0) > 10) return;
+
   const pending = await env.GSTONE_DB.prepare(
     `SELECT document_id, page_count, ocr_pages FROM documents
-     WHERE crawled_at IS NOT NULL AND ocr_at IS NULL AND error IS NULL
+     WHERE crawled_at IS NOT NULL AND ocr_at IS NULL AND error IS NULL AND ocr_pages IS NULL
      LIMIT ?`,
   )
-    .bind(DOC_BATCH_SIZE)
+    .bind(5)
     .all<{
       document_id: number;
       page_count: number | null;
@@ -178,17 +185,9 @@ export async function dispatchGstoneOcr(env: {
   const docs = pending.results ?? [];
   if (docs.length === 0) return;
 
-  const msgs = docs.map((d) => {
-    let nextPage = 0;
-    if (d.ocr_pages) {
-      try {
-        const pages = JSON.parse(d.ocr_pages) as (string | null)[];
-        nextPage = pages.findIndex((p) => !p || p.trim().length === 0);
-        if (nextPage === -1) nextPage = pages.length;
-      } catch {}
-    }
-    return { body: { document_id: d.document_id, page_index: nextPage } };
-  });
+  const msgs = docs.map((d) => ({
+    body: { document_id: d.document_id, page_index: 0 },
+  }));
 
   for (let i = 0; i < msgs.length; i += 100) {
     await env.GSTONE_OCR_QUEUE.sendBatch(msgs.slice(i, i + 100));
