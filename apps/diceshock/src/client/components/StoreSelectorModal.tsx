@@ -57,24 +57,6 @@ export default function StoreSelectorModal({
         </div>
 
         <div className="flex flex-col gap-0.5 px-3 pb-2 overflow-y-auto">
-          <button
-            type="button"
-            onClick={() => handleSelect("")}
-            className={clsx(
-              "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-colors text-left",
-              currentStore === ""
-                ? "bg-primary/10 text-primary font-medium"
-                : "hover:bg-base-200 text-base-content",
-            )}
-          >
-            <span className="w-5 shrink-0 flex items-center justify-center">
-              {currentStore === "" && (
-                <CheckIcon className="size-4" weight="bold" />
-              )}
-            </span>
-            <span>{t("me.defaultOption") || "默认"}</span>
-          </button>
-
           {(Object.values(STORES) as Array<(typeof STORES)[StoreCode]>).map(
             (entry) => {
               const isActive = entry.code === currentStore;

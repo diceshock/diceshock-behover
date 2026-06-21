@@ -653,7 +653,7 @@ function RouteComponent() {
                   <p className="text-sm font-medium truncate">
                     {preferredStore
                       ? STORES[preferredStore as StoreCode]?.shortName
-                      : t("me.defaultOption")}
+                      : "未选择"}
                   </p>
                 </div>
               </button>

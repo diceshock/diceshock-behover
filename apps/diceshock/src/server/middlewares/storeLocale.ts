@@ -56,7 +56,10 @@ function setStoreLocaleContext(
 }
 
 const storeLocaleMiddleware = FACTORY.createMiddleware(async (c, next) => {
-  if (shouldSkipPath(c.req.path)) return await next();
+  if (shouldSkipPath(c.req.path)) {
+    setStoreLocaleContext(c, DEFAULT_STORE, DEFAULT_LOCALE);
+    return await next();
+  }
 
   const firstSegment = c.req.path.split("/")[1] ?? "";
   const urlStoreLocale = parseStoreLocalePrefix(firstSegment);

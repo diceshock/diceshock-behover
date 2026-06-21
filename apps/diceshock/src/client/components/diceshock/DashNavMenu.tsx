@@ -183,8 +183,8 @@ function AccountSettingsModal({
       icon: StorefrontIcon,
       label: t("me.preferredStore"),
       sublabel: preferredStore
-        ? (STORES[preferredStore as StoreCode]?.shortName ?? "默认")
-        : "默认",
+        ? (STORES[preferredStore as StoreCode]?.shortName ?? "未选择")
+        : "未选择",
     },
   ];
 
@@ -340,23 +340,6 @@ function AccountSettingsModal({
 
             {activeTab === "store" && (
               <div className="flex flex-col gap-0.5">
-                <button
-                  type="button"
-                  onClick={() => handleStoreSelect("")}
-                  className={clsx(
-                    "flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-sm transition-colors text-left",
-                    preferredStore === ""
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "hover:bg-base-200 text-base-content",
-                  )}
-                >
-                  <span className="w-5 shrink-0 flex items-center justify-center">
-                    {preferredStore === "" && (
-                      <CheckIcon className="size-3.5" weight="bold" />
-                    )}
-                  </span>
-                  <span>默认</span>
-                </button>
                 {(
                   Object.values(STORES) as Array<(typeof STORES)[StoreCode]>
                 ).map((entry) => {
