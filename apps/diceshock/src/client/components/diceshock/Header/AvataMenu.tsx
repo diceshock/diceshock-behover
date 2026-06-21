@@ -94,7 +94,11 @@ function AvatarMenuContent() {
           ) : (
             <div className="avatar size-8 avatar-placeholder">
               <div className="bg-primary text-gray-900 w-16 rounded-full overflow-hidden">
-                <span className="text-lg">{name.slice(0, 2)}</span>
+                <span className="text-lg">
+                  {/^[\x20-\x7E\u00A0-\u024F\u0400-\u04FF]/.test(name)
+                    ? name.slice(0, 2)
+                    : name.slice(0, 1)}
+                </span>
               </div>
             </div>
           )}
@@ -179,7 +183,11 @@ function AvatarMenuContent() {
         ) : (
           <div className="avatar size-8 avatar-placeholder">
             <div className="bg-primary text-gray-900 w-16 rounded-full overflow-hidden">
-              <span className="text-lg">{name.slice(0, 2)}</span>
+              <span className="text-lg">
+                {/^[\x20-\x7E\u00A0-\u024F\u0400-\u04FF]/.test(name)
+                  ? name.slice(0, 2)
+                  : name.slice(0, 1)}
+              </span>
             </div>
           </div>
         )}
