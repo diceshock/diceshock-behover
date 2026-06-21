@@ -1,10 +1,11 @@
 import { gstoneDb, gstoneDocumentsTable, gstoneGamesTable } from "@lib/db";
-import { and, isNotNull, isNull, lt, max, sql } from "drizzle-orm";
+import { and, count, isNotNull, isNull, lt, max, sql } from "drizzle-orm";
 
 const BATCH_SIZE = 100;
 const DOC_BATCH_SIZE = 20;
 const MAX_GAME_ID = 50000;
 const STALE_THRESHOLD_MS = 10 * 60 * 1000;
+const BACKPRESSURE_LIMIT = 300;
 
 export const GSTONE_MAX_GAME_ID = MAX_GAME_ID;
 
@@ -13,6 +14,19 @@ export async function dispatchGstoneCrawl(env: {
   GSTONE_CRAWL_QUEUE: Queue;
 }): Promise<void> {
   const db = gstoneDb(env.GSTONE_DB);
+
+  const [pendingCount] = await db
+    .select({ c: count() })
+    .from(gstoneGamesTable)
+    .where(
+      and(isNull(gstoneGamesTable.crawled_at), isNull(gstoneGamesTable.error)),
+    );
+
+  if ((pendingCount?.c ?? 0) > BACKPRESSURE_LIMIT) {
+    throw new Error(
+      `Game crawl backpressure: ${pendingCount.c} pending items exceeds limit ${BACKPRESSURE_LIMIT}`,
+    );
+  }
 
   const staleThreshold = new Date(
     Date.now() - STALE_THRESHOLD_MS,
@@ -45,10 +59,22 @@ export async function dispatchGstoneCrawl(env: {
   if (nextId >= MAX_GAME_ID) return;
 
   const endId = Math.min(nextId + BATCH_SIZE, MAX_GAME_ID);
-  const messages = Array.from({ length: endId - nextId }, (_, i) => ({
-    body: { game_id: nextId + i },
+  const now = new Date().toISOString();
+
+  const newRows = Array.from({ length: endId - nextId }, (_, i) => ({
+    gstone_id: nextId + i,
+    created_at: now,
+    updated_at: now,
   }));
 
+  for (let i = 0; i < newRows.length; i += 20) {
+    await db
+      .insert(gstoneGamesTable)
+      .values(newRows.slice(i, i + 20))
+      .onConflictDoNothing();
+  }
+
+  const messages = newRows.map((r) => ({ body: { game_id: r.gstone_id } }));
   for (let i = 0; i < messages.length; i += 100) {
     await env.GSTONE_CRAWL_QUEUE.sendBatch(messages.slice(i, i + 100));
   }
@@ -66,7 +92,15 @@ export async function dispatchGstoneDocCrawl(env: {
     .bind(DOC_BATCH_SIZE)
     .all<{ document_id: number; game_id: number; title: string }>();
 
-  if ((pendingDocs.results?.length ?? 0) > 0) {
+  const pendingCount = pendingDocs.results?.length ?? 0;
+
+  if (pendingCount > DOC_BATCH_SIZE * 3) {
+    throw new Error(
+      `Doc crawl backpressure: ${pendingCount} pending exceeds limit`,
+    );
+  }
+
+  if (pendingCount > 0) {
     const msgs = (pendingDocs.results ?? []).map((d) => ({
       body: {
         document_id: d.document_id,

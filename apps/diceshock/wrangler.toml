@@ -106,24 +106,28 @@ queue = "diceshock-gstone-crawl"
 max_batch_size = 1
 max_batch_timeout = 3
 max_retries = 3
+max_concurrency = 1
 
 [[queues.consumers]]
 queue = "diceshock-gstone-images"
 max_batch_size = 1
 max_batch_timeout = 3
 max_retries = 3
+max_concurrency = 1
 
 [[queues.consumers]]
 queue = "diceshock-gstone-doc-crawl"
 max_batch_size = 1
 max_batch_timeout = 5
 max_retries = 3
+max_concurrency = 1
 
 [[queues.consumers]]
 queue = "diceshock-gstone-ocr"
 max_batch_size = 1
 max_batch_timeout = 30
 max_retries = 2
+max_concurrency = 1
 
 [[routes]]
 pattern = "origin.runespark.fun"
