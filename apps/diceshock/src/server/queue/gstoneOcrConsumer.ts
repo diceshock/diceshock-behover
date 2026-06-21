@@ -79,19 +79,18 @@ async function ocrImage(
 ): Promise<string> {
   const resizedUrl = imageUrl.includes("?")
     ? imageUrl
-    : `${imageUrl}?x-oss-process=image/auto-orient,1/resize,m_lfit,w_1600/quality,q_90`;
+    : `${imageUrl}?x-oss-process=image/auto-orient,1/resize,m_lfit,w_800/quality,q_80`;
 
   const imageResp = await fetch(resizedUrl);
   if (!imageResp.ok) throw new Error(`Image fetch failed: ${imageResp.status}`);
 
-  const imageData = await imageResp.arrayBuffer();
-  const imageArray = [...new Uint8Array(imageData)];
+  const imageBlob = await imageResp.arrayBuffer();
 
   try {
     await env.AI.run(
       "@cf/meta/llama-3.2-11b-vision-instruct" as any,
       {
-        image: imageArray,
+        image: new Uint8Array(imageBlob),
         prompt: "agree",
         max_tokens: 1,
       } as any,
@@ -101,7 +100,7 @@ async function ocrImage(
   const ocrResult = (await env.AI.run(
     "@cf/meta/llama-3.2-11b-vision-instruct" as any,
     {
-      image: imageArray,
+      image: new Uint8Array(imageBlob),
       prompt:
         "OCR this board game rulebook page. Extract ALL visible text exactly as written. Preserve line breaks, table structure, Chinese characters, and formatting. Output only the raw extracted text, no commentary.",
       max_tokens: 4096,
