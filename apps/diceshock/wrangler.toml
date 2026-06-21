@@ -45,6 +45,10 @@ binding = "R2"
 bucket_name = "diceshock"
 preview_bucket_name = "diceshock-preview"
 
+[[r2_buckets]]
+binding = "RAW_FEED"
+bucket_name = "ds-raw-feed"
+
 [[durable_objects.bindings]]
 name = "SOCKET"
 class_name = "SocketDO"
