@@ -125,9 +125,9 @@ max_concurrency = 1
 [[queues.consumers]]
 queue = "diceshock-gstone-ocr"
 max_batch_size = 1
-max_batch_timeout = 30
+max_batch_timeout = 5
 max_retries = 2
-max_concurrency = 1
+max_concurrency = 5
 
 [[routes]]
 pattern = "origin.runespark.fun"
