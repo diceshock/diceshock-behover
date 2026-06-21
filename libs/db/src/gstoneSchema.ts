@@ -36,6 +36,7 @@ export const gstoneDocumentsTable = sqlite.sqliteTable(
     page_count: sqlite.integer("page_count"),
     image_urls: sqlite.text("image_urls", { mode: "json" }).$type<string[]>(),
     r2_key: sqlite.text("r2_key"),
+    ocr_pages: sqlite.text("ocr_pages", { mode: "json" }).$type<string[]>(),
     error: sqlite.text("error"),
     retry_count: sqlite.integer("retry_count").notNull().default(0),
     created_at: sqlite.text("created_at").notNull(),

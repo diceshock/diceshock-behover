@@ -9,6 +9,7 @@ export interface GstoneDocCrawlMessage {
 
 export interface GstoneOcrMessage {
   document_id: number;
+  page_index: number;
 }
 
 const DOC_PAGE_URL = "https://www.gstonegames.com/game/doc-";
@@ -49,7 +50,7 @@ export async function handleGstoneDocCrawlQueue(
         .run();
 
       if (imageUrls.length > 0) {
-        await env.GSTONE_OCR_QUEUE.send({ document_id: docId });
+        await env.GSTONE_OCR_QUEUE.send({ document_id: docId, page_index: 0 });
       }
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);

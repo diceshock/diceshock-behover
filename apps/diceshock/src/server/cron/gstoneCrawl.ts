@@ -141,7 +141,9 @@ export async function dispatchGstoneOcr(env: {
   const docs = pending.results ?? [];
   if (docs.length === 0) return;
 
-  const msgs = docs.map((d) => ({ body: { document_id: d.document_id } }));
+  const msgs = docs.map((d) => ({
+    body: { document_id: d.document_id, page_index: 0 },
+  }));
   for (let i = 0; i < msgs.length; i += 100) {
     await env.GSTONE_OCR_QUEUE.sendBatch(msgs.slice(i, i + 100));
   }
