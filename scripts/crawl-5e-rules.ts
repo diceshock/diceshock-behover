@@ -19,8 +19,8 @@ const R2_ENDPOINT =
   "https://3244c8f91cd34317ce18652158e5853a.r2.cloudflarestorage.com";
 const R2_BUCKET = "ds-raw-feed";
 const R2_PREFIX = "5e-rules/"; // All files stored under this prefix
-const CONCURRENCY = 5; // Parallel fetch limit
-const DELAY_MS = 200; // Polite delay between batches
+const CONCURRENCY = 20;
+const DELAY_MS = 50;
 
 // ─── S3 Client ────────────────────────────────────────────────────────────────
 const s3 = new S3Client({

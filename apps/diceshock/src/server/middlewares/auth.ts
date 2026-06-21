@@ -488,6 +488,8 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
       uid: userInfoRaw.uid,
       nickname: userInfoRaw.nickname,
       meta: userInfoRaw.meta ?? null,
+      preferred_store_id: userInfoRaw.preferred_store_id ?? null,
+      preferred_locale: userInfoRaw.preferred_locale ?? null,
     },
   });
 
