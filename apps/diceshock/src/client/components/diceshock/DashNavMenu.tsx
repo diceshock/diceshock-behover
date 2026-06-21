@@ -73,8 +73,6 @@ export function DashNavMenuButton() {
 function AccountButton({ onClick }: { onClick: () => void }) {
   const { userInfo, session } = useAuth();
   const name = userInfo?.nickname ?? "Anonymous";
-  const uid = userInfo?.uid ?? "";
-  const shortUid = uid.length > 6 ? `${uid.slice(0, 6)}…` : uid;
   const role = (session?.user as any)?.role as string | undefined;
 
   const roleBadge =
@@ -95,14 +93,11 @@ function AccountButton({ onClick }: { onClick: () => void }) {
           </span>
         </div>
       </div>
-      <div className="min-w-0 whitespace-nowrap">
-        <p className="text-sm font-medium truncate leading-tight">{name}</p>
-        <p className="text-[10px] text-base-content/50 truncate leading-tight flex items-center gap-1">
-          <span>{shortUid}</span>
-          {roleBadge && (
-            <span className="badge badge-xs badge-primary">{roleBadge}</span>
-          )}
-        </p>
+      <div className="min-w-0 whitespace-nowrap flex items-center gap-1.5">
+        <span className="text-sm font-medium truncate">{name}</span>
+        {roleBadge && (
+          <span className="badge badge-xs badge-primary">{roleBadge}</span>
+        )}
       </div>
     </button>
   );
