@@ -130,9 +130,8 @@ export default {
     env: HonoCtxEnv["Bindings"],
     _ctx: ExecutionContext,
   ) => {
-    const { dispatchGstoneCrawl, dispatchGstoneDocCrawl } = await import(
-      "./server/cron/gstoneCrawl"
-    );
+    const { dispatchGstoneCrawl, dispatchGstoneDocCrawl, dispatchGstoneOcr } =
+      await import("./server/cron/gstoneCrawl");
     await dispatchGstoneCrawl({
       GSTONE_DB: env.GSTONE_DB,
       GSTONE_CRAWL_QUEUE: env.GSTONE_CRAWL_QUEUE,
@@ -140,6 +139,10 @@ export default {
     await dispatchGstoneDocCrawl({
       GSTONE_DB: env.GSTONE_DB,
       GSTONE_DOC_CRAWL_QUEUE: env.GSTONE_DOC_CRAWL_QUEUE,
+    });
+    await dispatchGstoneOcr({
+      GSTONE_DB: env.GSTONE_DB,
+      GSTONE_OCR_QUEUE: env.GSTONE_OCR_QUEUE,
     });
 
     if (event.cron === "0 4-22 * * *") {

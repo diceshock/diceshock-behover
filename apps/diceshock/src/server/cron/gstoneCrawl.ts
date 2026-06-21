@@ -125,3 +125,24 @@ export async function dispatchGstoneDocCrawl(env: {
     await env.GSTONE_DOC_CRAWL_QUEUE.sendBatch(messages.slice(i, i + 100));
   }
 }
+
+export async function dispatchGstoneOcr(env: {
+  GSTONE_DB: D1Database;
+  GSTONE_OCR_QUEUE: Queue;
+}): Promise<void> {
+  const pending = await env.GSTONE_DB.prepare(
+    `SELECT document_id FROM documents
+     WHERE crawled_at IS NOT NULL AND ocr_at IS NULL AND error IS NULL
+     LIMIT ?`,
+  )
+    .bind(DOC_BATCH_SIZE)
+    .all<{ document_id: number }>();
+
+  const docs = pending.results ?? [];
+  if (docs.length === 0) return;
+
+  const msgs = docs.map((d) => ({ body: { document_id: d.document_id } }));
+  for (let i = 0; i < msgs.length; i += 100) {
+    await env.GSTONE_OCR_QUEUE.sendBatch(msgs.slice(i, i + 100));
+  }
+}

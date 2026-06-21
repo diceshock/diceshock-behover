@@ -87,14 +87,16 @@ async function ocrImage(
   const imageData = await imageResp.arrayBuffer();
   const imageArray = [...new Uint8Array(imageData)];
 
-  const result = (await env.AI.run(
-    "@cf/meta/llama-3.2-11b-vision-instruct" as any,
-    {
-      image: imageArray,
-      prompt: "agree",
-      max_tokens: 1,
-    } as any,
-  )) as { response?: string };
+  try {
+    await env.AI.run(
+      "@cf/meta/llama-3.2-11b-vision-instruct" as any,
+      {
+        image: imageArray,
+        prompt: "agree",
+        max_tokens: 1,
+      } as any,
+    );
+  } catch {}
 
   const ocrResult = (await env.AI.run(
     "@cf/meta/llama-3.2-11b-vision-instruct" as any,
