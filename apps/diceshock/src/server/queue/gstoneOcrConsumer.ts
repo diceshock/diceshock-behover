@@ -98,24 +98,43 @@ async function ocrImage(
 ): Promise<string> {
   const resizedUrl = imageUrl.includes("?")
     ? imageUrl
-    : `${imageUrl}?x-oss-process=image/auto-orient,1/resize,m_lfit,w_1200/quality,q_85`;
+    : `${imageUrl}?x-oss-process=image/auto-orient,1/resize,m_lfit,w_800/quality,q_80`;
 
   const imageResp = await fetch(resizedUrl);
   if (!imageResp.ok) throw new Error(`Image fetch failed: ${imageResp.status}`);
 
   const imageData = await imageResp.arrayBuffer();
-  const blob = new Blob([imageData], {
-    type: imageResp.headers.get("content-type") ?? "image/jpeg",
-  });
+  const bytes = new Uint8Array(imageData);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 8192) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+  }
+  const base64 = btoa(binary);
 
-  const results = await (env.AI as any).toMarkdown([
-    { name: "page.jpg", blob },
-  ]);
+  const result = (await env.AI.run(
+    "@cf/meta/llama-4-scout-17b-16e-instruct" as any,
+    {
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "请逐字提取这张桌游规则书图片中的所有文字。保留原文（中文/英文），保留换行和格式。只输出原文内容，不要描述图片，不要翻译，不要添加任何说明。",
+            },
+            {
+              type: "image_url",
+              image_url: { url: `data:image/jpeg;base64,${base64}` },
+            },
+          ],
+        },
+      ],
+      max_tokens: 4096,
+      temperature: 0.1,
+    } as any,
+  )) as { response?: string };
 
-  const page = results?.[0];
-  if (!page || !page.data) throw new Error("toMarkdown returned empty result");
-
-  return page.data;
+  return result.response ?? "";
 }
 
 function buildMarkdown(opts: {
