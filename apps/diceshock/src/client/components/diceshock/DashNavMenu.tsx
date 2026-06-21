@@ -6,19 +6,35 @@ import {
   ImageSquareIcon,
   ListIcon,
   MegaphoneIcon,
+  MoonIcon,
   ScanIcon,
   SignOutIcon,
+  StorefrontIcon,
+  SunIcon,
   SwordIcon,
   TableIcon,
+  TranslateIcon,
   UsersIcon,
   XIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { Link, useMatches } from "@tanstack/react-router";
 import clsx from "clsx";
+import { useAtom } from "jotai";
 import { useCallback, useRef, useState } from "react";
-import ThemeSwap from "@/client/components/ThemeSwap";
+import useAuth from "@/client/hooks/useAuth";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import type { TranslationKey } from "@/shared/i18n";
+import {
+  LOCALES,
+  type LocaleCode,
+  STORES,
+  type StoreCode,
+} from "@/shared/store-locale";
+import trpcClientPublic from "@/shared/utils/trpc";
+import LanguageSelectorModal from "../LanguageSelectorModal";
+import Modal from "../modal";
+import StoreSelectorModal from "../StoreSelectorModal";
+import { themeA } from "../ThemeSwap";
 import DashQRScannerDialog from "./DashQRScannerDialog";
 
 const NAV_ITEMS: ReadonlyArray<{
@@ -55,15 +71,252 @@ export function DashNavMenuButton() {
   );
 }
 
+function AccountButton({ onClick }: { onClick: () => void }) {
+  const { userInfo, session } = useAuth();
+  const name = userInfo?.nickname ?? "Anonymous";
+  const uid = userInfo?.uid ?? "";
+  const role = (session?.user as any)?.role as string | undefined;
+
+  const roleBadge =
+    role === "admin" ? "管理员" : role === "staff" ? "店员" : "";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-base-300 active:bg-base-300 transition-colors text-left"
+    >
+      <div className="avatar avatar-placeholder shrink-0">
+        <div className="bg-primary text-gray-900 w-9 rounded-full overflow-hidden">
+          <span className="text-sm font-bold">
+            {/^[\x20-\x7E\u00A0-\u024F\u0400-\u04FF]/.test(name)
+              ? name.slice(0, 2)
+              : name.slice(0, 1)}
+          </span>
+        </div>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate">{name}</p>
+        <p className="text-[10px] text-base-content/50 truncate flex items-center gap-1">
+          <span>{uid}</span>
+          {roleBadge && (
+            <span className="badge badge-xs badge-primary">{roleBadge}</span>
+          )}
+        </p>
+      </div>
+    </button>
+  );
+}
+
+function AccountSettingsModal({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const { userInfo, session } = useAuth();
+  const [theme, setTheme] = useAtom(themeA);
+  const [langModalOpen, setLangModalOpen] = useState(false);
+  const [storeModalOpen, setStoreModalOpen] = useState(false);
+
+  const name = userInfo?.nickname ?? "Anonymous";
+  const uid = userInfo?.uid ?? "";
+  const role = (session?.user as any)?.role as string | undefined;
+  const roleBadge =
+    role === "admin" ? "管理员" : role === "staff" ? "店员" : "";
+
+  const preferredLocale =
+    typeof userInfo?.preferred_locale === "string"
+      ? userInfo.preferred_locale
+      : "";
+  const preferredStore =
+    typeof userInfo?.preferred_store_id === "string"
+      ? userInfo.preferred_store_id
+      : "";
+
+  const handleLocaleSelect = useCallback(
+    async (loc: LocaleCode) => {
+      try {
+        await trpcClientPublic.users.updatePreferences.mutate({
+          preferred_locale: loc,
+          preferred_store_id: preferredStore || null,
+        });
+        window.location.reload();
+      } catch {}
+    },
+    [preferredStore],
+  );
+
+  const handleStoreSelect = useCallback(
+    async (store: string) => {
+      try {
+        await trpcClientPublic.users.updatePreferences.mutate({
+          preferred_locale: preferredLocale || null,
+          preferred_store_id: store || null,
+        });
+        window.location.reload();
+      } catch {}
+    },
+    [preferredLocale],
+  );
+
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  }, [setTheme]);
+
+  return (
+    <>
+      <Modal
+        isCloseOnClick
+        isOpen={isOpen}
+        onToggle={(evt) => {
+          if (!evt.open) onClose();
+        }}
+      >
+        <div
+          className={clsx(
+            "modal-box max-w-none md:max-w-lg min-h-56 max-h-[80vh] rounded-xl px-0 pb-0 flex flex-col",
+            "absolute not-md:bottom-0 not-md:left-0 not-md:w-full not-md:rounded-none overflow-hidden",
+            "border border-base-content/30",
+          )}
+        >
+          <button
+            onClick={onClose}
+            className="btn btn-sm btn-circle absolute top-3 right-3 z-10"
+            aria-label="关闭"
+          >
+            <XIcon className="size-4" weight="bold" />
+          </button>
+
+          <div className="flex flex-col sm:flex-row flex-1 overflow-hidden">
+            <div className="sm:w-44 shrink-0 flex flex-col items-center justify-center gap-2 px-6 py-6 sm:border-r border-b sm:border-b-0 border-base-content/10 bg-base-200/50">
+              <div className="avatar avatar-placeholder">
+                <div className="bg-primary text-gray-900 w-14 rounded-full overflow-hidden">
+                  <span className="text-xl font-bold">
+                    {/^[\x20-\x7E\u00A0-\u024F\u0400-\u04FF]/.test(name)
+                      ? name.slice(0, 2)
+                      : name.slice(0, 1)}
+                  </span>
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-bold truncate max-w-32">{name}</p>
+                <p className="text-[10px] text-base-content/50">{uid}</p>
+                {roleBadge && (
+                  <span className="badge badge-sm badge-primary mt-1">
+                    {roleBadge}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1 flex flex-col gap-1 p-4 overflow-y-auto">
+              <button
+                type="button"
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg hover:bg-base-200 transition-colors text-left"
+                onClick={toggleTheme}
+              >
+                <div className="p-1.5 bg-primary/10 rounded-lg">
+                  {theme === "dark" ? (
+                    <MoonIcon className="size-4 text-primary" weight="fill" />
+                  ) : (
+                    <SunIcon className="size-4 text-primary" weight="fill" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{t("dashNav.theme")}</p>
+                  <p className="text-xs text-base-content/50">
+                    {theme === "dark" ? "深色" : "浅色"}
+                  </p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg hover:bg-base-200 transition-colors text-left"
+                onClick={() => setLangModalOpen(true)}
+              >
+                <div className="p-1.5 bg-primary/10 rounded-lg">
+                  <TranslateIcon className="size-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{t("me.preferredLang")}</p>
+                  <p className="text-xs text-base-content/50">
+                    {preferredLocale
+                      ? LOCALES[preferredLocale as LocaleCode]?.name
+                      : "默认"}
+                  </p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg hover:bg-base-200 transition-colors text-left"
+                onClick={() => setStoreModalOpen(true)}
+              >
+                <div className="p-1.5 bg-primary/10 rounded-lg">
+                  <StorefrontIcon className="size-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">
+                    {t("me.preferredStore")}
+                  </p>
+                  <p className="text-xs text-base-content/50">
+                    {preferredStore
+                      ? STORES[preferredStore as StoreCode]?.shortName
+                      : "默认"}
+                  </p>
+                </div>
+              </button>
+
+              <div className="border-t border-base-content/10 mt-2 pt-2">
+                <a
+                  href="https://diceshock.cloudflareaccess.com/cdn-cgi/access/logout"
+                  className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg hover:bg-error/10 transition-colors text-left"
+                >
+                  <div className="p-1.5 bg-error/10 rounded-lg">
+                    <SignOutIcon className="size-4 text-error" />
+                  </div>
+                  <p className="text-sm font-medium text-error">
+                    {t("dashNav.logout")}
+                  </p>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      <LanguageSelectorModal
+        isOpen={langModalOpen}
+        onClose={() => setLangModalOpen(false)}
+        currentLocale={(preferredLocale as LocaleCode) || "zh_Hans"}
+        onSelect={handleLocaleSelect}
+      />
+
+      <StoreSelectorModal
+        isOpen={storeModalOpen}
+        onClose={() => setStoreModalOpen(false)}
+        currentStore={(preferredStore as StoreCode | "") || ""}
+        onSelect={handleStoreSelect}
+      />
+    </>
+  );
+}
+
 function SidebarContent({
   currentPath,
   close,
   onScanClick,
+  onAccountClick,
   className,
 }: {
   currentPath: string;
   close: () => void;
   onScanClick: () => void;
+  onAccountClick: () => void;
   className?: string;
 }) {
   const { t } = useTranslation();
@@ -105,20 +358,9 @@ function SidebarContent({
       </li>
 
       <li>
-        <label className="gap-12 flex-nowrap">
-          <ThemeSwap />
-          <span className="whitespace-nowrap">{t("dashNav.theme")}</span>
-        </label>
-      </li>
-
-      <li>
-        <a
-          href="https://diceshock.cloudflareaccess.com/cdn-cgi/access/logout"
-          className="gap-12 flex-nowrap"
-        >
-          <SignOutIcon className="size-6 shrink-0" />
-          <span className="whitespace-nowrap">{t("dashNav.logout")}</span>
-        </a>
+        <div className="px-0 py-0 hover:bg-transparent active:bg-transparent">
+          <AccountButton onClick={onAccountClick} />
+        </div>
       </li>
     </ul>
   );
@@ -129,16 +371,19 @@ export default function DashNavDrawer({
 }: {
   children: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   const checkboxRef = useRef<HTMLInputElement>(null);
   const matches = useMatches();
   const currentPath = matches[matches.length - 1]?.pathname ?? "";
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
 
   const close = useCallback(() => {
     if (checkboxRef.current) checkboxRef.current.checked = false;
   }, []);
 
   const onScanClick = useCallback(() => setIsScannerOpen(true), []);
+  const onAccountClick = useCallback(() => setIsAccountOpen(true), []);
 
   return (
     <>
@@ -153,6 +398,7 @@ export default function DashNavDrawer({
           currentPath={currentPath}
           close={close}
           onScanClick={onScanClick}
+          onAccountClick={onAccountClick}
           className="p-0"
         />
       </div>
@@ -188,6 +434,7 @@ export default function DashNavDrawer({
               currentPath={currentPath}
               close={close}
               onScanClick={onScanClick}
+              onAccountClick={onAccountClick}
             />
           </div>
         </div>
@@ -198,6 +445,11 @@ export default function DashNavDrawer({
       <DashQRScannerDialog
         isOpen={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}
+      />
+
+      <AccountSettingsModal
+        isOpen={isAccountOpen}
+        onClose={() => setIsAccountOpen(false)}
       />
     </>
   );
