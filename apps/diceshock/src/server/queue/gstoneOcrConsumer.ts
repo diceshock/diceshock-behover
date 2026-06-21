@@ -30,9 +30,10 @@ export async function handleGstoneOcrQueue(
       }
 
       const pageText = await ocrImage(env, imageUrl);
+      const verifiedText = await verifyOcr(env, imageUrl, pageText);
 
       const existingPages: string[] = doc.ocr_pages ?? [];
-      existingPages[pageIndex] = pageText;
+      existingPages[pageIndex] = verifiedText;
 
       const now = new Date().toISOString();
       await env.GSTONE_DB.prepare(
@@ -140,7 +141,7 @@ async function ocrImage(
           content: [
             {
               type: "text",
-              text: "请逐字提取这张桌游规则书图片中的所有文字。保留原文（中文/英文），保留换行和格式。只输出原文内容，不要描述图片，不要翻译，不要添加任何说明。",
+              text: "提取这张桌游规则书页面中的所有内容。要求：\n1. 逐字提取所有文字，保留原文语言和换行\n2. 图中的图标/符号（如骰子图标、资源符号、箭头、星星等）用方括号描述，例如 [骰子图标] [金币符号] [箭头] [2点伤害图标]\n3. 如果有多栏排版，按从左到右、从上到下的正确阅读顺序输出\n4. 不要描述图片外观，不要翻译，不要添加说明，只输出提取的内容",
             },
             {
               type: "image_url",
@@ -155,6 +156,64 @@ async function ocrImage(
   )) as { response?: string };
 
   return result.response ?? "";
+}
+
+async function verifyOcr(
+  env: Cloudflare.Env,
+  imageUrl: string,
+  ocrText: string,
+): Promise<string> {
+  if (!ocrText || ocrText.trim().length < 20) return ocrText;
+
+  const resizedUrl = imageUrl.includes("?")
+    ? imageUrl
+    : `${imageUrl}?x-oss-process=image/auto-orient,1/resize,m_lfit,w_800/quality,q_80`;
+
+  const imageResp = await fetch(resizedUrl);
+  if (!imageResp.ok) return ocrText;
+
+  const imageData = await imageResp.arrayBuffer();
+  const bytes = new Uint8Array(imageData);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 8192) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+  }
+  const base64 = btoa(binary);
+
+  const result = (await env.AI.run(
+    "@cf/google/gemma-4-26b-a4b-it" as any,
+    {
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `对照原始图片校验以下 OCR 文本。重点修正：
+1. 符号/图标：对照图片中实际的图标形状，确认 [xxx] 标记是否准确描述了图标内容
+2. 文字错误：对照图片修正 OCR 识别错误的字符（尤其是中文/日文汉字）
+3. 遗漏内容：如果图片中有文字但 OCR 遗漏了，补充进去
+
+输出修正后的完整文本，保持原始格式。如果 OCR 已经准确则原样输出。
+
+OCR 文本：
+${ocrText}`,
+            },
+            {
+              type: "image_url",
+              image_url: { url: `data:image/jpeg;base64,${base64}` },
+            },
+          ],
+        },
+      ],
+      max_tokens: 4096,
+      temperature: 0.1,
+    } as any,
+  )) as { response?: string };
+
+  const verified = result.response ?? "";
+  if (verified.trim().length < ocrText.trim().length * 0.3) return ocrText;
+  return verified;
 }
 
 async function correctOcr(
@@ -176,11 +235,11 @@ async function correctOcr(
           role: "user",
           content: `以下是桌游「${title}」规则书的 OCR 识别结果。请执行以下修正：
 
-1. 文本顺序：修正因多栏排版导致的错乱阅读顺序，确保段落逻辑连贯
-2. 特殊符号：规则书常用图标符号代替文字（如骰子🎲、手牌🃏、金币💰等），OCR 可能产生乱码，请根据上下文还原为对应的文字描述（如「骰子」「手牌」「金币」）
-3. 引用关系：如果文本中提到「见第X页」「参照XX规则」等引用，保留并标注
+1. 阅读顺序：如果段落顺序明显因多栏排版被打乱，重新排列为正确的阅读流
+2. 断行修复：合并被错误断开的句子，修正明显的 OCR 错别字
+3. 引用关系：保留并用 [→ 见第X页] 格式标注规则间的交叉引用
 
-规则：保持原文语言，不翻译，不添加原文没有的内容，不总结。按原始分页输出，每页用 === 第N页 === 分隔。
+禁止：不要推测或替换 [xxx图标] 标记（这些是多模态识别的结果），不要翻译，不要添加原文没有的内容。按原始分页输出，每页用 === 第N页 === 分隔。
 
 ${combined}`,
         },
