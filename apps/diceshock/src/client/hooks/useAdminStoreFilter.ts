@@ -1,43 +1,28 @@
 import { useCallback, useState } from "react";
-import type { StoreCode } from "@/shared/store-locale";
+import { DEFAULT_STORE, type StoreCode } from "@/shared/store-locale";
 
 const STORAGE_KEY = "admin_store_filter";
 
-export type AdminStoreFilter = StoreCode | null;
-
-function readFromStorage(): AdminStoreFilter {
-  if (typeof window === "undefined") return null;
+function readFromStorage(): StoreCode {
+  if (typeof window === "undefined") return DEFAULT_STORE;
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === "gg" || stored === "jdk") return stored;
-  } catch {
-    // localStorage unavailable (e.g. private browsing)
-  }
-  return null;
+  } catch {}
+  return DEFAULT_STORE;
 }
 
-function writeToStorage(value: AdminStoreFilter): void {
+function writeToStorage(value: StoreCode): void {
   try {
-    if (value === null) {
-      localStorage.removeItem(STORAGE_KEY);
-    } else {
-      localStorage.setItem(STORAGE_KEY, value);
-    }
-  } catch {
-    // localStorage unavailable
-  }
+    localStorage.setItem(STORAGE_KEY, value);
+  } catch {}
 }
 
-/**
- * Hook for the admin store filter dropdown.
- * Reads/writes the `admin_store_filter` localStorage key.
- * Returns `null` for "all stores", or a StoreCode for a specific store.
- */
 export function useAdminStoreFilter() {
   const [storeFilter, setStoreFilterState] =
-    useState<AdminStoreFilter>(readFromStorage);
+    useState<StoreCode>(readFromStorage);
 
-  const setStoreFilter = useCallback((value: AdminStoreFilter) => {
+  const setStoreFilter = useCallback((value: StoreCode) => {
     setStoreFilterState(value);
     writeToStorage(value);
   }, []);

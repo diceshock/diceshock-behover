@@ -1,5 +1,5 @@
 import { useAdminStoreFilter } from "@/client/hooks/useAdminStoreFilter";
-import { STORES } from "@/shared/store-locale";
+import { STORES, type StoreCode } from "@/shared/store-locale";
 
 export default function AdminStoreFilter() {
   const { storeFilter, setStoreFilter } = useAdminStoreFilter();
@@ -7,13 +7,9 @@ export default function AdminStoreFilter() {
   return (
     <select
       className="select select-bordered select-sm"
-      value={storeFilter ?? ""}
-      onChange={(e) => {
-        const val = e.target.value;
-        setStoreFilter(val === "" ? null : (val as "gg" | "jdk"));
-      }}
+      value={storeFilter}
+      onChange={(e) => setStoreFilter(e.target.value as StoreCode)}
     >
-      <option value="">所有店铺</option>
       {Object.values(STORES).map((store) => (
         <option key={store.code} value={store.code}>
           {store.shortName}
