@@ -13,23 +13,26 @@ import {
   validate,
   visit,
 } from "graphql";
+import {
+  type AuthContext,
+  hasRole,
+  isRowVisible,
+  maskRow,
+  type Role,
+  TABLE_PERMISSIONS,
+} from "./permissions";
 
 export interface GraphQLContext {
   db: ReturnType<typeof dbFactory>;
   userId: string | null;
   openId: string;
+  auth: AuthContext;
 }
 
 type BuiltSchema = ReturnType<typeof buildSchema>;
 const buildDrizzleSchema = buildSchema as (db: unknown) => BuiltSchema;
 
 const MAX_FIND_MANY_LIMIT = 50;
-const BLOCKED_TABLES = new Set([
-  "accounts",
-  "sessions",
-  "verificationTokens",
-  "authenticators",
-]);
 
 const schemaCache = new WeakMap<GraphQLContext["db"], BuiltSchema>();
 
@@ -46,27 +49,33 @@ function rootFieldBaseName(fieldName: string): string {
   return fieldName.endsWith("Single") ? fieldName.slice(0, -6) : fieldName;
 }
 
-function isBlockedRootField(fieldName: string): boolean {
-  return BLOCKED_TABLES.has(rootFieldBaseName(fieldName));
-}
-
-function blockedTablesRule(context: ValidationContext): ASTVisitor {
-  return {
+function permissionRule(
+  auth: AuthContext,
+): (context: ValidationContext) => ASTVisitor {
+  return (context: ValidationContext) => ({
     Field(node) {
       const parentType = context.getParentType();
       if (parentType?.name !== "Query" && parentType?.name !== "Mutation")
         return;
 
-      if (isBlockedRootField(node.name.value)) {
+      const tableName = rootFieldBaseName(node.name.value);
+      const perm = TABLE_PERMISSIONS[tableName];
+
+      if (!perm) return;
+
+      const isMutation = parentType?.name === "Mutation";
+      const requiredRole = isMutation ? perm.write : perm.read;
+
+      if (!hasRole(auth.role, requiredRole)) {
         context.reportError(
           new GraphQLExecutionError(
-            `不允许访问受保护的数据表: ${rootFieldBaseName(node.name.value)}`,
+            `权限不足: ${tableName} 需要 ${requiredRole} 角色`,
             { nodes: node },
           ),
         );
       }
     },
-  };
+  });
 }
 
 function getFindManyFields(schema: GraphQLSchema): Set<string> {
@@ -161,6 +170,38 @@ function capResultArrays(value: unknown): unknown {
   return value;
 }
 
+function applyPermissions(data: unknown, auth: AuthContext): unknown {
+  if (!data || typeof data !== "object") return data;
+
+  const result: Record<string, unknown> = {};
+  for (const [tableField, value] of Object.entries(
+    data as Record<string, unknown>,
+  )) {
+    const tableName = rootFieldBaseName(tableField);
+
+    if (Array.isArray(value)) {
+      result[tableField] = value
+        .filter((row) =>
+          isRowVisible(tableName, row as Record<string, unknown>, auth),
+        )
+        .map((row) => maskRow(tableName, row as Record<string, unknown>, auth));
+    } else if (value && typeof value === "object") {
+      if (isRowVisible(tableName, value as Record<string, unknown>, auth)) {
+        result[tableField] = maskRow(
+          tableName,
+          value as Record<string, unknown>,
+          auth,
+        );
+      } else {
+        result[tableField] = null;
+      }
+    } else {
+      result[tableField] = value;
+    }
+  }
+  return result;
+}
+
 function formatErrors(errors: readonly GraphQLError[]): string[] {
   return errors.map((error) => `GraphQL 执行错误: ${error.message}`);
 }
@@ -182,7 +223,7 @@ export async function executeGraphQL(
 
   const validationErrors = validate(schema, document, [
     ...specifiedRules,
-    blockedTablesRule,
+    permissionRule(context.auth),
   ]);
   if (validationErrors.length > 0) {
     return { errors: formatErrors(validationErrors) };
@@ -204,10 +245,10 @@ export async function executeGraphQL(
 
   if (result.errors?.length) {
     return {
-      data: capResultArrays(result.data),
+      data: applyPermissions(capResultArrays(result.data), context.auth),
       errors: formatErrors(result.errors),
     };
   }
 
-  return { data: capResultArrays(result.data) };
+  return { data: applyPermissions(capResultArrays(result.data), context.auth) };
 }

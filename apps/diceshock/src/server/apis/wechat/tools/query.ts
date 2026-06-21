@@ -47,6 +47,7 @@ export async function executeQueryTool(
     db: db(context.env.DB),
     userId: context.userId,
     openId: context.openId,
+    auth: { role: "agent", userId: context.userId },
   };
 
   const result = await executeGraphQL(norm.source, args.variables, gqlContext);
