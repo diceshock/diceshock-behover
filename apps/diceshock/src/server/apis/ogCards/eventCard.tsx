@@ -45,6 +45,7 @@ function CoverEventCard({
     <html>
       <head>
         <meta charSet="utf-8" />
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: generated card CSS */}
         <style dangerouslySetInnerHTML={{ __html: COVER_CARD_CSS }} />
       </head>
       <body>
@@ -66,6 +67,7 @@ function CoverEventCard({
           </div>
         </div>
         <script
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: generated readiness script
           dangerouslySetInnerHTML={{
             __html: `
 const img = document.getElementById("cover");

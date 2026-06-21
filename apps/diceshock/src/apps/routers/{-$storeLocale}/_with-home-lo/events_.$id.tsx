@@ -8,24 +8,24 @@ import trpcClientPublic from "@/shared/utils/trpc";
 
 const SITE_URL = "https://origin.runespark.fun";
 
-export const Route = createFileRoute("/{-$storeLocale}/_with-home-lo/events_/$id")(
-  {
-    head: ({ params }) => ({
-      meta: [
-        { title: "活动详情 - DiceShock 骰子奇兵" },
-        { name: "description", content: "查看活动详情和报名信息" },
-        { property: "og:title", content: "活动详情 - DiceShock 骰子奇兵" },
-        { property: "og:description", content: "查看活动详情和报名信息" },
-        {
-          property: "og:image",
-          content: `${SITE_URL}/edge/media/card/event/${params.id}`,
-        },
-        { property: "og:url", content: `${SITE_URL}/events/${params.id}` },
-      ],
-    }),
-    component: EventDetailPage,
-  },
-);
+export const Route = createFileRoute(
+  "/{-$storeLocale}/_with-home-lo/events_/$id",
+)({
+  head: ({ params }) => ({
+    meta: [
+      { title: "活动详情 - DiceShock 骰子奇兵" },
+      { name: "description", content: "查看活动详情和报名信息" },
+      { property: "og:title", content: "活动详情 - DiceShock 骰子奇兵" },
+      { property: "og:description", content: "查看活动详情和报名信息" },
+      {
+        property: "og:image",
+        content: `${SITE_URL}/edge/media/card/event/${params.id}`,
+      },
+      { property: "og:url", content: `${SITE_URL}/events/${params.id}` },
+    ],
+  }),
+  component: EventDetailPage,
+});
 
 type EventDetail = Awaited<
   ReturnType<typeof trpcClientPublic.events.getById.query>
@@ -71,10 +71,7 @@ function EventDetailPage() {
       <main className="min-h-[calc(100vh-32rem)] w-full mt-20 sm:mt-32 md:mt-40 px-4 pb-20">
         <div className="mx-auto w-full max-w-3xl text-center py-20">
           <p className="text-lg text-base-content/60">{t("events.notFound")}</p>
-          <Link
-            to="/{-$storeLocale}/actives"
-            className="btn btn-ghost mt-4"
-          >
+          <Link to="/{-$storeLocale}/actives" className="btn btn-ghost mt-4">
             {t("common.backToList")}
           </Link>
         </div>

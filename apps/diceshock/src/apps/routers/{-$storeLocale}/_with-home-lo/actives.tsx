@@ -1,5 +1,4 @@
 import {
-  CalendarBlankIcon,
   ClockIcon,
   FunnelIcon,
   PlusIcon,
@@ -360,52 +359,49 @@ function ActivesPage() {
               </div>
             )}
 
-            {showActives && (
-              <>
-                {actives.length === 0 ? (
-                  <div className="text-center py-20 text-base-content/50">
-                    <p className="text-lg mb-2">
-                      {filterType === "expired"
-                        ? t("actives.noExpiredActives")
-                        : t("actives.noActives")}
-                    </p>
-                    <p className="text-sm">
-                      {userInfo
-                        ? t("actives.createHint")
-                        : t("actives.loginToCreate")}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-10">
-                    {weeks.map((week) => (
-                      <WeekSection
-                        key={week.weekKey}
-                        week={week}
-                        userId={userId}
-                      />
-                    ))}
+            {showActives &&
+              (actives.length === 0 ? (
+                <div className="text-center py-20 text-base-content/50">
+                  <p className="text-lg mb-2">
+                    {filterType === "expired"
+                      ? t("actives.noExpiredActives")
+                      : t("actives.noActives")}
+                  </p>
+                  <p className="text-sm">
+                    {userInfo
+                      ? t("actives.createHint")
+                      : t("actives.loginToCreate")}
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-10">
+                  {weeks.map((week) => (
+                    <WeekSection
+                      key={week.weekKey}
+                      week={week}
+                      userId={userId}
+                    />
+                  ))}
 
-                    {nextCursor && (
-                      <div className="flex justify-center mt-4">
-                        <button
-                          type="button"
-                          className={clsx(
-                            "btn btn-ghost",
-                            loadingMore && "loading",
-                          )}
-                          onClick={() => fetchActives(nextCursor)}
-                          disabled={loadingMore}
-                        >
-                          {loadingMore
-                            ? t("common.loading")
-                            : t("common.loadMore")}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
+                  {nextCursor && (
+                    <div className="flex justify-center mt-4">
+                      <button
+                        type="button"
+                        className={clsx(
+                          "btn btn-ghost",
+                          loadingMore && "loading",
+                        )}
+                        onClick={() => fetchActives(nextCursor)}
+                        disabled={loadingMore}
+                      >
+                        {loadingMore
+                          ? t("common.loading")
+                          : t("common.loadMore")}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
 
             {!showEvents && !showActives && (
               <div className="text-center py-20 text-base-content/50">
@@ -603,8 +599,8 @@ function ActiveCard({
   userId,
   isFirstOfDay,
   dayLabel,
-  borderLeft,
-  borderRight,
+  borderLeft: _borderLeft,
+  borderRight: _borderRight,
   borderExtendBefore,
   borderExtendAfter,
 }: {
@@ -707,7 +703,7 @@ function flattenWeek(
     }
 
     for (let i = 0; i < day.items.length; i++) {
-      const col = result.length % COLS;
+      const _col = result.length % COLS;
       result.push({
         type: "card",
         item: day.items[i],

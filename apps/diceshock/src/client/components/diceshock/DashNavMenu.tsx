@@ -129,6 +129,7 @@ export default function DashNavDrawer({
 }: {
   children: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   const checkboxRef = useRef<HTMLInputElement>(null);
   const matches = useMatches();
   const currentPath = matches[matches.length - 1]?.pathname ?? "";

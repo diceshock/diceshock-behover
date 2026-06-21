@@ -19,6 +19,14 @@ import { DashNavMenuButton } from "@/client/components/diceshock/DashNavMenu";
 import DashQRScannerDialog from "@/client/components/diceshock/DashQRScannerDialog";
 import InventoryManagementCard from "@/client/components/diceshock/InventoryManagementCard";
 import { useTranslation } from "@/client/hooks/useTranslation";
+import {
+  ACTIVES_DEFAULTS,
+  GSZ_DEFAULTS,
+  MEDIA_DEFAULTS,
+  ORDERS_DEFAULTS,
+  TABLES_DEFAULTS,
+  USERS_DEFAULTS,
+} from "@/client/utils/dashSearchDefaults";
 import { formatMessage } from "@/shared/i18n";
 import dayjs from "@/shared/utils/dayjs-config";
 import trpcClientPublic, { trpcClientDash } from "@/shared/utils/trpc";
@@ -163,7 +171,7 @@ function RouteComponent() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Link
             to="/dash/orders"
-            search={{}}
+            search={ORDERS_DEFAULTS}
             className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="card-body p-4">
@@ -181,7 +189,7 @@ function RouteComponent() {
 
           <Link
             to="/dash/users"
-            search={{}}
+            search={USERS_DEFAULTS}
             className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="card-body p-4">
@@ -199,7 +207,7 @@ function RouteComponent() {
 
           <Link
             to="/dash/tables"
-            search={{}}
+            search={TABLES_DEFAULTS}
             className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="card-body p-4">
@@ -217,7 +225,7 @@ function RouteComponent() {
 
           <Link
             to="/dash/actives"
-            search={{}}
+            search={ACTIVES_DEFAULTS}
             className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="card-body p-4">
@@ -269,7 +277,7 @@ function RouteComponent() {
 
           <Link
             to="/dash/gsz"
-            search={{}}
+            search={GSZ_DEFAULTS}
             className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="card-body p-4">
@@ -287,7 +295,7 @@ function RouteComponent() {
 
           <Link
             to="/dash/media"
-            search={{}}
+            search={MEDIA_DEFAULTS}
             className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="card-body p-4">
@@ -345,7 +353,7 @@ function RouteComponent() {
                 </h3>
                 <Link
                   to="/dash/orders"
-                  search={{}}
+                  search={ORDERS_DEFAULTS}
                   className="btn btn-xs btn-ghost"
                 >
                   {t("dashIndex.viewAll")}
@@ -365,7 +373,7 @@ function RouteComponent() {
                     <Link
                       key={order.id}
                       to="/dash/orders"
-                      search={{}}
+                      search={ORDERS_DEFAULTS}
                       className="flex items-center justify-between p-2 rounded-lg hover:bg-base-200 transition-colors"
                     >
                       <div className="flex items-center gap-2 min-w-0">
@@ -401,7 +409,7 @@ function RouteComponent() {
                 </h3>
                 <Link
                   to="/dash/tables"
-                  search={{}}
+                  search={TABLES_DEFAULTS}
                   className="btn btn-xs btn-ghost"
                 >
                   {t("dashIndex.viewAll")}
@@ -442,7 +450,7 @@ function RouteComponent() {
                 </h3>
                 <Link
                   to="/dash/users"
-                  search={{}}
+                  search={USERS_DEFAULTS}
                   className="btn btn-xs btn-ghost"
                 >
                   {t("dashIndex.viewAll")}

@@ -28,12 +28,8 @@
           "name": "active_tag_mappings_table_active_id_actives_table_id_fk",
           "tableFrom": "active_tag_mappings_table",
           "tableTo": "actives_table",
-          "columnsFrom": [
-            "active_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["active_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -41,22 +37,15 @@
           "name": "active_tag_mappings_table_tag_id_active_tags_table_id_fk",
           "tableFrom": "active_tag_mappings_table",
           "tableTo": "active_tags_table",
-          "columnsFrom": [
-            "tag_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tag_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "active_tag_mappings_table_active_id_tag_id_pk": {
-          "columns": [
-            "active_id",
-            "tag_id"
-          ],
+          "columns": ["active_id", "tag_id"],
           "name": "active_tag_mappings_table_active_id_tag_id_pk"
         }
       },

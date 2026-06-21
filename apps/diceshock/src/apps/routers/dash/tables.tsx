@@ -55,7 +55,7 @@ function RouteComponent() {
   const msg = useMsg();
   const isMobile = useIsMobile();
   const { t } = useTranslation();
-  const { storeFilter } = useAdminStoreFilter();
+  useAdminStoreFilter();
   const { q, type, status } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const setSearch = useCallback(
@@ -91,7 +91,7 @@ function RouteComponent() {
     } finally {
       setLoading(false);
     }
-  }, [storeFilter, msg]);
+  }, [msg, t]);
 
   useEffect(() => {
     void refreshTables();

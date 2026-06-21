@@ -1,4 +1,5 @@
-import db, { drizzle, orderPauseLogsTable, tableOccupancyTable } from "@lib/db";
+import type db from "@lib/db";
+import { drizzle, orderPauseLogsTable, tableOccupancyTable } from "@lib/db";
 import { fetchTableStateForDO, notifySocketDO } from "./seatTimer";
 
 type PauseReason = "manual" | "settlement" | "auto_transfer";

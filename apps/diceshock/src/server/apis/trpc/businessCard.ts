@@ -1,4 +1,4 @@
-import db, { drizzle, userBusinessCardTable, userInfoTable } from "@lib/db";
+import db, { drizzle, userBusinessCardTable } from "@lib/db";
 import { z } from "zod/v4";
 import { protectedProcedure } from "./baseTRPC";
 

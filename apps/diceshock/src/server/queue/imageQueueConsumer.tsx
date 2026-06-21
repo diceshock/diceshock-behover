@@ -140,15 +140,11 @@ async function processHtml2Image(
     await page.setViewport({ width: viewportWidth, height: viewportHeight });
     await page.setContent(html, { waitUntil: "networkidle0" });
 
-    const screenshotOptions: Parameters<typeof page.screenshot>[0] = {
+    const buffer = (await page.screenshot({
       type: format as "png" | "jpeg" | "webp",
       fullPage: true,
-    };
-    if (format !== "png") {
-      screenshotOptions.quality = quality;
-    }
-
-    const buffer = (await page.screenshot(screenshotOptions)) as Buffer;
+      ...(format !== "png" ? { quality } : {}),
+    })) as Buffer;
     return { buffer: new Uint8Array(buffer), format };
   } finally {
     await browser.close();
@@ -220,6 +216,7 @@ function TranscodeView({
     <html>
       <body>
         <canvas id="canvas" width={w} height={h} />
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: generated canvas script */}
         <script dangerouslySetInnerHTML={{ __html: script }} />
       </body>
     </html>
@@ -289,6 +286,7 @@ function QrCodeView({
       </head>
       <body>
         <canvas id="canvas" width={size} height={size} />
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: generated QR canvas script */}
         <script dangerouslySetInnerHTML={{ __html: script }} />
       </body>
     </html>

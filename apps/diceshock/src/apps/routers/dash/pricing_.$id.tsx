@@ -4,7 +4,7 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import { atom, useAtom } from "jotai";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import type { trpcClientDash } from "@/shared/utils/trpc";
@@ -56,7 +56,7 @@ const PLAN_TYPE_OPTIONS = [
   { value: "stored_value", label: "Table AGENT 储值卡" },
 ];
 
-const SCOPE_OPTIONS = [
+const _SCOPE_OPTIONS = [
   { value: "boardgame", label: "桌游" },
   { value: "mahjong", label: "日麻" },
   { value: "trpg", label: "跑团" },

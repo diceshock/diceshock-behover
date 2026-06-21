@@ -9,7 +9,7 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute } from "@tanstack/react-router";
 import clsx from "clsx";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import useAuth from "@/client/hooks/useAuth";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import type { PPCategory } from "@/shared/mahjong/pp";
@@ -351,7 +351,7 @@ function LeaderboardPanel() {
 
 function GszPage() {
   const { t } = useTranslation();
-  const { session, userInfo } = useAuth();
+  const { session } = useAuth();
   const isLoggedIn = !!session?.user?.id;
 
   return (

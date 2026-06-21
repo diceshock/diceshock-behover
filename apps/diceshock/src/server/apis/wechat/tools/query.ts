@@ -156,7 +156,7 @@ export async function executeQueryActiveParticipants(
   }
 
   const d = db(context.env.DB);
-  const { eq, and } = drizzle;
+  const { eq } = drizzle;
 
   const active = await d
     .select({

@@ -31,7 +31,7 @@ function Home() {
 
   useEffect(() => {
     if (isInWechat) {
-      navigate({ to: "/me", replace: true });
+      navigate({ to: "/{-$storeLocale}/me", replace: true });
     }
   }, [isInWechat, navigate]);
 

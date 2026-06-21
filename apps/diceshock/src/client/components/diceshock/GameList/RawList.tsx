@@ -28,7 +28,7 @@ const RawList: React.FC<{ games: GameWithDbId[] | null }> = ({ games }) => {
         data-tip={`${sch_name || eng_name}${sch_name ? ` (${eng_name})` : ""}`}
       >
         <Link
-          to="/$storeLocale/inventory/$id"
+          to="/{-$storeLocale}/inventory/$id"
           params={(prev: any) => ({ ...prev, id: dbId })}
         >
           <Swing

@@ -8,123 +8,123 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute } from "@tanstack/react-router";
 
-import { Route as rootRouteImport } from './routers/__root'
-import { Route as MainRouteImport } from './routers/_main'
-import { Route as DashGraphiqlRouteImport } from './routers/dash/graphiql'
-import { Route as MainHomePageRouteImport } from './routers/_main/_homePage'
+import { Route as rootRouteImport } from "./routers/__root";
+import { Route as MainRouteImport } from "./routers/_main";
+import { Route as MainHomePageRouteImport } from "./routers/_main/_homePage";
+import { Route as DashGraphiqlRouteImport } from "./routers/dash/graphiql";
 
-const DashLazyRouteImport = createFileRoute('/dash')()
+const DashLazyRouteImport = createFileRoute("/dash")();
 
 const DashLazyRoute = DashLazyRouteImport.update({
-  id: '/dash',
-  path: '/dash',
+  id: "/dash",
+  path: "/dash",
   getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import('./routers/dash.lazy').then((d) => d.Route))
+} as any).lazy(() => import("./routers/dash.lazy").then((d) => d.Route));
 const MainRoute = MainRouteImport.update({
-  id: '/_main',
+  id: "/_main",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const DashGraphiqlRoute = DashGraphiqlRouteImport.update({
-  id: '/graphiql',
-  path: '/graphiql',
+  id: "/graphiql",
+  path: "/graphiql",
   getParentRoute: () => DashLazyRoute,
-} as any)
+} as any);
 const MainHomePageRoute = MainHomePageRouteImport.update({
-  id: '/_homePage',
+  id: "/_homePage",
   getParentRoute: () => MainRoute,
-} as any)
+} as any);
 
 export interface FileRoutesByFullPath {
-  '/': typeof MainHomePageRoute
-  '/dash': typeof DashLazyRouteWithChildren
-  '/dash/graphiql': typeof DashGraphiqlRoute
+  "/": typeof MainHomePageRoute;
+  "/dash": typeof DashLazyRouteWithChildren;
+  "/dash/graphiql": typeof DashGraphiqlRoute;
 }
 export interface FileRoutesByTo {
-  '/': typeof MainHomePageRoute
-  '/dash': typeof DashLazyRouteWithChildren
-  '/dash/graphiql': typeof DashGraphiqlRoute
+  "/": typeof MainHomePageRoute;
+  "/dash": typeof DashLazyRouteWithChildren;
+  "/dash/graphiql": typeof DashGraphiqlRoute;
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport
-  '/_main': typeof MainRouteWithChildren
-  '/dash': typeof DashLazyRouteWithChildren
-  '/_main/_homePage': typeof MainHomePageRoute
-  '/dash/graphiql': typeof DashGraphiqlRoute
+  __root__: typeof rootRouteImport;
+  "/_main": typeof MainRouteWithChildren;
+  "/dash": typeof DashLazyRouteWithChildren;
+  "/_main/_homePage": typeof MainHomePageRoute;
+  "/dash/graphiql": typeof DashGraphiqlRoute;
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dash' | '/dash/graphiql'
-  fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dash' | '/dash/graphiql'
-  id: '__root__' | '/_main' | '/dash' | '/_main/_homePage' | '/dash/graphiql'
-  fileRoutesById: FileRoutesById
+  fileRoutesByFullPath: FileRoutesByFullPath;
+  fullPaths: "/" | "/dash" | "/dash/graphiql";
+  fileRoutesByTo: FileRoutesByTo;
+  to: "/" | "/dash" | "/dash/graphiql";
+  id: "__root__" | "/_main" | "/dash" | "/_main/_homePage" | "/dash/graphiql";
+  fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
-  MainRoute: typeof MainRouteWithChildren
-  DashLazyRoute: typeof DashLazyRouteWithChildren
+  MainRoute: typeof MainRouteWithChildren;
+  DashLazyRoute: typeof DashLazyRouteWithChildren;
 }
 
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    '/dash': {
-      id: '/dash'
-      path: '/dash'
-      fullPath: '/dash'
-      preLoaderRoute: typeof DashLazyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_main': {
-      id: '/_main'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof MainRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dash/graphiql': {
-      id: '/dash/graphiql'
-      path: '/graphiql'
-      fullPath: '/dash/graphiql'
-      preLoaderRoute: typeof DashGraphiqlRouteImport
-      parentRoute: typeof DashLazyRoute
-    }
-    '/_main/_homePage': {
-      id: '/_main/_homePage'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof MainHomePageRouteImport
-      parentRoute: typeof MainRoute
-    }
+    "/dash": {
+      id: "/dash";
+      path: "/dash";
+      fullPath: "/dash";
+      preLoaderRoute: typeof DashLazyRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/_main": {
+      id: "/_main";
+      path: "";
+      fullPath: "/";
+      preLoaderRoute: typeof MainRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/dash/graphiql": {
+      id: "/dash/graphiql";
+      path: "/graphiql";
+      fullPath: "/dash/graphiql";
+      preLoaderRoute: typeof DashGraphiqlRouteImport;
+      parentRoute: typeof DashLazyRoute;
+    };
+    "/_main/_homePage": {
+      id: "/_main/_homePage";
+      path: "";
+      fullPath: "/";
+      preLoaderRoute: typeof MainHomePageRouteImport;
+      parentRoute: typeof MainRoute;
+    };
   }
 }
 
 interface MainRouteChildren {
-  MainHomePageRoute: typeof MainHomePageRoute
+  MainHomePageRoute: typeof MainHomePageRoute;
 }
 
 const MainRouteChildren: MainRouteChildren = {
   MainHomePageRoute: MainHomePageRoute,
-}
+};
 
-const MainRouteWithChildren = MainRoute._addFileChildren(MainRouteChildren)
+const MainRouteWithChildren = MainRoute._addFileChildren(MainRouteChildren);
 
 interface DashLazyRouteChildren {
-  DashGraphiqlRoute: typeof DashGraphiqlRoute
+  DashGraphiqlRoute: typeof DashGraphiqlRoute;
 }
 
 const DashLazyRouteChildren: DashLazyRouteChildren = {
   DashGraphiqlRoute: DashGraphiqlRoute,
-}
+};
 
 const DashLazyRouteWithChildren = DashLazyRoute._addFileChildren(
   DashLazyRouteChildren,
-)
+);
 
 const rootRouteChildren: RootRouteChildren = {
   MainRoute: MainRouteWithChildren,
   DashLazyRoute: DashLazyRouteWithChildren,
-}
+};
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>()
+  ._addFileTypes<FileRouteTypes>();

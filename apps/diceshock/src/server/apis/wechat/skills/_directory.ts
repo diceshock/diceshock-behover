@@ -1,5 +1,4 @@
 import { renderSchema } from "./_schema";
-import { MUTATE_SYNTAX, QUERY_SYNTAX } from "./_syntax";
 
 export interface SkillNode {
   id: string;

@@ -39,7 +39,7 @@ function RouteComponent() {
   const msg = useMsg();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
-  const { storeFilter } = useAdminStoreFilter();
+  useAdminStoreFilter();
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -68,7 +68,7 @@ function RouteComponent() {
     } finally {
       setLoading(false);
     }
-  }, [storeFilter, msg, t]);
+  }, [msg, t]);
 
   useEffect(() => {
     void refreshEvents();
@@ -76,7 +76,7 @@ function RouteComponent() {
 
   const handleCreate = async () => {
     try {
-      const event = await trpcClientDash.eventsManagement.create.mutate({
+      const _event = await trpcClientDash.eventsManagement.create.mutate({
         title: t("dashEvents.newEventTitle"),
       });
       msg.success(t("dashEvents.createSuccess"));

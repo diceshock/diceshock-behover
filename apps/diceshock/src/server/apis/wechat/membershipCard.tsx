@@ -190,6 +190,7 @@ function MembershipCardView({ data }: { data: MembershipCardData }) {
     <html>
       <head>
         <meta charSet="utf-8" />
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: generated card CSS */}
         <style dangerouslySetInnerHTML={{ __html: MEMBERSHIP_CSS }} />
       </head>
       <body>
@@ -257,6 +258,7 @@ function MembershipCardView({ data }: { data: MembershipCardData }) {
           diceshock.com · {dayjs().format("YYYY-MM-DD HH:mm")} 生成
         </div>
         <script
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: generated readiness script
           dangerouslySetInnerHTML={{ __html: "window.__ready = true;" }}
         />
       </body>

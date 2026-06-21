@@ -1,6 +1,6 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { resolve } from "node:path";
-import { agentsDir, RotatingLog } from "./log.js";
+import { RotatingLog } from "./log.js";
 
 const root = process.env.NX_WORKSPACE_ROOT ?? process.cwd();
 const args = process.argv.slice(2);

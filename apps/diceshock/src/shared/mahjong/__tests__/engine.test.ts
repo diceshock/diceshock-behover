@@ -382,7 +382,6 @@ describe("engine", () => {
       expect(s.phase).toBe("playing");
       expect(s.players[0].currentPoints).toBe(35000);
     });
-
   });
 
   describe("store mode allows unregistered players", () => {

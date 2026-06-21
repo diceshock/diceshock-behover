@@ -55,7 +55,6 @@ export default function MarkdownEditor({
     ],
     content,
     onUpdate: ({ editor }) => {
-      // biome-ignore lint: tiptap-markdown extends editor.storage at runtime
       const md = (editor.storage as any).markdown.getMarkdown() as string;
       onChangeRef.current?.(md);
     },

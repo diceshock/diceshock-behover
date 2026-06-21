@@ -1,4 +1,4 @@
-import { animated, useSpring, useInView } from "@react-spring/web";
+import { animated, useInView, useSpring } from "@react-spring/web";
 import { useEffect, useRef } from "react";
 import dayjs from "@/shared/utils/dayjs-config";
 
@@ -88,4 +88,3 @@ const GameCountAnimation: React.FC<GameCountAnimationProps> = ({
 };
 
 export default GameCountAnimation;
-

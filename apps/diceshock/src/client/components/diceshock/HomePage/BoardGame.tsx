@@ -148,8 +148,7 @@ const BoardGame = () => {
 
         <div className="absolute -bottom-8 left-1/2 -translate-x-1/2">
           <Link
-            to="/$storeLocale/inventory"
-            params={(prev: any) => prev}
+            to="/{-$storeLocale}/inventory"
             className="btn btn-lg btn-primary"
           >
             查看库存 <ArrowRightIcon weight="bold" size={24} />

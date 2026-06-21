@@ -85,7 +85,7 @@ function RouteComponent() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { t } = useTranslation();
-  const { storeFilter } = useAdminStoreFilter();
+  useAdminStoreFilter();
   const [data, setData] = useState<OrdersList | null>(null);
   const [loading, setLoading] = useState(true);
   const [pricingSnapshot, setPricingSnapshot] = useState<SnapshotData | null>(
@@ -145,7 +145,7 @@ function RouteComponent() {
     } finally {
       setLoading(false);
     }
-  }, [status, sortBy, sortOrder, groupBy, page, storeFilter, msg]);
+  }, [status, sortBy, sortOrder, groupBy, page, msg, t]);
 
   useEffect(() => {
     void fetchOrders();
@@ -339,7 +339,7 @@ function RouteComponent() {
       groups.get(key)!.push(item);
     }
     return Array.from(groups.entries()).map(([key, items]) => ({ key, items }));
-  }, [items, groupBy]);
+  }, [items, groupBy, t]);
 
   const groupLabel = (key: string): string => {
     switch (groupBy) {

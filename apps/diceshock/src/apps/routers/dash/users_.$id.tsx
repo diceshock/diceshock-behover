@@ -29,8 +29,11 @@ import MembershipBadge, {
   type PlanType,
 } from "@/client/components/diceshock/MembershipBadge";
 import { useMsg } from "@/client/components/diceshock/Msg";
-import type { Wind } from "@/shared/mahjong/constants";
-import { WIND_LABELS } from "@/shared/mahjong/constants";
+import {
+  GSZ_DEFAULTS,
+  ORDERS_DEFAULTS,
+  USERS_DEFAULTS,
+} from "@/client/utils/dashSearchDefaults";
 import dayjs from "@/shared/utils/dayjs-config";
 import { formatPrice } from "@/shared/utils/pricing";
 import { trpcClientDash } from "@/shared/utils/trpc";
@@ -713,7 +716,11 @@ function UserDetailPage() {
     return (
       <main className="size-full flex flex-col items-center justify-center gap-4">
         <p className="text-base-content/60">用户不存在</p>
-        <Link to="/dash/users" className="btn btn-primary btn-sm">
+        <Link
+          to="/dash/users"
+          search={USERS_DEFAULTS}
+          className="btn btn-primary btn-sm"
+        >
           返回用户列表
         </Link>
       </main>
@@ -866,7 +873,12 @@ function UserDetailPage() {
                   <button
                     type="button"
                     className="btn btn-ghost"
-                    onClick={() => navigate({ to: "/dash/users" })}
+                    onClick={() =>
+                      navigate({
+                        to: "/dash/users",
+                        search: USERS_DEFAULTS,
+                      })
+                    }
                   >
                     取消
                   </button>
@@ -1263,6 +1275,7 @@ function UserDetailPage() {
                           </div>
                           <Link
                             to="/dash/gsz"
+                            search={GSZ_DEFAULTS}
                             className="btn btn-xs btn-ghost btn-primary shrink-0"
                           >
                             <EyeIcon className="size-3.5" />
@@ -1277,6 +1290,7 @@ function UserDetailPage() {
                     <h3 className="text-lg font-semibold">订单</h3>
                     <Link
                       to="/dash/orders"
+                      search={ORDERS_DEFAULTS}
                       className="btn btn-xs btn-ghost btn-primary"
                     >
                       查看全部订单
@@ -1292,174 +1306,166 @@ function UserDetailPage() {
                       该用户暂无订单
                     </div>
                   ) : (
-                    <>
-                      <div className="overflow-x-auto">
-                        <table className="table table-sm">
-                          <thead>
-                            <tr>
-                              <td className="w-10">
-                                <input
-                                  type="checkbox"
-                                  className="checkbox checkbox-sm"
-                                  checked={
-                                    sortedOccupancies.filter(
-                                      (o) => o.status !== "ended",
-                                    ).length > 0 &&
-                                    sortedOccupancies
-                                      .filter((o) => o.status !== "ended")
-                                      .every((o) => selectedOccIds.has(o.id))
+                    <div className="overflow-x-auto">
+                      <table className="table table-sm">
+                        <thead>
+                          <tr>
+                            <td className="w-10">
+                              <input
+                                type="checkbox"
+                                className="checkbox checkbox-sm"
+                                checked={
+                                  sortedOccupancies.filter(
+                                    (o) => o.status !== "ended",
+                                  ).length > 0 &&
+                                  sortedOccupancies
+                                    .filter((o) => o.status !== "ended")
+                                    .every((o) => selectedOccIds.has(o.id))
+                                }
+                                onChange={() => {
+                                  const nonEnded = sortedOccupancies
+                                    .filter((o) => o.status !== "ended")
+                                    .map((o) => o.id);
+                                  if (
+                                    nonEnded.every((oid) =>
+                                      selectedOccIds.has(oid),
+                                    )
+                                  ) {
+                                    setSelectedOccIds(new Set());
+                                  } else {
+                                    setSelectedOccIds(new Set(nonEnded));
                                   }
-                                  onChange={() => {
-                                    const nonEnded = sortedOccupancies
-                                      .filter((o) => o.status !== "ended")
-                                      .map((o) => o.id);
-                                    if (
-                                      nonEnded.every((oid) =>
-                                        selectedOccIds.has(oid),
-                                      )
-                                    ) {
-                                      setSelectedOccIds(new Set());
-                                    } else {
-                                      setSelectedOccIds(new Set(nonEnded));
-                                    }
-                                  }}
-                                />
-                              </td>
-                              <td>状态</td>
-                              <td>桌台</td>
-                              <td>开始时间</td>
-                              <td>时长</td>
-                              <td>费用</td>
-                              <th>操作</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {sortedOccupancies.map((occ) => {
-                              const start = dayjs(occ.start_at);
-                              const diffMin = dayjs().diff(start, "minute");
-                              const hours = Math.floor(diffMin / 60);
-                              const minutes = diffMin % 60;
-                              const durationStr =
-                                hours > 0
-                                  ? `${hours}h${minutes}m`
-                                  : `${minutes}m`;
+                                }}
+                              />
+                            </td>
+                            <td>状态</td>
+                            <td>桌台</td>
+                            <td>开始时间</td>
+                            <td>时长</td>
+                            <td>费用</td>
+                            <th>操作</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sortedOccupancies.map((occ) => {
+                            const start = dayjs(occ.start_at);
+                            const diffMin = dayjs().diff(start, "minute");
+                            const hours = Math.floor(diffMin / 60);
+                            const minutes = diffMin % 60;
+                            const durationStr =
+                              hours > 0
+                                ? `${hours}h${minutes}m`
+                                : `${minutes}m`;
 
-                              return (
-                                <tr key={occ.id}>
-                                  <td>
+                            return (
+                              <tr key={occ.id}>
+                                <td>
+                                  {occ.status !== "ended" && (
+                                    <input
+                                      type="checkbox"
+                                      className="checkbox checkbox-sm"
+                                      checked={selectedOccIds.has(occ.id)}
+                                      onChange={() => toggleOccSelect(occ.id)}
+                                    />
+                                  )}
+                                </td>
+                                <td>
+                                  {occ.status === "active" ? (
+                                    <span className="badge badge-success badge-sm">
+                                      进行中
+                                    </span>
+                                  ) : occ.status === "paused" ? (
+                                    <span className="badge badge-neutral badge-sm">
+                                      已暂停
+                                    </span>
+                                  ) : (
+                                    <span className="badge badge-ghost badge-sm">
+                                      已结束
+                                    </span>
+                                  )}
+                                </td>
+                                <td>
+                                  <Link
+                                    to="/dash/tables/$id"
+                                    params={{ id: occ.table_id }}
+                                    className="link link-hover"
+                                  >
+                                    {occ.table?.name ?? occ.table_id}
+                                  </Link>
+                                </td>
+                                <td className="text-sm">
+                                  {start.isValid()
+                                    ? start.format("MM/DD HH:mm")
+                                    : "—"}
+                                </td>
+                                <td className="text-sm">{durationStr}</td>
+                                <td className="font-mono text-sm">
+                                  {occ.final_price != null
+                                    ? formatPrice(occ.final_price)
+                                    : "—"}
+                                </td>
+                                <th>
+                                  <div className="flex items-center gap-1">
+                                    {occ.status === "active" && (
+                                      <button
+                                        type="button"
+                                        className="btn btn-xs btn-ghost"
+                                        onClick={() =>
+                                          void handlePauseOccOrder(occ.id)
+                                        }
+                                        disabled={orderActionPending === occ.id}
+                                      >
+                                        <PauseIcon className="size-3.5" />
+                                        暂停
+                                      </button>
+                                    )}
+                                    {occ.status === "paused" && (
+                                      <button
+                                        type="button"
+                                        className="btn btn-xs btn-ghost btn-success"
+                                        onClick={() =>
+                                          void handleResumeOccOrder(occ.id)
+                                        }
+                                        disabled={orderActionPending === occ.id}
+                                      >
+                                        <PlayIcon className="size-3.5" />
+                                        继续
+                                      </button>
+                                    )}
                                     {occ.status !== "ended" && (
-                                      <input
-                                        type="checkbox"
-                                        className="checkbox checkbox-sm"
-                                        checked={selectedOccIds.has(occ.id)}
-                                        onChange={() => toggleOccSelect(occ.id)}
-                                      />
+                                      <button
+                                        type="button"
+                                        className="btn btn-xs btn-ghost btn-error"
+                                        onClick={() =>
+                                          void handleEndOccOrder(
+                                            occ.id,
+                                            occ.status,
+                                          )
+                                        }
+                                        disabled={orderActionPending === occ.id}
+                                      >
+                                        <StopIcon className="size-3.5" />
+                                        终止
+                                      </button>
                                     )}
-                                  </td>
-                                  <td>
-                                    {occ.status === "active" ? (
-                                      <span className="badge badge-success badge-sm">
-                                        进行中
-                                      </span>
-                                    ) : occ.status === "paused" ? (
-                                      <span className="badge badge-neutral badge-sm">
-                                        已暂停
-                                      </span>
-                                    ) : (
-                                      <span className="badge badge-ghost badge-sm">
-                                        已结束
-                                      </span>
+                                    {occ.status === "ended" && (
+                                      <Link
+                                        to="/dash/orders/settle"
+                                        search={{ ids: [occ.id] }}
+                                        className="btn btn-xs btn-ghost"
+                                      >
+                                        <EyeIcon className="size-3.5" />
+                                        详情
+                                      </Link>
                                     )}
-                                  </td>
-                                  <td>
-                                    <Link
-                                      to="/dash/tables/$id"
-                                      params={{ id: occ.table_id }}
-                                      className="link link-hover"
-                                    >
-                                      {occ.table?.name ?? occ.table_id}
-                                    </Link>
-                                  </td>
-                                  <td className="text-sm">
-                                    {start.isValid()
-                                      ? start.format("MM/DD HH:mm")
-                                      : "—"}
-                                  </td>
-                                  <td className="text-sm">{durationStr}</td>
-                                  <td className="font-mono text-sm">
-                                    {occ.final_price != null
-                                      ? formatPrice(occ.final_price)
-                                      : "—"}
-                                  </td>
-                                  <th>
-                                    <div className="flex items-center gap-1">
-                                      {occ.status === "active" && (
-                                        <button
-                                          type="button"
-                                          className="btn btn-xs btn-ghost"
-                                          onClick={() =>
-                                            void handlePauseOccOrder(occ.id)
-                                          }
-                                          disabled={
-                                            orderActionPending === occ.id
-                                          }
-                                        >
-                                          <PauseIcon className="size-3.5" />
-                                          暂停
-                                        </button>
-                                      )}
-                                      {occ.status === "paused" && (
-                                        <button
-                                          type="button"
-                                          className="btn btn-xs btn-ghost btn-success"
-                                          onClick={() =>
-                                            void handleResumeOccOrder(occ.id)
-                                          }
-                                          disabled={
-                                            orderActionPending === occ.id
-                                          }
-                                        >
-                                          <PlayIcon className="size-3.5" />
-                                          继续
-                                        </button>
-                                      )}
-                                      {occ.status !== "ended" && (
-                                        <button
-                                          type="button"
-                                          className="btn btn-xs btn-ghost btn-error"
-                                          onClick={() =>
-                                            void handleEndOccOrder(
-                                              occ.id,
-                                              occ.status,
-                                            )
-                                          }
-                                          disabled={
-                                            orderActionPending === occ.id
-                                          }
-                                        >
-                                          <StopIcon className="size-3.5" />
-                                          终止
-                                        </button>
-                                      )}
-                                      {occ.status === "ended" && (
-                                        <Link
-                                          to="/dash/orders/settle"
-                                          search={{ ids: [occ.id] }}
-                                          className="btn btn-xs btn-ghost"
-                                        >
-                                          <EyeIcon className="size-3.5" />
-                                          详情
-                                        </Link>
-                                      )}
-                                    </div>
-                                  </th>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </>
+                                  </div>
+                                </th>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   )}
                 </div>
               );

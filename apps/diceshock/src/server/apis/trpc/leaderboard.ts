@@ -1,4 +1,4 @@
-import db, { leaderboardSnapshotsTable, userBadgesTable } from "@lib/db";
+import db from "@lib/db";
 import z from "zod/v4";
 import type { PPCategory } from "@/shared/mahjong/pp";
 import { aggregatePP, PP_CATEGORY_LABELS } from "@/shared/mahjong/pp";

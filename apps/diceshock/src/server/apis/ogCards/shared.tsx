@@ -144,11 +144,13 @@ export function CardShell({ children }: PropsWithChildren) {
     <html>
       <head>
         <meta charSet="utf-8" />
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: generated card CSS */}
         <style dangerouslySetInnerHTML={{ __html: CARD_SHELL_CSS }} />
       </head>
       <body>
         {children}
         <script
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: generated readiness script
           dangerouslySetInnerHTML={{ __html: "window.__ready = true;" }}
         />
       </body>

@@ -1,6 +1,6 @@
 import { getAuthUser } from "@hono/auth-js";
 import { trpcServer } from "@hono/trpc-server";
-import db, { userInfoTable } from "@lib/db";
+import db from "@lib/db";
 import { appRouterPublic } from "../apis/trpc";
 
 const trpcServerPublic = trpcServer({

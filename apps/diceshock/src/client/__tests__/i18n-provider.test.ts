@@ -1,10 +1,15 @@
-import { createElement } from "react";
+import { createElement, type ReactNode } from "react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import type { LocaleCode } from "@/shared/store-locale";
 import { injectCrossDataZ } from "@/shared/types";
 import { StoreProvider, useStoreContext } from "../hooks/useStoreContext";
 import { useTranslation } from "../hooks/useTranslation";
 import { I18nProvider } from "../providers/I18nProvider";
+
+type I18nProviderProps = Parameters<typeof I18nProvider>[0];
+type StoreProviderProps = Parameters<typeof StoreProvider>[0];
+const requiredChildren: ReactNode = null;
 
 function TranslationProbe() {
   const { locale, t } = useTranslation();
@@ -21,7 +26,7 @@ describe("I18nProvider", () => {
     const html = renderToString(
       createElement(
         I18nProvider,
-        { locale: "en" },
+        { locale: "en", children: requiredChildren } as I18nProviderProps,
         createElement(TranslationProbe),
       ),
     );
@@ -34,7 +39,7 @@ describe("I18nProvider", () => {
     const html = renderToString(
       createElement(
         StoreProvider,
-        { storeCode: "jdk" },
+        { storeCode: "jdk", children: requiredChildren } as StoreProviderProps,
         createElement(StoreProbe),
       ),
     );
@@ -51,10 +56,13 @@ describe("I18nProvider", () => {
     });
     const app = createElement(
       StoreProvider,
-      { storeCode: "gg" },
+      { storeCode: "gg", children: requiredChildren } as StoreProviderProps,
       createElement(
         I18nProvider,
-        { locale: crossData.LocaleCode },
+        {
+          locale: crossData.LocaleCode as LocaleCode | undefined,
+          children: requiredChildren,
+        } as I18nProviderProps,
         createElement(TranslationProbe),
       ),
     );

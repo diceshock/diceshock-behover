@@ -69,7 +69,7 @@ function RouteComponent() {
 
   const progress = useMemo(() => {
     if (!stats) return 0;
-    return Math.min(100, (stats.next_id / stats.estimated_max) * 100);
+    return Math.min(100, (stats.max_id / stats.estimated_max) * 100);
   }, [stats]);
 
   const handleReset = async () => {
@@ -126,31 +126,26 @@ function RouteComponent() {
           </div>
         ) : (
           <>
-            <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <section className="grid grid-cols-1 sm:grid-cols-2                     lg:grid-cols-4 gap-4">
               <StatCard
                 icon={<DatabaseIcon className="size-6 text-primary" />}
                 label="已入库游戏"
-                value={stats?.total_games ?? 0}
+                value={stats?.total ?? 0}
               />
               <StatCard
                 icon={<ListMagnifyingGlassIcon className="size-6 text-info" />}
                 label="下一个 ID"
-                value={`${stats?.next_id ?? 1} / ${stats?.estimated_max ?? 50000}`}
+                value={`${stats?.max_id ?? 1} / ${stats?.estimated_max ?? 50000}`}
               />
               <StatCard
                 icon={<WarningCircleIcon className="size-6 text-error" />}
                 label="爬取错误"
-                value={stats?.unresolved_errors ?? 0}
+                value={stats?.errors ?? 0}
               />
               <StatCard
                 icon={<ImageSquareIcon className="size-6 text-success" />}
                 label="已缓存封面"
-                value={stats?.cached_images ?? 0}
-              />
-              <StatCard
-                icon={<WarningCircleIcon className="size-6 text-warning" />}
-                label="图片失败"
-                value={stats?.image_errors ?? 0}
+                value={stats?.images_cached ?? 0}
               />
             </section>
 
@@ -158,9 +153,7 @@ function RouteComponent() {
               <div className="card-body p-4 space-y-3">
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="font-bold">爬取进度</h2>
-                  <span className="text-sm text-base-content/60">
-                    最近处理：{formatTime(stats?.last_crawl_at)}
-                  </span>
+                  <span className="text-sm text-base-content/60"></span>
                 </div>
                 <progress
                   className="progress progress-primary w-full"
@@ -168,9 +161,14 @@ function RouteComponent() {
                   max={100}
                 />
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-base-content/70">
-                  <span>成功：{stats?.total_crawled ?? 0}</span>
-                  <span>跳过：{stats?.total_skipped ?? 0}</span>
-                  <span>错误：{stats?.total_errors ?? 0}</span>
+                  <span>成功：{stats?.crawled ?? 0}</span>
+                  <span>
+                    跳过：
+                    {stats != null
+                      ? stats.total - stats.crawled - stats.errors
+                      : 0}
+                  </span>
+                  <span>错误：{stats?.errors ?? 0}</span>
                 </div>
               </div>
             </section>
@@ -198,12 +196,12 @@ function RouteComponent() {
                       </thead>
                       <tbody>
                         {errors.map((error) => (
-                          <tr key={error.id}>
-                            <td>{error.id}</td>
+                          <tr key={error.gstone_id}>
+                            <td>{error.gstone_id}</td>
                             <td>{error.gstone_id}</td>
                             <td className="max-w-xl truncate">{error.error}</td>
                             <td>{error.retry_count}</td>
-                            <td>{formatTime(error.created_at)}</td>
+                            <td>{formatTime(error.updated_at)}</td>
                           </tr>
                         ))}
                       </tbody>

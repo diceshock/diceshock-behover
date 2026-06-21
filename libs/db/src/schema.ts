@@ -539,6 +539,7 @@ export const tempIdentitiesTable = sqlite.sqliteTable("temp_identities", {
   created_at: sqlite
     .integer("created_at", { mode: "timestamp_ms" })
     .$defaultFn(() => new Date(Date.now())),
+  expires_at: sqlite.integer("expires_at", { mode: "timestamp_ms" }),
 });
 
 export const wechatConversationRoles = ["user", "assistant", "tool"] as const;

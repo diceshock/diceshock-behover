@@ -20,7 +20,7 @@ function WechatQREmbed({ onFallback }: { onFallback: () => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [appId, setAppId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [key, setKey] = useState(0);
+  const [_key, setKey] = useState(0);
 
   useEffect(() => {
     trpcClientPublic.settings.getWechatOpenConfig
@@ -54,7 +54,7 @@ function WechatQREmbed({ onFallback }: { onFallback: () => void }) {
 
     containerRef.current.innerHTML = "";
     containerRef.current.appendChild(iframe);
-  }, [appId, key]);
+  }, [appId]);
 
   if (loading) {
     return (
@@ -94,7 +94,7 @@ export default function LoginDialog({
   isSeatPage?: boolean;
 }) {
   const isInWechat = useMemo(() => isWechatBrowser(), []);
-  const { t, locale } = useTranslation();
+  const { t } = useTranslation();
 
   const [activeTab, setActiveTab] = useState<"wechat" | "phonenumber">(
     isInWechat ? "phonenumber" : "wechat",
@@ -178,7 +178,7 @@ export default function LoginDialog({
       );
       console.error(`Login failed: ${result?.error ?? "unknown"}`);
     },
-    [phone, smsForm.code, setError, isSeatPage],
+    [phone, smsForm.code, setError, isSeatPage, t],
   );
 
   const handleWechatLogin = useCallback(() => {
@@ -216,7 +216,7 @@ export default function LoginDialog({
     } finally {
       setCreatingTemp(false);
     }
-  }, [createTempIdentity, onClose, setError]);
+  }, [createTempIdentity, onClose, setError, t]);
 
   const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
 

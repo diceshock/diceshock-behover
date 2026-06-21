@@ -133,7 +133,14 @@ describe("storeLocaleMiddleware", () => {
 
   it("prefers user locale over Accept-Language header", async () => {
     const res = await createTestApp({
-      UserAgentMeta: { language: "ja" },
+      UserAgentMeta: {
+        language: "ja",
+        os: "other" as const,
+        browser: "chrome" as const,
+        userAgent: "test",
+        ip: "127.0.0.1",
+        timestamp: Date.now(),
+      },
       UserInfo: {
         uid: "user-1",
         nickname: "Alice",

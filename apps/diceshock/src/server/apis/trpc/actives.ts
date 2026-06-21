@@ -1,9 +1,4 @@
-import db, {
-  activeRegistrationsTable,
-  activesTable,
-  boardGamesTable,
-  drizzle,
-} from "@lib/db";
+import db, { activeRegistrationsTable, activesTable, drizzle } from "@lib/db";
 import { z } from "zod/v4";
 import dayjs from "@/shared/utils/dayjs-config";
 import { protectedProcedure, publicProcedure } from "./baseTRPC";

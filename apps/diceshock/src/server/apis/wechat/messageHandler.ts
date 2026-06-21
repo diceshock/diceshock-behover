@@ -22,7 +22,6 @@ import {
   saveMessage,
 } from "./conversationContext";
 import { chatWithAgent } from "./deepseekClient";
-import { generateAndSendMembershipCard } from "./membershipCard";
 import { addMemory, deleteAllMemories, searchMemory } from "./memory";
 import { dispatchMessages, parseAgentOutput } from "./messagePipeline";
 import { checkRateLimit, recordTokenUsage } from "./rateLimit";

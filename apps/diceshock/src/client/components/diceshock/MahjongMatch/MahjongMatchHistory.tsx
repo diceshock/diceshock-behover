@@ -398,7 +398,7 @@ export default function MahjongMatchHistory() {
                   {me && (
                     <span className="text-xs text-base-content/60 shrink-0">
                       {me.seat
-                        ? (SEAT_LABELS[me.seat as Seat] ?? me.seat) + "家"
+                        ? `${SEAT_LABELS[me.seat as Seat] ?? me.seat}家`
                         : ""}
                     </span>
                   )}

@@ -258,6 +258,7 @@ function RouteComponent() {
     displayInfo?.preferred_locale,
     displayInfo?.preferred_store_id,
     ssrUserInfo,
+    displayInfo,
   ]);
 
   const {
@@ -338,7 +339,7 @@ function RouteComponent() {
         setIsLoading(false);
       }
     },
-    [nickname, userInfo?.nickname, setUserInfoIm, messages],
+    [nickname, userInfo?.nickname, setUserInfoIm, messages, t],
   );
 
   const handleCopyUid = useCallback(async () => {
@@ -354,7 +355,7 @@ function RouteComponent() {
     } else {
       messages.error(t("me.copyFailed"));
     }
-  }, [displayInfo?.uid, messages]);
+  }, [displayInfo?.uid, messages, t]);
 
   const handleEditPhoneClick = useCallback(() => {
     setPhone("");
@@ -380,7 +381,7 @@ function RouteComponent() {
         return;
       }
 
-      if (!smsForm.code || smsForm.code.length !== 6) {
+      if (smsForm.code?.length !== 6) {
         messages.error(t("me.codeRequired"));
         return;
       }
@@ -424,7 +425,7 @@ function RouteComponent() {
         setIsLoadingPhone(false);
       }
     },
-    [phone, smsForm.code, setUserInfoIm, messages, handleClosePhone],
+    [phone, smsForm.code, setUserInfoIm, messages, handleClosePhone, t],
   );
 
   const handleSavePreferences = useCallback(async () => {

@@ -6,7 +6,7 @@ import Msg from "@/client/components/diceshock/Msg";
 import useCrossData from "@/client/hooks/useCrossData";
 
 export const Route = createFileRoute("/{-$storeLocale}/_with-home-lo")({
-  component: _Home,
+  component: HomeLayout,
 });
 
 function WechatFooter() {
@@ -26,7 +26,7 @@ function WechatFooter() {
   );
 }
 
-function _Home() {
+function HomeLayout() {
   const location = useLocation();
   const crossData = useCrossData();
   const isInWechat = useMemo(() => {
@@ -40,7 +40,7 @@ function _Home() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [location.pathname]);
+  }, []);
 
   return (
     <>

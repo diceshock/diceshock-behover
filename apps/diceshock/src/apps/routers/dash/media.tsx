@@ -161,7 +161,7 @@ function RouteComponent() {
     } finally {
       setLoading(false);
     }
-  }, [msg]);
+  }, [msg, t]);
 
   useEffect(() => {
     void fetchItems();
@@ -222,7 +222,7 @@ function RouteComponent() {
         void fetchItems();
       }
     },
-    [fetchItems, msg],
+    [fetchItems, msg, t],
   );
 
   const handleDrop = useCallback(
@@ -255,7 +255,7 @@ function RouteComponent() {
         msg.error(t("dashMedia.clipboardDenied"));
       }
     },
-    [msg],
+    [msg, t],
   );
 
   const openRenameDialog = useCallback((item: MediaItem) => {
@@ -283,7 +283,7 @@ function RouteComponent() {
     } finally {
       setRenamePending(false);
     }
-  }, [pendingRename, renameValue, fetchItems, msg]);
+  }, [pendingRename, renameValue, fetchItems, msg, t]);
 
   const openDeleteDialog = useCallback((item: MediaItem) => {
     setPendingDelete(item);
@@ -308,7 +308,7 @@ function RouteComponent() {
     } finally {
       setDeletePending(false);
     }
-  }, [pendingDelete, fetchItems, msg]);
+  }, [pendingDelete, fetchItems, msg, t]);
 
   return (
     <main className="size-full flex flex-col">

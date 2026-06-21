@@ -1,4 +1,4 @@
-import db, { eventsTable } from "@lib/db";
+import db from "@lib/db";
 import { publicProcedure, unwrapInput } from "./baseTRPC";
 
 const list = publicProcedure.query(async ({ ctx }) => {

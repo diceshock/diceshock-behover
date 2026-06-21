@@ -26,8 +26,11 @@ import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import useSeatTimer from "@/client/hooks/useSeatTimer";
-import type { Wind } from "@/shared/mahjong/constants";
-import { WIND_LABELS } from "@/shared/mahjong/constants";
+import {
+  GSZ_DEFAULTS,
+  ORDERS_DEFAULTS,
+  TABLES_DEFAULTS,
+} from "@/client/utils/dashSearchDefaults";
 import dayjs from "@/shared/utils/dayjs-config";
 import { formatPrice } from "@/shared/utils/pricing";
 import { trpcClientDash } from "@/shared/utils/trpc";
@@ -76,7 +79,7 @@ export const Route = createFileRoute("/dash/tables_/$id")({
   component: TableDetailPage,
 });
 
-function formatDuration(startAt: unknown): string {
+function _formatDuration(startAt: unknown): string {
   if (!startAt) return "—";
   const start = dayjs(startAt as string | number | Date);
   if (!start.isValid()) return "—";
@@ -239,7 +242,7 @@ function TableDetailPage() {
   useEffect(() => {
     if (!wsState?.occupancies || !table) return;
     void fetchTable();
-  }, [wsState?.occupancies]);
+  }, [wsState?.occupancies, table, fetchTable]);
 
   const handleBasicSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -372,7 +375,11 @@ function TableDetailPage() {
     return (
       <main className="size-full flex flex-col items-center justify-center gap-4">
         <p className="text-base-content/60">桌台不存在</p>
-        <Link to="/dash/tables" className="btn btn-primary btn-sm">
+        <Link
+          to="/dash/tables"
+          search={TABLES_DEFAULTS}
+          className="btn btn-primary btn-sm"
+        >
           返回桌台列表
         </Link>
       </main>
@@ -551,7 +558,12 @@ function TableDetailPage() {
                 <button
                   type="button"
                   className="btn btn-ghost"
-                  onClick={() => navigate({ to: "/dash/tables" })}
+                  onClick={() =>
+                    navigate({
+                      to: "/dash/tables",
+                      search: TABLES_DEFAULTS,
+                    })
+                  }
                 >
                   取消
                 </button>
@@ -627,6 +639,7 @@ function TableDetailPage() {
                         </div>
                         <Link
                           to="/dash/gsz"
+                          search={GSZ_DEFAULTS}
                           className="btn btn-xs btn-ghost btn-primary shrink-0"
                         >
                           <EyeIcon className="size-3.5" />
@@ -647,6 +660,7 @@ function TableDetailPage() {
                     <div className="flex items-center gap-2">
                       <Link
                         to="/dash/orders"
+                        search={ORDERS_DEFAULTS}
                         className="btn btn-xs btn-ghost btn-primary"
                       >
                         查看全部订单
@@ -670,170 +684,168 @@ function TableDetailPage() {
                       该桌台暂无订单
                     </div>
                   ) : (
-                    <>
-                      <div className="overflow-x-auto">
-                        <table className="table table-sm">
-                          <thead>
-                            <tr>
-                              <td className="w-10">
-                                <input
-                                  type="checkbox"
-                                  className="checkbox checkbox-sm"
-                                  checked={
-                                    sortedOccupancies.filter(
-                                      (o) => o.status !== "ended",
-                                    ).length > 0 &&
-                                    sortedOccupancies
-                                      .filter((o) => o.status !== "ended")
-                                      .every((o) => selectedOccIds.has(o.id))
+                    <div className="overflow-x-auto">
+                      <table className="table table-sm">
+                        <thead>
+                          <tr>
+                            <td className="w-10">
+                              <input
+                                type="checkbox"
+                                className="checkbox checkbox-sm"
+                                checked={
+                                  sortedOccupancies.filter(
+                                    (o) => o.status !== "ended",
+                                  ).length > 0 &&
+                                  sortedOccupancies
+                                    .filter((o) => o.status !== "ended")
+                                    .every((o) => selectedOccIds.has(o.id))
+                                }
+                                onChange={() => {
+                                  const nonEnded = sortedOccupancies
+                                    .filter((o) => o.status !== "ended")
+                                    .map((o) => o.id);
+                                  if (
+                                    nonEnded.every((oid) =>
+                                      selectedOccIds.has(oid),
+                                    )
+                                  ) {
+                                    setSelectedOccIds(new Set());
+                                  } else {
+                                    setSelectedOccIds(new Set(nonEnded));
                                   }
-                                  onChange={() => {
-                                    const nonEnded = sortedOccupancies
-                                      .filter((o) => o.status !== "ended")
-                                      .map((o) => o.id);
-                                    if (
-                                      nonEnded.every((oid) =>
-                                        selectedOccIds.has(oid),
-                                      )
-                                    ) {
-                                      setSelectedOccIds(new Set());
-                                    } else {
-                                      setSelectedOccIds(new Set(nonEnded));
-                                    }
-                                  }}
-                                />
-                              </td>
-                              <td>状态</td>
-                              <td>用户</td>
-                              <td>开始时间</td>
-                              <td>时长</td>
-                              <td>费用</td>
-                              <th>操作</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {sortedOccupancies.map((occ) => {
-                              const start = dayjs(occ.start_at);
-                              const diffMin = dayjs().diff(start, "minute");
-                              const hours = Math.floor(diffMin / 60);
-                              const minutes = diffMin % 60;
-                              const durationStr =
-                                hours > 0
-                                  ? `${hours}h${minutes}m`
-                                  : `${minutes}m`;
+                                }}
+                              />
+                            </td>
+                            <td>状态</td>
+                            <td>用户</td>
+                            <td>开始时间</td>
+                            <td>时长</td>
+                            <td>费用</td>
+                            <th>操作</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sortedOccupancies.map((occ) => {
+                            const start = dayjs(occ.start_at);
+                            const diffMin = dayjs().diff(start, "minute");
+                            const hours = Math.floor(diffMin / 60);
+                            const minutes = diffMin % 60;
+                            const durationStr =
+                              hours > 0
+                                ? `${hours}h${minutes}m`
+                                : `${minutes}m`;
 
-                              return (
-                                <tr key={occ.id}>
-                                  <td>
+                            return (
+                              <tr key={occ.id}>
+                                <td>
+                                  {occ.status !== "ended" && (
+                                    <input
+                                      type="checkbox"
+                                      className="checkbox checkbox-sm"
+                                      checked={selectedOccIds.has(occ.id)}
+                                      onChange={() => toggleOccSelect(occ.id)}
+                                    />
+                                  )}
+                                </td>
+                                <td>
+                                  {occ.status === "active" ? (
+                                    <span className="badge badge-success badge-sm">
+                                      进行中
+                                    </span>
+                                  ) : occ.status === "paused" ? (
+                                    <span className="badge badge-neutral badge-sm">
+                                      已暂停
+                                    </span>
+                                  ) : (
+                                    <span className="badge badge-ghost badge-sm">
+                                      已结束
+                                    </span>
+                                  )}
+                                </td>
+                                <td>
+                                  <Link
+                                    to="/dash/users/$id"
+                                    params={{ id: occ.user_id ?? "" }}
+                                    className="link link-hover"
+                                  >
+                                    {occ.nickname}
+                                  </Link>
+                                  {occ.uid && (
+                                    <span className="text-xs text-base-content/60 ml-1">
+                                      UID: {occ.uid}
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="text-sm">
+                                  {start.isValid()
+                                    ? start.format("MM/DD HH:mm")
+                                    : "—"}
+                                </td>
+                                <td className="text-sm">{durationStr}</td>
+                                <td className="font-mono text-sm">
+                                  {occ.final_price != null
+                                    ? formatPrice(occ.final_price)
+                                    : "—"}
+                                </td>
+                                <th>
+                                  <div className="flex items-center gap-1">
+                                    {occ.status === "active" && (
+                                      <button
+                                        type="button"
+                                        className="btn btn-xs btn-ghost"
+                                        onClick={() =>
+                                          void handlePauseOrder(occ.id)
+                                        }
+                                        disabled={orderActionPending}
+                                      >
+                                        <PauseIcon className="size-3.5" />
+                                        暂停
+                                      </button>
+                                    )}
+                                    {occ.status === "paused" && (
+                                      <button
+                                        type="button"
+                                        className="btn btn-xs btn-ghost btn-success"
+                                        onClick={() =>
+                                          void handleResumeOrder(occ.id)
+                                        }
+                                        disabled={orderActionPending}
+                                      >
+                                        <PlayIcon className="size-3.5" />
+                                        继续
+                                      </button>
+                                    )}
                                     {occ.status !== "ended" && (
-                                      <input
-                                        type="checkbox"
-                                        className="checkbox checkbox-sm"
-                                        checked={selectedOccIds.has(occ.id)}
-                                        onChange={() => toggleOccSelect(occ.id)}
-                                      />
+                                      <button
+                                        type="button"
+                                        className="btn btn-xs btn-ghost btn-error"
+                                        onClick={() =>
+                                          void handleNavigateToSettle(occ)
+                                        }
+                                        disabled={orderActionPending}
+                                      >
+                                        <StopIcon className="size-3.5" />
+                                        终止
+                                      </button>
                                     )}
-                                  </td>
-                                  <td>
-                                    {occ.status === "active" ? (
-                                      <span className="badge badge-success badge-sm">
-                                        进行中
-                                      </span>
-                                    ) : occ.status === "paused" ? (
-                                      <span className="badge badge-neutral badge-sm">
-                                        已暂停
-                                      </span>
-                                    ) : (
-                                      <span className="badge badge-ghost badge-sm">
-                                        已结束
-                                      </span>
+                                    {occ.status === "ended" && (
+                                      <Link
+                                        to="/dash/orders/settle"
+                                        search={{ ids: [occ.id] }}
+                                        className="btn btn-xs btn-ghost"
+                                      >
+                                        <EyeIcon className="size-3.5" />
+                                        详情
+                                      </Link>
                                     )}
-                                  </td>
-                                  <td>
-                                    <Link
-                                      to="/dash/users/$id"
-                                      params={{ id: occ.user_id ?? "" }}
-                                      className="link link-hover"
-                                    >
-                                      {occ.nickname}
-                                    </Link>
-                                    {occ.uid && (
-                                      <span className="text-xs text-base-content/60 ml-1">
-                                        UID: {occ.uid}
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td className="text-sm">
-                                    {start.isValid()
-                                      ? start.format("MM/DD HH:mm")
-                                      : "—"}
-                                  </td>
-                                  <td className="text-sm">{durationStr}</td>
-                                  <td className="font-mono text-sm">
-                                    {occ.final_price != null
-                                      ? formatPrice(occ.final_price)
-                                      : "—"}
-                                  </td>
-                                  <th>
-                                    <div className="flex items-center gap-1">
-                                      {occ.status === "active" && (
-                                        <button
-                                          type="button"
-                                          className="btn btn-xs btn-ghost"
-                                          onClick={() =>
-                                            void handlePauseOrder(occ.id)
-                                          }
-                                          disabled={orderActionPending}
-                                        >
-                                          <PauseIcon className="size-3.5" />
-                                          暂停
-                                        </button>
-                                      )}
-                                      {occ.status === "paused" && (
-                                        <button
-                                          type="button"
-                                          className="btn btn-xs btn-ghost btn-success"
-                                          onClick={() =>
-                                            void handleResumeOrder(occ.id)
-                                          }
-                                          disabled={orderActionPending}
-                                        >
-                                          <PlayIcon className="size-3.5" />
-                                          继续
-                                        </button>
-                                      )}
-                                      {occ.status !== "ended" && (
-                                        <button
-                                          type="button"
-                                          className="btn btn-xs btn-ghost btn-error"
-                                          onClick={() =>
-                                            void handleNavigateToSettle(occ)
-                                          }
-                                          disabled={orderActionPending}
-                                        >
-                                          <StopIcon className="size-3.5" />
-                                          终止
-                                        </button>
-                                      )}
-                                      {occ.status === "ended" && (
-                                        <Link
-                                          to="/dash/orders/settle"
-                                          search={{ ids: [occ.id] }}
-                                          className="btn btn-xs btn-ghost"
-                                        >
-                                          <EyeIcon className="size-3.5" />
-                                          详情
-                                        </Link>
-                                      )}
-                                    </div>
-                                  </th>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </>
+                                  </div>
+                                </th>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   )}
                 </div>
               );
@@ -1227,7 +1239,7 @@ function QrCodeTab({
     const pageH = pdfHeight + margin * 2;
 
     let pdf = `%PDF-1.4\n`;
-    const objects: string[] = [];
+    const _objects: string[] = [];
     let objCount = 0;
     const offsets: number[] = [];
 
@@ -1294,7 +1306,7 @@ function QrCodeTab({
     const xrefStart = headerBytes.length + jpegArr.length + footerBytes.length;
     binOffsets.push(pdfBinary.length);
 
-    const xref = `xref\n0 ${binObjCount + 2}\n0000000000 65535 f \n${binOffsets.map((o) => String(o).padStart(10, "0") + " 00000 n \n").join("")}\ntrailer\n<< /Size ${binObjCount + 2} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+    const xref = `xref\n0 ${binObjCount + 2}\n0000000000 65535 f \n${binOffsets.map((o) => `${String(o).padStart(10, "0")} 00000 n \n`).join("")}\ntrailer\n<< /Size ${binObjCount + 2} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
 
     const xrefBytes = encoder.encode(xref);
 

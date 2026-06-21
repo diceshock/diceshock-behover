@@ -687,7 +687,7 @@ async function handleSendSmsCode(
 async function handleVerifyPhone(
   env: MutateEnv,
   userId: string,
-  openId: string,
+  _openId: string,
   params: Record<string, unknown>,
 ): Promise<string> {
   const kv = env.KV;
@@ -815,7 +815,7 @@ async function handleBindGsz(
       }
     }
     gszSynced = gszId !== null;
-  } catch (e) {
+  } catch (_e) {
     gszError = "公式战系统暂时不可用";
   }
 

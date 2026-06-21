@@ -1,4 +1,3 @@
-import type { BoardGame } from "@lib/db";
 import { useInView } from "@react-spring/web";
 import clsx from "clsx";
 import { useAtomValue } from "jotai";

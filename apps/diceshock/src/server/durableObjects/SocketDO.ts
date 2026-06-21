@@ -3,10 +3,7 @@ import db, { mahjongMatchesTable } from "@lib/db";
 import { eq } from "drizzle-orm";
 import { gszFetch } from "@/server/apis/trpc/gszApi";
 import { queueNotification } from "@/server/apis/wechat/templateMessage";
-import {
-  fetchTableStateForDO,
-  fetchTableStateForDOByCode,
-} from "@/server/utils/seatTimer";
+import { fetchTableStateForDOByCode } from "@/server/utils/seatTimer";
 import type { Seat } from "@/shared/mahjong/constants";
 import { COUNTDOWN_SECONDS } from "@/shared/mahjong/constants";
 import * as engine from "@/shared/mahjong/engine";
@@ -101,10 +98,6 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
 
   private sseClients = new Map<string, SSEClient>();
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
-
-  constructor(ctx: DurableObjectState, env: Cloudflare.Env) {
-    super(ctx, env);
-  }
 
   private ensureHeartbeat(): void {
     if (this.heartbeatInterval) return;
@@ -311,7 +304,7 @@ export class SocketDO extends DurableObject<Cloudflare.Env> {
   }
 
   private async saveMatchToDB(): Promise<void> {
-    if (!this.mahjongState || this.mahjongState.phase !== "ended") return;
+    if (this.mahjongState?.phase !== "ended") return;
     const result = engine.serializeForDB(this.mahjongState);
     if (!result) return;
 

@@ -62,11 +62,14 @@ function StoreLocaleDropdown({ isOpen, onClose }: StoreLocaleDropdownProps) {
     return segments.length > 1 ? segments.slice(1).join("/") : "";
   }, [location.pathname]);
 
-  const navigateTo = (store: StoreCode, loc: LocaleCode) => {
-    const rest = getRestOfPath();
-    const prefix = buildStoreLocalePrefix(store, loc);
-    window.location.href = `/${prefix}/${rest}`;
-  };
+  const navigateTo = useCallback(
+    (store: StoreCode, loc: LocaleCode) => {
+      const rest = getRestOfPath();
+      const prefix = buildStoreLocalePrefix(store, loc);
+      window.location.href = `/${prefix}/${rest}`;
+    },
+    [getRestOfPath],
+  );
 
   const navigateHome = () => {
     const prefix = buildStoreLocalePrefix(storeCode, locale);
@@ -77,7 +80,7 @@ function StoreLocaleDropdown({ isOpen, onClose }: StoreLocaleDropdownProps) {
     (loc: LocaleCode) => {
       navigateTo(storeCode, loc);
     },
-    [storeCode, getRestOfPath],
+    [storeCode, navigateTo],
   );
 
   if (!isOpen) return null;

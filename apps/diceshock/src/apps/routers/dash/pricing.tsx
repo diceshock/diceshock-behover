@@ -198,8 +198,8 @@ const EMPTY_DATA: SnapshotData = {
 function PricingPage() {
   const msg = useMsg();
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const { storeFilter } = useAdminStoreFilter();
+  const _navigate = useNavigate();
+  useAdminStoreFilter();
 
   const [data, setData] = useAtom(pricingDataAtom);
   const [savedData, setSavedData] = useState<SnapshotData>(EMPTY_DATA);
@@ -231,7 +231,7 @@ function PricingPage() {
     } finally {
       setLoading(false);
     }
-  }, [storeFilter, msg, t]);
+  }, [msg, t, setData]);
 
   useEffect(() => {
     void refreshData();
@@ -383,8 +383,22 @@ function PricingPage() {
     }
     setSavePending(true);
     try {
+      const savePlans = effectiveData.plans.map((p) => ({
+        plan_type: p.plan_type,
+        name: p.name,
+        sort_order: p.sort_order,
+        enabled: p.enabled,
+        conditions: p.conditions ?? null,
+        billing_type: p.billing_type,
+        price: p.price,
+        cap_enabled: p.cap_enabled,
+        cap_unit: p.cap_unit,
+        cap_price: p.cap_price,
+        cap_price_day: p.cap_price_day,
+        cap_price_night: p.cap_price_night,
+      }));
       const result = await trpcClientDash.pricingPlansManagement.save.mutate({
-        data: effectiveData,
+        data: { config: effectiveData.config, plans: savePlans },
         name: snapshotName.trim(),
       });
       setSavedData(effectiveData);

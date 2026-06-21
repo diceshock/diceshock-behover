@@ -51,7 +51,7 @@ type BatchSettlementData = {
   previews: SettlementPreview[];
 };
 
-function formatTime(val: number | null | undefined): string {
+function _formatTime(val: number | null | undefined): string {
   if (!val) return "—";
   const d = dayjs.tz(val, "Asia/Shanghai");
   return d.isValid() ? d.format("YYYY/MM/DD HH:mm:ss") : "—";
@@ -575,7 +575,7 @@ function MultiOrderTimeline({ previews }: { previews: SettlementPreview[] }) {
 }
 
 function GroupedMembershipSection({
-  previews,
+  previews: _previews,
   activeSettleIds,
   previewMap,
   isAllEnded,

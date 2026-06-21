@@ -10,7 +10,7 @@ import {
 import { resolve } from "node:path";
 
 const MAX_LINES = 20_000;
-const MAX_FILES = 3;
+const _MAX_FILES = 3;
 const MAX_TRASH = 15;
 
 const root = process.env.NX_WORKSPACE_ROOT ?? process.cwd();

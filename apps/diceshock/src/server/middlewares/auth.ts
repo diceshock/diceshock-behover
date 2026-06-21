@@ -1,10 +1,10 @@
+import type { AdapterAccount } from "@auth/core/adapters";
 import Credentials from "@auth/core/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { type AuthConfig, getAuthUser, initAuthConfig } from "@hono/auth-js";
 import db, {
   accounts,
   drizzle,
-  storesTable,
   type UserRole,
   userInfoTable,
   users,
@@ -34,7 +34,7 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
   const adapter = {
     ...baseAdapter,
     async getUserByAccount(
-      providerAccount: Record<string, string>,
+      providerAccount: Pick<AdapterAccount, "provider" | "providerAccountId">,
     ): Promise<any> {
       const result = await baseAdapter.getUserByAccount!(providerAccount);
       if (result) return result;
@@ -82,7 +82,7 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
         }
 
         if (account && profile && token.sub) {
-          const unionid = (profile as any).unionid;
+          const unionid = (profile as Record<string, unknown>).unionid;
           if (unionid) {
             const existingUserId = await c.env.KV.get(`unionid:${unionid}`);
             if (existingUserId && existingUserId !== token.sub) {
@@ -135,9 +135,9 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
           account?.provider === "wechat-mp" &&
           profile &&
           "nickname" in profile &&
-          (profile as any).nickname
+          (profile as { nickname?: string }).nickname
         ) {
-          token.name = (profile as any).nickname;
+          token.name = (profile as { nickname?: string }).nickname;
         }
 
         return token;
@@ -147,7 +147,8 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
 
         session.user.id = token.sub;
         session.user.name = token.name as string;
-        (session.user as any).role = (token.role as UserRole) ?? "customer";
+        (session.user as unknown as Record<string, unknown>).role =
+          (token.role as UserRole) ?? "customer";
 
         return session;
       },
@@ -297,7 +298,7 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
             try {
               await tdb.insert(accounts).values({
                 userId: existingUserInfo.id,
-                type: "credentials" as any,
+                type: "credentials" as unknown as AdapterAccount["type"],
                 provider: "SMS",
                 providerAccountId: phone,
               });
@@ -437,6 +438,8 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
           uid: userInfo.uid,
           nickname: userInfo.nickname,
           meta: userInfo.meta ?? null,
+          preferred_store_id: userInfo.preferred_store_id ?? null,
+          preferred_locale: userInfo.preferred_locale ?? null,
         },
       });
 
@@ -449,7 +452,7 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
     await tdb
       .update(userInfoTable)
       .set({ phone })
-      .where((drizzle as any).eq(userInfoTable.id, id));
+      .where(drizzle.eq(userInfoTable.id, id));
     userInfoRaw.phone = phone;
   }
 
@@ -465,7 +468,7 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
     await tdb
       .update(userInfoTable)
       .set({ nickname: oauthName, meta: null })
-      .where((drizzle as any).eq(userInfoTable.id, id));
+      .where(drizzle.eq(userInfoTable.id, id));
     userInfoRaw.nickname = oauthName;
     userInfoRaw.meta = null;
   }
@@ -476,6 +479,8 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
       uid: userInfoRaw.uid,
       nickname: userInfoRaw.nickname,
       meta: userInfoRaw.meta ?? null,
+      preferred_store_id: userInfoRaw.preferred_store_id ?? null,
+      preferred_locale: userInfoRaw.preferred_locale ?? null,
     },
   });
 

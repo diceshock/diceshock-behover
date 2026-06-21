@@ -21,7 +21,7 @@ export default function BusinessCardModal({
   const messages = useMessages();
   const [loading, setLoading] = useState(false);
   const [isLoadingCard, setIsLoadingCard] = useState(false);
-  const [businessCard, setBusinessCard] = useState<{
+  const [_businessCard, setBusinessCard] = useState<{
     share_phone: boolean | null;
     wechat: string | null;
     qq: string | null;

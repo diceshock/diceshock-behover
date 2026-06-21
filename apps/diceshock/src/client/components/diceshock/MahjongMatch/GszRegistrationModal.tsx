@@ -220,113 +220,110 @@ export default function GszRegistrationModal({
             </>
           )}
 
-          {step === "confirm_register" && (
-            <>
-              {pendingRegistration ? (
-                <>
-                  <p className="text-sm text-base-content/60">
-                    注册已完成，可以正常参加对局。
-                  </p>
+          {step === "confirm_register" &&
+            (pendingRegistration ? (
+              <>
+                <p className="text-sm text-base-content/60">
+                  注册已完成，可以正常参加对局。
+                </p>
+                <button
+                  type="button"
+                  className="btn btn-primary w-full"
+                  onClick={() => {
+                    onRegistered(
+                      pendingRegistration.gszName,
+                      pendingRegistration.gszSynced,
+                      pendingRegistration.nicknameSynced,
+                    );
+                  }}
+                >
+                  我知道了，继续游戏
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-base-content/60">
+                  确认你的公式战昵称
+                </p>
+                <label className="form-control">
+                  <div className="label">
+                    <span className="label-text text-sm">公式战昵称</span>
+                  </div>
+                  <input
+                    type="text"
+                    className="input input-bordered w-full"
+                    placeholder="请输入昵称"
+                    value={gszName}
+                    onChange={(e) => setGszName(e.target.value)}
+                    maxLength={20}
+                  />
+                </label>
+                <label className="label cursor-pointer justify-start gap-2">
+                  <input
+                    type="checkbox"
+                    className="checkbox checkbox-sm"
+                    checked={syncNickname}
+                    onChange={(e) => setSyncNickname(e.target.checked)}
+                  />
+                  <span className="label-text text-sm">
+                    同步使用公式战昵称作为 Diceshock 昵称
+                  </span>
+                </label>
+                {existingPhone && (
+                  <div className="text-xs text-base-content/40">
+                    绑定手机号: {existingPhone}
+                  </div>
+                )}
+                {!existingPhone && phone && (
+                  <div className="text-xs text-base-content/40">
+                    绑定手机号: {phone}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  className="btn btn-primary w-full"
+                  disabled={loading || !gszName.trim()}
+                  onClick={handleRegister}
+                >
+                  {loading ? (
+                    <span className="loading loading-spinner loading-xs" />
+                  ) : (
+                    "确认注册"
+                  )}
+                </button>
+                {needsPhone && (
                   <button
                     type="button"
-                    className="btn btn-primary w-full"
-                    onClick={() => {
-                      onRegistered(
-                        pendingRegistration.gszName,
-                        pendingRegistration.gszSynced,
-                        pendingRegistration.nicknameSynced,
-                      );
-                    }}
+                    className="btn btn-ghost btn-sm w-full"
+                    onClick={() => setStep("phone_verify")}
                   >
-                    我知道了，继续游戏
+                    返回修改手机号
                   </button>
-                </>
-              ) : (
-                <>
-                  <p className="text-sm text-base-content/60">
-                    确认你的公式战昵称
-                  </p>
-                  <label className="form-control">
-                    <div className="label">
-                      <span className="label-text text-sm">公式战昵称</span>
+                )}
+                {error && (
+                  <>
+                    <div className="text-xs text-base-content/50 text-center">
+                      你也可以稍后前往
+                      <Link
+                        to="/{-$storeLocale}/me"
+                        className="link link-primary mx-1"
+                        onClick={onClose}
+                      >
+                        个人中心
+                      </Link>
+                      完成绑定
                     </div>
-                    <input
-                      type="text"
-                      className="input input-bordered w-full"
-                      placeholder="请输入昵称"
-                      value={gszName}
-                      onChange={(e) => setGszName(e.target.value)}
-                      maxLength={20}
-                    />
-                  </label>
-                  <label className="label cursor-pointer justify-start gap-2">
-                    <input
-                      type="checkbox"
-                      className="checkbox checkbox-sm"
-                      checked={syncNickname}
-                      onChange={(e) => setSyncNickname(e.target.checked)}
-                    />
-                    <span className="label-text text-sm">
-                      同步使用公式战昵称作为 Diceshock 昵称
-                    </span>
-                  </label>
-                  {existingPhone && (
-                    <div className="text-xs text-base-content/40">
-                      绑定手机号: {existingPhone}
-                    </div>
-                  )}
-                  {!existingPhone && phone && (
-                    <div className="text-xs text-base-content/40">
-                      绑定手机号: {phone}
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    className="btn btn-primary w-full"
-                    disabled={loading || !gszName.trim()}
-                    onClick={handleRegister}
-                  >
-                    {loading ? (
-                      <span className="loading loading-spinner loading-xs" />
-                    ) : (
-                      "确认注册"
-                    )}
-                  </button>
-                  {needsPhone && (
                     <button
                       type="button"
-                      className="btn btn-ghost btn-sm w-full"
-                      onClick={() => setStep("phone_verify")}
+                      className="btn btn-ghost btn-sm w-full text-base-content/50"
+                      onClick={onSkip}
                     >
-                      返回修改手机号
+                      跳过注册，继续游戏
                     </button>
-                  )}
-                  {error && (
-                    <>
-                      <div className="text-xs text-base-content/50 text-center">
-                        你也可以稍后前往
-                        <Link
-                          to="/me"
-                          className="link link-primary mx-1"
-                          onClick={onClose}
-                        >
-                          个人中心
-                        </Link>
-                        完成绑定
-                      </div>
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm w-full text-base-content/50"
-                        onClick={onSkip}
-                      >
-                        跳过注册，继续游戏
-                      </button>
-                    </>
-                  )}
-                </>
-              )}
-            </>
-          )}
+                  </>
+                )}
+              </>
+            ))}
         </div>
       </div>
     </Modal>

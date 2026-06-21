@@ -120,7 +120,7 @@ async function generateTotpMessage(
 }
 
 export async function executeGenerateTotp(
-  _args: {},
+  _args: Record<string, never>,
   context: ToolContext,
 ): Promise<string> {
   const totpMsg = await generateTotpMessage(context);

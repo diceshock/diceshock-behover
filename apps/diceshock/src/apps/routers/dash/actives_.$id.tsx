@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import TiptapEditor from "@/client/components/diceshock/TiptapEditor";
+import { ACTIVES_DEFAULTS } from "@/client/utils/dashSearchDefaults";
 import { trpcClientDash } from "@/shared/utils/trpc";
 
 type ActiveDetail = Awaited<
@@ -95,7 +96,7 @@ function ActiveEditorPage() {
           is_game: isGame,
         });
         msg.success("约局已保存");
-        navigate({ to: "/dash/actives" });
+        navigate({ to: "/dash/actives", search: ACTIVES_DEFAULTS });
       } catch (err) {
         msg.error(err instanceof Error ? err.message : "保存失败");
       } finally {
@@ -256,7 +257,9 @@ function ActiveEditorPage() {
                 <button
                   type="button"
                   className="btn btn-ghost"
-                  onClick={() => navigate({ to: "/dash/actives" })}
+                  onClick={() =>
+                    navigate({ to: "/dash/actives", search: ACTIVES_DEFAULTS })
+                  }
                   disabled={submitting}
                 >
                   取消

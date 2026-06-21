@@ -1,5 +1,5 @@
 import z from "zod/v4";
-import { staffProcedure, publicProcedure } from "./baseTRPC";
+import { publicProcedure, staffProcedure } from "./baseTRPC";
 
 const KV_KEY_CAPTCHA_DISABLED_UNTIL = "settings:captcha_disabled_until";
 const CAPTCHA_DISABLE_TTL = 60 * 60 * 2;

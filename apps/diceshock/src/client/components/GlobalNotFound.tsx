@@ -22,11 +22,11 @@ export default function GlobalNotFound() {
           </p>
 
           <div className="mt-8 flex flex-col sm:flex-row gap-3">
-            <Link to="/" className="btn btn-primary">
+            <Link to="/{-$storeLocale}" className="btn btn-primary">
               返回主页
             </Link>
 
-            <Link to="/contact-us" className="btn btn-ghost">
+            <Link to="/{-$storeLocale}/contact-us" className="btn btn-ghost">
               联系我们
             </Link>
           </div>

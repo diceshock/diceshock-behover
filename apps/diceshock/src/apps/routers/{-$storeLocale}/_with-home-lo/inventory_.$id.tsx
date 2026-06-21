@@ -248,10 +248,7 @@ function BoardGameDetailPage() {
           <p className="text-lg text-base-content/60">
             {t("inventory.gameNotFound")}
           </p>
-          <Link
-            to="/{-$storeLocale}/inventory"
-            className="btn btn-ghost mt-4"
-          >
+          <Link to="/{-$storeLocale}/inventory" className="btn btn-ghost mt-4">
             {t("inventory.backToInventory")}
           </Link>
         </div>

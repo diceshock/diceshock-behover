@@ -1,4 +1,4 @@
-import db, { activeRegistrationsTable, activesTable, users } from "@lib/db";
+import db, { activesTable } from "@lib/db";
 import { eq } from "drizzle-orm";
 import type { Context } from "hono";
 import type { HonoCtxEnv } from "@/shared/types";

@@ -8,7 +8,6 @@
  * module boundaries — see spike test step 2 for details).
  */
 
-import type { KVNamespace } from "@cloudflare/workers-types";
 import dbFactory from "@lib/db";
 import { buildSchema } from "drizzle-graphql";
 import { describe, expect, it, vi } from "vitest";
@@ -43,9 +42,10 @@ const { schema } = buildSchema(drizzleInstance);
 
 function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
   return {
-    env: { DB: mockD1, KV: {} as unknown as KVNamespace },
+    env: { DB: mockD1, KV: null as unknown as KVNamespace },
     openId: "test-open-id",
     userId: null,
+    preferredStoreId: null,
     ...overrides,
   };
 }

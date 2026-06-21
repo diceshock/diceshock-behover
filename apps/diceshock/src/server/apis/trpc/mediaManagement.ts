@@ -49,32 +49,36 @@ const renameZ = z.object({
   newName: z.string().min(1).max(500),
 });
 
-const rename = staffProcedure.input(renameZ).mutation(async ({ input, ctx }) => {
-  const src = await ctx.env.R2.get(input.oldKey);
-  if (!src) throw new Error("文件不存在");
+const rename = staffProcedure
+  .input(renameZ)
+  .mutation(async ({ input, ctx }) => {
+    const src = await ctx.env.R2.get(input.oldKey);
+    if (!src) throw new Error("文件不存在");
 
-  const newKey = `${UPLOAD_PREFIX}${input.newName}`;
+    const newKey = `${UPLOAD_PREFIX}${input.newName}`;
 
-  const existing = await ctx.env.R2.head(newKey);
-  if (existing) throw new Error("目标文件名已存在");
+    const existing = await ctx.env.R2.head(newKey);
+    if (existing) throw new Error("目标文件名已存在");
 
-  await ctx.env.R2.put(newKey, src.body, {
-    httpMetadata: src.httpMetadata,
-    customMetadata: src.customMetadata,
+    await ctx.env.R2.put(newKey, src.body, {
+      httpMetadata: src.httpMetadata,
+      customMetadata: src.customMetadata,
+    });
+    await ctx.env.R2.delete(input.oldKey);
+
+    return { key: newKey, url: `${CDN_BASE}${newKey}` };
   });
-  await ctx.env.R2.delete(input.oldKey);
-
-  return { key: newKey, url: `${CDN_BASE}${newKey}` };
-});
 
 const deleteZ = z.object({
   key: z.string(),
 });
 
-const remove = staffProcedure.input(deleteZ).mutation(async ({ input, ctx }) => {
-  await ctx.env.R2.delete(input.key);
-  return { success: true };
-});
+const remove = staffProcedure
+  .input(deleteZ)
+  .mutation(async ({ input, ctx }) => {
+    await ctx.env.R2.delete(input.key);
+    return { success: true };
+  });
 
 export default {
   list,

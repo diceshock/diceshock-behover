@@ -16,7 +16,7 @@ export const Route = createFileRoute("/{-$storeLocale}")({
       const parsed = parseStoreLocalePrefix(params.storeLocale);
 
       if (!parsed) {
-        throw redirect({ to: "/" });
+        throw redirect({ to: "/{-$storeLocale}" });
       }
     }
   },

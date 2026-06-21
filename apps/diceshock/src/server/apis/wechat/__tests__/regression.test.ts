@@ -37,8 +37,7 @@ vi.mock("../tools/mutate", () => ({
   executeMutateTool: mocks.executeMutateTool,
 }));
 
-vi.mock("../tools/loadSkill", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../tools/loadSkill")>()),
+vi.mock("../tools/loadSkill", () => ({
   executeLoadSkillTool: mocks.executeLoadSkillTool,
 }));
 

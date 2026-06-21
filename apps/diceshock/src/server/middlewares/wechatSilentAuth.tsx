@@ -1,7 +1,6 @@
 import { getAuthUser } from "@hono/auth-js";
 import { renderToString } from "react-dom/server";
 import { Script } from "vite-ssr-components/react";
-import type { HonoCtxEnv } from "@/shared/types";
 import { FACTORY } from "../factory";
 
 // 微信内置浏览器 + 未登录 → 返回自动提交表单页面，触发 Auth.js OAuth 流程（snsapi_base 静默授权）

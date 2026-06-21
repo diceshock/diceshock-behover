@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import type { HonoCtxEnv } from "@/shared/types";
-import { fetchAsDataUrl, LOGO_URL, renderCardResponse } from "./shared";
+import { fetchAsDataUrl, renderCardResponse } from "./shared";
 
 const LOGO_SVG_URL =
   "https://assets.runespark.fun/images/diceshock.favicon.svg";

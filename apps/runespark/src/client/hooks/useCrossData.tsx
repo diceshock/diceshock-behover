@@ -37,7 +37,6 @@ export const CrossDataProvider: React.FC<{
 };
 
 export const useCrossDataRegister = () => {
-  // biome-ignore lint/suspicious/noExplicitAny: accessing dynamic property on globalThis
   const raw = (globalThis as any)[INJECTION_OBJ];
 
   let decoded: InjectCrossData | null = null;

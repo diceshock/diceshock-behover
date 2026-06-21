@@ -9,7 +9,6 @@ import {
 import type { HonoCtxEnv } from "@/shared/types";
 import { MUTATE_TOOL_DEFINITION } from "./graphql/mutateActions";
 import { QUERY_TOOL_DEFINITION } from "./graphql/queryValidation";
-import { sendStatusMessage } from "./messagePipeline";
 import { matchSkills } from "./skillRouter";
 import { renderDirectory } from "./skills/_directory";
 import { MUTATE_SYNTAX, QUERY_SYNTAX } from "./skills/_syntax";
@@ -241,11 +240,11 @@ async function resolveUserIdentity(
   };
 }
 
-function getToolStatusMessage(_toolName: string): string | null {
+function _getToolStatusMessage(_toolName: string): string | null {
   return null;
 }
 
-function ensureJsonArray(raw: string): string {
+function _ensureJsonArray(raw: string): string {
   if (!raw.trim())
     return '[{"type":"text","content":"抱歉，我暂时无法回答这个问题。"}]';
   const trimmed = raw.trim();
@@ -294,7 +293,10 @@ async function executeToolCall(
     case "mutate":
       return await executeMutateTool(parsedArgs as never, toolContext);
     case "generate_totp":
-      return await executeGenerateTotp(parsedArgs, toolContext);
+      return await executeGenerateTotp(
+        parsedArgs as Record<string, never>,
+        toolContext,
+      );
     case "query_active_participants":
       return await executeQueryActiveParticipants(
         parsedArgs as { active_id: string },
@@ -635,7 +637,7 @@ function collectRoundContext(
   return parts.join(" ");
 }
 
-function synthesizeFromToolResults(toolResults: string[]): string {
+function _synthesizeFromToolResults(toolResults: string[]): string {
   const summaries: string[] = [];
 
   for (const raw of toolResults) {

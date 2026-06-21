@@ -35,51 +35,6 @@ const ZdogIllustration: React.FC<{ className?: string }> = ({ className }) => {
     yellow: "#28ffa5",
   };
 
-  useEffect(() => {
-    const illo = new Zdog.Illustration({
-      element: illoRef.current as HTMLCanvasElement,
-      scale: 8,
-      resize: true,
-      onResize: function (width: number, height: number) {
-        displaySizeRef.current = Math.min(width, height);
-        this.zoom = Math.floor(displaySizeRef.current / sceneSize);
-      },
-    });
-
-    solidsRef.current = [];
-
-    createHourglass(illo);
-    createSphere(illo);
-    createCylinder(illo);
-    createCone(illo);
-    createTetrahedron(illo);
-    createOctahedron(illo);
-    createCube(illo);
-    createDodecahedron(illo);
-    createIsocahedron(illo);
-
-    animate(illo);
-
-    new Zdog.Dragger({
-      startElement: illoRef.current as HTMLCanvasElement,
-      onDragStart: () => {
-        isSpinningRef.current = false;
-        dragStartRef.current = {
-          x: viewRotationRef.current.x,
-          y: viewRotationRef.current.y,
-        };
-      },
-      onDragMove: (pointer, moveX, moveY) => {
-        viewRotationRef.current.x =
-          dragStartRef.current.x - (moveY / displaySizeRef.current) * TAU;
-        viewRotationRef.current.y =
-          dragStartRef.current.y - (moveX / displaySizeRef.current) * TAU;
-      },
-    });
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // Functions to create solids
   const createHourglass = (illo: Zdog.Illustration) => {
     const hourglass = new Zdog.Anchor({
@@ -475,6 +430,50 @@ const ZdogIllustration: React.FC<{ className?: string }> = ({ className }) => {
 
     animateFrame();
   };
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only Zdog canvas initialization
+  useEffect(() => {
+    const illo = new Zdog.Illustration({
+      element: illoRef.current as HTMLCanvasElement,
+      scale: 8,
+      resize: true,
+      onResize: function (width: number, height: number) {
+        displaySizeRef.current = Math.min(width, height);
+        this.zoom = Math.floor(displaySizeRef.current / sceneSize);
+      },
+    });
+
+    solidsRef.current = [];
+
+    createHourglass(illo);
+    createSphere(illo);
+    createCylinder(illo);
+    createCone(illo);
+    createTetrahedron(illo);
+    createOctahedron(illo);
+    createCube(illo);
+    createDodecahedron(illo);
+    createIsocahedron(illo);
+
+    animate(illo);
+
+    new Zdog.Dragger({
+      startElement: illoRef.current as HTMLCanvasElement,
+      onDragStart: () => {
+        isSpinningRef.current = false;
+        dragStartRef.current = {
+          x: viewRotationRef.current.x,
+          y: viewRotationRef.current.y,
+        };
+      },
+      onDragMove: (_pointer, moveX, moveY) => {
+        viewRotationRef.current.x =
+          dragStartRef.current.x - (moveY / displaySizeRef.current) * TAU;
+        viewRotationRef.current.y =
+          dragStartRef.current.y - (moveX / displaySizeRef.current) * TAU;
+      },
+    });
+  }, []);
 
   return <canvas ref={illoRef} className={className} />;
 };

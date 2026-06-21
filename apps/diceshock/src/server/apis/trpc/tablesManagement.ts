@@ -333,7 +333,7 @@ const getOccupancyByUserId = staffProcedure
   .query(async ({ input, ctx }) => {
     const tdb = db(ctx.env.DB);
     const occupancies = await tdb.query.tableOccupancyTable.findMany({
-      where: (o, { eq, ne, and }) => and(eq(o.user_id, input.userId)),
+      where: (o, { eq, and }) => and(eq(o.user_id, input.userId)),
       with: {
         table: { columns: { id: true, name: true, type: true, status: true } },
       },

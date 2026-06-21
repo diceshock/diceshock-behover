@@ -102,7 +102,7 @@ export default function ParticipantsCardModal({
           return a.is_watching ? 1 : -1;
         });
         setParticipants(sorted);
-      } catch (error) {
+      } catch (_error) {
         messages.error("获取参与者信息失败");
       } finally {
         setLoading(false);
@@ -123,7 +123,7 @@ export default function ParticipantsCardModal({
             active_id: activeId,
           });
         setCardDetail(result);
-      } catch (error) {
+      } catch (_error) {
         messages.error("获取名片失败");
         setCardDetail(null);
       } finally {

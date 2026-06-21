@@ -8,806 +8,806 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routers/__root'
-import { Route as Char123StoreLocaleChar125RouteImport } from './routers/{-$storeLocale}'
-import { Route as DashRouteImport } from './routers/dash'
-import { Route as DashIndexRouteImport } from './routers/dash/index'
-import { Route as Char123StoreLocaleChar125TRouteImport } from './routers/{-$storeLocale}/t'
-import { Route as Char123StoreLocaleChar125ReadyRouteImport } from './routers/{-$storeLocale}/ready'
-import { Route as Char123StoreLocaleChar125MyRiichiRouteImport } from './routers/{-$storeLocale}/my-riichi'
-import { Route as Char123StoreLocaleChar125WithHomeLoRouteImport } from './routers/{-$storeLocale}/_with-home-lo'
-import { Route as DashUsersRouteImport } from './routers/dash/users'
-import { Route as DashTablesRouteImport } from './routers/dash/tables'
-import { Route as DashPricingRouteImport } from './routers/dash/pricing'
-import { Route as DashOrdersRouteImport } from './routers/dash/orders'
-import { Route as DashMediaRouteImport } from './routers/dash/media'
-import { Route as DashGszRouteImport } from './routers/dash/gsz'
-import { Route as DashEventsRouteImport } from './routers/dash/events'
-import { Route as DashCrawlerRouteImport } from './routers/dash/crawler'
-import { Route as DashActivesRouteImport } from './routers/dash/actives'
-import { Route as Char123StoreLocaleChar125WithHomeLoIndexRouteImport } from './routers/{-$storeLocale}/_with-home-lo/index'
-import { Route as Char123StoreLocaleChar125TCodeRouteImport } from './routers/{-$storeLocale}/t/$code'
-import { Route as Char123StoreLocaleChar125ReadyCodeRouteImport } from './routers/{-$storeLocale}/ready/$code'
-import { Route as Char123StoreLocaleChar125MyRiichiIdRouteImport } from './routers/{-$storeLocale}/my-riichi/$id'
-import { Route as Char123StoreLocaleChar125WithHomeLoRiichiRouteImport } from './routers/{-$storeLocale}/_with-home-lo/riichi'
-import { Route as Char123StoreLocaleChar125WithHomeLoMeRouteImport } from './routers/{-$storeLocale}/_with-home-lo/me'
-import { Route as Char123StoreLocaleChar125WithHomeLoInventoryRouteImport } from './routers/{-$storeLocale}/_with-home-lo/inventory'
-import { Route as Char123StoreLocaleChar125WithHomeLoExternalRedirectRouteImport } from './routers/{-$storeLocale}/_with-home-lo/external-redirect'
-import { Route as Char123StoreLocaleChar125WithHomeLoDiceshockAgentsRouteImport } from './routers/{-$storeLocale}/_with-home-lo/diceshock-agents'
-import { Route as Char123StoreLocaleChar125WithHomeLoContactUsRouteImport } from './routers/{-$storeLocale}/_with-home-lo/contact-us'
-import { Route as Char123StoreLocaleChar125WithHomeLoActivesRouteImport } from './routers/{-$storeLocale}/_with-home-lo/actives'
-import { Route as DashUsersIdRouteImport } from './routers/dash/users_.$id'
-import { Route as DashTablesIdRouteImport } from './routers/dash/tables_.$id'
-import { Route as DashPricingIdRouteImport } from './routers/dash/pricing_.$id'
-import { Route as DashOrdersSettleRouteImport } from './routers/dash/orders_.settle'
-import { Route as DashGszIdRouteImport } from './routers/dash/gsz_.$id'
-import { Route as DashEventsIdRouteImport } from './routers/dash/events_.$id'
-import { Route as DashActivesIdRouteImport } from './routers/dash/actives_.$id'
-import { Route as Char123StoreLocaleChar125WithHomeLoInventoryIdRouteImport } from './routers/{-$storeLocale}/_with-home-lo/inventory_.$id'
-import { Route as Char123StoreLocaleChar125WithHomeLoEventsIdRouteImport } from './routers/{-$storeLocale}/_with-home-lo/events_.$id'
-import { Route as Char123StoreLocaleChar125WithHomeLoActivesNewRouteImport } from './routers/{-$storeLocale}/_with-home-lo/actives_.new'
-import { Route as Char123StoreLocaleChar125WithHomeLoActivesIdRouteImport } from './routers/{-$storeLocale}/_with-home-lo/actives_.$id'
-import { Route as DashOrdersIdSettleRouteImport } from './routers/dash/orders_.$id.settle'
+import { Route as rootRouteImport } from "./routers/__root";
+import { Route as Char123StoreLocaleChar125RouteImport } from "./routers/{-$storeLocale}";
+import { Route as Char123StoreLocaleChar125WithHomeLoRouteImport } from "./routers/{-$storeLocale}/_with-home-lo";
+import { Route as Char123StoreLocaleChar125WithHomeLoActivesRouteImport } from "./routers/{-$storeLocale}/_with-home-lo/actives";
+import { Route as Char123StoreLocaleChar125WithHomeLoActivesIdRouteImport } from "./routers/{-$storeLocale}/_with-home-lo/actives_.$id";
+import { Route as Char123StoreLocaleChar125WithHomeLoActivesNewRouteImport } from "./routers/{-$storeLocale}/_with-home-lo/actives_.new";
+import { Route as Char123StoreLocaleChar125WithHomeLoContactUsRouteImport } from "./routers/{-$storeLocale}/_with-home-lo/contact-us";
+import { Route as Char123StoreLocaleChar125WithHomeLoDiceshockAgentsRouteImport } from "./routers/{-$storeLocale}/_with-home-lo/diceshock-agents";
+import { Route as Char123StoreLocaleChar125WithHomeLoEventsIdRouteImport } from "./routers/{-$storeLocale}/_with-home-lo/events_.$id";
+import { Route as Char123StoreLocaleChar125WithHomeLoExternalRedirectRouteImport } from "./routers/{-$storeLocale}/_with-home-lo/external-redirect";
+import { Route as Char123StoreLocaleChar125WithHomeLoIndexRouteImport } from "./routers/{-$storeLocale}/_with-home-lo/index";
+import { Route as Char123StoreLocaleChar125WithHomeLoInventoryRouteImport } from "./routers/{-$storeLocale}/_with-home-lo/inventory";
+import { Route as Char123StoreLocaleChar125WithHomeLoInventoryIdRouteImport } from "./routers/{-$storeLocale}/_with-home-lo/inventory_.$id";
+import { Route as Char123StoreLocaleChar125WithHomeLoMeRouteImport } from "./routers/{-$storeLocale}/_with-home-lo/me";
+import { Route as Char123StoreLocaleChar125WithHomeLoRiichiRouteImport } from "./routers/{-$storeLocale}/_with-home-lo/riichi";
+import { Route as Char123StoreLocaleChar125MyRiichiRouteImport } from "./routers/{-$storeLocale}/my-riichi";
+import { Route as Char123StoreLocaleChar125MyRiichiIdRouteImport } from "./routers/{-$storeLocale}/my-riichi/$id";
+import { Route as Char123StoreLocaleChar125ReadyRouteImport } from "./routers/{-$storeLocale}/ready";
+import { Route as Char123StoreLocaleChar125ReadyCodeRouteImport } from "./routers/{-$storeLocale}/ready/$code";
+import { Route as Char123StoreLocaleChar125TRouteImport } from "./routers/{-$storeLocale}/t";
+import { Route as Char123StoreLocaleChar125TCodeRouteImport } from "./routers/{-$storeLocale}/t/$code";
+import { Route as DashRouteImport } from "./routers/dash";
+import { Route as DashActivesRouteImport } from "./routers/dash/actives";
+import { Route as DashActivesIdRouteImport } from "./routers/dash/actives_.$id";
+import { Route as DashCrawlerRouteImport } from "./routers/dash/crawler";
+import { Route as DashEventsRouteImport } from "./routers/dash/events";
+import { Route as DashEventsIdRouteImport } from "./routers/dash/events_.$id";
+import { Route as DashGszRouteImport } from "./routers/dash/gsz";
+import { Route as DashGszIdRouteImport } from "./routers/dash/gsz_.$id";
+import { Route as DashIndexRouteImport } from "./routers/dash/index";
+import { Route as DashMediaRouteImport } from "./routers/dash/media";
+import { Route as DashOrdersRouteImport } from "./routers/dash/orders";
+import { Route as DashOrdersIdSettleRouteImport } from "./routers/dash/orders_.$id.settle";
+import { Route as DashOrdersSettleRouteImport } from "./routers/dash/orders_.settle";
+import { Route as DashPricingRouteImport } from "./routers/dash/pricing";
+import { Route as DashPricingIdRouteImport } from "./routers/dash/pricing_.$id";
+import { Route as DashTablesRouteImport } from "./routers/dash/tables";
+import { Route as DashTablesIdRouteImport } from "./routers/dash/tables_.$id";
+import { Route as DashUsersRouteImport } from "./routers/dash/users";
+import { Route as DashUsersIdRouteImport } from "./routers/dash/users_.$id";
 
 const Char123StoreLocaleChar125Route =
   Char123StoreLocaleChar125RouteImport.update({
-    id: '/{-$storeLocale}',
-    path: '/{-$storeLocale}',
+    id: "/{-$storeLocale}",
+    path: "/{-$storeLocale}",
     getParentRoute: () => rootRouteImport,
-  } as any)
+  } as any);
 const DashRoute = DashRouteImport.update({
-  id: '/dash',
-  path: '/dash',
+  id: "/dash",
+  path: "/dash",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const DashIndexRoute = DashIndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => DashRoute,
-} as any)
+} as any);
 const Char123StoreLocaleChar125TRoute =
   Char123StoreLocaleChar125TRouteImport.update({
-    id: '/t',
-    path: '/t',
+    id: "/t",
+    path: "/t",
     getParentRoute: () => Char123StoreLocaleChar125Route,
-  } as any)
+  } as any);
 const Char123StoreLocaleChar125ReadyRoute =
   Char123StoreLocaleChar125ReadyRouteImport.update({
-    id: '/ready',
-    path: '/ready',
+    id: "/ready",
+    path: "/ready",
     getParentRoute: () => Char123StoreLocaleChar125Route,
-  } as any)
+  } as any);
 const Char123StoreLocaleChar125MyRiichiRoute =
   Char123StoreLocaleChar125MyRiichiRouteImport.update({
-    id: '/my-riichi',
-    path: '/my-riichi',
+    id: "/my-riichi",
+    path: "/my-riichi",
     getParentRoute: () => Char123StoreLocaleChar125Route,
-  } as any)
+  } as any);
 const Char123StoreLocaleChar125WithHomeLoRoute =
   Char123StoreLocaleChar125WithHomeLoRouteImport.update({
-    id: '/_with-home-lo',
+    id: "/_with-home-lo",
     getParentRoute: () => Char123StoreLocaleChar125Route,
-  } as any)
+  } as any);
 const DashUsersRoute = DashUsersRouteImport.update({
-  id: '/users',
-  path: '/users',
+  id: "/users",
+  path: "/users",
   getParentRoute: () => DashRoute,
-} as any)
+} as any);
 const DashTablesRoute = DashTablesRouteImport.update({
-  id: '/tables',
-  path: '/tables',
+  id: "/tables",
+  path: "/tables",
   getParentRoute: () => DashRoute,
-} as any)
+} as any);
 const DashPricingRoute = DashPricingRouteImport.update({
-  id: '/pricing',
-  path: '/pricing',
+  id: "/pricing",
+  path: "/pricing",
   getParentRoute: () => DashRoute,
-} as any)
+} as any);
 const DashOrdersRoute = DashOrdersRouteImport.update({
-  id: '/orders',
-  path: '/orders',
+  id: "/orders",
+  path: "/orders",
   getParentRoute: () => DashRoute,
-} as any)
+} as any);
 const DashMediaRoute = DashMediaRouteImport.update({
-  id: '/media',
-  path: '/media',
+  id: "/media",
+  path: "/media",
   getParentRoute: () => DashRoute,
-} as any)
+} as any);
 const DashGszRoute = DashGszRouteImport.update({
-  id: '/gsz',
-  path: '/gsz',
+  id: "/gsz",
+  path: "/gsz",
   getParentRoute: () => DashRoute,
-} as any)
+} as any);
 const DashEventsRoute = DashEventsRouteImport.update({
-  id: '/events',
-  path: '/events',
+  id: "/events",
+  path: "/events",
   getParentRoute: () => DashRoute,
-} as any)
+} as any);
 const DashCrawlerRoute = DashCrawlerRouteImport.update({
-  id: '/crawler',
-  path: '/crawler',
+  id: "/crawler",
+  path: "/crawler",
   getParentRoute: () => DashRoute,
-} as any)
+} as any);
 const DashActivesRoute = DashActivesRouteImport.update({
-  id: '/actives',
-  path: '/actives',
+  id: "/actives",
+  path: "/actives",
   getParentRoute: () => DashRoute,
-} as any)
+} as any);
 const Char123StoreLocaleChar125WithHomeLoIndexRoute =
   Char123StoreLocaleChar125WithHomeLoIndexRouteImport.update({
-    id: '/',
-    path: '/',
+    id: "/",
+    path: "/",
     getParentRoute: () => Char123StoreLocaleChar125WithHomeLoRoute,
-  } as any)
+  } as any);
 const Char123StoreLocaleChar125TCodeRoute =
   Char123StoreLocaleChar125TCodeRouteImport.update({
-    id: '/$code',
-    path: '/$code',
+    id: "/$code",
+    path: "/$code",
     getParentRoute: () => Char123StoreLocaleChar125TRoute,
-  } as any)
+  } as any);
 const Char123StoreLocaleChar125ReadyCodeRoute =
   Char123StoreLocaleChar125ReadyCodeRouteImport.update({
-    id: '/$code',
-    path: '/$code',
+    id: "/$code",
+    path: "/$code",
     getParentRoute: () => Char123StoreLocaleChar125ReadyRoute,
-  } as any)
+  } as any);
 const Char123StoreLocaleChar125MyRiichiIdRoute =
   Char123StoreLocaleChar125MyRiichiIdRouteImport.update({
-    id: '/$id',
-    path: '/$id',
+    id: "/$id",
+    path: "/$id",
     getParentRoute: () => Char123StoreLocaleChar125MyRiichiRoute,
-  } as any)
+  } as any);
 const Char123StoreLocaleChar125WithHomeLoRiichiRoute =
   Char123StoreLocaleChar125WithHomeLoRiichiRouteImport.update({
-    id: '/riichi',
-    path: '/riichi',
+    id: "/riichi",
+    path: "/riichi",
     getParentRoute: () => Char123StoreLocaleChar125WithHomeLoRoute,
-  } as any)
+  } as any);
 const Char123StoreLocaleChar125WithHomeLoMeRoute =
   Char123StoreLocaleChar125WithHomeLoMeRouteImport.update({
-    id: '/me',
-    path: '/me',
+    id: "/me",
+    path: "/me",
     getParentRoute: () => Char123StoreLocaleChar125WithHomeLoRoute,
-  } as any)
+  } as any);
 const Char123StoreLocaleChar125WithHomeLoInventoryRoute =
   Char123StoreLocaleChar125WithHomeLoInventoryRouteImport.update({
-    id: '/inventory',
-    path: '/inventory',
+    id: "/inventory",
+    path: "/inventory",
     getParentRoute: () => Char123StoreLocaleChar125WithHomeLoRoute,
-  } as any)
+  } as any);
 const Char123StoreLocaleChar125WithHomeLoExternalRedirectRoute =
   Char123StoreLocaleChar125WithHomeLoExternalRedirectRouteImport.update({
-    id: '/external-redirect',
-    path: '/external-redirect',
+    id: "/external-redirect",
+    path: "/external-redirect",
     getParentRoute: () => Char123StoreLocaleChar125WithHomeLoRoute,
-  } as any)
+  } as any);
 const Char123StoreLocaleChar125WithHomeLoDiceshockAgentsRoute =
   Char123StoreLocaleChar125WithHomeLoDiceshockAgentsRouteImport.update({
-    id: '/diceshock-agents',
-    path: '/diceshock-agents',
+    id: "/diceshock-agents",
+    path: "/diceshock-agents",
     getParentRoute: () => Char123StoreLocaleChar125WithHomeLoRoute,
-  } as any)
+  } as any);
 const Char123StoreLocaleChar125WithHomeLoContactUsRoute =
   Char123StoreLocaleChar125WithHomeLoContactUsRouteImport.update({
-    id: '/contact-us',
-    path: '/contact-us',
+    id: "/contact-us",
+    path: "/contact-us",
     getParentRoute: () => Char123StoreLocaleChar125WithHomeLoRoute,
-  } as any)
+  } as any);
 const Char123StoreLocaleChar125WithHomeLoActivesRoute =
   Char123StoreLocaleChar125WithHomeLoActivesRouteImport.update({
-    id: '/actives',
-    path: '/actives',
+    id: "/actives",
+    path: "/actives",
     getParentRoute: () => Char123StoreLocaleChar125WithHomeLoRoute,
-  } as any)
+  } as any);
 const DashUsersIdRoute = DashUsersIdRouteImport.update({
-  id: '/users_/$id',
-  path: '/users/$id',
+  id: "/users_/$id",
+  path: "/users/$id",
   getParentRoute: () => DashRoute,
-} as any)
+} as any);
 const DashTablesIdRoute = DashTablesIdRouteImport.update({
-  id: '/tables_/$id',
-  path: '/tables/$id',
+  id: "/tables_/$id",
+  path: "/tables/$id",
   getParentRoute: () => DashRoute,
-} as any)
+} as any);
 const DashPricingIdRoute = DashPricingIdRouteImport.update({
-  id: '/pricing_/$id',
-  path: '/pricing/$id',
+  id: "/pricing_/$id",
+  path: "/pricing/$id",
   getParentRoute: () => DashRoute,
-} as any)
+} as any);
 const DashOrdersSettleRoute = DashOrdersSettleRouteImport.update({
-  id: '/orders_/settle',
-  path: '/orders/settle',
+  id: "/orders_/settle",
+  path: "/orders/settle",
   getParentRoute: () => DashRoute,
-} as any)
+} as any);
 const DashGszIdRoute = DashGszIdRouteImport.update({
-  id: '/gsz_/$id',
-  path: '/gsz/$id',
+  id: "/gsz_/$id",
+  path: "/gsz/$id",
   getParentRoute: () => DashRoute,
-} as any)
+} as any);
 const DashEventsIdRoute = DashEventsIdRouteImport.update({
-  id: '/events_/$id',
-  path: '/events/$id',
+  id: "/events_/$id",
+  path: "/events/$id",
   getParentRoute: () => DashRoute,
-} as any)
+} as any);
 const DashActivesIdRoute = DashActivesIdRouteImport.update({
-  id: '/actives_/$id',
-  path: '/actives/$id',
+  id: "/actives_/$id",
+  path: "/actives/$id",
   getParentRoute: () => DashRoute,
-} as any)
+} as any);
 const Char123StoreLocaleChar125WithHomeLoInventoryIdRoute =
   Char123StoreLocaleChar125WithHomeLoInventoryIdRouteImport.update({
-    id: '/inventory_/$id',
-    path: '/inventory/$id',
+    id: "/inventory_/$id",
+    path: "/inventory/$id",
     getParentRoute: () => Char123StoreLocaleChar125WithHomeLoRoute,
-  } as any)
+  } as any);
 const Char123StoreLocaleChar125WithHomeLoEventsIdRoute =
   Char123StoreLocaleChar125WithHomeLoEventsIdRouteImport.update({
-    id: '/events_/$id',
-    path: '/events/$id',
+    id: "/events_/$id",
+    path: "/events/$id",
     getParentRoute: () => Char123StoreLocaleChar125WithHomeLoRoute,
-  } as any)
+  } as any);
 const Char123StoreLocaleChar125WithHomeLoActivesNewRoute =
   Char123StoreLocaleChar125WithHomeLoActivesNewRouteImport.update({
-    id: '/actives_/new',
-    path: '/actives/new',
+    id: "/actives_/new",
+    path: "/actives/new",
     getParentRoute: () => Char123StoreLocaleChar125WithHomeLoRoute,
-  } as any)
+  } as any);
 const Char123StoreLocaleChar125WithHomeLoActivesIdRoute =
   Char123StoreLocaleChar125WithHomeLoActivesIdRouteImport.update({
-    id: '/actives_/$id',
-    path: '/actives/$id',
+    id: "/actives_/$id",
+    path: "/actives/$id",
     getParentRoute: () => Char123StoreLocaleChar125WithHomeLoRoute,
-  } as any)
+  } as any);
 const DashOrdersIdSettleRoute = DashOrdersIdSettleRouteImport.update({
-  id: '/orders_/$id/settle',
-  path: '/orders/$id/settle',
+  id: "/orders_/$id/settle",
+  path: "/orders/$id/settle",
   getParentRoute: () => DashRoute,
-} as any)
+} as any);
 
 export interface FileRoutesByFullPath {
-  '/dash': typeof DashRouteWithChildren
-  '/{-$storeLocale}': typeof Char123StoreLocaleChar125RouteWithChildren
-  '/dash/actives': typeof DashActivesRoute
-  '/dash/crawler': typeof DashCrawlerRoute
-  '/dash/events': typeof DashEventsRoute
-  '/dash/gsz': typeof DashGszRoute
-  '/dash/media': typeof DashMediaRoute
-  '/dash/orders': typeof DashOrdersRoute
-  '/dash/pricing': typeof DashPricingRoute
-  '/dash/tables': typeof DashTablesRoute
-  '/dash/users': typeof DashUsersRoute
-  '/{-$storeLocale}/my-riichi': typeof Char123StoreLocaleChar125MyRiichiRouteWithChildren
-  '/{-$storeLocale}/ready': typeof Char123StoreLocaleChar125ReadyRouteWithChildren
-  '/{-$storeLocale}/t': typeof Char123StoreLocaleChar125TRouteWithChildren
-  '/dash/': typeof DashIndexRoute
-  '/dash/actives/$id': typeof DashActivesIdRoute
-  '/dash/events/$id': typeof DashEventsIdRoute
-  '/dash/gsz/$id': typeof DashGszIdRoute
-  '/dash/orders/settle': typeof DashOrdersSettleRoute
-  '/dash/pricing/$id': typeof DashPricingIdRoute
-  '/dash/tables/$id': typeof DashTablesIdRoute
-  '/dash/users/$id': typeof DashUsersIdRoute
-  '/{-$storeLocale}/actives': typeof Char123StoreLocaleChar125WithHomeLoActivesRoute
-  '/{-$storeLocale}/contact-us': typeof Char123StoreLocaleChar125WithHomeLoContactUsRoute
-  '/{-$storeLocale}/diceshock-agents': typeof Char123StoreLocaleChar125WithHomeLoDiceshockAgentsRoute
-  '/{-$storeLocale}/external-redirect': typeof Char123StoreLocaleChar125WithHomeLoExternalRedirectRoute
-  '/{-$storeLocale}/inventory': typeof Char123StoreLocaleChar125WithHomeLoInventoryRoute
-  '/{-$storeLocale}/me': typeof Char123StoreLocaleChar125WithHomeLoMeRoute
-  '/{-$storeLocale}/riichi': typeof Char123StoreLocaleChar125WithHomeLoRiichiRoute
-  '/{-$storeLocale}/my-riichi/$id': typeof Char123StoreLocaleChar125MyRiichiIdRoute
-  '/{-$storeLocale}/ready/$code': typeof Char123StoreLocaleChar125ReadyCodeRoute
-  '/{-$storeLocale}/t/$code': typeof Char123StoreLocaleChar125TCodeRoute
-  '/{-$storeLocale}/': typeof Char123StoreLocaleChar125WithHomeLoIndexRoute
-  '/dash/orders/$id/settle': typeof DashOrdersIdSettleRoute
-  '/{-$storeLocale}/actives/$id': typeof Char123StoreLocaleChar125WithHomeLoActivesIdRoute
-  '/{-$storeLocale}/actives/new': typeof Char123StoreLocaleChar125WithHomeLoActivesNewRoute
-  '/{-$storeLocale}/events/$id': typeof Char123StoreLocaleChar125WithHomeLoEventsIdRoute
-  '/{-$storeLocale}/inventory/$id': typeof Char123StoreLocaleChar125WithHomeLoInventoryIdRoute
+  "/dash": typeof DashRouteWithChildren;
+  "/{-$storeLocale}": typeof Char123StoreLocaleChar125RouteWithChildren;
+  "/dash/actives": typeof DashActivesRoute;
+  "/dash/crawler": typeof DashCrawlerRoute;
+  "/dash/events": typeof DashEventsRoute;
+  "/dash/gsz": typeof DashGszRoute;
+  "/dash/media": typeof DashMediaRoute;
+  "/dash/orders": typeof DashOrdersRoute;
+  "/dash/pricing": typeof DashPricingRoute;
+  "/dash/tables": typeof DashTablesRoute;
+  "/dash/users": typeof DashUsersRoute;
+  "/{-$storeLocale}/my-riichi": typeof Char123StoreLocaleChar125MyRiichiRouteWithChildren;
+  "/{-$storeLocale}/ready": typeof Char123StoreLocaleChar125ReadyRouteWithChildren;
+  "/{-$storeLocale}/t": typeof Char123StoreLocaleChar125TRouteWithChildren;
+  "/dash/": typeof DashIndexRoute;
+  "/dash/actives/$id": typeof DashActivesIdRoute;
+  "/dash/events/$id": typeof DashEventsIdRoute;
+  "/dash/gsz/$id": typeof DashGszIdRoute;
+  "/dash/orders/settle": typeof DashOrdersSettleRoute;
+  "/dash/pricing/$id": typeof DashPricingIdRoute;
+  "/dash/tables/$id": typeof DashTablesIdRoute;
+  "/dash/users/$id": typeof DashUsersIdRoute;
+  "/{-$storeLocale}/actives": typeof Char123StoreLocaleChar125WithHomeLoActivesRoute;
+  "/{-$storeLocale}/contact-us": typeof Char123StoreLocaleChar125WithHomeLoContactUsRoute;
+  "/{-$storeLocale}/diceshock-agents": typeof Char123StoreLocaleChar125WithHomeLoDiceshockAgentsRoute;
+  "/{-$storeLocale}/external-redirect": typeof Char123StoreLocaleChar125WithHomeLoExternalRedirectRoute;
+  "/{-$storeLocale}/inventory": typeof Char123StoreLocaleChar125WithHomeLoInventoryRoute;
+  "/{-$storeLocale}/me": typeof Char123StoreLocaleChar125WithHomeLoMeRoute;
+  "/{-$storeLocale}/riichi": typeof Char123StoreLocaleChar125WithHomeLoRiichiRoute;
+  "/{-$storeLocale}/my-riichi/$id": typeof Char123StoreLocaleChar125MyRiichiIdRoute;
+  "/{-$storeLocale}/ready/$code": typeof Char123StoreLocaleChar125ReadyCodeRoute;
+  "/{-$storeLocale}/t/$code": typeof Char123StoreLocaleChar125TCodeRoute;
+  "/{-$storeLocale}/": typeof Char123StoreLocaleChar125WithHomeLoIndexRoute;
+  "/dash/orders/$id/settle": typeof DashOrdersIdSettleRoute;
+  "/{-$storeLocale}/actives/$id": typeof Char123StoreLocaleChar125WithHomeLoActivesIdRoute;
+  "/{-$storeLocale}/actives/new": typeof Char123StoreLocaleChar125WithHomeLoActivesNewRoute;
+  "/{-$storeLocale}/events/$id": typeof Char123StoreLocaleChar125WithHomeLoEventsIdRoute;
+  "/{-$storeLocale}/inventory/$id": typeof Char123StoreLocaleChar125WithHomeLoInventoryIdRoute;
 }
 export interface FileRoutesByTo {
-  '/{-$storeLocale}': typeof Char123StoreLocaleChar125WithHomeLoIndexRoute
-  '/dash/actives': typeof DashActivesRoute
-  '/dash/crawler': typeof DashCrawlerRoute
-  '/dash/events': typeof DashEventsRoute
-  '/dash/gsz': typeof DashGszRoute
-  '/dash/media': typeof DashMediaRoute
-  '/dash/orders': typeof DashOrdersRoute
-  '/dash/pricing': typeof DashPricingRoute
-  '/dash/tables': typeof DashTablesRoute
-  '/dash/users': typeof DashUsersRoute
-  '/{-$storeLocale}/my-riichi': typeof Char123StoreLocaleChar125MyRiichiRouteWithChildren
-  '/{-$storeLocale}/ready': typeof Char123StoreLocaleChar125ReadyRouteWithChildren
-  '/{-$storeLocale}/t': typeof Char123StoreLocaleChar125TRouteWithChildren
-  '/dash': typeof DashIndexRoute
-  '/dash/actives/$id': typeof DashActivesIdRoute
-  '/dash/events/$id': typeof DashEventsIdRoute
-  '/dash/gsz/$id': typeof DashGszIdRoute
-  '/dash/orders/settle': typeof DashOrdersSettleRoute
-  '/dash/pricing/$id': typeof DashPricingIdRoute
-  '/dash/tables/$id': typeof DashTablesIdRoute
-  '/dash/users/$id': typeof DashUsersIdRoute
-  '/{-$storeLocale}/actives': typeof Char123StoreLocaleChar125WithHomeLoActivesRoute
-  '/{-$storeLocale}/contact-us': typeof Char123StoreLocaleChar125WithHomeLoContactUsRoute
-  '/{-$storeLocale}/diceshock-agents': typeof Char123StoreLocaleChar125WithHomeLoDiceshockAgentsRoute
-  '/{-$storeLocale}/external-redirect': typeof Char123StoreLocaleChar125WithHomeLoExternalRedirectRoute
-  '/{-$storeLocale}/inventory': typeof Char123StoreLocaleChar125WithHomeLoInventoryRoute
-  '/{-$storeLocale}/me': typeof Char123StoreLocaleChar125WithHomeLoMeRoute
-  '/{-$storeLocale}/riichi': typeof Char123StoreLocaleChar125WithHomeLoRiichiRoute
-  '/{-$storeLocale}/my-riichi/$id': typeof Char123StoreLocaleChar125MyRiichiIdRoute
-  '/{-$storeLocale}/ready/$code': typeof Char123StoreLocaleChar125ReadyCodeRoute
-  '/{-$storeLocale}/t/$code': typeof Char123StoreLocaleChar125TCodeRoute
-  '/dash/orders/$id/settle': typeof DashOrdersIdSettleRoute
-  '/{-$storeLocale}/actives/$id': typeof Char123StoreLocaleChar125WithHomeLoActivesIdRoute
-  '/{-$storeLocale}/actives/new': typeof Char123StoreLocaleChar125WithHomeLoActivesNewRoute
-  '/{-$storeLocale}/events/$id': typeof Char123StoreLocaleChar125WithHomeLoEventsIdRoute
-  '/{-$storeLocale}/inventory/$id': typeof Char123StoreLocaleChar125WithHomeLoInventoryIdRoute
+  "/{-$storeLocale}": typeof Char123StoreLocaleChar125WithHomeLoIndexRoute;
+  "/dash/actives": typeof DashActivesRoute;
+  "/dash/crawler": typeof DashCrawlerRoute;
+  "/dash/events": typeof DashEventsRoute;
+  "/dash/gsz": typeof DashGszRoute;
+  "/dash/media": typeof DashMediaRoute;
+  "/dash/orders": typeof DashOrdersRoute;
+  "/dash/pricing": typeof DashPricingRoute;
+  "/dash/tables": typeof DashTablesRoute;
+  "/dash/users": typeof DashUsersRoute;
+  "/{-$storeLocale}/my-riichi": typeof Char123StoreLocaleChar125MyRiichiRouteWithChildren;
+  "/{-$storeLocale}/ready": typeof Char123StoreLocaleChar125ReadyRouteWithChildren;
+  "/{-$storeLocale}/t": typeof Char123StoreLocaleChar125TRouteWithChildren;
+  "/dash": typeof DashIndexRoute;
+  "/dash/actives/$id": typeof DashActivesIdRoute;
+  "/dash/events/$id": typeof DashEventsIdRoute;
+  "/dash/gsz/$id": typeof DashGszIdRoute;
+  "/dash/orders/settle": typeof DashOrdersSettleRoute;
+  "/dash/pricing/$id": typeof DashPricingIdRoute;
+  "/dash/tables/$id": typeof DashTablesIdRoute;
+  "/dash/users/$id": typeof DashUsersIdRoute;
+  "/{-$storeLocale}/actives": typeof Char123StoreLocaleChar125WithHomeLoActivesRoute;
+  "/{-$storeLocale}/contact-us": typeof Char123StoreLocaleChar125WithHomeLoContactUsRoute;
+  "/{-$storeLocale}/diceshock-agents": typeof Char123StoreLocaleChar125WithHomeLoDiceshockAgentsRoute;
+  "/{-$storeLocale}/external-redirect": typeof Char123StoreLocaleChar125WithHomeLoExternalRedirectRoute;
+  "/{-$storeLocale}/inventory": typeof Char123StoreLocaleChar125WithHomeLoInventoryRoute;
+  "/{-$storeLocale}/me": typeof Char123StoreLocaleChar125WithHomeLoMeRoute;
+  "/{-$storeLocale}/riichi": typeof Char123StoreLocaleChar125WithHomeLoRiichiRoute;
+  "/{-$storeLocale}/my-riichi/$id": typeof Char123StoreLocaleChar125MyRiichiIdRoute;
+  "/{-$storeLocale}/ready/$code": typeof Char123StoreLocaleChar125ReadyCodeRoute;
+  "/{-$storeLocale}/t/$code": typeof Char123StoreLocaleChar125TCodeRoute;
+  "/dash/orders/$id/settle": typeof DashOrdersIdSettleRoute;
+  "/{-$storeLocale}/actives/$id": typeof Char123StoreLocaleChar125WithHomeLoActivesIdRoute;
+  "/{-$storeLocale}/actives/new": typeof Char123StoreLocaleChar125WithHomeLoActivesNewRoute;
+  "/{-$storeLocale}/events/$id": typeof Char123StoreLocaleChar125WithHomeLoEventsIdRoute;
+  "/{-$storeLocale}/inventory/$id": typeof Char123StoreLocaleChar125WithHomeLoInventoryIdRoute;
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport
-  '/dash': typeof DashRouteWithChildren
-  '/{-$storeLocale}': typeof Char123StoreLocaleChar125RouteWithChildren
-  '/dash/actives': typeof DashActivesRoute
-  '/dash/crawler': typeof DashCrawlerRoute
-  '/dash/events': typeof DashEventsRoute
-  '/dash/gsz': typeof DashGszRoute
-  '/dash/media': typeof DashMediaRoute
-  '/dash/orders': typeof DashOrdersRoute
-  '/dash/pricing': typeof DashPricingRoute
-  '/dash/tables': typeof DashTablesRoute
-  '/dash/users': typeof DashUsersRoute
-  '/{-$storeLocale}/_with-home-lo': typeof Char123StoreLocaleChar125WithHomeLoRouteWithChildren
-  '/{-$storeLocale}/my-riichi': typeof Char123StoreLocaleChar125MyRiichiRouteWithChildren
-  '/{-$storeLocale}/ready': typeof Char123StoreLocaleChar125ReadyRouteWithChildren
-  '/{-$storeLocale}/t': typeof Char123StoreLocaleChar125TRouteWithChildren
-  '/dash/': typeof DashIndexRoute
-  '/dash/actives_/$id': typeof DashActivesIdRoute
-  '/dash/events_/$id': typeof DashEventsIdRoute
-  '/dash/gsz_/$id': typeof DashGszIdRoute
-  '/dash/orders_/settle': typeof DashOrdersSettleRoute
-  '/dash/pricing_/$id': typeof DashPricingIdRoute
-  '/dash/tables_/$id': typeof DashTablesIdRoute
-  '/dash/users_/$id': typeof DashUsersIdRoute
-  '/{-$storeLocale}/_with-home-lo/actives': typeof Char123StoreLocaleChar125WithHomeLoActivesRoute
-  '/{-$storeLocale}/_with-home-lo/contact-us': typeof Char123StoreLocaleChar125WithHomeLoContactUsRoute
-  '/{-$storeLocale}/_with-home-lo/diceshock-agents': typeof Char123StoreLocaleChar125WithHomeLoDiceshockAgentsRoute
-  '/{-$storeLocale}/_with-home-lo/external-redirect': typeof Char123StoreLocaleChar125WithHomeLoExternalRedirectRoute
-  '/{-$storeLocale}/_with-home-lo/inventory': typeof Char123StoreLocaleChar125WithHomeLoInventoryRoute
-  '/{-$storeLocale}/_with-home-lo/me': typeof Char123StoreLocaleChar125WithHomeLoMeRoute
-  '/{-$storeLocale}/_with-home-lo/riichi': typeof Char123StoreLocaleChar125WithHomeLoRiichiRoute
-  '/{-$storeLocale}/my-riichi/$id': typeof Char123StoreLocaleChar125MyRiichiIdRoute
-  '/{-$storeLocale}/ready/$code': typeof Char123StoreLocaleChar125ReadyCodeRoute
-  '/{-$storeLocale}/t/$code': typeof Char123StoreLocaleChar125TCodeRoute
-  '/{-$storeLocale}/_with-home-lo/': typeof Char123StoreLocaleChar125WithHomeLoIndexRoute
-  '/dash/orders_/$id/settle': typeof DashOrdersIdSettleRoute
-  '/{-$storeLocale}/_with-home-lo/actives_/$id': typeof Char123StoreLocaleChar125WithHomeLoActivesIdRoute
-  '/{-$storeLocale}/_with-home-lo/actives_/new': typeof Char123StoreLocaleChar125WithHomeLoActivesNewRoute
-  '/{-$storeLocale}/_with-home-lo/events_/$id': typeof Char123StoreLocaleChar125WithHomeLoEventsIdRoute
-  '/{-$storeLocale}/_with-home-lo/inventory_/$id': typeof Char123StoreLocaleChar125WithHomeLoInventoryIdRoute
+  __root__: typeof rootRouteImport;
+  "/dash": typeof DashRouteWithChildren;
+  "/{-$storeLocale}": typeof Char123StoreLocaleChar125RouteWithChildren;
+  "/dash/actives": typeof DashActivesRoute;
+  "/dash/crawler": typeof DashCrawlerRoute;
+  "/dash/events": typeof DashEventsRoute;
+  "/dash/gsz": typeof DashGszRoute;
+  "/dash/media": typeof DashMediaRoute;
+  "/dash/orders": typeof DashOrdersRoute;
+  "/dash/pricing": typeof DashPricingRoute;
+  "/dash/tables": typeof DashTablesRoute;
+  "/dash/users": typeof DashUsersRoute;
+  "/{-$storeLocale}/_with-home-lo": typeof Char123StoreLocaleChar125WithHomeLoRouteWithChildren;
+  "/{-$storeLocale}/my-riichi": typeof Char123StoreLocaleChar125MyRiichiRouteWithChildren;
+  "/{-$storeLocale}/ready": typeof Char123StoreLocaleChar125ReadyRouteWithChildren;
+  "/{-$storeLocale}/t": typeof Char123StoreLocaleChar125TRouteWithChildren;
+  "/dash/": typeof DashIndexRoute;
+  "/dash/actives_/$id": typeof DashActivesIdRoute;
+  "/dash/events_/$id": typeof DashEventsIdRoute;
+  "/dash/gsz_/$id": typeof DashGszIdRoute;
+  "/dash/orders_/settle": typeof DashOrdersSettleRoute;
+  "/dash/pricing_/$id": typeof DashPricingIdRoute;
+  "/dash/tables_/$id": typeof DashTablesIdRoute;
+  "/dash/users_/$id": typeof DashUsersIdRoute;
+  "/{-$storeLocale}/_with-home-lo/actives": typeof Char123StoreLocaleChar125WithHomeLoActivesRoute;
+  "/{-$storeLocale}/_with-home-lo/contact-us": typeof Char123StoreLocaleChar125WithHomeLoContactUsRoute;
+  "/{-$storeLocale}/_with-home-lo/diceshock-agents": typeof Char123StoreLocaleChar125WithHomeLoDiceshockAgentsRoute;
+  "/{-$storeLocale}/_with-home-lo/external-redirect": typeof Char123StoreLocaleChar125WithHomeLoExternalRedirectRoute;
+  "/{-$storeLocale}/_with-home-lo/inventory": typeof Char123StoreLocaleChar125WithHomeLoInventoryRoute;
+  "/{-$storeLocale}/_with-home-lo/me": typeof Char123StoreLocaleChar125WithHomeLoMeRoute;
+  "/{-$storeLocale}/_with-home-lo/riichi": typeof Char123StoreLocaleChar125WithHomeLoRiichiRoute;
+  "/{-$storeLocale}/my-riichi/$id": typeof Char123StoreLocaleChar125MyRiichiIdRoute;
+  "/{-$storeLocale}/ready/$code": typeof Char123StoreLocaleChar125ReadyCodeRoute;
+  "/{-$storeLocale}/t/$code": typeof Char123StoreLocaleChar125TCodeRoute;
+  "/{-$storeLocale}/_with-home-lo/": typeof Char123StoreLocaleChar125WithHomeLoIndexRoute;
+  "/dash/orders_/$id/settle": typeof DashOrdersIdSettleRoute;
+  "/{-$storeLocale}/_with-home-lo/actives_/$id": typeof Char123StoreLocaleChar125WithHomeLoActivesIdRoute;
+  "/{-$storeLocale}/_with-home-lo/actives_/new": typeof Char123StoreLocaleChar125WithHomeLoActivesNewRoute;
+  "/{-$storeLocale}/_with-home-lo/events_/$id": typeof Char123StoreLocaleChar125WithHomeLoEventsIdRoute;
+  "/{-$storeLocale}/_with-home-lo/inventory_/$id": typeof Char123StoreLocaleChar125WithHomeLoInventoryIdRoute;
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
+  fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
-    | '/dash'
-    | '/{-$storeLocale}'
-    | '/dash/actives'
-    | '/dash/crawler'
-    | '/dash/events'
-    | '/dash/gsz'
-    | '/dash/media'
-    | '/dash/orders'
-    | '/dash/pricing'
-    | '/dash/tables'
-    | '/dash/users'
-    | '/{-$storeLocale}/my-riichi'
-    | '/{-$storeLocale}/ready'
-    | '/{-$storeLocale}/t'
-    | '/dash/'
-    | '/dash/actives/$id'
-    | '/dash/events/$id'
-    | '/dash/gsz/$id'
-    | '/dash/orders/settle'
-    | '/dash/pricing/$id'
-    | '/dash/tables/$id'
-    | '/dash/users/$id'
-    | '/{-$storeLocale}/actives'
-    | '/{-$storeLocale}/contact-us'
-    | '/{-$storeLocale}/diceshock-agents'
-    | '/{-$storeLocale}/external-redirect'
-    | '/{-$storeLocale}/inventory'
-    | '/{-$storeLocale}/me'
-    | '/{-$storeLocale}/riichi'
-    | '/{-$storeLocale}/my-riichi/$id'
-    | '/{-$storeLocale}/ready/$code'
-    | '/{-$storeLocale}/t/$code'
-    | '/{-$storeLocale}/'
-    | '/dash/orders/$id/settle'
-    | '/{-$storeLocale}/actives/$id'
-    | '/{-$storeLocale}/actives/new'
-    | '/{-$storeLocale}/events/$id'
-    | '/{-$storeLocale}/inventory/$id'
-  fileRoutesByTo: FileRoutesByTo
+    | "/dash"
+    | "/{-$storeLocale}"
+    | "/dash/actives"
+    | "/dash/crawler"
+    | "/dash/events"
+    | "/dash/gsz"
+    | "/dash/media"
+    | "/dash/orders"
+    | "/dash/pricing"
+    | "/dash/tables"
+    | "/dash/users"
+    | "/{-$storeLocale}/my-riichi"
+    | "/{-$storeLocale}/ready"
+    | "/{-$storeLocale}/t"
+    | "/dash/"
+    | "/dash/actives/$id"
+    | "/dash/events/$id"
+    | "/dash/gsz/$id"
+    | "/dash/orders/settle"
+    | "/dash/pricing/$id"
+    | "/dash/tables/$id"
+    | "/dash/users/$id"
+    | "/{-$storeLocale}/actives"
+    | "/{-$storeLocale}/contact-us"
+    | "/{-$storeLocale}/diceshock-agents"
+    | "/{-$storeLocale}/external-redirect"
+    | "/{-$storeLocale}/inventory"
+    | "/{-$storeLocale}/me"
+    | "/{-$storeLocale}/riichi"
+    | "/{-$storeLocale}/my-riichi/$id"
+    | "/{-$storeLocale}/ready/$code"
+    | "/{-$storeLocale}/t/$code"
+    | "/{-$storeLocale}/"
+    | "/dash/orders/$id/settle"
+    | "/{-$storeLocale}/actives/$id"
+    | "/{-$storeLocale}/actives/new"
+    | "/{-$storeLocale}/events/$id"
+    | "/{-$storeLocale}/inventory/$id";
+  fileRoutesByTo: FileRoutesByTo;
   to:
-    | '/{-$storeLocale}'
-    | '/dash/actives'
-    | '/dash/crawler'
-    | '/dash/events'
-    | '/dash/gsz'
-    | '/dash/media'
-    | '/dash/orders'
-    | '/dash/pricing'
-    | '/dash/tables'
-    | '/dash/users'
-    | '/{-$storeLocale}/my-riichi'
-    | '/{-$storeLocale}/ready'
-    | '/{-$storeLocale}/t'
-    | '/dash'
-    | '/dash/actives/$id'
-    | '/dash/events/$id'
-    | '/dash/gsz/$id'
-    | '/dash/orders/settle'
-    | '/dash/pricing/$id'
-    | '/dash/tables/$id'
-    | '/dash/users/$id'
-    | '/{-$storeLocale}/actives'
-    | '/{-$storeLocale}/contact-us'
-    | '/{-$storeLocale}/diceshock-agents'
-    | '/{-$storeLocale}/external-redirect'
-    | '/{-$storeLocale}/inventory'
-    | '/{-$storeLocale}/me'
-    | '/{-$storeLocale}/riichi'
-    | '/{-$storeLocale}/my-riichi/$id'
-    | '/{-$storeLocale}/ready/$code'
-    | '/{-$storeLocale}/t/$code'
-    | '/dash/orders/$id/settle'
-    | '/{-$storeLocale}/actives/$id'
-    | '/{-$storeLocale}/actives/new'
-    | '/{-$storeLocale}/events/$id'
-    | '/{-$storeLocale}/inventory/$id'
+    | "/{-$storeLocale}"
+    | "/dash/actives"
+    | "/dash/crawler"
+    | "/dash/events"
+    | "/dash/gsz"
+    | "/dash/media"
+    | "/dash/orders"
+    | "/dash/pricing"
+    | "/dash/tables"
+    | "/dash/users"
+    | "/{-$storeLocale}/my-riichi"
+    | "/{-$storeLocale}/ready"
+    | "/{-$storeLocale}/t"
+    | "/dash"
+    | "/dash/actives/$id"
+    | "/dash/events/$id"
+    | "/dash/gsz/$id"
+    | "/dash/orders/settle"
+    | "/dash/pricing/$id"
+    | "/dash/tables/$id"
+    | "/dash/users/$id"
+    | "/{-$storeLocale}/actives"
+    | "/{-$storeLocale}/contact-us"
+    | "/{-$storeLocale}/diceshock-agents"
+    | "/{-$storeLocale}/external-redirect"
+    | "/{-$storeLocale}/inventory"
+    | "/{-$storeLocale}/me"
+    | "/{-$storeLocale}/riichi"
+    | "/{-$storeLocale}/my-riichi/$id"
+    | "/{-$storeLocale}/ready/$code"
+    | "/{-$storeLocale}/t/$code"
+    | "/dash/orders/$id/settle"
+    | "/{-$storeLocale}/actives/$id"
+    | "/{-$storeLocale}/actives/new"
+    | "/{-$storeLocale}/events/$id"
+    | "/{-$storeLocale}/inventory/$id";
   id:
-    | '__root__'
-    | '/dash'
-    | '/{-$storeLocale}'
-    | '/dash/actives'
-    | '/dash/crawler'
-    | '/dash/events'
-    | '/dash/gsz'
-    | '/dash/media'
-    | '/dash/orders'
-    | '/dash/pricing'
-    | '/dash/tables'
-    | '/dash/users'
-    | '/{-$storeLocale}/_with-home-lo'
-    | '/{-$storeLocale}/my-riichi'
-    | '/{-$storeLocale}/ready'
-    | '/{-$storeLocale}/t'
-    | '/dash/'
-    | '/dash/actives_/$id'
-    | '/dash/events_/$id'
-    | '/dash/gsz_/$id'
-    | '/dash/orders_/settle'
-    | '/dash/pricing_/$id'
-    | '/dash/tables_/$id'
-    | '/dash/users_/$id'
-    | '/{-$storeLocale}/_with-home-lo/actives'
-    | '/{-$storeLocale}/_with-home-lo/contact-us'
-    | '/{-$storeLocale}/_with-home-lo/diceshock-agents'
-    | '/{-$storeLocale}/_with-home-lo/external-redirect'
-    | '/{-$storeLocale}/_with-home-lo/inventory'
-    | '/{-$storeLocale}/_with-home-lo/me'
-    | '/{-$storeLocale}/_with-home-lo/riichi'
-    | '/{-$storeLocale}/my-riichi/$id'
-    | '/{-$storeLocale}/ready/$code'
-    | '/{-$storeLocale}/t/$code'
-    | '/{-$storeLocale}/_with-home-lo/'
-    | '/dash/orders_/$id/settle'
-    | '/{-$storeLocale}/_with-home-lo/actives_/$id'
-    | '/{-$storeLocale}/_with-home-lo/actives_/new'
-    | '/{-$storeLocale}/_with-home-lo/events_/$id'
-    | '/{-$storeLocale}/_with-home-lo/inventory_/$id'
-  fileRoutesById: FileRoutesById
+    | "__root__"
+    | "/dash"
+    | "/{-$storeLocale}"
+    | "/dash/actives"
+    | "/dash/crawler"
+    | "/dash/events"
+    | "/dash/gsz"
+    | "/dash/media"
+    | "/dash/orders"
+    | "/dash/pricing"
+    | "/dash/tables"
+    | "/dash/users"
+    | "/{-$storeLocale}/_with-home-lo"
+    | "/{-$storeLocale}/my-riichi"
+    | "/{-$storeLocale}/ready"
+    | "/{-$storeLocale}/t"
+    | "/dash/"
+    | "/dash/actives_/$id"
+    | "/dash/events_/$id"
+    | "/dash/gsz_/$id"
+    | "/dash/orders_/settle"
+    | "/dash/pricing_/$id"
+    | "/dash/tables_/$id"
+    | "/dash/users_/$id"
+    | "/{-$storeLocale}/_with-home-lo/actives"
+    | "/{-$storeLocale}/_with-home-lo/contact-us"
+    | "/{-$storeLocale}/_with-home-lo/diceshock-agents"
+    | "/{-$storeLocale}/_with-home-lo/external-redirect"
+    | "/{-$storeLocale}/_with-home-lo/inventory"
+    | "/{-$storeLocale}/_with-home-lo/me"
+    | "/{-$storeLocale}/_with-home-lo/riichi"
+    | "/{-$storeLocale}/my-riichi/$id"
+    | "/{-$storeLocale}/ready/$code"
+    | "/{-$storeLocale}/t/$code"
+    | "/{-$storeLocale}/_with-home-lo/"
+    | "/dash/orders_/$id/settle"
+    | "/{-$storeLocale}/_with-home-lo/actives_/$id"
+    | "/{-$storeLocale}/_with-home-lo/actives_/new"
+    | "/{-$storeLocale}/_with-home-lo/events_/$id"
+    | "/{-$storeLocale}/_with-home-lo/inventory_/$id";
+  fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
-  DashRoute: typeof DashRouteWithChildren
-  Char123StoreLocaleChar125Route: typeof Char123StoreLocaleChar125RouteWithChildren
+  DashRoute: typeof DashRouteWithChildren;
+  Char123StoreLocaleChar125Route: typeof Char123StoreLocaleChar125RouteWithChildren;
 }
 
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    '/{-$storeLocale}': {
-      id: '/{-$storeLocale}'
-      path: '/{-$storeLocale}'
-      fullPath: '/{-$storeLocale}'
-      preLoaderRoute: typeof Char123StoreLocaleChar125RouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dash': {
-      id: '/dash'
-      path: '/dash'
-      fullPath: '/dash'
-      preLoaderRoute: typeof DashRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dash/': {
-      id: '/dash/'
-      path: '/'
-      fullPath: '/dash/'
-      preLoaderRoute: typeof DashIndexRouteImport
-      parentRoute: typeof DashRoute
-    }
-    '/{-$storeLocale}/t': {
-      id: '/{-$storeLocale}/t'
-      path: '/t'
-      fullPath: '/{-$storeLocale}/t'
-      preLoaderRoute: typeof Char123StoreLocaleChar125TRouteImport
-      parentRoute: typeof Char123StoreLocaleChar125Route
-    }
-    '/{-$storeLocale}/ready': {
-      id: '/{-$storeLocale}/ready'
-      path: '/ready'
-      fullPath: '/{-$storeLocale}/ready'
-      preLoaderRoute: typeof Char123StoreLocaleChar125ReadyRouteImport
-      parentRoute: typeof Char123StoreLocaleChar125Route
-    }
-    '/{-$storeLocale}/my-riichi': {
-      id: '/{-$storeLocale}/my-riichi'
-      path: '/my-riichi'
-      fullPath: '/{-$storeLocale}/my-riichi'
-      preLoaderRoute: typeof Char123StoreLocaleChar125MyRiichiRouteImport
-      parentRoute: typeof Char123StoreLocaleChar125Route
-    }
-    '/{-$storeLocale}/_with-home-lo': {
-      id: '/{-$storeLocale}/_with-home-lo'
-      path: ''
-      fullPath: '/{-$storeLocale}'
-      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoRouteImport
-      parentRoute: typeof Char123StoreLocaleChar125Route
-    }
-    '/dash/users': {
-      id: '/dash/users'
-      path: '/users'
-      fullPath: '/dash/users'
-      preLoaderRoute: typeof DashUsersRouteImport
-      parentRoute: typeof DashRoute
-    }
-    '/dash/tables': {
-      id: '/dash/tables'
-      path: '/tables'
-      fullPath: '/dash/tables'
-      preLoaderRoute: typeof DashTablesRouteImport
-      parentRoute: typeof DashRoute
-    }
-    '/dash/pricing': {
-      id: '/dash/pricing'
-      path: '/pricing'
-      fullPath: '/dash/pricing'
-      preLoaderRoute: typeof DashPricingRouteImport
-      parentRoute: typeof DashRoute
-    }
-    '/dash/orders': {
-      id: '/dash/orders'
-      path: '/orders'
-      fullPath: '/dash/orders'
-      preLoaderRoute: typeof DashOrdersRouteImport
-      parentRoute: typeof DashRoute
-    }
-    '/dash/media': {
-      id: '/dash/media'
-      path: '/media'
-      fullPath: '/dash/media'
-      preLoaderRoute: typeof DashMediaRouteImport
-      parentRoute: typeof DashRoute
-    }
-    '/dash/gsz': {
-      id: '/dash/gsz'
-      path: '/gsz'
-      fullPath: '/dash/gsz'
-      preLoaderRoute: typeof DashGszRouteImport
-      parentRoute: typeof DashRoute
-    }
-    '/dash/events': {
-      id: '/dash/events'
-      path: '/events'
-      fullPath: '/dash/events'
-      preLoaderRoute: typeof DashEventsRouteImport
-      parentRoute: typeof DashRoute
-    }
-    '/dash/crawler': {
-      id: '/dash/crawler'
-      path: '/crawler'
-      fullPath: '/dash/crawler'
-      preLoaderRoute: typeof DashCrawlerRouteImport
-      parentRoute: typeof DashRoute
-    }
-    '/dash/actives': {
-      id: '/dash/actives'
-      path: '/actives'
-      fullPath: '/dash/actives'
-      preLoaderRoute: typeof DashActivesRouteImport
-      parentRoute: typeof DashRoute
-    }
-    '/{-$storeLocale}/_with-home-lo/': {
-      id: '/{-$storeLocale}/_with-home-lo/'
-      path: '/'
-      fullPath: '/{-$storeLocale}/'
-      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoIndexRouteImport
-      parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute
-    }
-    '/{-$storeLocale}/t/$code': {
-      id: '/{-$storeLocale}/t/$code'
-      path: '/$code'
-      fullPath: '/{-$storeLocale}/t/$code'
-      preLoaderRoute: typeof Char123StoreLocaleChar125TCodeRouteImport
-      parentRoute: typeof Char123StoreLocaleChar125TRoute
-    }
-    '/{-$storeLocale}/ready/$code': {
-      id: '/{-$storeLocale}/ready/$code'
-      path: '/$code'
-      fullPath: '/{-$storeLocale}/ready/$code'
-      preLoaderRoute: typeof Char123StoreLocaleChar125ReadyCodeRouteImport
-      parentRoute: typeof Char123StoreLocaleChar125ReadyRoute
-    }
-    '/{-$storeLocale}/my-riichi/$id': {
-      id: '/{-$storeLocale}/my-riichi/$id'
-      path: '/$id'
-      fullPath: '/{-$storeLocale}/my-riichi/$id'
-      preLoaderRoute: typeof Char123StoreLocaleChar125MyRiichiIdRouteImport
-      parentRoute: typeof Char123StoreLocaleChar125MyRiichiRoute
-    }
-    '/{-$storeLocale}/_with-home-lo/riichi': {
-      id: '/{-$storeLocale}/_with-home-lo/riichi'
-      path: '/riichi'
-      fullPath: '/{-$storeLocale}/riichi'
-      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoRiichiRouteImport
-      parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute
-    }
-    '/{-$storeLocale}/_with-home-lo/me': {
-      id: '/{-$storeLocale}/_with-home-lo/me'
-      path: '/me'
-      fullPath: '/{-$storeLocale}/me'
-      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoMeRouteImport
-      parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute
-    }
-    '/{-$storeLocale}/_with-home-lo/inventory': {
-      id: '/{-$storeLocale}/_with-home-lo/inventory'
-      path: '/inventory'
-      fullPath: '/{-$storeLocale}/inventory'
-      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoInventoryRouteImport
-      parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute
-    }
-    '/{-$storeLocale}/_with-home-lo/external-redirect': {
-      id: '/{-$storeLocale}/_with-home-lo/external-redirect'
-      path: '/external-redirect'
-      fullPath: '/{-$storeLocale}/external-redirect'
-      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoExternalRedirectRouteImport
-      parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute
-    }
-    '/{-$storeLocale}/_with-home-lo/diceshock-agents': {
-      id: '/{-$storeLocale}/_with-home-lo/diceshock-agents'
-      path: '/diceshock-agents'
-      fullPath: '/{-$storeLocale}/diceshock-agents'
-      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoDiceshockAgentsRouteImport
-      parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute
-    }
-    '/{-$storeLocale}/_with-home-lo/contact-us': {
-      id: '/{-$storeLocale}/_with-home-lo/contact-us'
-      path: '/contact-us'
-      fullPath: '/{-$storeLocale}/contact-us'
-      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoContactUsRouteImport
-      parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute
-    }
-    '/{-$storeLocale}/_with-home-lo/actives': {
-      id: '/{-$storeLocale}/_with-home-lo/actives'
-      path: '/actives'
-      fullPath: '/{-$storeLocale}/actives'
-      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoActivesRouteImport
-      parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute
-    }
-    '/dash/users_/$id': {
-      id: '/dash/users_/$id'
-      path: '/users/$id'
-      fullPath: '/dash/users/$id'
-      preLoaderRoute: typeof DashUsersIdRouteImport
-      parentRoute: typeof DashRoute
-    }
-    '/dash/tables_/$id': {
-      id: '/dash/tables_/$id'
-      path: '/tables/$id'
-      fullPath: '/dash/tables/$id'
-      preLoaderRoute: typeof DashTablesIdRouteImport
-      parentRoute: typeof DashRoute
-    }
-    '/dash/pricing_/$id': {
-      id: '/dash/pricing_/$id'
-      path: '/pricing/$id'
-      fullPath: '/dash/pricing/$id'
-      preLoaderRoute: typeof DashPricingIdRouteImport
-      parentRoute: typeof DashRoute
-    }
-    '/dash/orders_/settle': {
-      id: '/dash/orders_/settle'
-      path: '/orders/settle'
-      fullPath: '/dash/orders/settle'
-      preLoaderRoute: typeof DashOrdersSettleRouteImport
-      parentRoute: typeof DashRoute
-    }
-    '/dash/gsz_/$id': {
-      id: '/dash/gsz_/$id'
-      path: '/gsz/$id'
-      fullPath: '/dash/gsz/$id'
-      preLoaderRoute: typeof DashGszIdRouteImport
-      parentRoute: typeof DashRoute
-    }
-    '/dash/events_/$id': {
-      id: '/dash/events_/$id'
-      path: '/events/$id'
-      fullPath: '/dash/events/$id'
-      preLoaderRoute: typeof DashEventsIdRouteImport
-      parentRoute: typeof DashRoute
-    }
-    '/dash/actives_/$id': {
-      id: '/dash/actives_/$id'
-      path: '/actives/$id'
-      fullPath: '/dash/actives/$id'
-      preLoaderRoute: typeof DashActivesIdRouteImport
-      parentRoute: typeof DashRoute
-    }
-    '/{-$storeLocale}/_with-home-lo/inventory_/$id': {
-      id: '/{-$storeLocale}/_with-home-lo/inventory_/$id'
-      path: '/inventory/$id'
-      fullPath: '/{-$storeLocale}/inventory/$id'
-      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoInventoryIdRouteImport
-      parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute
-    }
-    '/{-$storeLocale}/_with-home-lo/events_/$id': {
-      id: '/{-$storeLocale}/_with-home-lo/events_/$id'
-      path: '/events/$id'
-      fullPath: '/{-$storeLocale}/events/$id'
-      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoEventsIdRouteImport
-      parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute
-    }
-    '/{-$storeLocale}/_with-home-lo/actives_/new': {
-      id: '/{-$storeLocale}/_with-home-lo/actives_/new'
-      path: '/actives/new'
-      fullPath: '/{-$storeLocale}/actives/new'
-      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoActivesNewRouteImport
-      parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute
-    }
-    '/{-$storeLocale}/_with-home-lo/actives_/$id': {
-      id: '/{-$storeLocale}/_with-home-lo/actives_/$id'
-      path: '/actives/$id'
-      fullPath: '/{-$storeLocale}/actives/$id'
-      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoActivesIdRouteImport
-      parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute
-    }
-    '/dash/orders_/$id/settle': {
-      id: '/dash/orders_/$id/settle'
-      path: '/orders/$id/settle'
-      fullPath: '/dash/orders/$id/settle'
-      preLoaderRoute: typeof DashOrdersIdSettleRouteImport
-      parentRoute: typeof DashRoute
-    }
+    "/{-$storeLocale}": {
+      id: "/{-$storeLocale}";
+      path: "/{-$storeLocale}";
+      fullPath: "/{-$storeLocale}";
+      preLoaderRoute: typeof Char123StoreLocaleChar125RouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/dash": {
+      id: "/dash";
+      path: "/dash";
+      fullPath: "/dash";
+      preLoaderRoute: typeof DashRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/dash/": {
+      id: "/dash/";
+      path: "/";
+      fullPath: "/dash/";
+      preLoaderRoute: typeof DashIndexRouteImport;
+      parentRoute: typeof DashRoute;
+    };
+    "/{-$storeLocale}/t": {
+      id: "/{-$storeLocale}/t";
+      path: "/t";
+      fullPath: "/{-$storeLocale}/t";
+      preLoaderRoute: typeof Char123StoreLocaleChar125TRouteImport;
+      parentRoute: typeof Char123StoreLocaleChar125Route;
+    };
+    "/{-$storeLocale}/ready": {
+      id: "/{-$storeLocale}/ready";
+      path: "/ready";
+      fullPath: "/{-$storeLocale}/ready";
+      preLoaderRoute: typeof Char123StoreLocaleChar125ReadyRouteImport;
+      parentRoute: typeof Char123StoreLocaleChar125Route;
+    };
+    "/{-$storeLocale}/my-riichi": {
+      id: "/{-$storeLocale}/my-riichi";
+      path: "/my-riichi";
+      fullPath: "/{-$storeLocale}/my-riichi";
+      preLoaderRoute: typeof Char123StoreLocaleChar125MyRiichiRouteImport;
+      parentRoute: typeof Char123StoreLocaleChar125Route;
+    };
+    "/{-$storeLocale}/_with-home-lo": {
+      id: "/{-$storeLocale}/_with-home-lo";
+      path: "";
+      fullPath: "/{-$storeLocale}";
+      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoRouteImport;
+      parentRoute: typeof Char123StoreLocaleChar125Route;
+    };
+    "/dash/users": {
+      id: "/dash/users";
+      path: "/users";
+      fullPath: "/dash/users";
+      preLoaderRoute: typeof DashUsersRouteImport;
+      parentRoute: typeof DashRoute;
+    };
+    "/dash/tables": {
+      id: "/dash/tables";
+      path: "/tables";
+      fullPath: "/dash/tables";
+      preLoaderRoute: typeof DashTablesRouteImport;
+      parentRoute: typeof DashRoute;
+    };
+    "/dash/pricing": {
+      id: "/dash/pricing";
+      path: "/pricing";
+      fullPath: "/dash/pricing";
+      preLoaderRoute: typeof DashPricingRouteImport;
+      parentRoute: typeof DashRoute;
+    };
+    "/dash/orders": {
+      id: "/dash/orders";
+      path: "/orders";
+      fullPath: "/dash/orders";
+      preLoaderRoute: typeof DashOrdersRouteImport;
+      parentRoute: typeof DashRoute;
+    };
+    "/dash/media": {
+      id: "/dash/media";
+      path: "/media";
+      fullPath: "/dash/media";
+      preLoaderRoute: typeof DashMediaRouteImport;
+      parentRoute: typeof DashRoute;
+    };
+    "/dash/gsz": {
+      id: "/dash/gsz";
+      path: "/gsz";
+      fullPath: "/dash/gsz";
+      preLoaderRoute: typeof DashGszRouteImport;
+      parentRoute: typeof DashRoute;
+    };
+    "/dash/events": {
+      id: "/dash/events";
+      path: "/events";
+      fullPath: "/dash/events";
+      preLoaderRoute: typeof DashEventsRouteImport;
+      parentRoute: typeof DashRoute;
+    };
+    "/dash/crawler": {
+      id: "/dash/crawler";
+      path: "/crawler";
+      fullPath: "/dash/crawler";
+      preLoaderRoute: typeof DashCrawlerRouteImport;
+      parentRoute: typeof DashRoute;
+    };
+    "/dash/actives": {
+      id: "/dash/actives";
+      path: "/actives";
+      fullPath: "/dash/actives";
+      preLoaderRoute: typeof DashActivesRouteImport;
+      parentRoute: typeof DashRoute;
+    };
+    "/{-$storeLocale}/_with-home-lo/": {
+      id: "/{-$storeLocale}/_with-home-lo/";
+      path: "/";
+      fullPath: "/{-$storeLocale}/";
+      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoIndexRouteImport;
+      parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute;
+    };
+    "/{-$storeLocale}/t/$code": {
+      id: "/{-$storeLocale}/t/$code";
+      path: "/$code";
+      fullPath: "/{-$storeLocale}/t/$code";
+      preLoaderRoute: typeof Char123StoreLocaleChar125TCodeRouteImport;
+      parentRoute: typeof Char123StoreLocaleChar125TRoute;
+    };
+    "/{-$storeLocale}/ready/$code": {
+      id: "/{-$storeLocale}/ready/$code";
+      path: "/$code";
+      fullPath: "/{-$storeLocale}/ready/$code";
+      preLoaderRoute: typeof Char123StoreLocaleChar125ReadyCodeRouteImport;
+      parentRoute: typeof Char123StoreLocaleChar125ReadyRoute;
+    };
+    "/{-$storeLocale}/my-riichi/$id": {
+      id: "/{-$storeLocale}/my-riichi/$id";
+      path: "/$id";
+      fullPath: "/{-$storeLocale}/my-riichi/$id";
+      preLoaderRoute: typeof Char123StoreLocaleChar125MyRiichiIdRouteImport;
+      parentRoute: typeof Char123StoreLocaleChar125MyRiichiRoute;
+    };
+    "/{-$storeLocale}/_with-home-lo/riichi": {
+      id: "/{-$storeLocale}/_with-home-lo/riichi";
+      path: "/riichi";
+      fullPath: "/{-$storeLocale}/riichi";
+      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoRiichiRouteImport;
+      parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute;
+    };
+    "/{-$storeLocale}/_with-home-lo/me": {
+      id: "/{-$storeLocale}/_with-home-lo/me";
+      path: "/me";
+      fullPath: "/{-$storeLocale}/me";
+      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoMeRouteImport;
+      parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute;
+    };
+    "/{-$storeLocale}/_with-home-lo/inventory": {
+      id: "/{-$storeLocale}/_with-home-lo/inventory";
+      path: "/inventory";
+      fullPath: "/{-$storeLocale}/inventory";
+      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoInventoryRouteImport;
+      parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute;
+    };
+    "/{-$storeLocale}/_with-home-lo/external-redirect": {
+      id: "/{-$storeLocale}/_with-home-lo/external-redirect";
+      path: "/external-redirect";
+      fullPath: "/{-$storeLocale}/external-redirect";
+      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoExternalRedirectRouteImport;
+      parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute;
+    };
+    "/{-$storeLocale}/_with-home-lo/diceshock-agents": {
+      id: "/{-$storeLocale}/_with-home-lo/diceshock-agents";
+      path: "/diceshock-agents";
+      fullPath: "/{-$storeLocale}/diceshock-agents";
+      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoDiceshockAgentsRouteImport;
+      parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute;
+    };
+    "/{-$storeLocale}/_with-home-lo/contact-us": {
+      id: "/{-$storeLocale}/_with-home-lo/contact-us";
+      path: "/contact-us";
+      fullPath: "/{-$storeLocale}/contact-us";
+      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoContactUsRouteImport;
+      parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute;
+    };
+    "/{-$storeLocale}/_with-home-lo/actives": {
+      id: "/{-$storeLocale}/_with-home-lo/actives";
+      path: "/actives";
+      fullPath: "/{-$storeLocale}/actives";
+      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoActivesRouteImport;
+      parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute;
+    };
+    "/dash/users_/$id": {
+      id: "/dash/users_/$id";
+      path: "/users/$id";
+      fullPath: "/dash/users/$id";
+      preLoaderRoute: typeof DashUsersIdRouteImport;
+      parentRoute: typeof DashRoute;
+    };
+    "/dash/tables_/$id": {
+      id: "/dash/tables_/$id";
+      path: "/tables/$id";
+      fullPath: "/dash/tables/$id";
+      preLoaderRoute: typeof DashTablesIdRouteImport;
+      parentRoute: typeof DashRoute;
+    };
+    "/dash/pricing_/$id": {
+      id: "/dash/pricing_/$id";
+      path: "/pricing/$id";
+      fullPath: "/dash/pricing/$id";
+      preLoaderRoute: typeof DashPricingIdRouteImport;
+      parentRoute: typeof DashRoute;
+    };
+    "/dash/orders_/settle": {
+      id: "/dash/orders_/settle";
+      path: "/orders/settle";
+      fullPath: "/dash/orders/settle";
+      preLoaderRoute: typeof DashOrdersSettleRouteImport;
+      parentRoute: typeof DashRoute;
+    };
+    "/dash/gsz_/$id": {
+      id: "/dash/gsz_/$id";
+      path: "/gsz/$id";
+      fullPath: "/dash/gsz/$id";
+      preLoaderRoute: typeof DashGszIdRouteImport;
+      parentRoute: typeof DashRoute;
+    };
+    "/dash/events_/$id": {
+      id: "/dash/events_/$id";
+      path: "/events/$id";
+      fullPath: "/dash/events/$id";
+      preLoaderRoute: typeof DashEventsIdRouteImport;
+      parentRoute: typeof DashRoute;
+    };
+    "/dash/actives_/$id": {
+      id: "/dash/actives_/$id";
+      path: "/actives/$id";
+      fullPath: "/dash/actives/$id";
+      preLoaderRoute: typeof DashActivesIdRouteImport;
+      parentRoute: typeof DashRoute;
+    };
+    "/{-$storeLocale}/_with-home-lo/inventory_/$id": {
+      id: "/{-$storeLocale}/_with-home-lo/inventory_/$id";
+      path: "/inventory/$id";
+      fullPath: "/{-$storeLocale}/inventory/$id";
+      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoInventoryIdRouteImport;
+      parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute;
+    };
+    "/{-$storeLocale}/_with-home-lo/events_/$id": {
+      id: "/{-$storeLocale}/_with-home-lo/events_/$id";
+      path: "/events/$id";
+      fullPath: "/{-$storeLocale}/events/$id";
+      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoEventsIdRouteImport;
+      parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute;
+    };
+    "/{-$storeLocale}/_with-home-lo/actives_/new": {
+      id: "/{-$storeLocale}/_with-home-lo/actives_/new";
+      path: "/actives/new";
+      fullPath: "/{-$storeLocale}/actives/new";
+      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoActivesNewRouteImport;
+      parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute;
+    };
+    "/{-$storeLocale}/_with-home-lo/actives_/$id": {
+      id: "/{-$storeLocale}/_with-home-lo/actives_/$id";
+      path: "/actives/$id";
+      fullPath: "/{-$storeLocale}/actives/$id";
+      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoActivesIdRouteImport;
+      parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute;
+    };
+    "/dash/orders_/$id/settle": {
+      id: "/dash/orders_/$id/settle";
+      path: "/orders/$id/settle";
+      fullPath: "/dash/orders/$id/settle";
+      preLoaderRoute: typeof DashOrdersIdSettleRouteImport;
+      parentRoute: typeof DashRoute;
+    };
   }
 }
 
 interface DashRouteChildren {
-  DashActivesRoute: typeof DashActivesRoute
-  DashCrawlerRoute: typeof DashCrawlerRoute
-  DashEventsRoute: typeof DashEventsRoute
-  DashGszRoute: typeof DashGszRoute
-  DashMediaRoute: typeof DashMediaRoute
-  DashOrdersRoute: typeof DashOrdersRoute
-  DashPricingRoute: typeof DashPricingRoute
-  DashTablesRoute: typeof DashTablesRoute
-  DashUsersRoute: typeof DashUsersRoute
-  DashIndexRoute: typeof DashIndexRoute
-  DashActivesIdRoute: typeof DashActivesIdRoute
-  DashEventsIdRoute: typeof DashEventsIdRoute
-  DashGszIdRoute: typeof DashGszIdRoute
-  DashOrdersSettleRoute: typeof DashOrdersSettleRoute
-  DashPricingIdRoute: typeof DashPricingIdRoute
-  DashTablesIdRoute: typeof DashTablesIdRoute
-  DashUsersIdRoute: typeof DashUsersIdRoute
-  DashOrdersIdSettleRoute: typeof DashOrdersIdSettleRoute
+  DashActivesRoute: typeof DashActivesRoute;
+  DashCrawlerRoute: typeof DashCrawlerRoute;
+  DashEventsRoute: typeof DashEventsRoute;
+  DashGszRoute: typeof DashGszRoute;
+  DashMediaRoute: typeof DashMediaRoute;
+  DashOrdersRoute: typeof DashOrdersRoute;
+  DashPricingRoute: typeof DashPricingRoute;
+  DashTablesRoute: typeof DashTablesRoute;
+  DashUsersRoute: typeof DashUsersRoute;
+  DashIndexRoute: typeof DashIndexRoute;
+  DashActivesIdRoute: typeof DashActivesIdRoute;
+  DashEventsIdRoute: typeof DashEventsIdRoute;
+  DashGszIdRoute: typeof DashGszIdRoute;
+  DashOrdersSettleRoute: typeof DashOrdersSettleRoute;
+  DashPricingIdRoute: typeof DashPricingIdRoute;
+  DashTablesIdRoute: typeof DashTablesIdRoute;
+  DashUsersIdRoute: typeof DashUsersIdRoute;
+  DashOrdersIdSettleRoute: typeof DashOrdersIdSettleRoute;
 }
 
 const DashRouteChildren: DashRouteChildren = {
@@ -829,23 +829,23 @@ const DashRouteChildren: DashRouteChildren = {
   DashTablesIdRoute: DashTablesIdRoute,
   DashUsersIdRoute: DashUsersIdRoute,
   DashOrdersIdSettleRoute: DashOrdersIdSettleRoute,
-}
+};
 
-const DashRouteWithChildren = DashRoute._addFileChildren(DashRouteChildren)
+const DashRouteWithChildren = DashRoute._addFileChildren(DashRouteChildren);
 
 interface Char123StoreLocaleChar125WithHomeLoRouteChildren {
-  Char123StoreLocaleChar125WithHomeLoActivesRoute: typeof Char123StoreLocaleChar125WithHomeLoActivesRoute
-  Char123StoreLocaleChar125WithHomeLoContactUsRoute: typeof Char123StoreLocaleChar125WithHomeLoContactUsRoute
-  Char123StoreLocaleChar125WithHomeLoDiceshockAgentsRoute: typeof Char123StoreLocaleChar125WithHomeLoDiceshockAgentsRoute
-  Char123StoreLocaleChar125WithHomeLoExternalRedirectRoute: typeof Char123StoreLocaleChar125WithHomeLoExternalRedirectRoute
-  Char123StoreLocaleChar125WithHomeLoInventoryRoute: typeof Char123StoreLocaleChar125WithHomeLoInventoryRoute
-  Char123StoreLocaleChar125WithHomeLoMeRoute: typeof Char123StoreLocaleChar125WithHomeLoMeRoute
-  Char123StoreLocaleChar125WithHomeLoRiichiRoute: typeof Char123StoreLocaleChar125WithHomeLoRiichiRoute
-  Char123StoreLocaleChar125WithHomeLoIndexRoute: typeof Char123StoreLocaleChar125WithHomeLoIndexRoute
-  Char123StoreLocaleChar125WithHomeLoActivesIdRoute: typeof Char123StoreLocaleChar125WithHomeLoActivesIdRoute
-  Char123StoreLocaleChar125WithHomeLoActivesNewRoute: typeof Char123StoreLocaleChar125WithHomeLoActivesNewRoute
-  Char123StoreLocaleChar125WithHomeLoEventsIdRoute: typeof Char123StoreLocaleChar125WithHomeLoEventsIdRoute
-  Char123StoreLocaleChar125WithHomeLoInventoryIdRoute: typeof Char123StoreLocaleChar125WithHomeLoInventoryIdRoute
+  Char123StoreLocaleChar125WithHomeLoActivesRoute: typeof Char123StoreLocaleChar125WithHomeLoActivesRoute;
+  Char123StoreLocaleChar125WithHomeLoContactUsRoute: typeof Char123StoreLocaleChar125WithHomeLoContactUsRoute;
+  Char123StoreLocaleChar125WithHomeLoDiceshockAgentsRoute: typeof Char123StoreLocaleChar125WithHomeLoDiceshockAgentsRoute;
+  Char123StoreLocaleChar125WithHomeLoExternalRedirectRoute: typeof Char123StoreLocaleChar125WithHomeLoExternalRedirectRoute;
+  Char123StoreLocaleChar125WithHomeLoInventoryRoute: typeof Char123StoreLocaleChar125WithHomeLoInventoryRoute;
+  Char123StoreLocaleChar125WithHomeLoMeRoute: typeof Char123StoreLocaleChar125WithHomeLoMeRoute;
+  Char123StoreLocaleChar125WithHomeLoRiichiRoute: typeof Char123StoreLocaleChar125WithHomeLoRiichiRoute;
+  Char123StoreLocaleChar125WithHomeLoIndexRoute: typeof Char123StoreLocaleChar125WithHomeLoIndexRoute;
+  Char123StoreLocaleChar125WithHomeLoActivesIdRoute: typeof Char123StoreLocaleChar125WithHomeLoActivesIdRoute;
+  Char123StoreLocaleChar125WithHomeLoActivesNewRoute: typeof Char123StoreLocaleChar125WithHomeLoActivesNewRoute;
+  Char123StoreLocaleChar125WithHomeLoEventsIdRoute: typeof Char123StoreLocaleChar125WithHomeLoEventsIdRoute;
+  Char123StoreLocaleChar125WithHomeLoInventoryIdRoute: typeof Char123StoreLocaleChar125WithHomeLoInventoryIdRoute;
 }
 
 const Char123StoreLocaleChar125WithHomeLoRouteChildren: Char123StoreLocaleChar125WithHomeLoRouteChildren =
@@ -874,62 +874,62 @@ const Char123StoreLocaleChar125WithHomeLoRouteChildren: Char123StoreLocaleChar12
       Char123StoreLocaleChar125WithHomeLoEventsIdRoute,
     Char123StoreLocaleChar125WithHomeLoInventoryIdRoute:
       Char123StoreLocaleChar125WithHomeLoInventoryIdRoute,
-  }
+  };
 
 const Char123StoreLocaleChar125WithHomeLoRouteWithChildren =
   Char123StoreLocaleChar125WithHomeLoRoute._addFileChildren(
     Char123StoreLocaleChar125WithHomeLoRouteChildren,
-  )
+  );
 
 interface Char123StoreLocaleChar125MyRiichiRouteChildren {
-  Char123StoreLocaleChar125MyRiichiIdRoute: typeof Char123StoreLocaleChar125MyRiichiIdRoute
+  Char123StoreLocaleChar125MyRiichiIdRoute: typeof Char123StoreLocaleChar125MyRiichiIdRoute;
 }
 
 const Char123StoreLocaleChar125MyRiichiRouteChildren: Char123StoreLocaleChar125MyRiichiRouteChildren =
   {
     Char123StoreLocaleChar125MyRiichiIdRoute:
       Char123StoreLocaleChar125MyRiichiIdRoute,
-  }
+  };
 
 const Char123StoreLocaleChar125MyRiichiRouteWithChildren =
   Char123StoreLocaleChar125MyRiichiRoute._addFileChildren(
     Char123StoreLocaleChar125MyRiichiRouteChildren,
-  )
+  );
 
 interface Char123StoreLocaleChar125ReadyRouteChildren {
-  Char123StoreLocaleChar125ReadyCodeRoute: typeof Char123StoreLocaleChar125ReadyCodeRoute
+  Char123StoreLocaleChar125ReadyCodeRoute: typeof Char123StoreLocaleChar125ReadyCodeRoute;
 }
 
 const Char123StoreLocaleChar125ReadyRouteChildren: Char123StoreLocaleChar125ReadyRouteChildren =
   {
     Char123StoreLocaleChar125ReadyCodeRoute:
       Char123StoreLocaleChar125ReadyCodeRoute,
-  }
+  };
 
 const Char123StoreLocaleChar125ReadyRouteWithChildren =
   Char123StoreLocaleChar125ReadyRoute._addFileChildren(
     Char123StoreLocaleChar125ReadyRouteChildren,
-  )
+  );
 
 interface Char123StoreLocaleChar125TRouteChildren {
-  Char123StoreLocaleChar125TCodeRoute: typeof Char123StoreLocaleChar125TCodeRoute
+  Char123StoreLocaleChar125TCodeRoute: typeof Char123StoreLocaleChar125TCodeRoute;
 }
 
 const Char123StoreLocaleChar125TRouteChildren: Char123StoreLocaleChar125TRouteChildren =
   {
     Char123StoreLocaleChar125TCodeRoute: Char123StoreLocaleChar125TCodeRoute,
-  }
+  };
 
 const Char123StoreLocaleChar125TRouteWithChildren =
   Char123StoreLocaleChar125TRoute._addFileChildren(
     Char123StoreLocaleChar125TRouteChildren,
-  )
+  );
 
 interface Char123StoreLocaleChar125RouteChildren {
-  Char123StoreLocaleChar125WithHomeLoRoute: typeof Char123StoreLocaleChar125WithHomeLoRouteWithChildren
-  Char123StoreLocaleChar125MyRiichiRoute: typeof Char123StoreLocaleChar125MyRiichiRouteWithChildren
-  Char123StoreLocaleChar125ReadyRoute: typeof Char123StoreLocaleChar125ReadyRouteWithChildren
-  Char123StoreLocaleChar125TRoute: typeof Char123StoreLocaleChar125TRouteWithChildren
+  Char123StoreLocaleChar125WithHomeLoRoute: typeof Char123StoreLocaleChar125WithHomeLoRouteWithChildren;
+  Char123StoreLocaleChar125MyRiichiRoute: typeof Char123StoreLocaleChar125MyRiichiRouteWithChildren;
+  Char123StoreLocaleChar125ReadyRoute: typeof Char123StoreLocaleChar125ReadyRouteWithChildren;
+  Char123StoreLocaleChar125TRoute: typeof Char123StoreLocaleChar125TRouteWithChildren;
 }
 
 const Char123StoreLocaleChar125RouteChildren: Char123StoreLocaleChar125RouteChildren =
@@ -942,17 +942,17 @@ const Char123StoreLocaleChar125RouteChildren: Char123StoreLocaleChar125RouteChil
       Char123StoreLocaleChar125ReadyRouteWithChildren,
     Char123StoreLocaleChar125TRoute:
       Char123StoreLocaleChar125TRouteWithChildren,
-  }
+  };
 
 const Char123StoreLocaleChar125RouteWithChildren =
   Char123StoreLocaleChar125Route._addFileChildren(
     Char123StoreLocaleChar125RouteChildren,
-  )
+  );
 
 const rootRouteChildren: RootRouteChildren = {
   DashRoute: DashRouteWithChildren,
   Char123StoreLocaleChar125Route: Char123StoreLocaleChar125RouteWithChildren,
-}
+};
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>()
+  ._addFileTypes<FileRouteTypes>();

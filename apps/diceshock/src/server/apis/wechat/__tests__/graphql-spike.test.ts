@@ -7,13 +7,21 @@
  * This is NOT production code — insights captured in .sisyphus/notepads/.
  */
 
-import dbFactory from "@lib/db";
-import * as schemaExports from "@lib/db/schema";
+/**
+ * SPIIKE: drizzle-graphql table coverage investigation.
+ *
+ * Goal: Confirm which tables `buildSchema` from `drizzle-graphql` exposes,
+ * verify in-process `graphql()` execution works, and document gaps.
+ *
+ * This is NOT production code — insights captured in .sisyphus/notepads/.
+ */
+
+import dbFactory, * as schemaExports from "@lib/db";
 import { buildSchema } from "drizzle-graphql";
 import { describe, expect, it } from "vitest";
 
 // ── 14 tables that MUST have query resolvers ──────────────────────
-const REQUIRED_TABLES = new Set([
+const _REQUIRED_TABLES = new Set([
   "activesTable",
   "activeRegistrationsTable",
   "boardGamesTable",
@@ -31,7 +39,7 @@ const REQUIRED_TABLES = new Set([
 ]);
 
 // All tables defined in the schema (for comparison)
-const ALL_SCHEMA_TABLES = Object.entries(schemaExports)
+const _ALL_SCHEMA_TABLES = Object.entries(schemaExports)
   .filter(
     ([, v]) =>
       typeof v === "object" &&
@@ -90,7 +98,7 @@ describe("drizzle-graphql table coverage spike", () => {
   // ── Step 4: Map drizzle table names → GraphQL query field names ─
   it("maps drizzle table names to GraphQL query fields", () => {
     // Extract table names from the schema exports (drizzle table names)
-    const allTableExports = Object.keys(schemaExports).filter(
+    const _allTableExports = Object.keys(schemaExports).filter(
       (k) =>
         typeof (schemaExports as Record<string, unknown>)[k] === "object" &&
         (schemaExports as Record<string, unknown>)[k] !== null &&

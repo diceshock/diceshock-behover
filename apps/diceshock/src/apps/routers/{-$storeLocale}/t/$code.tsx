@@ -21,7 +21,7 @@ import useMahjongMatch from "@/client/hooks/useMahjongMatch";
 import useNetworkQuality from "@/client/hooks/useNetworkQuality";
 import useSeatTimer from "@/client/hooks/useSeatTimer";
 import useTempIdentity from "@/client/hooks/useTempIdentity";
-import { getLoginTime } from "@/client/hooks/useTOTP";
+import useTOTP, { getLoginTime } from "@/client/hooks/useTOTP";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import type { SeatIdentity } from "@/shared/types";
 import {
@@ -101,7 +101,7 @@ function SeatTimerPage() {
   const { t } = useTranslation();
   const { identity, ready: identityReady } = useSeatIdentity();
   const { setUserInfoIm } = useAuth();
-  const [redirectedFrom, setRedirectedFrom] = useState(from || "");
+  const [redirectedFrom, _setRedirectedFrom] = useState(from || "");
 
   const [tableData, setTableData] = useState<Awaited<
     ReturnType<typeof trpcClientPublic.tables.getByCode.query>
@@ -167,7 +167,7 @@ function SeatTimerPage() {
     } finally {
       setLoading(false);
     }
-  }, [code]);
+  }, [code, t]);
 
   useEffect(() => {
     void fetchTable();
@@ -508,7 +508,7 @@ function SeatTimerPage() {
 function TableInfoSection({
   table,
   totalOccupied,
-  connected,
+  connected: _connected,
   signalLevel,
 }: {
   table: {
@@ -586,7 +586,7 @@ function TOTPSection({ identity }: { identity: SeatIdentity | null }) {
 }
 
 function RealTOTPSection() {
-  const { code, remainingSeconds, isLoading, error } = __useTOTPImport(true);
+  const { code, remainingSeconds, isLoading, error } = useTOTP(true);
   const crossData = useCrossData();
   const userAgentRef = useRef(
     crossData?.UserAgentMeta?.userAgent ?? navigator.userAgent,
@@ -662,6 +662,7 @@ function TOTPDisplay({
   isLoading: boolean;
   qrPayload: string | null;
 }) {
+  const { t } = useTranslation();
   const progress = remainingSeconds / TOTP_TIME_STEP;
   const circumference = 2 * Math.PI * 14;
   const dashOffset = circumference * (1 - progress);
@@ -750,10 +751,6 @@ function TOTPDisplay({
   );
 }
 
-import useTOTP from "@/client/hooks/useTOTP";
-
-const __useTOTPImport = useTOTP;
-
 function PricePreviewSection({
   startAt,
   tableType,
@@ -763,6 +760,7 @@ function PricePreviewSection({
   tableType: string;
   snapshot: SnapshotData | null;
 }) {
+  const { t } = useTranslation();
   const [price, setPrice] = useState<string | null>(null);
 
   useEffect(() => {

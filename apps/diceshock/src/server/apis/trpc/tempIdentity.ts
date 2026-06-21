@@ -1,16 +1,14 @@
 import db, {
   drizzle,
   orderPauseLogsTable,
-  pricingSnapshotsTable,
   tableOccupancyTable,
-  tablesTable,
   tempIdentitiesTable,
 } from "@lib/db";
 import { createId } from "@paralleldrive/cuid2";
 import z from "zod/v4";
 import { genNickname } from "@/server/utils/auth";
-import { fetchTableStateForDO, notifySocketDO } from "@/server/utils/seatTimer";
 import { pauseWithReason } from "@/server/utils/pauseOrder";
+import { fetchTableStateForDO, notifySocketDO } from "@/server/utils/seatTimer";
 import { calculatePrice, type SnapshotData } from "@/shared/utils/pricing";
 import { generateTotpSecret } from "@/shared/utils/totp";
 import { publicProcedure } from "./baseTRPC";
@@ -106,7 +104,12 @@ const occupy = publicProcedure
     }
 
     if (existingOccupancy && existingOccupancy.status === "active") {
-      await pauseWithReason(tdb, existingOccupancy.id, "auto_transfer", ctx.env);
+      await pauseWithReason(
+        tdb,
+        existingOccupancy.id,
+        "auto_transfer",
+        ctx.env,
+      );
     }
 
     const table = await tdb.query.tablesTable.findFirst({

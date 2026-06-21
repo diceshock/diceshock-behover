@@ -3,7 +3,6 @@ import type { Context } from "hono";
 import { renderToString } from "react-dom/server";
 import type { HonoCtxEnv } from "@/shared/types";
 import {
-  CardFooter,
   CardShell,
   fetchAsDataUrl,
   LOGO_URL,
@@ -20,7 +19,7 @@ export async function boardGameCard(c: Context<HonoCtxEnv>) {
       where: (g, { eq }) => eq(g.id, id),
     });
 
-    if (!game || !game.content) {
+    if (!game?.content) {
       return renderCard(
         <CardShell>
           <p>Not found</p>
@@ -113,6 +112,7 @@ function BoardGameCardView({ data }: { data: CardData }) {
     <html>
       <head>
         <meta charSet="utf-8" />
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: generated card CSS */}
         <style dangerouslySetInnerHTML={{ __html: BOARD_GAME_CSS }} />
       </head>
       <body>
@@ -173,6 +173,7 @@ function BoardGameCardView({ data }: { data: CardData }) {
           </div>
         </div>
         <script
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: generated readiness script
           dangerouslySetInnerHTML={{
             __html: `
 const img = document.getElementById("cover");

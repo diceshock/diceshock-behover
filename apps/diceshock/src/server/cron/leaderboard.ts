@@ -1,10 +1,5 @@
-import db, {
-  leaderboardSnapshotsTable,
-  mahjongMatchesTable,
-  userBadgesTable,
-  userInfoTable,
-} from "@lib/db";
-import { and, eq, gte, lte } from "drizzle-orm";
+import db, { leaderboardSnapshotsTable, userBadgesTable } from "@lib/db";
+import { eq } from "drizzle-orm";
 import type { PPCategory } from "@/shared/mahjong/pp";
 import {
   calculateMatchPP,

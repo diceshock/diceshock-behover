@@ -1,12 +1,8 @@
 import db, {
   drizzle,
   orderPauseLogsTable,
-  pricingSnapshotsTable,
   tableOccupancyTable,
-  tablesTable,
-  userInfoTable,
   userMembershipPlansTable,
-  users,
 } from "@lib/db";
 import { queueNotification } from "@/server/apis/wechat/templateMessage";
 import { pauseWithReason } from "@/server/utils/pauseOrder";

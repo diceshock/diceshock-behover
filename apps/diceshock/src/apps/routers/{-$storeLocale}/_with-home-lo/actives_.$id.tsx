@@ -12,7 +12,6 @@ import {
   Link,
   useNavigate,
 } from "@tanstack/react-router";
-import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import BusinessCardModal from "@/client/components/diceshock/BusinessCardModal";
 import ParticipantsCardModal from "@/client/components/diceshock/ParticipantsCardModal";
@@ -51,9 +50,9 @@ type ActiveDetail = Awaited<
 function ActiveDetailPage() {
   const { id } = Route.useParams();
   const { t } = useTranslation();
-  const { userInfo, session } = useAuth();
+  const { session } = useAuth();
   const messages = useMessages();
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
 
   const [active, setActive] = useState<ActiveDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -164,7 +163,7 @@ function ActiveDetailPage() {
       await trpcClientPublic.actives.leave.mutate({ active_id: id });
       messages.success(t("actives.leaveSuccess"));
       fetchActive();
-    } catch (error) {
+    } catch (_error) {
       messages.error(t("errors.operationFailed"));
     } finally {
       setActionLoading(false);
@@ -192,10 +191,7 @@ function ActiveDetailPage() {
           <p className="text-lg text-base-content/60">
             {t("actives.notFound")}
           </p>
-          <Link
-            to="/{-$storeLocale}/actives"
-            className="btn btn-ghost mt-4"
-          >
+          <Link to="/{-$storeLocale}/actives" className="btn btn-ghost mt-4">
             {t("actives.backToList")}
           </Link>
         </div>

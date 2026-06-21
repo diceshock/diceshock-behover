@@ -2,19 +2,13 @@ import db, {
   drizzle,
   pagedZ,
   sessions,
-  storesTable,
   userInfoTable,
   userRoles,
   users,
 } from "@lib/db";
 import z4, { z } from "zod/v4";
 import { generateTOTP } from "@/shared/utils/totp";
-import {
-  adminProcedure,
-  protectedProcedure,
-  publicProcedure,
-  staffProcedure,
-} from "./baseTRPC";
+import { adminProcedure, protectedProcedure, staffProcedure } from "./baseTRPC";
 
 export const getFilterZ = z4.object({
   searchWords: z4.string().nonempty().optional(),

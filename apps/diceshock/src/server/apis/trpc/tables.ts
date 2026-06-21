@@ -1,4 +1,4 @@
-import db, { drizzle, tableOccupancyTable, tablesTable } from "@lib/db";
+import db, { drizzle, tableOccupancyTable } from "@lib/db";
 import { createId } from "@paralleldrive/cuid2";
 import { queueNotification } from "@/server/apis/wechat/templateMessage";
 import { pauseWithReason } from "@/server/utils/pauseOrder";

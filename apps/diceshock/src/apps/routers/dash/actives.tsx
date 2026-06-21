@@ -49,7 +49,7 @@ function RouteComponent() {
   const msg = useMsg();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
-  const { storeFilter } = useAdminStoreFilter();
+  useAdminStoreFilter();
   const [actives, setActives] = useState<ActiveItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -96,7 +96,7 @@ function RouteComponent() {
     } finally {
       setLoading(false);
     }
-  }, [storeFilter, msg, t]);
+  }, [msg, t]);
 
   useEffect(() => {
     void refreshActives();
