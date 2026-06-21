@@ -79,36 +79,24 @@ async function ocrImage(
 ): Promise<string> {
   const resizedUrl = imageUrl.includes("?")
     ? imageUrl
-    : `${imageUrl}?x-oss-process=image/auto-orient,1/resize,m_lfit,w_800/quality,q_80`;
+    : `${imageUrl}?x-oss-process=image/auto-orient,1/resize,m_lfit,w_1200/quality,q_85`;
 
   const imageResp = await fetch(resizedUrl);
   if (!imageResp.ok) throw new Error(`Image fetch failed: ${imageResp.status}`);
 
-  const imageBlob = await imageResp.arrayBuffer();
+  const imageData = await imageResp.arrayBuffer();
+  const blob = new Blob([imageData], {
+    type: imageResp.headers.get("content-type") ?? "image/jpeg",
+  });
 
-  try {
-    await env.AI.run(
-      "@cf/meta/llama-3.2-11b-vision-instruct" as any,
-      {
-        image: new Uint8Array(imageBlob),
-        prompt: "agree",
-        max_tokens: 1,
-      } as any,
-    );
-  } catch {}
+  const results = await (env.AI as any).toMarkdown([
+    { name: "page.jpg", blob },
+  ]);
 
-  const ocrResult = (await env.AI.run(
-    "@cf/meta/llama-3.2-11b-vision-instruct" as any,
-    {
-      image: new Uint8Array(imageBlob),
-      prompt:
-        "OCR this board game rulebook page. Extract ALL visible text exactly as written. Preserve line breaks, table structure, Chinese characters, and formatting. Output only the raw extracted text, no commentary.",
-      max_tokens: 4096,
-      temperature: 0.1,
-    } as any,
-  )) as { response?: string };
+  const page = results?.[0];
+  if (!page || !page.data) throw new Error("toMarkdown returned empty result");
 
-  return ocrResult.response ?? "";
+  return page.data;
 }
 
 function buildMarkdown(opts: {
