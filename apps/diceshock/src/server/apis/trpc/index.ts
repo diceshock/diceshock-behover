@@ -18,6 +18,7 @@ import ownedManagement from "./ownedManagement";
 import pricingPlansManagement from "./pricingPlansManagement";
 import rules from "./rules";
 import settingsManagement from "./settingsManagement";
+import shortlinkManagement from "./shortlinkManagement";
 import tables from "./tables";
 import tablesManagement from "./tablesManagement";
 import tempIdentity from "./tempIdentity";
@@ -32,6 +33,7 @@ export const appRouterDash = router({
   ordersManagement,
   mediaManagement,
   crawlerManagement,
+  shortlinkManagement,
   users,
   membershipPlans,
   pricingPlansManagement,

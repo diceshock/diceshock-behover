@@ -17,6 +17,8 @@ import { inventoryCard } from "@/server/apis/ogCards/inventoryCard";
 import { riichiRankingCard } from "@/server/apis/ogCards/riichiRanking";
 import { riichiStatsCard } from "@/server/apis/ogCards/riichiStats";
 import { siteOgCard } from "@/server/apis/ogCards/siteOgCard";
+import { shortlinkRedirect } from "@/server/apis/shortlink";
+import { shortlinkCreate } from "@/server/apis/shortlinkApi";
 import sitemap from "@/server/apis/sitemap";
 import {
   wechatCreateMenu,
@@ -58,6 +60,7 @@ app.use(serverMetaInj);
 app.post("/edge/media/upload", mediaUpload);
 app.post("/edge/media/process", imageProcessSubmit);
 app.get("/edge/media/process/:taskId", imageProcessStatus);
+app.post("/edge/shortlink", shortlinkCreate);
 app.get("/edge/media/card/board-game/:id", boardGameCard);
 app.get("/edge/media/card/riichi-ranking", riichiRankingCard);
 app.get("/edge/media/card/riichi-stats/:userId", riichiStatsCard);
@@ -76,6 +79,8 @@ app.use("*", wechatSilentAuth);
 
 app.get("/sitemap.xml", sitemap);
 app.get("/fonts/css/:locale.css", fontCss);
+
+app.get("/x/:id", shortlinkRedirect);
 
 app.get("/MP_verify_yvnJDKhKIBUZ0DgN.txt", (c) => c.text("yvnJDKhKIBUZ0DgN"));
 
