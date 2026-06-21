@@ -85,36 +85,14 @@ async function ocrImage(
   if (!imageResp.ok) throw new Error(`Image fetch failed: ${imageResp.status}`);
 
   const imageData = await imageResp.arrayBuffer();
-  const bytes = new Uint8Array(imageData);
-  let base64 = "";
-  for (let i = 0; i < bytes.length; i += 8192) {
-    base64 += String.fromCharCode(...bytes.subarray(i, i + 8192));
-  }
-  base64 = btoa(base64);
+  const imageArray = [...new Uint8Array(imageData)];
 
   const result = (await env.AI.run(
-    "@cf/google/gemma-4-26b-a4b-it" as any,
+    "@cf/meta/llama-3.2-11b-vision-instruct" as any,
     {
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a precise OCR engine. Extract ALL visible text from the image. Preserve line breaks, indentation, table structure (use markdown tables), and formatting. Output Chinese characters as-is alongside English. Do not describe, summarize, or add commentary. Output only the extracted text.",
-        },
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: "Extract all text from this board game rulebook page.",
-            },
-            {
-              type: "image",
-              image: `data:image/jpeg;base64,${base64}`,
-            },
-          ],
-        },
-      ],
+      image: imageArray,
+      prompt:
+        "OCR this board game rulebook page. Extract ALL visible text exactly as written. Preserve line breaks, table structure, Chinese characters, and formatting. Output only the raw extracted text, no commentary.",
       max_tokens: 4096,
       temperature: 0.1,
     } as any,
