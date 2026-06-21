@@ -77,7 +77,6 @@ export async function dispatchGstoneDocCrawl(env: {
     for (let i = 0; i < msgs.length; i += 100) {
       await env.GSTONE_DOC_CRAWL_QUEUE.sendBatch(msgs.slice(i, i + 100));
     }
-    return;
   }
 
   const rows = await env.GSTONE_DB.prepare(
