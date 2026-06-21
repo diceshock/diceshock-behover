@@ -130,10 +130,16 @@ export default {
     env: HonoCtxEnv["Bindings"],
     _ctx: ExecutionContext,
   ) => {
-    const { dispatchGstoneCrawl } = await import("./server/cron/gstoneCrawl");
+    const { dispatchGstoneCrawl, dispatchGstoneDocCrawl } = await import(
+      "./server/cron/gstoneCrawl"
+    );
     await dispatchGstoneCrawl({
       GSTONE_DB: env.GSTONE_DB,
       GSTONE_CRAWL_QUEUE: env.GSTONE_CRAWL_QUEUE,
+    });
+    await dispatchGstoneDocCrawl({
+      GSTONE_DB: env.GSTONE_DB,
+      GSTONE_DOC_CRAWL_QUEUE: env.GSTONE_DOC_CRAWL_QUEUE,
     });
 
     if (event.cron === "0 4-22 * * *") {
@@ -171,6 +177,20 @@ export default {
         "./server/queue/gstoneCrawlConsumer"
       );
       await handleGstoneImageQueue(batch as any, env as any);
+      return;
+    }
+    if (queueName === "diceshock-gstone-doc-crawl") {
+      const { handleGstoneDocCrawlQueue } = await import(
+        "./server/queue/gstoneDocCrawlConsumer"
+      );
+      await handleGstoneDocCrawlQueue(batch as any, env as any);
+      return;
+    }
+    if (queueName === "diceshock-gstone-ocr") {
+      const { handleGstoneOcrQueue } = await import(
+        "./server/queue/gstoneOcrConsumer"
+      );
+      await handleGstoneOcrQueue(batch as any, env as any);
       return;
     }
     const { handleImageQueue } = await import(

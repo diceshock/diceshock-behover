@@ -11,6 +11,8 @@ interface __BaseEnv_CloudflareBindings {
 	NOTIFICATION_QUEUE: Queue;
 	GSTONE_CRAWL_QUEUE: Queue;
 	GSTONE_IMAGE_QUEUE: Queue;
+	GSTONE_DOC_CRAWL_QUEUE: Queue;
+	GSTONE_OCR_QUEUE: Queue;
 	AI_SEARCH: AiSearchInstance;
 	BROWSER: BrowserRun;
 	AI: Ai;

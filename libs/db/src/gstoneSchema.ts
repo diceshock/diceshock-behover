@@ -26,3 +26,26 @@ export const gstoneGamesTable = sqlite.sqliteTable(
     sqlite.index("idx_games_error").on(table.error),
   ],
 );
+
+export const gstoneDocumentsTable = sqlite.sqliteTable(
+  "documents",
+  {
+    document_id: sqlite.integer("document_id").primaryKey(),
+    game_id: sqlite.integer("game_id").notNull(),
+    title: sqlite.text("title"),
+    page_count: sqlite.integer("page_count"),
+    image_urls: sqlite.text("image_urls", { mode: "json" }).$type<string[]>(),
+    r2_key: sqlite.text("r2_key"),
+    error: sqlite.text("error"),
+    retry_count: sqlite.integer("retry_count").notNull().default(0),
+    created_at: sqlite.text("created_at").notNull(),
+    crawled_at: sqlite.text("crawled_at"),
+    ocr_at: sqlite.text("ocr_at"),
+    updated_at: sqlite.text("updated_at").notNull(),
+  },
+  (table) => [
+    sqlite.index("idx_docs_game").on(table.game_id),
+    sqlite.index("idx_docs_crawled").on(table.crawled_at),
+    sqlite.index("idx_docs_ocr").on(table.ocr_at),
+  ],
+);

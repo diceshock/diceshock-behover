@@ -81,6 +81,14 @@ queue = "diceshock-gstone-crawl"
 binding = "GSTONE_IMAGE_QUEUE"
 queue = "diceshock-gstone-images"
 
+[[queues.producers]]
+binding = "GSTONE_DOC_CRAWL_QUEUE"
+queue = "diceshock-gstone-doc-crawl"
+
+[[queues.producers]]
+binding = "GSTONE_OCR_QUEUE"
+queue = "diceshock-gstone-ocr"
+
 [[queues.consumers]]
 queue = "diceshock-image-processing"
 max_batch_size = 1
@@ -104,6 +112,18 @@ queue = "diceshock-gstone-images"
 max_batch_size = 1
 max_batch_timeout = 3
 max_retries = 3
+
+[[queues.consumers]]
+queue = "diceshock-gstone-doc-crawl"
+max_batch_size = 1
+max_batch_timeout = 5
+max_retries = 3
+
+[[queues.consumers]]
+queue = "diceshock-gstone-ocr"
+max_batch_size = 1
+max_batch_timeout = 30
+max_retries = 2
 
 [[routes]]
 pattern = "origin.runespark.fun"

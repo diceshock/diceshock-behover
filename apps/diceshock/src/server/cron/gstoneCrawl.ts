@@ -1,7 +1,8 @@
-import { gstoneDb, gstoneGamesTable } from "@lib/db";
-import { and, isNull, lt, max } from "drizzle-orm";
+import { gstoneDb, gstoneDocumentsTable, gstoneGamesTable } from "@lib/db";
+import { and, isNotNull, isNull, lt, max, sql } from "drizzle-orm";
 
 const BATCH_SIZE = 100;
+const DOC_BATCH_SIZE = 20;
 const MAX_GAME_ID = 50000;
 const STALE_THRESHOLD_MS = 10 * 60 * 1000;
 
@@ -12,7 +13,6 @@ export async function dispatchGstoneCrawl(env: {
   GSTONE_CRAWL_QUEUE: Queue;
 }): Promise<void> {
   const db = gstoneDb(env.GSTONE_DB);
-  const now = new Date().toISOString();
 
   const staleThreshold = new Date(
     Date.now() - STALE_THRESHOLD_MS,
@@ -45,22 +45,61 @@ export async function dispatchGstoneCrawl(env: {
   if (nextId >= MAX_GAME_ID) return;
 
   const endId = Math.min(nextId + BATCH_SIZE, MAX_GAME_ID);
-
-  const newRows = Array.from({ length: endId - nextId }, (_, i) => ({
-    gstone_id: nextId + i,
-    created_at: now,
-    updated_at: now,
+  const messages = Array.from({ length: endId - nextId }, (_, i) => ({
+    body: { game_id: nextId + i },
   }));
 
-  for (let i = 0; i < newRows.length; i += 20) {
-    await db
-      .insert(gstoneGamesTable)
-      .values(newRows.slice(i, i + 20))
-      .onConflictDoNothing();
-  }
-
-  const messages = newRows.map((r) => ({ body: { game_id: r.gstone_id } }));
   for (let i = 0; i < messages.length; i += 100) {
     await env.GSTONE_CRAWL_QUEUE.sendBatch(messages.slice(i, i + 100));
+  }
+}
+
+export async function dispatchGstoneDocCrawl(env: {
+  GSTONE_DB: D1Database;
+  GSTONE_DOC_CRAWL_QUEUE: Queue;
+}): Promise<void> {
+  const rows = await env.GSTONE_DB.prepare(
+    `SELECT g.gstone_id, g.name, g.full_data
+     FROM games g
+     WHERE g.crawled_at IS NOT NULL
+       AND g.full_data IS NOT NULL
+       AND NOT EXISTS (
+         SELECT 1 FROM documents d WHERE d.game_id = g.gstone_id
+       )
+     LIMIT ?`,
+  )
+    .bind(DOC_BATCH_SIZE)
+    .all<{ gstone_id: number; name: string | null; full_data: string }>();
+
+  const messages: Array<{
+    body: { document_id: number; game_id: number; title: string };
+  }> = [];
+
+  for (const row of rows.results ?? []) {
+    try {
+      const data = JSON.parse(row.full_data);
+      const gameInfo = data?.game_info ?? data;
+      const docInfo = gameInfo?.document_info;
+      const docList: Array<{ id: number; document_title: string }> =
+        docInfo?.doc_list ?? [];
+
+      for (const doc of docList) {
+        messages.push({
+          body: {
+            document_id: doc.id,
+            game_id: row.gstone_id,
+            title: doc.document_title ?? "Untitled",
+          },
+        });
+      }
+    } catch {
+      // skip malformed full_data
+    }
+  }
+
+  if (messages.length === 0) return;
+
+  for (let i = 0; i < messages.length; i += 100) {
+    await env.GSTONE_DOC_CRAWL_QUEUE.sendBatch(messages.slice(i, i + 100));
   }
 }
