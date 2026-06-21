@@ -31,6 +31,7 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
 
   const WECHAT_PROVIDERS = ["wechat-open", "wechat-mp", "wechat-mp-silent"];
   const baseAdapter = DrizzleAdapter(db(c.env.DB));
+  const tdb = db(c.env.DB);
   const adapter = {
     ...baseAdapter,
     async getUserByAccount(
@@ -39,14 +40,25 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
       const result = await baseAdapter.getUserByAccount!(providerAccount);
       if (result) return result;
 
-      if (WECHAT_PROVIDERS.includes(providerAccount.provider)) {
-        for (const altProvider of WECHAT_PROVIDERS) {
-          if (altProvider === providerAccount.provider) continue;
-          const altResult = await baseAdapter.getUserByAccount!({
-            ...providerAccount,
-            provider: altProvider,
-          });
-          if (altResult) return altResult;
+      if (!WECHAT_PROVIDERS.includes(providerAccount.provider)) return null;
+
+      for (const altProvider of WECHAT_PROVIDERS) {
+        if (altProvider === providerAccount.provider) continue;
+        const altResult = await baseAdapter.getUserByAccount!({
+          ...providerAccount,
+          provider: altProvider,
+        });
+        if (altResult) {
+          await tdb
+            .insert(accounts)
+            .values({
+              userId: (altResult as any).id,
+              type: "oauth",
+              provider: providerAccount.provider,
+              providerAccountId: providerAccount.providerAccountId,
+            })
+            .onConflictDoNothing();
+          return altResult;
         }
       }
       return null;
