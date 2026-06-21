@@ -50,19 +50,6 @@ export async function handleGstoneOcrQueue(
           page_index: pageIndex + 1,
         });
       } else {
-        const [game] = await db
-          .select({
-            name: gstoneGamesTable.name,
-            eng_name: gstoneGamesTable.eng_name,
-            rating: gstoneGamesTable.rating,
-            player_num: gstoneGamesTable.player_num,
-            category: gstoneGamesTable.category,
-            description: gstoneGamesTable.description,
-          })
-          .from(gstoneGamesTable)
-          .where(eq(gstoneGamesTable.gstone_id, doc.game_id))
-          .limit(1);
-
         const validPages = existingPages.filter(
           (t) => t && t.trim().length > 20,
         );
@@ -85,12 +72,6 @@ export async function handleGstoneOcrQueue(
 
         const markdown = buildMarkdown({
           gameId: doc.game_id,
-          gameName: game?.name ?? null,
-          gameEngName: game?.eng_name ?? null,
-          gameRating: game?.rating ?? null,
-          gamePlayerNum: game?.player_num ?? null,
-          gameCategory: game?.category ?? null,
-          gameDescription: game?.description ?? null,
           documentId: docId,
           documentTitle: doc.title ?? "Untitled",
           imageUrls: doc.image_urls,
@@ -272,12 +253,6 @@ ${combined}`,
 
 function buildMarkdown(opts: {
   gameId: number;
-  gameName: string | null;
-  gameEngName: string | null;
-  gameRating: number | null;
-  gamePlayerNum: number[] | null;
-  gameCategory: Array<{ id: number; value: string }> | null;
-  gameDescription: string | null;
   documentId: number;
   documentTitle: string;
   imageUrls: string[];
@@ -287,21 +262,9 @@ function buildMarkdown(opts: {
     .map((url, i) => `  - page: ${i + 1}\n    image_url: "${url}"`)
     .join("\n");
 
-  const categories = opts.gameCategory?.map((c) => c.value).join(", ");
-
   const header = [
     "---",
     `game_id: ${opts.gameId}`,
-    `game_name: "${(opts.gameName ?? "").replace(/"/g, '\\"')}"`,
-    `game_eng_name: "${(opts.gameEngName ?? "").replace(/"/g, '\\"')}"`,
-    opts.gameRating != null ? `game_rating: ${opts.gameRating}` : null,
-    categories ? `game_category: "${categories}"` : null,
-    opts.gamePlayerNum
-      ? `game_player_num: "${JSON.stringify(opts.gamePlayerNum)}"`
-      : null,
-    opts.gameDescription
-      ? `game_description: "${opts.gameDescription.slice(0, 200).replace(/"/g, '\\"').replace(/\n/g, " ")}"`
-      : null,
     `document_id: ${opts.documentId}`,
     `document_title: "${opts.documentTitle.replace(/"/g, '\\"')}"`,
     `total_pages: ${opts.pages.length}`,
@@ -310,9 +273,7 @@ function buildMarkdown(opts: {
     `crawled_at: "${new Date().toISOString()}"`,
     "---",
     "",
-  ]
-    .filter(Boolean)
-    .join("\n");
+  ].join("\n");
 
   const body = opts.pages
     .map((text, i) => `## Page ${i + 1}\n\n${(text ?? "").trim()}`)
