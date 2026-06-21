@@ -77,7 +77,11 @@ async function ocrImage(
   env: Cloudflare.Env,
   imageUrl: string,
 ): Promise<string> {
-  const imageResp = await fetch(imageUrl);
+  const resizedUrl = imageUrl.includes("?")
+    ? imageUrl
+    : `${imageUrl}?x-oss-process=image/auto-orient,1/resize,m_lfit,w_1600/quality,q_90`;
+
+  const imageResp = await fetch(resizedUrl);
   if (!imageResp.ok) throw new Error(`Image fetch failed: ${imageResp.status}`);
 
   const imageData = await imageResp.arrayBuffer();
