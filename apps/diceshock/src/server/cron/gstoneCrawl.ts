@@ -58,6 +58,28 @@ export async function dispatchGstoneDocCrawl(env: {
   GSTONE_DB: D1Database;
   GSTONE_DOC_CRAWL_QUEUE: Queue;
 }): Promise<void> {
+  const pendingDocs = await env.GSTONE_DB.prepare(
+    `SELECT document_id, game_id, title FROM documents
+     WHERE crawled_at IS NULL AND error IS NULL
+     LIMIT ?`,
+  )
+    .bind(DOC_BATCH_SIZE)
+    .all<{ document_id: number; game_id: number; title: string }>();
+
+  if ((pendingDocs.results?.length ?? 0) > 0) {
+    const msgs = (pendingDocs.results ?? []).map((d) => ({
+      body: {
+        document_id: d.document_id,
+        game_id: d.game_id,
+        title: d.title ?? "Untitled",
+      },
+    }));
+    for (let i = 0; i < msgs.length; i += 100) {
+      await env.GSTONE_DOC_CRAWL_QUEUE.sendBatch(msgs.slice(i, i + 100));
+    }
+    return;
+  }
+
   const rows = await env.GSTONE_DB.prepare(
     `SELECT g.gstone_id, g.name, g.full_data
      FROM games g
