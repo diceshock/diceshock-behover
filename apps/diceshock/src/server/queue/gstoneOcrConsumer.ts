@@ -91,6 +91,15 @@ async function ocrImage(
     "@cf/meta/llama-3.2-11b-vision-instruct" as any,
     {
       image: imageArray,
+      prompt: "agree",
+      max_tokens: 1,
+    } as any,
+  )) as { response?: string };
+
+  const ocrResult = (await env.AI.run(
+    "@cf/meta/llama-3.2-11b-vision-instruct" as any,
+    {
+      image: imageArray,
       prompt:
         "OCR this board game rulebook page. Extract ALL visible text exactly as written. Preserve line breaks, table structure, Chinese characters, and formatting. Output only the raw extracted text, no commentary.",
       max_tokens: 4096,
@@ -98,7 +107,7 @@ async function ocrImage(
     } as any,
   )) as { response?: string };
 
-  return result.response ?? "";
+  return ocrResult.response ?? "";
 }
 
 function buildMarkdown(opts: {
