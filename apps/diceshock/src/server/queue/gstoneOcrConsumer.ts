@@ -58,6 +58,26 @@ export async function handleGstoneOcrQueue(
           .where(eq(gstoneGamesTable.gstone_id, doc.game_id))
           .limit(1);
 
+        const validPages = existingPages.filter(
+          (t) => t && t.trim().length > 20,
+        );
+
+        if (validPages.length === 0) {
+          await env.GSTONE_DB.prepare(
+            "UPDATE documents SET error = ?, updated_at = ? WHERE document_id = ?",
+          )
+            .bind("OCR produced no meaningful content", now, docId)
+            .run();
+          msg.ack();
+          continue;
+        }
+
+        const correctedPages = await correctOcr(
+          env,
+          existingPages,
+          doc.title ?? "Untitled",
+        );
+
         const markdown = buildMarkdown({
           gameId: doc.game_id,
           gameName: game?.name ?? null,
@@ -65,7 +85,7 @@ export async function handleGstoneOcrQueue(
           documentId: docId,
           documentTitle: doc.title ?? "Untitled",
           imageUrls: doc.image_urls,
-          pages: existingPages,
+          pages: correctedPages,
         });
 
         const r2Key = `gstone-rulebooks/${doc.game_id}/${docId}.md`;
@@ -135,6 +155,44 @@ async function ocrImage(
   )) as { response?: string };
 
   return result.response ?? "";
+}
+
+async function correctOcr(
+  env: Cloudflare.Env,
+  pages: string[],
+  title: string,
+): Promise<string[]> {
+  const combined = pages
+    .map((t, i) => `=== 第${i + 1}页 ===\n${(t ?? "").trim()}`)
+    .join("\n\n");
+
+  if (combined.trim().length < 50) return pages;
+
+  const result = (await env.AI.run(
+    "@cf/meta/llama-4-scout-17b-16e-instruct" as any,
+    {
+      messages: [
+        {
+          role: "user",
+          content: `以下是桌游「${title}」规则书的 OCR 识别结果，可能存在错字、乱码、断行错误。请修正明显的 OCR 错误（如错别字、乱码符号、断词），保持原文语言和格式不变，不要添加内容、不要翻译、不要总结。按原始分页格式输出，每页用 === 第N页 === 分隔。\n\n${combined}`,
+        },
+      ],
+      max_tokens: 8192,
+      temperature: 0.1,
+    } as any,
+  )) as { response?: string };
+
+  const corrected = result.response ?? "";
+  if (corrected.trim().length < combined.trim().length * 0.3) return pages;
+
+  const correctedPages: string[] = [];
+  const sections = corrected.split(/===\s*第\d+页\s*===/);
+  for (let i = 0; i < pages.length; i++) {
+    const section = sections[i + 1]?.trim();
+    correctedPages[i] =
+      section && section.length > 10 ? section : (pages[i] ?? "");
+  }
+  return correctedPages;
 }
 
 function buildMarkdown(opts: {
