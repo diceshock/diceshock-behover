@@ -446,23 +446,17 @@ function RouteComponent() {
           preferred_store_id: preferredStore || null,
         });
         if (result.success) {
-          setUserInfoIm((draft) => {
-            if (!draft) return undefined;
-            (draft as Record<string, unknown>).preferred_locale =
-              locale || null;
-            return draft;
-          });
-          messages.success(t("me.preferencesSaved"));
+          window.location.reload();
         } else {
           messages.error(t("me.updateFailed"));
+          setIsSavingPrefs(false);
         }
       } catch {
         messages.error(t("me.networkError"));
-      } finally {
         setIsSavingPrefs(false);
       }
     },
-    [preferredStore, messages, setUserInfoIm, t],
+    [preferredStore, messages, t],
   );
 
   const handleSaveStore = useCallback(
@@ -476,23 +470,17 @@ function RouteComponent() {
           preferred_store_id: store || null,
         });
         if (result.success) {
-          setUserInfoIm((draft) => {
-            if (!draft) return undefined;
-            (draft as Record<string, unknown>).preferred_store_id =
-              store || null;
-            return draft;
-          });
-          messages.success(t("me.preferencesSaved"));
+          window.location.reload();
         } else {
           messages.error(t("me.updateFailed"));
+          setIsSavingPrefs(false);
         }
       } catch {
         messages.error(t("me.networkError"));
-      } finally {
         setIsSavingPrefs(false);
       }
     },
-    [preferredLocale, messages, setUserInfoIm, t],
+    [preferredLocale, messages, t],
   );
 
   return (
