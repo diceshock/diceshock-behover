@@ -130,79 +130,9 @@
     font-style: normal;
 }
 
-@font-face {
-    font-family: "Sarasa";
-    src: url("https://assets.runespark.fun/fonts/sarasa-bold.ttc") format("truetype-collection");
-    font-weight: 700;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: "Sarasa";
-    src: url("https://assets.runespark.fun/fonts/sarasa-bolditalic.ttc") format("truetype-collection");
-    font-weight: 700;
-    font-style: italic;
-}
-
-@font-face {
-    font-family: "Sarasa";
-    src: url("https://assets.runespark.fun/fonts/sarasa-extralight.ttc") format("truetype-collection");
-    font-weight: 200;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: "Sarasa";
-    src: url("https://assets.runespark.fun/fonts/sarasa-extralightitalic.ttc") format("truetype-collection");
-    font-weight: 200;
-    font-style: italic;
-}
-
-@font-face {
-    font-family: "Sarasa";
-    src: url("https://assets.runespark.fun/fonts/sarasa-light.ttc") format("truetype-collection");
-    font-weight: 300;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: "Sarasa";
-    src: url("https://assets.runespark.fun/fonts/sarasa-lightitalic.ttc") format("truetype-collection");
-    font-weight: 300;
-    font-style: italic;
-}
-
-@font-face {
-    font-family: "Sarasa";
-    src: url("https://assets.runespark.fun/fonts/sarasa-regular.ttc") format("truetype-collection");
-    font-weight: 400;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: "Sarasa";
-    src: url("https://assets.runespark.fun/fonts/sarasa-italic.ttc") format("truetype-collection");
-    font-weight: 400;
-    font-style: italic;
-}
-
-@font-face {
-    font-family: "Sarasa";
-    src: url("https://assets.runespark.fun/fonts/sarasa-semibold.ttc") format("truetype-collection");
-    font-weight: 600;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: "Sarasa";
-    src: url("https://assets.runespark.fun/fonts/sarasa-semibolditalic.ttc") format("truetype-collection");
-    font-weight: 600;
-    font-style: italic;
-}
-
-/* 使用 Sarasa 作为默认字体 */
+/* 使用 DiceShock Sans 作为默认字体 */
 body {
-    font-family: "Sarasa", sans-serif;
+    font-family: "DiceShock Sans", sans-serif;
 }
 
 /* 防止 badge 文字折行 */
@@ -216,7 +146,7 @@ body {
 }
 
 .tiptap-wrapper {
-    font-family: "Sarasa", sans-serif;
+    font-family: "DiceShock Sans", sans-serif;
     border: 1px solid var(--color-base-300);
     border-radius: 0.5rem;
     overflow: hidden;
@@ -283,7 +213,7 @@ body {
 }
 
 .mdx-content {
-    font-family: "Sarasa", sans-serif;
+    font-family: "DiceShock Sans", sans-serif;
     color: var(--color-base-content);
     line-height: 1.75;
 }

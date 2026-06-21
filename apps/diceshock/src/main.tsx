@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import apisRoot from "@/server/apis/apisRoot";
 import { boardGameCard } from "@/server/apis/boardGameCard";
 import fileRoute from "@/server/apis/fileRoute";
+import { fontCss } from "@/server/apis/fontCss";
 import {
   imageProcessStatus,
   imageProcessSubmit,
@@ -74,6 +75,7 @@ app.use("/api/auth/*", authHandler());
 app.use("*", wechatSilentAuth);
 
 app.get("/sitemap.xml", sitemap);
+app.get("/fonts/css/:locale.css", fontCss);
 
 app.get("/MP_verify_yvnJDKhKIBUZ0DgN.txt", (c) => c.text("yvnJDKhKIBUZ0DgN"));
 

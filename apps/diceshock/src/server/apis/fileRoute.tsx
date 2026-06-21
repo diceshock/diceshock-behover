@@ -125,6 +125,8 @@ export default async function fileRoute(c: Context<HonoCtxEnv>) {
 
             <Link href="/src/apps/style.css" rel="stylesheet" />
 
+            <link rel="stylesheet" href={`/fonts/css/${activeLocale}.css`} />
+
             <link
               rel="icon"
               type="image/svg+xml"
