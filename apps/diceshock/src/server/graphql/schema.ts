@@ -1,5 +1,6 @@
 import {
   extendSchema,
+  type GraphQLField,
   type GraphQLFieldResolver,
   GraphQLObjectType,
   type GraphQLResolveInfo,
@@ -23,7 +24,8 @@ export type ResolverFn<
 export type ResolverConfig =
   | ResolverFn
   | {
-      resolve: ResolverFn;
+      resolve?: ResolverFn;
+      subscribe?: ResolverFn;
     };
 
 export type ResolverMap = Record<string, Record<string, ResolverConfig>>;
@@ -60,14 +62,31 @@ function attachResolvers(schema: GraphQLSchema, resolvers: ResolverMap): void {
           `Cannot attach resolver to unknown field: ${typeName}.${fieldName}`,
         );
       }
-      field.resolve = toGraphQLResolver(resolver);
+      attachResolver(field, resolver);
     }
   }
 }
 
-function toGraphQLResolver(
+function attachResolver(
+  field: GraphQLField<unknown, GQLContext>,
   resolver: ResolverConfig,
+): void {
+  if (typeof resolver === "function") {
+    field.resolve = toGraphQLResolver(resolver);
+    return;
+  }
+
+  if (resolver.resolve) {
+    field.resolve = toGraphQLResolver(resolver.resolve);
+  }
+
+  if (resolver.subscribe) {
+    field.subscribe = toGraphQLResolver(resolver.subscribe);
+  }
+}
+
+function toGraphQLResolver(
+  resolver: ResolverFn,
 ): GraphQLFieldResolver<unknown, GQLContext, Record<string, unknown>> {
-  const resolve = typeof resolver === "function" ? resolver : resolver.resolve;
-  return (source, args, context, info) => resolve(source, args, context, info);
+  return (source, args, context, info) => resolver(source, args, context, info);
 }
