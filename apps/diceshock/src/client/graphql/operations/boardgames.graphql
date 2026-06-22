@@ -4,11 +4,52 @@ query GetLeaderboard($category: LeaderboardCategory!, $period: LeaderboardPeriod
     period
     computedAt
     entries {
+      userId
       nickname
       totalPP
       matchCount
       rank
       prevRank
     }
+  }
+}
+
+query GetOwnedBoardGameCount {
+  ownedBoardGameCount {
+    current
+    removed
+    latestDate
+  }
+}
+
+query GetOwnedBoardGame($id: ID!) {
+  ownedBoardGame(id: $id) {
+    id
+    schName
+    engName
+    gstoneId
+    gstoneRating
+    category
+    mode
+    playerNum
+    bestPlayerNum
+    content
+    removeDate
+  }
+}
+
+query GetOwnedBoardGames($input: BoardGameFilterInput) {
+  ownedBoardGames(input: $input) {
+    id
+    schName
+    engName
+    gstoneId
+    gstoneRating
+    category
+    mode
+    playerNum
+    bestPlayerNum
+    content
+    removeDate
   }
 }

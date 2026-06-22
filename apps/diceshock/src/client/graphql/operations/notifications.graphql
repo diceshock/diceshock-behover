@@ -1,0 +1,11 @@
+subscription NotificationReceived($userId: ID!) {
+  notificationReceived(userId: $userId) {
+    id
+    userId
+    type
+    title
+    body
+    activeId
+    createdAt
+  }
+}

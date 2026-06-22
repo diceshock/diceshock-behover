@@ -1,10 +1,11 @@
+import { useApolloClient } from "@apollo/client";
 import type { BoardGame } from "@lib/db";
 import { useInView } from "@react-spring/web";
 import clsx from "clsx";
 import { useAtomValue } from "jotai";
 import uniqBy from "lodash/uniqBy";
 import React, { useEffect, useState } from "react";
-import trpcClientPublic from "@/shared/utils/trpc";
+import { GetOwnedBoardGamesDocument } from "@/client/graphql/__generated__";
 import Filter, { filterCfgA } from "./Filter";
 import RawList, { type GameWithDbId } from "./RawList";
 
@@ -12,6 +13,7 @@ const GameList: React.FC<{
   className?: { outer?: string; filter?: string };
 }> = ({ className }) => {
   const filter = useAtomValue(filterCfgA);
+  const client = useApolloClient();
 
   const [games, setGames] = useState<GameWithDbId[] | null>(null);
   const [isLoadEnd, setIsLoadEnd] = useState(false);
@@ -29,18 +31,35 @@ const GameList: React.FC<{
       setIsLoading(true);
       if (!isSameFilter) setIsLoadEnd(false);
 
-      trpcClientPublic.owned.get
+      const page = isSameFilter ? Math.ceil((games?.length ?? 0) / 20) + 1 : 1;
+      client
         .query({
-          page: isSameFilter ? Math.ceil((games?.length ?? 0) / 20) + 1 : 1,
-          pageSize: 20,
-          params: filter,
+          query: GetOwnedBoardGamesDocument,
+          variables: {
+            input: {
+              pagination: { offset: (page - 1) * 20, limit: 20 },
+              searchWords: filter.searchWords || undefined,
+              numOfPlayers: filter.numOfPlayers ?? undefined,
+              isBestNumOfPlayers: filter.isBestNumOfPlayers || undefined,
+              tags: filter.tags?.length ? filter.tags : undefined,
+            },
+          },
         })
         .then((res) => {
-          if (res.length < 20) setIsLoadEnd(true);
+          const ownedBoardGames = res.data.ownedBoardGames as Array<{
+            id: string;
+            content: string | null;
+            schName: string | null;
+            engName: string | null;
+          }>;
+          if (ownedBoardGames.length < 20) setIsLoadEnd(true);
 
-          const gameArr = res
+          const gameArr = ownedBoardGames
             .filter((game) => game.content)
-            .map((game) => ({ ...game.content!, dbId: game.id }));
+            .map((game) => ({
+              ...(JSON.parse(game.content!) as BoardGame.BoardGameCol),
+              dbId: game.id,
+            }));
 
           if (!isSameFilter) setGames(gameArr);
 
@@ -53,7 +72,7 @@ const GameList: React.FC<{
     }, 500);
 
     return () => clearTimeout(timeout);
-  }, [filter, games, isLoadEnd, isLoading, inView]);
+  }, [filter, games, isLoadEnd, isLoading, inView, client]);
 
   return (
     <div

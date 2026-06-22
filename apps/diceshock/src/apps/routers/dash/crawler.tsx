@@ -1,3 +1,4 @@
+import { useApolloClient } from "@apollo/client";
 import {
   ArrowsClockwiseIcon,
   DatabaseIcon,
@@ -15,20 +16,23 @@ import {
 } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import type {
+  CrawlerErrorsQuery,
+  CrawlerStatsQuery,
+} from "@/client/graphql/__generated__";
+import {
+  CrawlerErrorsDocument,
+  CrawlerStatsDocument,
+  ResetCrawlerErrorsDocument,
+} from "@/client/graphql/__generated__";
 import dayjs from "@/shared/utils/dayjs-config";
-import { trpcClientDash } from "@/shared/utils/trpc";
 
 export const Route = createFileRoute("/dash/crawler")({
   component: RouteComponent,
 });
 
-type CrawlerStats = Awaited<
-  ReturnType<typeof trpcClientDash.crawlerManagement.getStats.query>
->;
-
-type CrawlerError = Awaited<
-  ReturnType<typeof trpcClientDash.crawlerManagement.getErrors.query>
->[number];
+type CrawlerStats = CrawlerStatsQuery["crawlerStats"];
+type CrawlerError = CrawlerErrorsQuery["crawlerErrors"][number];
 
 function formatTime(val: string | null | undefined): string {
   if (!val) return "—";
@@ -42,6 +46,7 @@ function formatTime(val: string | null | undefined): string {
 
 function RouteComponent() {
   const msg = useMsg();
+  const client = useApolloClient();
   const [stats, setStats] = useState<CrawlerStats | null>(null);
   const [errors, setErrors] = useState<CrawlerError[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,18 +55,21 @@ function RouteComponent() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [nextStats, nextErrors] = await Promise.all([
-        trpcClientDash.crawlerManagement.getStats.query(),
-        trpcClientDash.crawlerManagement.getErrors.query({ limit: 10 }),
+      const [statsRes, errorsRes] = await Promise.all([
+        client.query({ query: CrawlerStatsDocument }),
+        client.query({
+          query: CrawlerErrorsDocument,
+          variables: { limit: 10 },
+        }),
       ]);
-      setStats(nextStats);
-      setErrors(nextErrors);
+      setStats(statsRes.data.crawlerStats);
+      setErrors(errorsRes.data.crawlerErrors);
     } catch (error) {
       msg.error(error instanceof Error ? error.message : "加载爬虫状态失败");
     } finally {
       setLoading(false);
     }
-  }, [msg]);
+  }, [client, msg]);
 
   useEffect(() => {
     void load();
@@ -69,14 +77,14 @@ function RouteComponent() {
 
   const progress = useMemo(() => {
     if (!stats) return 0;
-    return Math.min(100, (stats.next_id / stats.estimated_max) * 100);
+    return Math.min(100, (stats.maxId / stats.estimatedMax) * 100);
   }, [stats]);
 
   const handleReset = async () => {
     if (!confirm("确定要重置爬虫进度吗？已入库游戏不会删除。")) return;
     setResetting(true);
     try {
-      await trpcClientDash.crawlerManagement.resetCrawl.mutate();
+      await client.mutate({ mutation: ResetCrawlerErrorsDocument });
       msg.success("爬虫进度已重置");
       await load();
     } catch (error) {
@@ -130,27 +138,27 @@ function RouteComponent() {
               <StatCard
                 icon={<DatabaseIcon className="size-6 text-primary" />}
                 label="已入库游戏"
-                value={stats?.total_games ?? 0}
+                value={stats?.total ?? 0}
               />
               <StatCard
                 icon={<ListMagnifyingGlassIcon className="size-6 text-info" />}
                 label="下一个 ID"
-                value={`${stats?.next_id ?? 1} / ${stats?.estimated_max ?? 50000}`}
+                value={`${stats?.maxId ?? 1} / ${stats?.estimatedMax ?? 50000}`}
               />
               <StatCard
                 icon={<WarningCircleIcon className="size-6 text-error" />}
                 label="爬取错误"
-                value={stats?.unresolved_errors ?? 0}
+                value={stats?.errors ?? 0}
               />
               <StatCard
                 icon={<ImageSquareIcon className="size-6 text-success" />}
                 label="已缓存封面"
-                value={stats?.cached_images ?? 0}
+                value={stats?.imagesCached ?? 0}
               />
               <StatCard
                 icon={<WarningCircleIcon className="size-6 text-warning" />}
                 label="图片失败"
-                value={stats?.image_errors ?? 0}
+                value={"—"}
               />
             </section>
 
@@ -159,7 +167,8 @@ function RouteComponent() {
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="font-bold">爬取进度</h2>
                   <span className="text-sm text-base-content/60">
-                    最近处理：{formatTime(stats?.last_crawl_at)}
+                    当前进度：{stats?.maxId ?? "—"} /{" "}
+                    {stats?.estimatedMax ?? "—"}
                   </span>
                 </div>
                 <progress
@@ -168,9 +177,9 @@ function RouteComponent() {
                   max={100}
                 />
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-base-content/70">
-                  <span>成功：{stats?.total_crawled ?? 0}</span>
-                  <span>跳过：{stats?.total_skipped ?? 0}</span>
-                  <span>错误：{stats?.total_errors ?? 0}</span>
+                  <span>入库：{stats?.total ?? 0}</span>
+                  <span>已爬取：{stats?.crawled ?? 0}</span>
+                  <span>错误：{stats?.errors ?? 0}</span>
                 </div>
               </div>
             </section>
@@ -198,12 +207,12 @@ function RouteComponent() {
                       </thead>
                       <tbody>
                         {errors.map((error) => (
-                          <tr key={error.id}>
-                            <td>{error.id}</td>
-                            <td>{error.gstone_id}</td>
+                          <tr key={error.gstoneId}>
+                            <td>{error.gstoneId}</td>
+                            <td>{error.gstoneId}</td>
                             <td className="max-w-xl truncate">{error.error}</td>
-                            <td>{error.retry_count}</td>
-                            <td>{formatTime(error.created_at)}</td>
+                            <td>{error.retryCount}</td>
+                            <td>{formatTime(error.updatedAt)}</td>
                           </tr>
                         ))}
                       </tbody>

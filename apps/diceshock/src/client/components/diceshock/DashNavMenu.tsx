@@ -22,6 +22,7 @@ import { Link, useMatches } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useAtom } from "jotai";
 import { useCallback, useRef, useState } from "react";
+import { useUpdateMyPreferencesMutation } from "@/client/graphql/__generated__";
 import useAuth from "@/client/hooks/useAuth";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import type { TranslationKey } from "@/shared/i18n";
@@ -31,7 +32,6 @@ import {
   STORES,
   type StoreCode,
 } from "@/shared/store-locale";
-import trpcClientPublic from "@/shared/utils/trpc";
 import Modal from "../modal";
 import { themeA } from "../ThemeSwap";
 import DashQRScannerDialog from "./DashQRScannerDialog";
@@ -126,30 +126,42 @@ function AccountSettingsModal({
       ? userInfo.preferred_store_id
       : "";
 
+  const [updateMyPreferences] = useUpdateMyPreferencesMutation({
+    onCompleted: () => {
+      window.location.reload();
+    },
+  });
+
   const handleLocaleSelect = useCallback(
     async (loc: string) => {
       try {
-        await trpcClientPublic.users.updatePreferences.mutate({
-          preferred_locale: loc || null,
-          preferred_store_id: preferredStore || null,
+        await updateMyPreferences({
+          variables: {
+            input: {
+              preferredLocale: loc || null,
+              preferredStoreId: preferredStore || null,
+            },
+          },
         });
-        window.location.reload();
       } catch {}
     },
-    [preferredStore],
+    [preferredStore, updateMyPreferences],
   );
 
   const handleStoreSelect = useCallback(
     async (store: string) => {
       try {
-        await trpcClientPublic.users.updatePreferences.mutate({
-          preferred_locale: preferredLocale || null,
-          preferred_store_id: store || null,
+        await updateMyPreferences({
+          variables: {
+            input: {
+              preferredLocale: preferredLocale || null,
+              preferredStoreId: store || null,
+            },
+          },
         });
-        window.location.reload();
       } catch {}
     },
-    [preferredLocale],
+    [preferredLocale, updateMyPreferences],
   );
 
   const menuItems: Array<{

@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import type React from "react";
 import { useCallback, useMemo, useState } from "react";
 import LongTextLogo from "@/client/assets/svg/black-simplify-with-text-logo.svg?react";
+import Notifications from "@/client/components/Notifications";
 import StoreLocaleDropdown from "@/client/components/StoreLocaleDropdown";
 import useCrossData from "@/client/hooks/useCrossData";
 import { useStoreContext } from "@/client/hooks/useStoreContext";
@@ -144,7 +145,8 @@ function Header() {
           <ul className="menu menu-horizontal px-1">{getMidMenu(PAGES)}</ul>
         </div>
 
-        <div className="navbar-end pr-2">
+        <div className="navbar-end pr-2 gap-1">
+          <Notifications />
           <AvatarMenu />
         </div>
       </nav>

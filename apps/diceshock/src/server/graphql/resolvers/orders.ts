@@ -612,6 +612,8 @@ export const ordersTypeDefs = `
     resumeOrder(id: ID!): TableOccupancy!
     settleOrder(input: SettleOrderInput!): SettlementResult!
     batchSettle(input: BatchSettleInput!): [BatchOrderResult!]!
+    batchPauseOrders(ids: [ID!]!): [BatchOrderResult!]!
+    batchResumeOrders(ids: [ID!]!): [BatchOrderResult!]!
     batchSettleOrders(input: BatchSettleInput!): BatchSettlementResult!
     cancelSettlement(id: ID!): BatchOrderResult!
     cancelBatchSettlement(ids: [ID!]!): [BatchOrderResult!]!
@@ -899,6 +901,60 @@ export const ordersResolvers = {
         ctx,
       );
       return { batchId: crypto.randomUUID(), results };
+    },
+    async batchPauseOrders(
+      _source: unknown,
+      args: { ids: string[] },
+      ctx: GQLContext,
+    ) {
+      requireStaff(ctx);
+      const input = zodToGraphQLError(
+        z.object({ ids: z.array(z.string().min(1)).min(1) }),
+        args,
+      );
+      const tdb = dbFactory(ctx.env.DB);
+      const results: Array<{ id: string; success: boolean; error?: string }> =
+        [];
+      for (const id of input.ids) {
+        try {
+          await ordersResolvers.Mutation.pauseOrder(_source, { id }, ctx);
+          results.push({ id, success: true });
+        } catch (error) {
+          results.push({
+            id,
+            success: false,
+            error: error instanceof Error ? error.message : "Pause failed",
+          });
+        }
+      }
+      return results;
+    },
+    async batchResumeOrders(
+      _source: unknown,
+      args: { ids: string[] },
+      ctx: GQLContext,
+    ) {
+      requireStaff(ctx);
+      const input = zodToGraphQLError(
+        z.object({ ids: z.array(z.string().min(1)).min(1) }),
+        args,
+      );
+      const tdb = dbFactory(ctx.env.DB);
+      const results: Array<{ id: string; success: boolean; error?: string }> =
+        [];
+      for (const id of input.ids) {
+        try {
+          await ordersResolvers.Mutation.resumeOrder(_source, { id }, ctx);
+          results.push({ id, success: true });
+        } catch (error) {
+          results.push({
+            id,
+            success: false,
+            error: error instanceof Error ? error.message : "Resume failed",
+          });
+        }
+      }
+      return results;
     },
     async cancelSettlement(_source: unknown, args: unknown, ctx: GQLContext) {
       requireStaff(ctx);

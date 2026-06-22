@@ -9,11 +9,15 @@ import { useCallback, useEffect, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import TiptapEditor from "@/client/components/diceshock/TiptapEditor";
-import { trpcClientDash } from "@/shared/utils/trpc";
+import {
+  useManagedActiveQuery,
+  useRemoveActiveRegistrationMutation,
+  useUpdateActiveMutation,
+} from "@/client/graphql/__generated__";
 
-type ActiveDetail = Awaited<
-  ReturnType<typeof trpcClientDash.activesManagement.getById.query>
->;
+type ActiveDetail = NonNullable<
+  ReturnType<typeof useManagedActiveQuery>["data"]
+>["managedActive"];
 type Registration = ActiveDetail["registrations"][number];
 
 type Tab = "info" | "members";
@@ -40,35 +44,40 @@ function ActiveEditorPage() {
   const [joinedUsers, setJoinedUsers] = useState<Registration[]>([]);
   const [watchingUsers, setWatchingUsers] = useState<Registration[]>([]);
 
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchActive = useCallback(async () => {
-    setLoading(true);
-    try {
-      const active = await trpcClientDash.activesManagement.getById.query({
-        id,
-      });
+  const { loading, refetch } = useManagedActiveQuery({
+    variables: { id },
+    onCompleted: (res) => {
+      const active = res.managedActive;
       setTitle(active.title);
       setDate(active.date);
       setTime(active.time ?? "");
-      setMaxPlayers(active.max_players);
-      setBoardGameId(active.board_game_id ?? "");
+      setMaxPlayers(active.maxPlayers);
+      setBoardGameId(active.boardGameId ?? "");
       setContent(active.content ?? "");
-      setIsGame(active.is_game ?? true);
+      setIsGame(active.isGame ?? true);
 
-      setJoinedUsers(active.registrations.filter((r) => !r.is_watching));
-      setWatchingUsers(active.registrations.filter((r) => r.is_watching));
-    } catch (err) {
-      msg.error(err instanceof Error ? err.message : "加载约局失败");
-    } finally {
-      setLoading(false);
-    }
-  }, [id, msg]);
+      setJoinedUsers(
+        active.registrations.filter((r) => !r.isWatching) as Registration[],
+      );
+      setWatchingUsers(
+        active.registrations.filter((r) => r.isWatching) as Registration[],
+      );
+    },
+    onError: (err) => {
+      msg.error(err.message || "加载约局失败");
+    },
+  });
 
-  useEffect(() => {
-    void fetchActive();
-  }, [fetchActive]);
+  const [updateActiveMutation] = useUpdateActiveMutation({
+    refetchQueries: ["ManagedActive"],
+  });
+
+  const [removeActiveRegistrationMutation] =
+    useRemoveActiveRegistrationMutation({
+      refetchQueries: ["ManagedActive"],
+    });
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -84,15 +93,19 @@ function ActiveEditorPage() {
 
       setSubmitting(true);
       try {
-        await trpcClientDash.activesManagement.update.mutate({
-          id,
-          title: title.trim(),
-          date,
-          time: time || null,
-          max_players: maxPlayers,
-          board_game_id: boardGameId.trim() || null,
-          content: content || null,
-          is_game: isGame,
+        await updateActiveMutation({
+          variables: {
+            input: {
+              id,
+              title: title.trim(),
+              date,
+              time: time || null,
+              maxPlayers,
+              boardGameId: boardGameId.trim() || null,
+              content: content || null,
+              isGame,
+            },
+          },
         });
         msg.success("约局已保存");
         navigate({ to: "/dash/actives" });
@@ -113,16 +126,17 @@ function ActiveEditorPage() {
       isGame,
       msg,
       navigate,
+      updateActiveMutation,
     ],
   );
 
   const handleRemoveRegistration = async (reg: Registration) => {
     try {
-      await trpcClientDash.activesManagement.removeRegistration.mutate({
-        registrationId: reg.id,
+      await removeActiveRegistrationMutation({
+        variables: { registrationId: reg.id },
       });
       msg.success("已移除");
-      await fetchActive();
+      await refetch();
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "移除失败");
     }

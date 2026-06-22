@@ -1,3 +1,4 @@
+import { useApolloClient } from "@apollo/client";
 import {
   ArrowCounterClockwiseIcon,
   ArrowSquareOutIcon,
@@ -25,20 +26,36 @@ import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import type { ActiveMahjongMatchesQuery } from "@/client/graphql/__generated__";
+import {
+  ActiveMahjongMatchesDocument,
+  BatchPauseOrdersDocument,
+  BatchResumeOrdersDocument,
+  MahjongMode,
+  PauseOrderDocument,
+  ResumeOrderDocument,
+  TableScope,
+  TableStatus,
+  TableType,
+  useAddTableOccupancyMutation,
+  useManagedTableQuery,
+  useRegenerateTableCodeMutation,
+  useToggleTableStatusMutation,
+  useUpdateTableMutation,
+} from "@/client/graphql/__generated__";
 import useSeatTimer from "@/client/hooks/useSeatTimer";
 import type { Wind } from "@/shared/mahjong/constants";
 import { WIND_LABELS } from "@/shared/mahjong/constants";
 import dayjs from "@/shared/utils/dayjs-config";
 import { formatPrice } from "@/shared/utils/pricing";
-import { trpcClientDash } from "@/shared/utils/trpc";
 
-type TableDetail = Awaited<
-  ReturnType<typeof trpcClientDash.tablesManagement.getById.query>
->;
+type TableDetail = NonNullable<
+  ReturnType<typeof useManagedTableQuery>["data"]
+>["managedTable"];
 type Occupancy = TableDetail["occupancies"][number];
 
-type ActiveMatch = Awaited<
-  ReturnType<typeof trpcClientDash.gszManagement.listActive.query>
+type ActiveMatch = NonNullable<
+  ActiveMahjongMatchesQuery["activeMahjongMatches"]
 >[number];
 
 const TYPE_LABELS: Record<string, string> = {
@@ -56,11 +73,15 @@ const SCOPE_LABELS: Record<string, string> = {
 const GSZ_MODE_LABELS: Record<string, string> = {
   "3p": "三麻",
   "4p": "四麻",
+  THREE_PLAYER: "三麻",
+  FOUR_PLAYER: "四麻",
 };
 
 const GSZ_FORMAT_LABELS: Record<string, string> = {
   tonpuu: "东风场",
   hanchan: "半庄",
+  TONPUU: "东风场",
+  HANCHAN: "半庄",
 };
 
 const GSZ_PHASE_LABELS: Record<string, string> = {
@@ -92,9 +113,31 @@ function TableDetailPage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const msg = useMsg();
+  const client = useApolloClient();
 
   const [table, setTable] = useState<TableDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  const { loading, refetch: fetchTable } = useManagedTableQuery({
+    variables: { id },
+    onCompleted: (res) => {
+      const data = res.managedTable;
+      setTable(data as TableDetail | null);
+      setEditForm({
+        name: data.name,
+        type: data.type as string as "fixed" | "solo",
+        scope: data.scope as string as
+          | "trpg"
+          | "boardgame"
+          | "console"
+          | "mahjong",
+        capacity: data.capacity,
+        description: data.description ?? "",
+      });
+    },
+    onError: (err) => {
+      msg.error(err.message || "加载桌台失败");
+    },
+  });
   const [activeTab, setActiveTab] = useState<"basic" | "qrcode" | "occupancy">(
     "basic",
   );
@@ -107,6 +150,19 @@ function TableDetailPage() {
     description: "",
   });
   const [editPending, setEditPending] = useState(false);
+
+  const [updateTableMutation] = useUpdateTableMutation({
+    refetchQueries: ["ManagedTable"],
+  });
+  const [toggleTableStatusMutation] = useToggleTableStatusMutation({
+    refetchQueries: ["ManagedTable"],
+  });
+  const [regenerateTableCodeMutation] = useRegenerateTableCodeMutation({
+    refetchQueries: ["ManagedTable"],
+  });
+  const [addTableOccupancyMutation] = useAddTableOccupancyMutation({
+    refetchQueries: ["ManagedTable"],
+  });
 
   const [statusTogglePending, setStatusTogglePending] = useState(false);
 
@@ -141,13 +197,14 @@ function TableDetailPage() {
 
   const handleBatchPauseOcc = async () => {
     const activeIds = (table?.occupancies ?? [])
-      .filter((o) => selectedOccIds.has(o.id) && o.status === "active")
+      .filter((o) => selectedOccIds.has(o.id) && o.status === "ACTIVE")
       .map((o) => o.id);
     if (activeIds.length === 0) return;
     setOrderActionPending(true);
     try {
-      await trpcClientDash.ordersManagement.batchPause.mutate({
-        ids: activeIds,
+      await client.mutate({
+        mutation: BatchPauseOrdersDocument,
+        variables: { ids: activeIds },
       });
       msg.success(`已暂停 ${activeIds.length} 个订单`);
       setSelectedOccIds(new Set());
@@ -161,13 +218,14 @@ function TableDetailPage() {
 
   const handleBatchResumeOcc = async () => {
     const pausedIds = (table?.occupancies ?? [])
-      .filter((o) => selectedOccIds.has(o.id) && o.status === "paused")
+      .filter((o) => selectedOccIds.has(o.id) && o.status === "PAUSED")
       .map((o) => o.id);
     if (pausedIds.length === 0) return;
     setOrderActionPending(true);
     try {
-      await trpcClientDash.ordersManagement.batchResume.mutate({
-        ids: pausedIds,
+      await client.mutate({
+        mutation: BatchResumeOrdersDocument,
+        variables: { ids: pausedIds },
       });
       msg.success(`已继续 ${pausedIds.length} 个订单`);
       setSelectedOccIds(new Set());
@@ -188,41 +246,21 @@ function TableDetailPage() {
     return () => clearInterval(timer);
   }, []);
 
-  const fetchTable = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await trpcClientDash.tablesManagement.getById.query({ id });
-      setTable(data);
-      setEditForm({
-        name: data.name,
-        type: data.type as "fixed" | "solo",
-        scope: data.scope as "trpg" | "boardgame" | "console" | "mahjong",
-        capacity: data.capacity,
-        description: data.description ?? "",
-      });
-    } catch (err) {
-      msg.error(err instanceof Error ? err.message : "加载桌台失败");
-    } finally {
-      setLoading(false);
-    }
-  }, [id, msg]);
-
-  useEffect(() => {
-    void fetchTable();
-  }, [fetchTable]);
-
   const fetchActiveMatch = useCallback(async () => {
     setActiveMatchLoading(true);
     try {
-      const all = await trpcClientDash.gszManagement.listActive.query();
-      const match = all.find((m) => m.tableId === id) ?? null;
+      const result = await client.query({
+        query: ActiveMahjongMatchesDocument,
+      });
+      const all = result.data?.activeMahjongMatches ?? [];
+      const match = all.find((m: ActiveMatch) => m.tableId === id) ?? null;
       setActiveMatch(match);
     } catch {
       // noop
     } finally {
       setActiveMatchLoading(false);
     }
-  }, [id]);
+  }, [id, client]);
 
   useEffect(() => {
     void fetchActiveMatch();
@@ -249,13 +287,24 @@ function TableDetailPage() {
     }
     setEditPending(true);
     try {
-      await trpcClientDash.tablesManagement.update.mutate({
-        id,
-        name: editForm.name.trim(),
-        type: editForm.type,
-        scope: editForm.scope,
-        capacity: editForm.capacity,
-        description: editForm.description.trim() || null,
+      await updateTableMutation({
+        variables: {
+          input: {
+            id,
+            name: editForm.name.trim(),
+            type: editForm.type === "fixed" ? TableType.Fixed : TableType.Solo,
+            scope:
+              editForm.scope === "boardgame"
+                ? TableScope.Boardgame
+                : editForm.scope === "trpg"
+                  ? TableScope.Trpg
+                  : editForm.scope === "console"
+                    ? TableScope.Console
+                    : TableScope.Mahjong,
+            capacity: editForm.capacity,
+            description: editForm.description.trim() || null,
+          },
+        },
       });
       msg.success("桌台信息已更新");
       await fetchTable();
@@ -269,10 +318,14 @@ function TableDetailPage() {
   const handleToggleStatus = async () => {
     setStatusTogglePending(true);
     try {
-      const res = await trpcClientDash.tablesManagement.toggleStatus.mutate({
-        id,
+      const res = await toggleTableStatusMutation({
+        variables: { id },
       });
-      msg.success(res.status === "active" ? "已上架" : "已下架");
+      msg.success(
+        res.data?.toggleTableStatus.status === TableStatus.Active
+          ? "已上架"
+          : "已下架",
+      );
       await fetchTable();
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "操作失败");
@@ -284,7 +337,9 @@ function TableDetailPage() {
   const handleRegenerateCode = async () => {
     setRegeneratePending(true);
     try {
-      await trpcClientDash.tablesManagement.regenerateCode.mutate({ id });
+      await regenerateTableCodeMutation({
+        variables: { id },
+      });
       msg.success("编号已重新生成");
       regenerateDialogRef.current?.close();
       await fetchTable();
@@ -303,9 +358,13 @@ function TableDetailPage() {
     }
     setAddOccPending(true);
     try {
-      await trpcClientDash.tablesManagement.addOccupancy.mutate({
-        table_id: id,
-        user_id: addOccForm.userId.trim(),
+      await addTableOccupancyMutation({
+        variables: {
+          input: {
+            tableId: id,
+            userId: addOccForm.userId.trim(),
+          },
+        },
       });
       msg.success("已添加使用");
       addOccDialogRef.current?.close();
@@ -321,8 +380,11 @@ function TableDetailPage() {
   const handleNavigateToSettle = async (occ: Occupancy) => {
     setOrderActionPending(true);
     try {
-      if (occ.status === "active") {
-        await trpcClientDash.ordersManagement.pauseOrder.mutate({ id: occ.id });
+      if (occ.status === "ACTIVE") {
+        await client.mutate({
+          mutation: PauseOrderDocument,
+          variables: { id: occ.id },
+        });
       }
     } catch {
     } finally {
@@ -337,7 +399,10 @@ function TableDetailPage() {
   const handlePauseOrder = async (occId: string) => {
     setOrderActionPending(true);
     try {
-      await trpcClientDash.ordersManagement.pauseOrder.mutate({ id: occId });
+      await client.mutate({
+        mutation: PauseOrderDocument,
+        variables: { id: occId },
+      });
       msg.success("已暂停");
       await fetchTable();
     } catch (err) {
@@ -350,7 +415,10 @@ function TableDetailPage() {
   const handleResumeOrder = async (occId: string) => {
     setOrderActionPending(true);
     try {
-      await trpcClientDash.ordersManagement.resumeOrder.mutate({ id: occId });
+      await client.mutate({
+        mutation: ResumeOrderDocument,
+        variables: { id: occId },
+      });
       msg.success("已继续");
       await fetchTable();
     } catch (err) {
@@ -605,7 +673,7 @@ function TableDetailPage() {
                               {activeMatch.tableName}
                             </span>
                             <span
-                              className={`badge badge-xs ${activeMatch.mode === "4p" ? "badge-primary" : "badge-secondary"}`}
+                              className={`badge badge-xs ${activeMatch.mode === MahjongMode.FourPlayer ? "badge-primary" : "badge-secondary"}`}
                             >
                               {GSZ_MODE_LABELS[activeMatch.mode] ??
                                 activeMatch.mode}

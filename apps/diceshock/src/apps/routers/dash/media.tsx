@@ -1,3 +1,4 @@
+import { useApolloClient } from "@apollo/client";
 import {
   CloudArrowUpIcon,
   CopyIcon,
@@ -15,10 +16,14 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import {
+  MediaObjectsDocument,
+  RemoveMediaObjectDocument,
+  RenameMediaObjectDocument,
+} from "@/client/graphql/__generated__";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import { formatMessage } from "@/shared/i18n";
 import dayjs from "@/shared/utils/dayjs-config";
-import { trpcClientDash } from "@/shared/utils/trpc";
 
 type MediaItem = {
   key: string;
@@ -124,6 +129,7 @@ function sortItems(items: MediaItem[], sortKey: SortKey): MediaItem[] {
 function RouteComponent() {
   const msg = useMsg();
   const { t } = useTranslation();
+  const client = useApolloClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const renameDialogRef = useRef<HTMLDialogElement>(null);
   const deleteDialogRef = useRef<HTMLDialogElement>(null);
@@ -152,16 +158,17 @@ function RouteComponent() {
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await trpcClientDash.mediaManagement.list.query({
-        limit: 1000,
+      const { data } = await client.query({
+        query: MediaObjectsDocument,
+        variables: { input: { limit: 1000 } },
       });
-      setAllItems(result.items);
+      setAllItems(data.mediaObjects.items as MediaItem[]);
     } catch (err) {
       msg.error(err instanceof Error ? err.message : t("dashMedia.loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [msg]);
+  }, [client, msg, t]);
 
   useEffect(() => {
     void fetchItems();
@@ -222,7 +229,7 @@ function RouteComponent() {
         void fetchItems();
       }
     },
-    [fetchItems, msg],
+    [fetchItems, msg, t],
   );
 
   const handleDrop = useCallback(
@@ -255,7 +262,7 @@ function RouteComponent() {
         msg.error(t("dashMedia.clipboardDenied"));
       }
     },
-    [msg],
+    [msg, t],
   );
 
   const openRenameDialog = useCallback((item: MediaItem) => {
@@ -268,9 +275,12 @@ function RouteComponent() {
     if (!pendingRename || !renameValue.trim()) return;
     setRenamePending(true);
     try {
-      await trpcClientDash.mediaManagement.rename.mutate({
-        oldKey: pendingRename.key,
-        newName: renameValue.trim(),
+      await client.mutate({
+        mutation: RenameMediaObjectDocument,
+        variables: {
+          oldKey: pendingRename.key,
+          newName: renameValue.trim(),
+        },
       });
       msg.success(t("dashMedia.renameSuccess"));
       renameDialogRef.current?.close();
@@ -283,7 +293,7 @@ function RouteComponent() {
     } finally {
       setRenamePending(false);
     }
-  }, [pendingRename, renameValue, fetchItems, msg]);
+  }, [pendingRename, renameValue, client, fetchItems, msg, t]);
 
   const openDeleteDialog = useCallback((item: MediaItem) => {
     setPendingDelete(item);
@@ -294,8 +304,9 @@ function RouteComponent() {
     if (!pendingDelete) return;
     setDeletePending(true);
     try {
-      await trpcClientDash.mediaManagement.remove.mutate({
-        key: pendingDelete.key,
+      await client.mutate({
+        mutation: RemoveMediaObjectDocument,
+        variables: { key: pendingDelete.key },
       });
       msg.success(t("dashMedia.fileDeleted"));
       deleteDialogRef.current?.close();
@@ -308,7 +319,7 @@ function RouteComponent() {
     } finally {
       setDeletePending(false);
     }
-  }, [pendingDelete, fetchItems, msg]);
+  }, [pendingDelete, client, fetchItems, msg, t]);
 
   return (
     <main className="size-full flex flex-col">

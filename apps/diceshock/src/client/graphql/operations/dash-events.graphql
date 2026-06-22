@@ -1,0 +1,64 @@
+query ManagedEvents {
+  managedEvents {
+    id
+    title
+    description
+    coverImageUrl
+    content
+    isPublished
+    createdAt
+    updatedAt
+  }
+}
+
+query ManagedEvent($id: ID!) {
+  managedEvent(id: $id) {
+    id
+    title
+    description
+    coverImageUrl
+    content
+    isPublished
+    createdAt
+    updatedAt
+  }
+}
+
+mutation CreateEvent($input: EventInput!) {
+  createEvent(input: $input) {
+    id
+    title
+    description
+    coverImageUrl
+    content
+    isPublished
+    createdAt
+    updatedAt
+  }
+}
+
+mutation UpdateEvent($input: UpdateEventInput!) {
+  updateEvent(input: $input) {
+    id
+    title
+    description
+    coverImageUrl
+    content
+    isPublished
+    createdAt
+    updatedAt
+  }
+}
+
+mutation RemoveEvent($id: ID!) {
+  removeEvent(id: $id) {
+    id
+  }
+}
+
+mutation ToggleEventPublish($id: ID!) {
+  toggleEventPublish(id: $id) {
+    id
+    isPublished
+  }
+}

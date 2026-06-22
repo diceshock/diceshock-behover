@@ -1377,6 +1377,9 @@ type NotificationPayload {
   id: ID!
   userId: ID!
   type: String!
+  title: String
+  body: String
+  activeId: ID
   data: String!
   createdAt: String!
 }

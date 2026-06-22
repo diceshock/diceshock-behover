@@ -10,11 +10,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import AdminStoreFilter from "@/client/components/AdminStoreFilter";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import {
+  useCreateEventMutation,
+  useManagedEventsQuery,
+  useRemoveEventMutation,
+  useToggleEventPublishMutation,
+} from "@/client/graphql/__generated__";
 import { useAdminStoreFilter } from "@/client/hooks/useAdminStoreFilter";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import dayjs from "@/shared/utils/dayjs-config";
-import { trpcClientDash } from "@/shared/utils/trpc";
 
 function formatCreateAt(val: unknown): string {
   if (!val) return "—";
@@ -26,10 +31,10 @@ function formatCreateAt(val: unknown): string {
   }
 }
 
-type EventsList = Awaited<
-  ReturnType<typeof trpcClientDash.eventsManagement.list.query>
->;
-type EventItem = EventsList[number];
+type EventsList = NonNullable<
+  ReturnType<typeof useManagedEventsQuery>["data"]
+>["managedEvents"];
+type EventItem = NonNullable<EventsList>[number];
 
 export const Route = createFileRoute("/dash/events")({
   component: RouteComponent,
@@ -41,7 +46,25 @@ function RouteComponent() {
   const isMobile = useIsMobile();
   const { storeFilter } = useAdminStoreFilter();
   const [events, setEvents] = useState<EventItem[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const { loading, refetch: refreshEvents } = useManagedEventsQuery({
+    onCompleted: (res) => {
+      setEvents((res.managedEvents ?? []) as EventItem[]);
+    },
+    onError: (err) => {
+      msg.error(err.message || t("dashEvents.fetchFailed"));
+    },
+  });
+
+  const [createEventMutation] = useCreateEventMutation({
+    refetchQueries: ["ManagedEvents"],
+  });
+  const [toggleEventPublishMutation] = useToggleEventPublishMutation({
+    refetchQueries: ["ManagedEvents"],
+  });
+  const [removeEventMutation] = useRemoveEventMutation({
+    refetchQueries: ["ManagedEvents"],
+  });
 
   const deleteDialogRef = useRef<HTMLDialogElement>(null);
   const [pendingDelete, setPendingDelete] = useState<EventItem | null>(null);
@@ -56,31 +79,14 @@ function RouteComponent() {
     }
   };
 
-  const refreshEvents = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await trpcClientDash.eventsManagement.list.query();
-      setEvents(data);
-    } catch (err) {
-      msg.error(
-        err instanceof Error ? err.message : t("dashEvents.fetchFailed"),
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [storeFilter, msg, t]);
-
-  useEffect(() => {
-    void refreshEvents();
-  }, [refreshEvents]);
-
   const handleCreate = async () => {
     try {
-      const event = await trpcClientDash.eventsManagement.create.mutate({
-        title: t("dashEvents.newEventTitle"),
+      await createEventMutation({
+        variables: {
+          input: { title: t("dashEvents.newEventTitle") },
+        },
       });
       msg.success(t("dashEvents.createSuccess"));
-      await refreshEvents();
     } catch (err) {
       msg.error(
         err instanceof Error ? err.message : t("dashEvents.createFailed"),
@@ -90,15 +96,14 @@ function RouteComponent() {
 
   const handleTogglePublish = async (event: EventItem) => {
     try {
-      await trpcClientDash.eventsManagement.togglePublish.mutate({
-        id: event.id,
+      await toggleEventPublishMutation({
+        variables: { id: event.id },
       });
       msg.success(
-        event.is_published
+        event.isPublished
           ? t("dashEvents.unpublishSuccess")
           : t("dashEvents.publishSuccess"),
       );
-      await refreshEvents();
     } catch (err) {
       msg.error(
         err instanceof Error ? err.message : t("dashEvents.operationFailed"),
@@ -117,13 +122,12 @@ function RouteComponent() {
     if (!pendingDelete) return;
     setDeletePending(true);
     try {
-      await trpcClientDash.eventsManagement.remove.mutate({
-        id: pendingDelete.id,
+      await removeEventMutation({
+        variables: { id: pendingDelete.id },
       });
       msg.success(t("dashEvents.deleteSuccess"));
       deleteDialogRef.current?.close();
       setPendingDelete(null);
-      await refreshEvents();
     } catch (err) {
       msg.error(
         err instanceof Error ? err.message : t("dashEvents.deleteFailed"),
@@ -217,9 +221,9 @@ function RouteComponent() {
                     {event.description || "—"}
                   </td>
                   <td>
-                    {event.cover_image_url ? (
+                    {event.coverImageUrl ? (
                       <img
-                        src={event.cover_image_url}
+                        src={event.coverImageUrl}
                         alt=""
                         className="w-16 h-10 object-cover rounded"
                       />
@@ -228,7 +232,7 @@ function RouteComponent() {
                     )}
                   </td>
                   <td className="whitespace-nowrap">
-                    {event.is_published ? (
+                    {event.isPublished ? (
                       <span className="badge badge-success badge-sm">
                         {t("dashEvents.published")}
                       </span>
@@ -239,10 +243,10 @@ function RouteComponent() {
                     )}
                   </td>
                   <td className="whitespace-nowrap">
-                    {formatCreateAt(event.create_at)}
+                    {formatCreateAt(event.createdAt)}
                   </td>
                   <td className="whitespace-nowrap">
-                    {formatCreateAt(event.update_at)}
+                    {formatCreateAt(event.updatedAt)}
                   </td>
                   <th className="whitespace-nowrap">
                     {isMobile ? (
@@ -275,7 +279,7 @@ function RouteComponent() {
                               type="button"
                               onClick={() => handleTogglePublish(event)}
                             >
-                              {event.is_published
+                              {event.isPublished
                                 ? t("dashEvents.unpublish")
                                 : t("dashEvents.publish")}
                             </button>
@@ -307,7 +311,7 @@ function RouteComponent() {
                           className="btn btn-xs btn-ghost"
                           onClick={() => handleTogglePublish(event)}
                         >
-                          {event.is_published
+                          {event.isPublished
                             ? t("dashEvents.unpublish")
                             : t("dashEvents.publish")}
                         </button>

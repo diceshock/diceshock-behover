@@ -17,6 +17,13 @@ import { useCallback, useEffect, useState } from "react";
 import BusinessCardModal from "@/client/components/diceshock/BusinessCardModal";
 import ParticipantsCardModal from "@/client/components/diceshock/ParticipantsCardModal";
 import TiptapViewer from "@/client/components/diceshock/TiptapEditor/TiptapViewer";
+import type { GetActiveQuery } from "@/client/graphql/__generated__";
+import {
+  useActiveParticipantsChangedSubscription,
+  useGetActiveQuery,
+  useJoinActiveMutation,
+  useLeaveActiveMutation,
+} from "@/client/graphql/__generated__";
 import useAuth from "@/client/hooks/useAuth";
 import { useMessages } from "@/client/hooks/useMessages";
 import { useTranslation } from "@/client/hooks/useTranslation";
@@ -44,9 +51,7 @@ export const Route = createFileRoute(
   component: ActiveDetailPage,
 });
 
-type ActiveDetail = Awaited<
-  ReturnType<typeof trpcClientPublic.actives.getById.query>
->;
+type ActiveDetail = NonNullable<GetActiveQuery["active"]>;
 
 function ActiveDetailPage() {
   const { id } = Route.useParams();
@@ -62,36 +67,47 @@ function ActiveDetailPage() {
   const [showParticipantsModal, setShowParticipantsModal] = useState(false);
 
   const userId = session?.user?.id;
-  const isCreator = active && userId && active.creator_id === userId;
+  const isCreator = active && userId && active.creatorId === userId;
 
-  const myRegistration = active?.registrations.find(
-    (r) => r.user_id === userId,
-  );
+  const myRegistration = active?.registrations.find((r) => r.userId === userId);
   const joinedCount =
-    active?.registrations.filter((r) => !r.is_watching).length ?? 0;
+    active?.registrations.filter((r) => !r.isWatching).length ?? 0;
   const watchingCount =
-    active?.registrations.filter((r) => r.is_watching).length ?? 0;
-  const isFull = active ? joinedCount >= active.max_players : false;
+    active?.registrations.filter((r) => r.isWatching).length ?? 0;
+  const isFull = active ? joinedCount >= active.maxPlayers : false;
   const isExpired = active
     ? active.date < dayjs().tz("Asia/Shanghai").format("YYYY-MM-DD")
     : false;
 
-  const fetchActive = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await trpcClientPublic.actives.getById.query({ id });
-      setActive(result);
-    } catch (error) {
-      console.error("Failed to fetch active:", error);
-      messages.error(t("errors.loadActiveFailed"));
-    } finally {
-      setLoading(false);
-    }
-  }, [id, messages, t]);
+  const {
+    data: activeQueryData,
+    loading: activeLoading,
+    refetch,
+  } = useGetActiveQuery({
+    variables: { id },
+  });
+
+  const [joinActiveMutation] = useJoinActiveMutation();
+  const [leaveActiveMutation] = useLeaveActiveMutation();
+
+  // Real-time participant updates via subscription
+  useActiveParticipantsChangedSubscription({
+    variables: { activeId: id },
+    skip: !id,
+    onData: () => {
+      refetch();
+    },
+  });
 
   useEffect(() => {
-    fetchActive();
-  }, [fetchActive]);
+    setLoading(activeLoading);
+  }, [activeLoading]);
+
+  useEffect(() => {
+    if (activeQueryData?.active) {
+      setActive(activeQueryData.active);
+    }
+  }, [activeQueryData]);
 
   const handleJoin = useCallback(
     async (isWatching: boolean) => {
@@ -120,14 +136,19 @@ function ActiveDetailPage() {
       }
 
       try {
-        await trpcClientPublic.actives.join.mutate({
-          active_id: id,
-          is_watching: isWatching,
+        // If already registered, need to leave first then rejoin with new status
+        if (myRegistration) {
+          await leaveActiveMutation({ variables: { activeId: id } });
+        }
+
+        await joinActiveMutation({
+          variables: { activeId: id, isWatching },
         });
+
         messages.success(
           isWatching ? t("actives.setWatching") : t("actives.joinSuccess"),
         );
-        fetchActive();
+        refetch();
       } catch (error) {
         messages.error(
           error instanceof Error ? error.message : t("errors.operationFailed"),
@@ -136,19 +157,27 @@ function ActiveDetailPage() {
         setActionLoading(false);
       }
     },
-    [userId, id, messages, fetchActive, myRegistration, t],
+    [
+      userId,
+      id,
+      messages,
+      refetch,
+      myRegistration,
+      t,
+      joinActiveMutation,
+      leaveActiveMutation,
+    ],
   );
 
   const handleJoinAfterBusinessCard = useCallback(async () => {
     setShowBusinessCard(false);
     setActionLoading(true);
     try {
-      await trpcClientPublic.actives.join.mutate({
-        active_id: id,
-        is_watching: false,
+      await joinActiveMutation({
+        variables: { activeId: id, isWatching: false },
       });
       messages.success(t("actives.joinSuccess"));
-      fetchActive();
+      refetch();
     } catch (error) {
       messages.error(
         error instanceof Error ? error.message : t("actives.joinFailed"),
@@ -156,20 +185,20 @@ function ActiveDetailPage() {
     } finally {
       setActionLoading(false);
     }
-  }, [id, messages, fetchActive, t]);
+  }, [id, messages, refetch, t, joinActiveMutation]);
 
   const handleLeave = useCallback(async () => {
     setActionLoading(true);
     try {
-      await trpcClientPublic.actives.leave.mutate({ active_id: id });
+      await leaveActiveMutation({ variables: { activeId: id } });
       messages.success(t("actives.leaveSuccess"));
-      fetchActive();
+      refetch();
     } catch (error) {
       messages.error(t("errors.operationFailed"));
     } finally {
       setActionLoading(false);
     }
-  }, [id, messages, fetchActive, t]);
+  }, [id, messages, refetch, t, leaveActiveMutation]);
 
   const openParticipantsModal = useCallback(() => {
     setShowParticipantsModal(true);
@@ -230,33 +259,31 @@ function ActiveDetailPage() {
                     {t("actives.creator")}
                   </span>
                 )}
-                {!isCreator &&
-                  myRegistration &&
-                  !myRegistration.is_watching && (
-                    <span className="badge badge-primary badge-xs">
-                      {t("actives.joined")}
-                    </span>
-                  )}
-                {!isCreator && myRegistration?.is_watching && (
+                {!isCreator && myRegistration && !myRegistration.isWatching && (
+                  <span className="badge badge-primary badge-xs">
+                    {t("actives.joined")}
+                  </span>
+                )}
+                {!isCreator && myRegistration?.isWatching && (
                   <span className="badge badge-ghost badge-xs">
                     {t("actives.watching")}
                   </span>
                 )}
-                {active.is_system_recommended && (
+                {active.isSystemRecommended && (
                   <span className="badge badge-primary badge-xs">推荐</span>
                 )}
                 {active.boardGames?.map(
                   (g) =>
                     g && (
                       <span key={g.id} className="badge badge-primary badge-xs">
-                        🎲 {g.sch_name || g.eng_name}
+                        🎲 {g.schName || g.engName}
                       </span>
                     ),
                 )}
               </div>
             </div>
 
-            {active.is_system_recommended && (
+            {active.isSystemRecommended && (
               <div className="alert alert-info alert-soft">
                 <span className="text-xs">
                   这是系统根据多位用户的偏好自动推荐的约局
@@ -277,7 +304,7 @@ function ActiveDetailPage() {
               )}
               <span className="flex items-center gap-1.5">
                 <UsersIcon className="size-4" />
-                {joinedCount}/{active.max_players}{" "}
+                {joinedCount}/{active.maxPlayers}{" "}
                 {t("actives.joinedCountLabel")}
                 {watchingCount > 0 && (
                   <span className="text-base-content/40">
@@ -287,7 +314,7 @@ function ActiveDetailPage() {
               </span>
               <span className="text-base-content/40">
                 {t("actives.creatorLabel")}
-                {active.creator.name ?? "Anonymous"}
+                {active.creator?.name ?? "Anonymous"}
               </span>
             </div>
 
@@ -312,7 +339,7 @@ function ActiveDetailPage() {
                   </button>
                 ) : myRegistration ? (
                   <>
-                    {myRegistration.is_watching ? (
+                    {myRegistration.isWatching ? (
                       <button
                         type="button"
                         className="btn btn-primary gap-2"
@@ -333,7 +360,7 @@ function ActiveDetailPage() {
                         {t("actives.switchToWatching")}
                       </button>
                     )}
-                    {!active.is_system_recommended && (
+                    {!active.isSystemRecommended && (
                       <button
                         type="button"
                         className="btn btn-ghost btn-error gap-2"
@@ -386,11 +413,11 @@ function ActiveDetailPage() {
                   )}
                 </div>
 
-                {active.registrations.filter((r) => !r.is_watching).length >
+                {active.registrations.filter((r) => !r.isWatching).length >
                 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {active.registrations
-                      .filter((r) => !r.is_watching)
+                      .filter((r) => !r.isWatching)
                       .map((r) => (
                         <span key={r.id} className="badge badge-primary">
                           {r.nickname}
@@ -410,7 +437,7 @@ function ActiveDetailPage() {
                     </h3>
                     <div className="flex flex-wrap gap-2">
                       {active.registrations
-                        .filter((r) => r.is_watching)
+                        .filter((r) => r.isWatching)
                         .map((r) => (
                           <span key={r.id} className="badge badge-ghost">
                             {r.nickname}

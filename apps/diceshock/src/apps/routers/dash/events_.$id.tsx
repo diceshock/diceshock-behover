@@ -4,11 +4,14 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import clsx from "clsx";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import MarkdownTextEditor from "@/client/components/diceshock/MarkdownEditor/MarkdownTextEditor";
 import { useMsg } from "@/client/components/diceshock/Msg";
-import { trpcClientDash } from "@/shared/utils/trpc";
+import {
+  useManagedEventQuery,
+  useUpdateEventMutation,
+} from "@/client/graphql/__generated__";
 
 export const Route = createFileRoute("/dash/events_/$id")({
   component: EventEditorPage,
@@ -23,27 +26,25 @@ function EventEditorPage() {
   const [description, setDescription] = useState("");
   const [coverImageUrl, setCoverImageUrl] = useState("");
   const [content, setContent] = useState("");
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchEvent = useCallback(async () => {
-    setLoading(true);
-    try {
-      const event = await trpcClientDash.eventsManagement.getById.query({ id });
+  const { loading } = useManagedEventQuery({
+    variables: { id },
+    onCompleted: (res) => {
+      const event = res.managedEvent;
       setTitle(event.title);
       setDescription(event.description ?? "");
-      setCoverImageUrl(event.cover_image_url ?? "");
+      setCoverImageUrl(event.coverImageUrl ?? "");
       setContent(event.content ?? "");
-    } catch (err) {
-      msg.error(err instanceof Error ? err.message : "加载活动失败");
-    } finally {
-      setLoading(false);
-    }
-  }, [id, msg]);
+    },
+    onError: (err) => {
+      msg.error(err.message || "加载活动失败");
+    },
+  });
 
-  useEffect(() => {
-    fetchEvent();
-  }, [fetchEvent]);
+  const [updateEventMutation] = useUpdateEventMutation({
+    refetchQueries: ["ManagedEvent"],
+  });
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -55,12 +56,16 @@ function EventEditorPage() {
 
       setSubmitting(true);
       try {
-        await trpcClientDash.eventsManagement.update.mutate({
-          id,
-          title: title.trim(),
-          description: description.trim() || undefined,
-          cover_image_url: coverImageUrl.trim() || undefined,
-          content: content || undefined,
+        await updateEventMutation({
+          variables: {
+            input: {
+              id,
+              title: title.trim(),
+              description: description.trim() || undefined,
+              coverImageUrl: coverImageUrl.trim() || undefined,
+              content: content || undefined,
+            },
+          },
         });
         msg.success("活动已保存");
         navigate({ to: "/dash/events" });
@@ -70,7 +75,16 @@ function EventEditorPage() {
         setSubmitting(false);
       }
     },
-    [id, title, description, coverImageUrl, content, msg, navigate],
+    [
+      id,
+      title,
+      description,
+      coverImageUrl,
+      content,
+      msg,
+      navigate,
+      updateEventMutation,
+    ],
   );
 
   if (loading) {

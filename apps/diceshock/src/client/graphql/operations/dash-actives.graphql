@@ -1,0 +1,98 @@
+query ManagedActives {
+  managedActives {
+    id
+    creatorId
+    creator {
+      id
+      name
+    }
+    title
+    boardGameId
+    boardGame {
+      id
+      schName
+      engName
+    }
+    storeId
+    date
+    time
+    maxPlayers
+    content
+    isGame
+    registrations {
+      id
+      activeId
+      userId
+      isWatching
+      nickname
+      uid
+    }
+    createdAt
+    updatedAt
+  }
+}
+
+query ManagedActive($id: ID!) {
+  managedActive(id: $id) {
+    id
+    creatorId
+    creator {
+      id
+      name
+    }
+    title
+    boardGameId
+    boardGame {
+      id
+      schName
+      engName
+    }
+    storeId
+    date
+    time
+    maxPlayers
+    content
+    isGame
+    registrations {
+      id
+      activeId
+      userId
+      isWatching
+      nickname
+      uid
+    }
+    createdAt
+    updatedAt
+  }
+}
+
+mutation RemoveActive($id: ID!) {
+  removeActive(id: $id) {
+    id
+  }
+}
+
+mutation BatchRemoveActives($ids: [ID!]!) {
+  batchRemoveActives(ids: $ids) {
+    id
+  }
+}
+
+mutation UpdateActive($input: UpdateActiveInput!) {
+  updateActive(input: $input) {
+    id
+    title
+    date
+    time
+    maxPlayers
+    boardGameId
+    content
+    isGame
+  }
+}
+
+mutation RemoveActiveRegistration($registrationId: ID!) {
+  removeActiveRegistration(registrationId: $registrationId) {
+    id
+  }
+}

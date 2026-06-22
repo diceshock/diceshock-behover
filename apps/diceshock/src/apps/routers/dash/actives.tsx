@@ -11,12 +11,16 @@ import AdminStoreFilter from "@/client/components/AdminStoreFilter";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import {
+  useBatchRemoveActivesMutation,
+  useManagedActivesQuery,
+  useRemoveActiveMutation,
+} from "@/client/graphql/__generated__";
 import { useAdminStoreFilter } from "@/client/hooks/useAdminStoreFilter";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import { formatMessage } from "@/shared/i18n";
 import dayjs from "@/shared/utils/dayjs-config";
-import { trpcClientDash } from "@/shared/utils/trpc";
 
 function formatCreateAt(val: unknown): string {
   if (!val) return "—";
@@ -28,10 +32,10 @@ function formatCreateAt(val: unknown): string {
   }
 }
 
-type ActivesList = Awaited<
-  ReturnType<typeof trpcClientDash.activesManagement.list.query>
->;
-type ActiveItem = ActivesList[number];
+type ActivesList = NonNullable<
+  ReturnType<typeof useManagedActivesQuery>["data"]
+>["managedActives"];
+type ActiveItem = NonNullable<ActivesList>[number];
 
 type StatusFilter = "all" | "active" | "expired";
 
@@ -51,7 +55,26 @@ function RouteComponent() {
   const isMobile = useIsMobile();
   const { storeFilter } = useAdminStoreFilter();
   const [actives, setActives] = useState<ActiveItem[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const {
+    data,
+    loading,
+    refetch: refreshActives,
+  } = useManagedActivesQuery({
+    onCompleted: (res) => {
+      setActives((res.managedActives ?? []) as ActiveItem[]);
+    },
+    onError: (err) => {
+      msg.error(err.message || t("dashActives.fetchFailed"));
+    },
+  });
+
+  const [removeActiveMutation] = useRemoveActiveMutation({
+    refetchQueries: ["ManagedActives"],
+  });
+  const [batchRemoveActivesMutation] = useBatchRemoveActivesMutation({
+    refetchQueries: ["ManagedActives"],
+  });
 
   const { q, status } = Route.useSearch();
   const navigate = useNavigate();
@@ -84,24 +107,6 @@ function RouteComponent() {
 
   const shanghaiToday = dayjs().tz("Asia/Shanghai").format("YYYY-MM-DD");
 
-  const refreshActives = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await trpcClientDash.activesManagement.list.query();
-      setActives(data);
-    } catch (err) {
-      msg.error(
-        err instanceof Error ? err.message : t("dashActives.fetchFailed"),
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [storeFilter, msg, t]);
-
-  useEffect(() => {
-    void refreshActives();
-  }, [refreshActives]);
-
   const filteredActives = useMemo(() => {
     let result = actives;
 
@@ -116,8 +121,8 @@ function RouteComponent() {
       result = result.filter((a) => {
         const title = a.title.toLowerCase();
         const gameName = (
-          a.boardGame?.sch_name ||
-          a.boardGame?.eng_name ||
+          a.boardGame?.schName ||
+          a.boardGame?.engName ||
           ""
         ).toLowerCase();
         return title.includes(lower) || gameName.includes(lower);
@@ -160,8 +165,8 @@ function RouteComponent() {
     if (!pendingDelete) return;
     setDeletePending(true);
     try {
-      await trpcClientDash.activesManagement.remove.mutate({
-        id: pendingDelete.id,
+      await removeActiveMutation({
+        variables: { id: pendingDelete.id },
       });
       msg.success(t("dashActives.deleteSuccess"));
       deleteDialogRef.current?.close();
@@ -171,7 +176,6 @@ function RouteComponent() {
         next.delete(pendingDelete.id);
         return next;
       });
-      await refreshActives();
     } catch (err) {
       msg.error(
         err instanceof Error ? err.message : t("dashActives.deleteFailed"),
@@ -189,8 +193,10 @@ function RouteComponent() {
     if (selectedIds.size === 0) return;
     setBatchDeletePending(true);
     try {
-      await trpcClientDash.activesManagement.batchRemove.mutate({
-        ids: [...selectedIds],
+      await batchRemoveActivesMutation({
+        variables: {
+          ids: [...selectedIds],
+        },
       });
       msg.success(
         formatMessage(t("dashActives.batchDeleteSuccess"), {
@@ -199,7 +205,6 @@ function RouteComponent() {
       );
       batchDeleteDialogRef.current?.close();
       setSelectedIds(new Set());
-      await refreshActives();
     } catch (err) {
       msg.error(
         err instanceof Error ? err.message : t("dashActives.batchDeleteFailed"),
@@ -305,10 +310,10 @@ function RouteComponent() {
             ) : (
               filteredActives.map((active) => {
                 const joinedCount = active.registrations.filter(
-                  (r) => !r.is_watching,
+                  (r) => !r.isWatching,
                 ).length;
                 const watchingCount = active.registrations.filter(
-                  (r) => r.is_watching,
+                  (r) => r.isWatching,
                 ).length;
                 const isExpired = active.date < shanghaiToday;
 
@@ -350,19 +355,19 @@ function RouteComponent() {
                     </td>
                     <td className="whitespace-nowrap">
                       {active.boardGame
-                        ? active.boardGame.sch_name || active.boardGame.eng_name
+                        ? active.boardGame.schName || active.boardGame.engName
                         : "—"}
                     </td>
                     <td className="whitespace-nowrap">{active.date}</td>
                     <td className="whitespace-nowrap">{active.time ?? "—"}</td>
-                    <td className="whitespace-nowrap">{active.max_players}</td>
+                    <td className="whitespace-nowrap">{active.maxPlayers}</td>
                     <td className="whitespace-nowrap">{joinedCount}</td>
                     <td className="whitespace-nowrap">{watchingCount}</td>
                     <td className="whitespace-nowrap">
                       {active.creator?.name ?? "—"}
                     </td>
                     <td className="whitespace-nowrap">
-                      {formatCreateAt(active.create_at)}
+                      {formatCreateAt(active.createdAt)}
                     </td>
                     <td className="whitespace-nowrap">
                       {isExpired ? (

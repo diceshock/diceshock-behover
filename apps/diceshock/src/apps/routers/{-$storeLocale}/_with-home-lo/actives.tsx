@@ -9,10 +9,18 @@ import {
 import { ClientOnly, createFileRoute, Link } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
+import type {
+  GetActivesQuery,
+  GetEventsQuery,
+} from "@/client/graphql/__generated__";
+import {
+  type ActiveDateRange,
+  useGetActivesQuery,
+  useGetEventsQuery,
+} from "@/client/graphql/__generated__";
 import useAuth from "@/client/hooks/useAuth";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import dayjs from "@/shared/utils/dayjs-config";
-import trpcClientPublic from "@/shared/utils/trpc";
 
 const SITE_URL = "https://origin.runespark.fun";
 
@@ -33,13 +41,8 @@ export const Route = createFileRoute("/{-$storeLocale}/_with-home-lo/actives")({
   component: ActivesPage,
 });
 
-type ActiveItem = Awaited<
-  ReturnType<typeof trpcClientPublic.actives.list.query>
->["items"][number];
-
-type EventItem = Awaited<
-  ReturnType<typeof trpcClientPublic.events.list.query>
->[number];
+type ActiveItem = GetActivesQuery["actives"]["items"][number];
+type EventItem = GetEventsQuery["events"][number];
 
 type FilterType = "all" | "events" | "actives" | "expired";
 type DateRange = "today" | "week" | "month" | "year" | undefined;
@@ -52,22 +55,22 @@ function ActiveTags({
   userId?: string;
 }) {
   const { t } = useTranslation();
-  const isCreator = userId && active.creator_id === userId;
+  const isCreator = userId && active.creatorId === userId;
   const myReg = userId
-    ? active.registrations.find((r) => r.user_id === userId)
+    ? active.registrations.find((r) => r.userId === userId)
     : undefined;
 
   const hasAny =
     isCreator ||
     myReg ||
     (active.boardGames && active.boardGames.length > 0) ||
-    active.is_system_recommended;
+    active.isSystemRecommended;
 
   if (!hasAny) return null;
 
   return (
     <div className="flex flex-wrap items-center gap-1 mt-1">
-      {active.is_system_recommended && (
+      {active.isSystemRecommended && (
         <span className="badge badge-primary badge-xs">推荐</span>
       )}
       {isCreator && (
@@ -75,12 +78,12 @@ function ActiveTags({
           {t("actives.creator")}
         </span>
       )}
-      {!isCreator && myReg && !myReg.is_watching && (
+      {!isCreator && myReg && !myReg.isWatching && (
         <span className="badge badge-primary badge-xs">
           {t("actives.joined")}
         </span>
       )}
-      {!isCreator && myReg?.is_watching && (
+      {!isCreator && myReg?.isWatching && (
         <span className="badge badge-ghost badge-xs">
           {t("actives.watching")}
         </span>
@@ -89,7 +92,7 @@ function ActiveTags({
         (g) =>
           g && (
             <span key={g.id} className="badge badge-primary badge-xs">
-              🎲 {g.sch_name || g.eng_name}
+              🎲 {g.schName || g.engName}
             </span>
           ),
       )}
@@ -128,10 +131,10 @@ function EventCard({ event }: { event: EventItem }) {
       params={(prev: any) => ({ ...prev, id: event.id })}
       className="card bg-base-200 border border-base-content/10 hover:border-primary/30 transition-all hover:shadow-md overflow-hidden cursor-pointer"
     >
-      {event.cover_image_url && (
+      {event.coverImageUrl && (
         <figure className="h-40 overflow-hidden">
           <img
-            src={event.cover_image_url}
+            src={event.coverImageUrl}
             alt={event.title}
             className="w-full h-full object-cover"
           />
@@ -163,50 +166,68 @@ function ActivesPage() {
 
   const hasFilters = filterType !== "all" || dateRange !== undefined;
 
-  const fetchEvents = useCallback(async () => {
-    try {
-      const result = await trpcClientPublic.events.list.query();
-      setEvents(result);
-    } catch (error) {
-      console.error("Failed to fetch events:", error);
-    }
-  }, []);
+  const { data: eventsData } = useGetEventsQuery();
 
-  const fetchActives = useCallback(
-    async (cursor?: string) => {
-      if (!cursor) setLoading(true);
-      else setLoadingMore(true);
-
-      try {
-        const result = await trpcClientPublic.actives.list.query({
-          limit: 20,
-          showExpired: filterType === "expired",
-          dateRange: dateRange,
-          cursor,
-        });
-        if (cursor) {
-          setActives((prev) => [...prev, ...result.items]);
-        } else {
-          setActives(result.items);
-        }
-        setNextCursor(result.nextCursor);
-      } catch (error) {
-        console.error("Failed to fetch actives:", error);
-      } finally {
-        setLoading(false);
-        setLoadingMore(false);
-      }
+  const {
+    data: activesData,
+    loading: activesLoading,
+    fetchMore,
+  } = useGetActivesQuery({
+    variables: {
+      input: {
+        pagination: { limit: 20 },
+        showExpired: filterType === "expired" || undefined,
+        dateRange: dateRange
+          ? (dateRange.toUpperCase() as ActiveDateRange)
+          : undefined,
+        storeId: undefined,
+      },
     },
-    [filterType, dateRange],
-  );
+  });
 
   useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
+    if (eventsData?.events) {
+      setEvents(eventsData.events);
+    }
+  }, [eventsData]);
 
   useEffect(() => {
-    fetchActives();
-  }, [fetchActives]);
+    setLoading(activesLoading);
+  }, [activesLoading]);
+
+  useEffect(() => {
+    if (activesData?.actives) {
+      setActives(activesData.actives.items);
+      setNextCursor(activesData.actives.pageInfo.nextCursor ?? undefined);
+    }
+  }, [activesData]);
+
+  const handleLoadMore = useCallback(async () => {
+    if (!nextCursor) return;
+    setLoadingMore(true);
+    try {
+      const result = await fetchMore({
+        variables: {
+          input: {
+            pagination: { cursor: nextCursor, limit: 20 },
+            showExpired: filterType === "expired" || undefined,
+            dateRange: dateRange
+              ? (dateRange.toUpperCase() as ActiveDateRange)
+              : undefined,
+            storeId: undefined,
+          },
+        },
+      });
+      if (result.data?.actives) {
+        setActives((prev) => [...prev, ...result.data.actives.items]);
+        setNextCursor(result.data.actives.pageInfo.nextCursor ?? undefined);
+      }
+    } catch (error) {
+      console.error("Failed to fetch more actives:", error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [fetchMore, nextCursor, filterType, dateRange]);
 
   const showEvents = filterType === "all" || filterType === "events";
   const showActives =
@@ -399,7 +420,7 @@ function ActivesPage() {
                             "btn btn-ghost",
                             loadingMore && "loading",
                           )}
-                          onClick={() => fetchActives(nextCursor)}
+                          onClick={() => handleLoadMore()}
                           disabled={loadingMore}
                         >
                           {loadingMore
@@ -531,10 +552,8 @@ function SmActiveCard({
   dayLabel: string;
 }) {
   const { t } = useTranslation();
-  const joinedCount = active.registrations.filter((r) => !r.is_watching).length;
-  const watchingCount = active.registrations.filter(
-    (r) => r.is_watching,
-  ).length;
+  const joinedCount = active.registrations.filter((r) => !r.isWatching).length;
+  const watchingCount = active.registrations.filter((r) => r.isWatching).length;
   const isExpired =
     active.date < dayjs().tz("Asia/Shanghai").format("YYYY-MM-DD");
 
@@ -582,7 +601,7 @@ function SmActiveCard({
               )}
               <span className="flex items-center gap-1">
                 <UsersIcon className="size-3.5" />
-                {joinedCount}/{active.max_players}
+                {joinedCount}/{active.maxPlayers}
                 {watchingCount > 0 && (
                   <span className="text-base-content/40">
                     ( {t("actives.watchingCount", { count: watchingCount })} )
@@ -594,7 +613,7 @@ function SmActiveCard({
             <div className="flex items-center gap-2 mt-2 text-xs text-base-content/40">
               <span>
                 {t("actives.creatorLabel")}
-                {active.creator.name ?? "Anonymous"}
+                {active.creator?.name ?? "Anonymous"}
               </span>
             </div>
           </div>
@@ -624,10 +643,8 @@ function ActiveCard({
   borderExtendAfter: boolean;
 }) {
   const { t } = useTranslation();
-  const joinedCount = active.registrations.filter((r) => !r.is_watching).length;
-  const watchingCount = active.registrations.filter(
-    (r) => r.is_watching,
-  ).length;
+  const joinedCount = active.registrations.filter((r) => !r.isWatching).length;
+  const watchingCount = active.registrations.filter((r) => r.isWatching).length;
   const isExpired =
     active.date < dayjs().tz("Asia/Shanghai").format("YYYY-MM-DD");
 
@@ -676,7 +693,7 @@ function ActiveCard({
             )}
             <span className="flex items-center gap-1">
               <UsersIcon className="size-3.5" />
-              {joinedCount}/{active.max_players}
+              {joinedCount}/{active.maxPlayers}
               {watchingCount > 0 && (
                 <span className="text-base-content/40">
                   ( {t("actives.watchingCount", { count: watchingCount })} )
@@ -688,7 +705,7 @@ function ActiveCard({
           <div className="flex items-center gap-2 mt-2 text-xs text-base-content/40">
             <span>
               {t("actives.creatorLabel")}
-              {active.creator.name ?? "Anonymous"}
+              {active.creator?.name ?? "Anonymous"}
             </span>
           </div>
         </div>

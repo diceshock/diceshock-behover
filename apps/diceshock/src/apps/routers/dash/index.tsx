@@ -1,3 +1,4 @@
+import { useApolloClient } from "@apollo/client";
 import {
   CalendarDotsIcon,
   ClipboardTextIcon,
@@ -18,10 +19,14 @@ import { useCallback, useEffect, useState } from "react";
 import { DashNavMenuButton } from "@/client/components/diceshock/DashNavMenu";
 import DashQRScannerDialog from "@/client/components/diceshock/DashQRScannerDialog";
 import InventoryManagementCard from "@/client/components/diceshock/InventoryManagementCard";
+import {
+  CaptchaSettingsDocument,
+  OrdersDocument,
+  SetCaptchaEnabledDocument,
+} from "@/client/graphql/__generated__";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import { formatMessage } from "@/shared/i18n";
 import dayjs from "@/shared/utils/dayjs-config";
-import trpcClientPublic, { trpcClientDash } from "@/shared/utils/trpc";
 
 export const Route = createFileRoute("/dash/")({
   component: RouteComponent,
@@ -48,6 +53,7 @@ function formatTime(val: number | null | undefined): string {
 
 function RouteComponent() {
   const { t } = useTranslation();
+  const client = useApolloClient();
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,49 +64,64 @@ function RouteComponent() {
   const [captchaToggling, setCaptchaToggling] = useState(false);
 
   useEffect(() => {
-    trpcClientPublic.settings.getCaptchaEnabled
-      .query()
+    client
+      .query({ query: CaptchaSettingsDocument })
       .then((res) => {
-        setCaptchaEnabled(res.enabled);
-        setCaptchaDisabledUntil(res.disabledUntil);
+        setCaptchaEnabled(res.data.captchaSettings.enabled);
+        setCaptchaDisabledUntil(
+          res.data.captchaSettings.disabledUntil
+            ? Number(res.data.captchaSettings.disabledUntil)
+            : null,
+        );
       })
       .catch(() => {});
-  }, []);
+  }, [client]);
 
-  const handleCaptchaToggle = useCallback(async (enabled: boolean) => {
-    setCaptchaToggling(true);
-    try {
-      const res =
-        await trpcClientDash.settingsManagement.setCaptchaEnabled.mutate({
-          enabled,
+  const handleCaptchaToggle = useCallback(
+    async (enabled: boolean) => {
+      setCaptchaToggling(true);
+      try {
+        const res = await client.mutate({
+          mutation: SetCaptchaEnabledDocument,
+          variables: { enabled },
         });
-      if (res.success) {
-        setCaptchaEnabled(res.enabled);
-        setCaptchaDisabledUntil(res.disabledUntil);
+        if (res.data?.setCaptchaEnabled) {
+          const data = res.data.setCaptchaEnabled;
+          setCaptchaEnabled(data.enabled);
+          setCaptchaDisabledUntil(
+            data.disabledUntil
+              ? Number(new Date(data.disabledUntil).getTime())
+              : null,
+          );
+        }
+      } catch {
+      } finally {
+        setCaptchaToggling(false);
       }
-    } catch {
-    } finally {
-      setCaptchaToggling(false);
-    }
-  }, []);
+    },
+    [client],
+  );
 
   const fetchRecent = useCallback(async () => {
     try {
-      const result = await trpcClientDash.ordersManagement.list.query({
-        search: "",
-        status: "all",
-        sortBy: "start_at",
-        sortOrder: "desc",
-        groupBy: "none",
-        page: 1,
-        pageSize: 8,
+      const result = await client.query({
+        query: OrdersDocument,
+        variables: {
+          input: {
+            search: "",
+            status: "ALL",
+            pagination: { offset: 0, limit: 8 },
+          },
+        },
       });
-      setRecentOrders(result.items);
+      if (result.data?.orders?.items) {
+        setRecentOrders(result.data.orders.items);
+      }
     } catch {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [client]);
 
   useEffect(() => {
     void fetchRecent();

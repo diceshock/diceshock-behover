@@ -1,56 +1,47 @@
 import { ClientOnly, createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import MarkdownViewer from "@/client/components/diceshock/MarkdownEditor/MarkdownViewer";
+import { useGetEventQuery } from "@/client/graphql/__generated__";
 import { useMessages } from "@/client/hooks/useMessages";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import dayjs from "@/shared/utils/dayjs-config";
-import trpcClientPublic from "@/shared/utils/trpc";
 
 const SITE_URL = "https://origin.runespark.fun";
 
-export const Route = createFileRoute("/{-$storeLocale}/_with-home-lo/events_/$id")(
-  {
-    head: ({ params }) => ({
-      meta: [
-        { title: "活动详情 - DiceShock 骰子奇兵" },
-        { name: "description", content: "查看活动详情和报名信息" },
-        { property: "og:title", content: "活动详情 - DiceShock 骰子奇兵" },
-        { property: "og:description", content: "查看活动详情和报名信息" },
-        {
-          property: "og:image",
-          content: `${SITE_URL}/edge/media/card/event/${params.id}`,
-        },
-        { property: "og:url", content: `${SITE_URL}/events/${params.id}` },
-      ],
-    }),
-    component: EventDetailPage,
-  },
-);
+export const Route = createFileRoute(
+  "/{-$storeLocale}/_with-home-lo/events_/$id",
+)({
+  head: ({ params }) => ({
+    meta: [
+      { title: "活动详情 - DiceShock 骰子奇兵" },
+      { name: "description", content: "查看活动详情和报名信息" },
+      { property: "og:title", content: "活动详情 - DiceShock 骰子奇兵" },
+      { property: "og:description", content: "查看活动详情和报名信息" },
+      {
+        property: "og:image",
+        content: `${SITE_URL}/edge/media/card/event/${params.id}`,
+      },
+      { property: "og:url", content: `${SITE_URL}/events/${params.id}` },
+    ],
+  }),
+  component: EventDetailPage,
+});
 
-type EventDetail = Awaited<
-  ReturnType<typeof trpcClientPublic.events.getById.query>
->;
+type EventDetail = NonNullable<
+  ReturnType<typeof useGetEventQuery>["data"]
+>["event"];
 
 function EventDetailPage() {
   const { id } = Route.useParams();
   const { t } = useTranslation();
   const messages = useMessages();
 
-  const [event, setEvent] = useState<EventDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data, loading, refetch } = useGetEventQuery({ variables: { id } });
+  const event = data?.event ?? null;
 
   const fetchEvent = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await trpcClientPublic.events.getById.query({ id });
-      setEvent(result);
-    } catch (error) {
-      console.error("Failed to fetch event:", error);
-      messages.error(t("errors.loadEventFailed"));
-    } finally {
-      setLoading(false);
-    }
-  }, [id, messages, t]);
+    await refetch();
+  }, [refetch]);
 
   useEffect(() => {
     fetchEvent();
@@ -71,10 +62,7 @@ function EventDetailPage() {
       <main className="min-h-[calc(100vh-32rem)] w-full mt-20 sm:mt-32 md:mt-40 px-4 pb-20">
         <div className="mx-auto w-full max-w-3xl text-center py-20">
           <p className="text-lg text-base-content/60">{t("events.notFound")}</p>
-          <Link
-            to="/{-$storeLocale}/actives"
-            className="btn btn-ghost mt-4"
-          >
+          <Link to="/{-$storeLocale}/actives" className="btn btn-ghost mt-4">
             {t("common.backToList")}
           </Link>
         </div>
@@ -94,10 +82,10 @@ function EventDetailPage() {
           </Link>
 
           <div className="flex flex-col gap-6">
-            {event.cover_image_url && (
+            {event.coverImageUrl && (
               <figure className="rounded-lg overflow-hidden">
                 <img
-                  src={event.cover_image_url}
+                  src={event.coverImageUrl}
                   alt={event.title}
                   className="w-full max-h-80 object-cover"
                 />
@@ -112,8 +100,8 @@ function EventDetailPage() {
                 <p className="mt-2 text-base-content/60">{event.description}</p>
               )}
               <div className="mt-2 text-xs text-base-content/40">
-                {event.create_at &&
-                  dayjs(event.create_at).format("YYYY年MM月DD日 HH:mm")}
+                {event.createdAt &&
+                  dayjs(event.createdAt).format("YYYY年MM月DD日 HH:mm")}
               </div>
             </div>
 

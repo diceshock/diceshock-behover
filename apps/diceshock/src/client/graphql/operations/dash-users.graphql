@@ -1,0 +1,173 @@
+query Users($input: UserSearchInput = {}) {
+  users(input: $input) {
+    items {
+      id
+      uid
+      name
+      email
+      image
+      role
+      nickname
+      phone
+      preferredLocale
+      preferredStoreId
+      meta
+      createdAt
+      membershipPlans {
+        id
+        userId
+        planType
+        amount
+        note
+        startDate
+        endDate
+        createdAt
+        updatedAt
+      }
+    }
+    pageInfo {
+      offset
+      limit
+      total
+      nextCursor
+      hasMore
+    }
+  }
+}
+
+query User($id: ID!) {
+  user(id: $id) {
+    id
+    uid
+    name
+    email
+    image
+    role
+    nickname
+    phone
+    preferredLocale
+    preferredStoreId
+    meta
+    createdAt
+    membershipPlans {
+      id
+      userId
+      planType
+      amount
+      note
+      startDate
+      endDate
+      createdAt
+      updatedAt
+    }
+  }
+}
+
+mutation DisableUser($id: ID!) {
+  disableUser(id: $id) {
+    id
+    role
+  }
+}
+
+mutation UpdateUser($input: UpdateManagedUserInput!) {
+  updateUser(input: $input) {
+    id
+    uid
+    name
+    email
+    role
+    nickname
+    phone
+  }
+}
+
+mutation UpdateUserRole($input: UpdateRoleInput!) {
+  updateUserRole(input: $input) {
+    id
+    role
+  }
+}
+
+query MembershipPlansByUser($userId: ID!) {
+  membershipPlansByUser(userId: $userId) {
+    id
+    userId
+    planType
+    amount
+    note
+    startDate
+    endDate
+    createdAt
+    updatedAt
+  }
+}
+
+mutation CreateMembershipPlan($input: CreateMembershipPlanInput!) {
+  createMembershipPlan(input: $input) {
+    id
+    userId
+    planType
+    amount
+    note
+    startDate
+    endDate
+    createdAt
+    updatedAt
+  }
+}
+
+mutation UpdateMembershipPlan($input: UpdateMembershipPlanInput!) {
+  updateMembershipPlan(input: $input) {
+    id
+    userId
+    planType
+    amount
+    note
+    startDate
+    endDate
+    createdAt
+    updatedAt
+  }
+}
+
+mutation RemoveMembershipPlan($id: ID!) {
+  removeMembershipPlan(id: $id) {
+    id
+  }
+}
+
+mutation DeductStoredValue($input: DeductStoredValueInput!) {
+  deductStoredValue(input: $input) {
+    plan {
+      id
+      userId
+      planType
+      amount
+    }
+    deducted
+  }
+}
+
+query OccupanciesByUser($userId: ID!) {
+  occupanciesByUser(userId: $userId) {
+    id
+    tableId
+    userId
+    tempId
+    nickname
+    uid
+    phone
+    seats
+    status
+    startAt
+    endAt
+    finalPrice
+    table {
+      id
+      name
+      code
+      scope
+    }
+  }
+}

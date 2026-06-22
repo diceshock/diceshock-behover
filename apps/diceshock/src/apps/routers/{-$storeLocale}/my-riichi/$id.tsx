@@ -15,6 +15,14 @@ import {
 import { createFileRoute } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useGetMahjongHeatmapQuery,
+  useGetMahjongMatchHistoryQuery,
+  useGetMyBadgesQuery,
+  useGetMyPpStatsQuery,
+  useGetMyRankingsQuery,
+  useGetUserBadgesQuery,
+} from "@/client/graphql/__generated__";
 import useAuth from "@/client/hooks/useAuth";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import { copyToClipboard } from "@/server/utils";
@@ -29,7 +37,6 @@ import type { PPCategory } from "@/shared/mahjong/pp";
 import { formatPP, getPlayerPP, PP_CATEGORY_LABELS } from "@/shared/mahjong/pp";
 import type { MatchType } from "@/shared/mahjong/types";
 import dayjs from "@/shared/utils/dayjs-config";
-import trpcClientPublic from "@/shared/utils/trpc";
 
 const SITE_URL = "https://origin.runespark.fun";
 
@@ -454,68 +461,127 @@ function MyGszProfile() {
     return params;
   }, [matchTypeFilter, modeFilter, formatFilter, startDate, endDate]);
 
+  const { data: matchHistoryData, fetchMore } = useGetMahjongMatchHistoryQuery({
+    variables: {
+      input: {
+        userId: profileUserId,
+        pagination: { limit: 20 },
+      },
+    },
+    skip: !profileUserId,
+  });
+
+  const { data: ppStatsData } = useGetMyPpStatsQuery({
+    skip: !isOwnProfile || !currentUserId,
+  });
+
+  const { data: heatmapData } = useGetMahjongHeatmapQuery({
+    variables: { userId: profileUserId },
+    skip: !isOwnProfile || !currentUserId,
+  });
+
+  const { data: badgesData } = useGetMyBadgesQuery({
+    skip: !isOwnProfile || !currentUserId,
+  });
+
+  const { data: rankingsData } = useGetMyRankingsQuery({
+    skip: !isOwnProfile || !currentUserId,
+  });
+
+  const { data: userBadgesData } = useGetUserBadgesQuery({
+    variables: { userId: profileUserId },
+    skip: isOwnProfile || !profileUserId,
+  });
+
   const fetchMatches = useCallback(
     async (cursor?: string) => {
-      const filterParams = buildFilterParams();
       try {
-        const data = await trpcClientPublic.leaderboard.getMatchHistory.query({
-          userId: profileUserId,
-          limit: 20,
-          cursor,
-          ...filterParams,
+        const filterParams = buildFilterParams();
+        const result = await fetchMore({
+          variables: {
+            input: {
+              userId: profileUserId,
+              ...(cursor
+                ? { pagination: { cursor, limit: 20 } }
+                : { pagination: { limit: 20 } }),
+              ...filterParams,
+            },
+          },
         });
-        if (cursor) {
-          setMatches((prev) => [...prev, ...(data.items as Match[])]);
-        } else {
-          setMatches(data.items as Match[]);
+        const data = result.data?.mahjongMatchHistory;
+        if (data) {
+          if (cursor) {
+            setMatches((prev) => [
+              ...prev,
+              ...(data.items as unknown as Match[]),
+            ]);
+          } else {
+            setMatches(data.items as unknown as Match[]);
+          }
+          setMatchCursor(data.pageInfo.nextCursor);
+          setHasMoreMatches(!!data.pageInfo.nextCursor);
         }
-        setMatchCursor(data.nextCursor);
-        setHasMoreMatches(!!data.nextCursor);
       } catch {}
     },
-    [profileUserId, buildFilterParams],
+    [profileUserId, buildFilterParams, fetchMore],
   );
 
   useEffect(() => {
     setIsLoading(true);
-    const promises: Promise<void>[] = [];
 
     if (isOwnProfile && currentUserId) {
-      promises.push(
-        trpcClientPublic.leaderboard.getMyPPStats
-          .query()
-          .then((data) => setPpStats(data as PPStat[]))
-          .catch(() => {}),
-      );
-      promises.push(
-        trpcClientPublic.leaderboard.getHeatmapData
-          .query({ userId: profileUserId })
-          .then((data) => setHeatmap(data))
-          .catch(() => {}),
-      );
-      promises.push(
-        trpcClientPublic.leaderboard.getMyBadges
-          .query()
-          .then((data) => setBadges(data as Badge[]))
-          .catch(() => {}),
-      );
-      promises.push(
-        trpcClientPublic.leaderboard.getMyRankings
-          .query()
-          .then((data) => setRankings(data as RankingEntry[]))
-          .catch(() => {}),
-      );
+      Promise.allSettled([
+        Promise.resolve().then(() => {
+          if (ppStatsData?.myPPStats?.categories) {
+            try {
+              const parsed = JSON.parse(
+                ppStatsData.myPPStats.categories,
+              ) as PPStat[];
+              setPpStats(parsed);
+            } catch {}
+          }
+        }),
+        Promise.resolve().then(() => {
+          if (heatmapData?.mahjongHeatmap) {
+            try {
+              const parsed = JSON.parse(heatmapData.mahjongHeatmap) as Record<
+                string,
+                number
+              >;
+              setHeatmap(parsed);
+            } catch {}
+          }
+        }),
+        Promise.resolve().then(() => {
+          if (badgesData?.myBadges) {
+            setBadges(badgesData.myBadges as unknown as Badge[]);
+          }
+        }),
+        Promise.resolve().then(() => {
+          if (rankingsData?.myRankings) {
+            setRankings(rankingsData.myRankings as unknown as RankingEntry[]);
+          }
+        }),
+      ]).finally(() => setIsLoading(false));
     } else {
-      promises.push(
-        trpcClientPublic.leaderboard.getUserBadges
-          .query({ userId: profileUserId })
-          .then((data) => setBadges(data as Badge[]))
-          .catch(() => {}),
-      );
+      Promise.allSettled([
+        Promise.resolve().then(() => {
+          if (userBadgesData?.userBadges) {
+            setBadges(userBadgesData.userBadges as unknown as Badge[]);
+          }
+        }),
+      ]).finally(() => setIsLoading(false));
     }
-
-    Promise.allSettled(promises).finally(() => setIsLoading(false));
-  }, [profileUserId, currentUserId, isOwnProfile]);
+  }, [
+    profileUserId,
+    currentUserId,
+    isOwnProfile,
+    ppStatsData,
+    heatmapData,
+    badgesData,
+    rankingsData,
+    userBadgesData,
+  ]);
 
   useEffect(() => {
     if (isOwnProfile && currentUserId) {

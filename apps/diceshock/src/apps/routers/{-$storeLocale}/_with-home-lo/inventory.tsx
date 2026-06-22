@@ -1,9 +1,10 @@
+import { useQuery } from "@apollo/client";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import GameCountAnimation from "@/client/components/diceshock/GameCountAnimation";
 import GameList from "@/client/components/diceshock/GameList";
+import { useGetOwnedBoardGameCountQuery } from "@/client/graphql/__generated__";
 import { useTranslation } from "@/client/hooks/useTranslation";
-import trpcClientPublic from "@/shared/utils/trpc";
 
 const SITE_URL = "https://origin.runespark.fun";
 
@@ -37,27 +38,22 @@ function RouteComponent() {
   const [count, setCount] = useState<number>(0);
   const [updateDate, setUpdateDate] = useState<Date | undefined>(undefined);
 
+  const { data } = useGetOwnedBoardGameCountQuery();
+
   useEffect(() => {
-    trpcClientPublic.owned.getCount
-      .query()
-      .then(({ current, latestDate }) => {
-        setCount(current ?? 0);
-        if (latestDate) {
-          // latestDate 可能是 Date 对象或字符串，需要转换
-          const date =
-            typeof latestDate === "string"
-              ? new Date(latestDate)
-              : new Date(latestDate);
-          setUpdateDate(date);
-        } else {
-          setUpdateDate(new Date());
-        }
-      })
-      .catch(() => {
-        setCount(0);
+    if (data?.ownedBoardGameCount) {
+      const { current, latestDate } = data.ownedBoardGameCount;
+      setCount(current ?? 0);
+      if (latestDate) {
+        setUpdateDate(new Date(latestDate));
+      } else {
         setUpdateDate(new Date());
-      });
-  }, []);
+      }
+    } else {
+      setCount(0);
+      setUpdateDate(new Date());
+    }
+  }, [data]);
 
   return (
     <main className="max-w-full min-h-screen overflow-x-clip py-8 md:py-14 px-4">

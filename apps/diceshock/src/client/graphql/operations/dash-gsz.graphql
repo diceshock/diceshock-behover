@@ -1,0 +1,152 @@
+query MahjongMatch($id: ID!, $storeId: ID) {
+  mahjongMatch(id: $id, storeId: $storeId) {
+    id
+    tableId
+    table {
+      id
+      name
+      code
+    }
+    matchType
+    gszRecordId
+    gszSynced
+    gszError
+    gszSyncedAt
+    mode
+    format
+    startedAt
+    endedAt
+    terminationReason
+    players {
+      userId
+      nickname
+      seat
+      finalScore
+    }
+    playersJson
+    scores
+    config {
+      type
+      mode
+      format
+    }
+    createdAt
+    unsyncableReasons {
+      nickname
+      userId
+      reason
+    }
+  }
+}
+
+mutation TerminateMahjongMatch($tableCode: String!, $reason: MahjongTerminationReason) {
+  terminateMahjongMatch(tableCode: $tableCode, reason: $reason) {
+    id
+    terminatedAt: endedAt
+    terminationReason
+  }
+}
+
+mutation UpdateMahjongScore($matchId: ID!, $players: [MahjongPlayerInput!]!) {
+  updateMahjongScore(matchId: $matchId, players: $players) {
+    id
+    players {
+      userId
+      nickname
+      seat
+      finalScore
+    }
+    playersJson
+  }
+}
+
+mutation SyncMahjongMatchToGsz($matchId: ID!) {
+  syncMahjongMatchToGsz(matchId: $matchId) {
+    success
+    error
+    successCount
+    failCount
+    total
+  }
+}
+
+mutation BatchSyncMahjongMatchesToGsz($matchIds: [ID!]!) {
+  batchSyncMahjongMatchesToGsz(matchIds: $matchIds) {
+    success
+    error
+    successCount
+    failCount
+    total
+  }
+}
+
+query ManagedMahjongMatches($input: MahjongManagementListInput) {
+  managedMahjongMatches(input: $input) {
+    items {
+      id
+      tableId
+      table {
+        id
+        name
+        code
+        scope
+      }
+      matchType
+      gszRecordId
+      gszSynced
+      gszError
+      gszSyncedAt
+      mode
+      format
+      startedAt
+      endedAt
+      terminationReason
+      players {
+        userId
+        nickname
+        seat
+        finalScore
+      }
+      playersJson
+      unsyncableReasons {
+        nickname
+        userId
+        reason
+      }
+    }
+    pageInfo {
+      offset
+      limit
+      total
+      nextCursor
+      hasMore
+    }
+  }
+}
+
+query ActiveMahjongMatches {
+  activeMahjongMatches {
+    tableCode
+    tableName
+    tableId
+    phase
+    matchType
+    mode
+    format
+    players {
+      userId
+      nickname
+      seat
+      currentPoints
+    }
+    startedAt
+  }
+}
+
+query MahjongTables {
+  mahjongTables {
+    id
+    name
+    code
+  }
+}

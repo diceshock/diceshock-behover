@@ -16,9 +16,13 @@ import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import {
+  useBatchSettlementPreviewMutation,
+  useBatchSettleOrdersMutation,
+  useCancelBatchSettlementMutation,
+} from "@/client/graphql/__generated__";
 import dayjs from "@/shared/utils/dayjs-config";
 import { formatPrice } from "@/shared/utils/pricing";
-import { trpcClientDash } from "@/shared/utils/trpc";
 
 export const Route = createFileRoute("/dash/orders_/settle")({
   component: BatchSettlePage,
@@ -43,12 +47,12 @@ export const Route = createFileRoute("/dash/orders_/settle")({
   },
 });
 
-type SettlementPreview = Awaited<
-  ReturnType<typeof trpcClientDash.ordersManagement.getSettlementPreview.query>
->;
+type SettlementPreviewItem = NonNullable<
+  ReturnType<typeof useBatchSettlementPreviewMutation>[1]["data"]
+>["batchSettlementPreview"][number];
 
 type BatchSettlementData = {
-  previews: SettlementPreview[];
+  previews: SettlementPreviewItem[];
 };
 
 function formatTime(val: number | null | undefined): string {
@@ -73,9 +77,11 @@ function formatMinutes(mins: number): string {
 function buildSegments(
   startAt: number,
   endAt: number,
-  pauseLogs: Array<{ pausedAt: number; resumedAt: number | null }>,
+  pauseLogs: Array<{ pausedAt: string; resumedAt: string | null }>,
 ) {
-  const sorted = [...pauseLogs].sort((a, b) => a.pausedAt - b.pausedAt);
+  const sorted = [...pauseLogs].sort(
+    (a, b) => new Date(a.pausedAt).getTime() - new Date(b.pausedAt).getTime(),
+  );
   const segments: Array<{
     type: "active" | "paused";
     start: number;
@@ -84,8 +90,11 @@ function buildSegments(
   let cursor = startAt;
 
   for (const log of sorted) {
-    const pStart = Math.max(log.pausedAt, startAt);
-    const pEnd = Math.min(log.resumedAt ?? endAt, endAt);
+    const pStart = Math.max(new Date(log.pausedAt).getTime(), startAt);
+    const pEnd = Math.min(
+      log.resumedAt ? new Date(log.resumedAt).getTime() : endAt,
+      endAt,
+    );
     if (pStart > cursor)
       segments.push({ type: "active", start: cursor, end: pStart });
     if (pEnd > pStart)
@@ -111,21 +120,24 @@ function BatchSettlePage() {
   const [deductEnabled, setDeductEnabled] = useState(false);
   const [cancelIds, setCancelIds] = useState<Set<string>>(new Set());
 
+  const [fetchPreview] = useBatchSettlementPreviewMutation();
+  const [batchSettle] = useBatchSettleOrdersMutation();
+  const [cancelSettlement] = useCancelBatchSettlementMutation();
+
   const fetchData = useCallback(async () => {
     if (ids.length === 0) return;
     setLoading(true);
     try {
-      const result =
-        await trpcClientDash.ordersManagement.batchSettlementPreview.mutate({
-          ids,
-        });
-      setData(result);
+      const result = await fetchPreview({ variables: { ids } });
+      if (result.data?.batchSettlementPreview) {
+        setData({ previews: result.data.batchSettlementPreview });
+      }
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "加载失败");
     } finally {
       setLoading(false);
     }
-  }, [ids, msg]);
+  }, [ids, fetchPreview, msg]);
 
   useEffect(() => {
     void fetchData();
@@ -160,7 +172,7 @@ function BatchSettlePage() {
   );
 
   const allEnded = useMemo(
-    () => data?.previews.every((p) => p.order.status === "ended") ?? false,
+    () => data?.previews.every((p) => p.order.status === "SETTLED") ?? false,
     [data],
   );
 
@@ -180,9 +192,13 @@ function BatchSettlePage() {
     if (settleIds.length === 0) return;
     setSettling(true);
     try {
-      await trpcClientDash.ordersManagement.batchSettle.mutate({
-        ids: settleIds,
-        deductFromStoredValue: deductEnabled,
+      await batchSettle({
+        variables: {
+          input: {
+            ids: settleIds,
+            deductFromStoredValue: deductEnabled,
+          },
+        },
       });
       msg.success("结算完成");
       await fetchData();
@@ -197,8 +213,8 @@ function BatchSettlePage() {
     const idsToCancel = Array.from(cancelIds);
     if (idsToCancel.length === 0) return;
     try {
-      await trpcClientDash.ordersManagement.cancelBatchSettlement.mutate({
-        ids: idsToCancel,
+      await cancelSettlement({
+        variables: { ids: idsToCancel },
       });
       msg.success(`已取消 ${idsToCancel.length} 个订单的结算`);
       const remainingIds = ids.filter((id) => !cancelIds.has(id));
@@ -227,8 +243,8 @@ function BatchSettlePage() {
 
   const handleCancelAll = async () => {
     try {
-      await trpcClientDash.ordersManagement.cancelBatchSettlement.mutate({
-        ids,
+      await cancelSettlement({
+        variables: { ids },
       });
       msg.success("已取消全部结算");
       void navigate({
@@ -391,7 +407,7 @@ function OrderCardsGrid({
   cancelIds,
   onToggle,
 }: {
-  previews: SettlementPreview[];
+  previews: SettlementPreviewItem[];
   cancelIds: Set<string>;
   onToggle: (id: string) => void;
 }) {
@@ -420,7 +436,7 @@ function OrderCardsGrid({
                 </span>
               </div>
               <span className="badge badge-sm badge-ghost">
-                {preview.order.status === "ended" ? "已结束" : "待结算"}
+                {preview.order.status === "SETTLED" ? "已结束" : "待结算"}
               </span>
             </div>
             <div className="text-sm text-base-content/70 space-y-1">
@@ -446,7 +462,7 @@ function CombinedPriceSection({
   totalPrice,
 }: {
   activeSettleIds: string[];
-  previewMap: Map<string, SettlementPreview>;
+  previewMap: Map<string, SettlementPreviewItem>;
   totalPrice: number;
 }) {
   return (
@@ -479,10 +495,18 @@ function CombinedPriceSection({
   );
 }
 
-function MultiOrderTimeline({ previews }: { previews: SettlementPreview[] }) {
-  const globalStart = Math.min(...previews.map((p) => p.order.start_at));
+function MultiOrderTimeline({
+  previews,
+}: {
+  previews: SettlementPreviewItem[];
+}) {
+  const globalStart = Math.min(
+    ...previews.map((p) => new Date(p.order.startAt).getTime()),
+  );
   const globalEnd = Math.max(
-    ...previews.map((p) => p.order.end_at ?? Date.now()),
+    ...previews.map((p) =>
+      p.order.endAt ? new Date(p.order.endAt).getTime() : Date.now(),
+    ),
   );
   const totalDuration = Math.max(1, globalEnd - globalStart);
 
@@ -494,8 +518,10 @@ function MultiOrderTimeline({ previews }: { previews: SettlementPreview[] }) {
       </h3>
       <div className="flex flex-col gap-3">
         {previews.map((preview) => {
-          const orderStart = preview.order.start_at;
-          const orderEnd = preview.order.end_at ?? Date.now();
+          const orderStart = new Date(preview.order.startAt).getTime();
+          const orderEnd = preview.order.endAt
+            ? new Date(preview.order.endAt).getTime()
+            : Date.now();
           const leftPct = ((orderStart - globalStart) / totalDuration) * 100;
           const widthPct = ((orderEnd - orderStart) / totalDuration) * 100;
 
@@ -582,9 +608,9 @@ function GroupedMembershipSection({
   deductEnabled,
   onDeductToggle,
 }: {
-  previews: SettlementPreview[];
+  previews: SettlementPreviewItem[];
   activeSettleIds: string[];
-  previewMap: Map<string, SettlementPreview>;
+  previewMap: Map<string, SettlementPreviewItem>;
   isAllEnded: boolean;
   deductEnabled: boolean;
   onDeductToggle: (v: boolean) => void;
@@ -595,20 +621,20 @@ function GroupedMembershipSection({
       {
         nickname: string;
         uid: string | null;
-        membership: SettlementPreview["membership"];
+        membership: SettlementPreviewItem["membership"];
         totalPrice: number;
       }
     >();
     for (const id of activeSettleIds) {
       const p = previewMap.get(id);
       if (!p) continue;
-      const key = p.order.uid ?? p.order.nickname;
+      const key = p.order.uid ?? p.order.nickname ?? "unknown";
       const existing = map.get(key);
       if (existing) {
         existing.totalPrice += p.finalPrice;
       } else {
         map.set(key, {
-          nickname: p.order.nickname,
+          nickname: p.order.nickname ?? "",
           uid: p.order.uid ?? null,
           membership: p.membership,
           totalPrice: p.finalPrice,
@@ -662,9 +688,9 @@ function GroupedMembershipSection({
                         </span>
                         {group.membership.timePlanType && (
                           <span className="badge badge-sm badge-outline">
-                            {group.membership.timePlanType === "yearly"
+                            {group.membership.timePlanType === "YEARLY"
                               ? "LTS"
-                              : group.membership.timePlanType === "monthly_cc"
+                              : group.membership.timePlanType === "MONTHLY_CC"
                                 ? "CC"
                                 : "标准"}
                           </span>
@@ -729,11 +755,11 @@ function GroupedMembershipSection({
 function BatchPricingPlansSection({
   previews,
 }: {
-  previews: SettlementPreview[];
+  previews: SettlementPreviewItem[];
 }) {
   const allPlans = useMemo(() => {
     const seen = new Set<string>();
-    const result: SettlementPreview["pricingPlans"] = [];
+    const result: SettlementPreviewItem["pricingPlans"] = [];
     for (const p of previews) {
       for (const plan of p.pricingPlans) {
         if (!seen.has(plan.name)) {

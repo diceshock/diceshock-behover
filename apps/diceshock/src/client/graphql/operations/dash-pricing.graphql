@@ -1,0 +1,98 @@
+query PricingDraft($storeId: ID) {
+  pricingDraft(storeId: $storeId) {
+    data {
+      config {
+        daytimeStart
+        daytimeEnd
+      }
+      plans
+    }
+    snapshotId
+    snapshotName
+    status
+  }
+}
+
+query PricingSnapshots($storeId: ID) {
+  pricingSnapshots(storeId: $storeId) {
+    id
+    name
+    storeId
+    data {
+      config {
+        daytimeStart
+        daytimeEnd
+      }
+      plans
+    }
+    status
+    summary
+    createdAt
+    publishedAt
+  }
+}
+
+query PricingSnapshot($id: ID!) {
+  pricingSnapshot(id: $id) {
+    id
+    name
+    storeId
+    data {
+      config {
+        daytimeStart
+        daytimeEnd
+      }
+      plans
+    }
+    status
+    summary
+    createdAt
+    publishedAt
+  }
+}
+
+mutation SavePricingSnapshot($input: SavePricingSnapshotInput!) {
+  savePricingSnapshot(input: $input) {
+    id
+    name
+    storeId
+    data {
+      config {
+        daytimeStart
+        daytimeEnd
+      }
+      plans
+    }
+    status
+    summary
+    createdAt
+    publishedAt
+  }
+}
+
+mutation PublishPricingSnapshot($storeId: ID) {
+  publishPricingSnapshot(storeId: $storeId) {
+    id
+    name
+    status
+    publishedAt
+  }
+}
+
+mutation RestorePricingSnapshot($id: ID!) {
+  restorePricingSnapshot(id: $id) {
+    id
+    name
+    data {
+      config {
+        daytimeStart
+        daytimeEnd
+      }
+      plans
+    }
+    status
+    summary
+    createdAt
+    publishedAt
+  }
+}

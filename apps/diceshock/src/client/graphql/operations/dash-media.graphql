@@ -1,0 +1,36 @@
+query MediaObjects($input: MediaListInput = {}) {
+  mediaObjects(input: $input) {
+    items {
+      key
+      name
+      contentType
+      size
+      uploaded
+      url
+    }
+    truncated
+    cursor
+  }
+}
+
+mutation RenameMediaObject($oldKey: String!, $newName: String!) {
+  renameMediaObject(oldKey: $oldKey, newName: $newName) {
+    key
+    name
+    contentType
+    size
+    uploaded
+    url
+  }
+}
+
+mutation RemoveMediaObject($key: String!) {
+  removeMediaObject(key: $key) {
+    key
+    name
+    contentType
+    size
+    uploaded
+    url
+  }
+}

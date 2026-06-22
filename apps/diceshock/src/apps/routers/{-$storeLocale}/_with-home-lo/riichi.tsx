@@ -10,11 +10,15 @@ import {
 import { createFileRoute } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  type LeaderboardCategory,
+  type LeaderboardPeriod,
+  useGetLeaderboardQuery,
+} from "@/client/graphql/__generated__";
 import useAuth from "@/client/hooks/useAuth";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import type { PPCategory } from "@/shared/mahjong/pp";
 import { formatPP, PP_CATEGORY_LABELS } from "@/shared/mahjong/pp";
-import trpcClientPublic from "@/shared/utils/trpc";
 
 const SITE_URL = "https://origin.runespark.fun";
 
@@ -268,16 +272,19 @@ function LeaderboardPanel() {
     useState<PPCategory>("tournament");
   const [selectedPeriod, setSelectedPeriod] = useState<Period>("month");
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+
+  const { data, loading: isLoading } = useGetLeaderboardQuery({
+    variables: {
+      category: selectedCategory.toUpperCase() as LeaderboardCategory,
+      period: selectedPeriod.toUpperCase() as LeaderboardPeriod,
+    },
+  });
 
   useEffect(() => {
-    setIsLoading(true);
-    trpcClientPublic.leaderboard.getLeaderboard
-      .query({ category: selectedCategory, period: selectedPeriod })
-      .then((data) => setEntries((data.entries ?? []) as LeaderboardEntry[]))
-      .catch(() => setEntries([]))
-      .finally(() => setIsLoading(false));
-  }, [selectedCategory, selectedPeriod]);
+    if (data?.leaderboard?.entries) {
+      setEntries(data.leaderboard.entries as LeaderboardEntry[]);
+    }
+  }, [data]);
 
   const top3 = entries.slice(0, 3);
 

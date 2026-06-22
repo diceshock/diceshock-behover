@@ -1,9 +1,9 @@
 import { GameControllerIcon } from "@phosphor-icons/react/dist/ssr";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
+import { useGetMyPpStatsQuery } from "@/client/graphql/__generated__";
 import type { PPCategory } from "@/shared/mahjong/pp";
 import { formatPP, PP_CATEGORY_LABELS } from "@/shared/mahjong/pp";
-import trpcClientPublic from "@/shared/utils/trpc";
 
 interface PPStat {
   category: PPCategory;
@@ -20,17 +20,23 @@ export default function GszQuickCard({
   const [ppStats, setPpStats] = useState<PPStat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const { data } = useGetMyPpStatsQuery();
+
   useEffect(() => {
     if (!userId) {
       setIsLoading(false);
       return;
     }
-    trpcClientPublic.leaderboard.getMyPPStats
-      .query()
-      .then((data) => setPpStats(data as PPStat[]))
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
-  }, [userId]);
+    if (data?.myPPStats?.categories) {
+      try {
+        const parsed = JSON.parse(data.myPPStats.categories) as PPStat[];
+        setPpStats(parsed);
+      } catch {
+        setPpStats([]);
+      }
+    }
+    setIsLoading(false);
+  }, [userId, data]);
 
   const totalMatches = ppStats.reduce((sum, s) => sum + s.matchCount, 0);
   const totalPP =

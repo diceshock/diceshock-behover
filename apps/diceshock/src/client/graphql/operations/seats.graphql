@@ -1,0 +1,25 @@
+subscription SeatUpdated($tableCode: String!) {
+  seatUpdated(tableCode: $tableCode) {
+    tableCode
+    table {
+      id
+      name
+      type
+      scope
+      status
+      capacity
+      code
+    }
+    occupancies {
+      id
+      userId
+      nickname
+      uid
+      seats
+      startAt
+      status
+      tableId
+    }
+    updatedAt
+  }
+}

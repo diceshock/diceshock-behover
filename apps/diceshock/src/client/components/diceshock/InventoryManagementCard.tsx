@@ -2,7 +2,8 @@ import type { BoardGame } from "@lib/utils";
 import { CheckIcon, WarningIcon } from "@phosphor-icons/react/dist/ssr";
 import _ from "lodash";
 import { useCallback, useEffect, useState } from "react";
-import trpcClientPublic, { trpcClientDash } from "@/shared/utils/trpc";
+import { useGetOwnedBoardGameCountQuery } from "@/client/graphql/__generated__";
+import { trpcClientDash } from "@/shared/utils/trpc";
 
 export default function InventoryManagementCard() {
   const [count, setCount] = useState<{
@@ -10,11 +11,20 @@ export default function InventoryManagementCard() {
     removed?: number;
   }>({});
 
-  const fetch = useCallback(async () => {
-    const { current, removed } = await trpcClientPublic.owned.getCount.query();
+  const { data: countData, refetch } = useGetOwnedBoardGameCountQuery();
 
-    setCount({ current, removed });
-  }, []);
+  useEffect(() => {
+    if (countData?.ownedBoardGameCount) {
+      setCount({
+        current: countData.ownedBoardGameCount.current,
+        removed: countData.ownedBoardGameCount.removed,
+      });
+    }
+  }, [countData]);
+
+  const fetch = useCallback(async () => {
+    refetch();
+  }, [refetch]);
 
   const [synced, setSynced] = useState<{
     syncing: boolean;

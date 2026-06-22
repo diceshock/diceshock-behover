@@ -1,0 +1,60 @@
+query WechatTemplates {
+  wechatTemplates {
+    success
+    error
+    templates {
+      templateId
+      title
+      primaryIndustry
+      deputyIndustry
+      content
+      example
+    }
+  }
+}
+
+query WechatTemplateSlots {
+  wechatTemplateSlots {
+    key
+    label
+    templateId
+  }
+}
+
+mutation AddWechatTemplateFromLibrary($input: AddWechatTemplateFromLibraryInput!) {
+  addWechatTemplateFromLibrary(input: $input) {
+    success
+    error
+    templateId
+    slot
+    label
+  }
+}
+
+mutation AssignWechatTemplateSlot($slot: WechatTemplateSlotKey!, $templateId: String!) {
+  assignWechatTemplateSlot(slot: $slot, templateId: $templateId) {
+    key
+    label
+    templateId
+  }
+}
+
+mutation RemoveWechatTemplate($templateId: String!) {
+  removeWechatTemplate(templateId: $templateId) {
+    success
+    error
+    templateId
+    slot
+    label
+  }
+}
+
+mutation SendWechatTemplateTest($userId: ID!, $slot: WechatTemplateSlotKey!) {
+  sendWechatTemplateTest(userId: $userId, slot: $slot) {
+    success
+    error
+    templateId
+    slot
+    label
+  }
+}

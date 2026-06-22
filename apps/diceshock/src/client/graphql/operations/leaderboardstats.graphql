@@ -1,0 +1,96 @@
+query GetMyPPStats($storeId: ID) {
+  myPPStats(storeId: $storeId) {
+    totalPP
+    categories
+    raw
+  }
+}
+
+query GetMahjongHeatmap($userId: ID, $storeId: ID) {
+  mahjongHeatmap(userId: $userId, storeId: $storeId)
+}
+
+query GetMyBadges($storeId: ID) {
+  myBadges(storeId: $storeId) {
+    id
+    userId
+    badgeType
+    badgeRank
+    category
+    periodLabel
+    title
+    awardedAt
+    createdAt
+  }
+}
+
+query GetMyRankings($storeId: ID) {
+  myRankings(storeId: $storeId) {
+    category
+    period
+    rank
+    totalPP
+    prevRank
+    matchCount
+  }
+}
+
+query GetUserBadges($userId: ID!, $storeId: ID) {
+  userBadges(userId: $userId, storeId: $storeId) {
+    id
+    userId
+    badgeType
+    badgeRank
+    category
+    periodLabel
+    title
+    awardedAt
+    createdAt
+  }
+}
+
+query GetMahjongMatchHistory($input: MahjongMatchHistoryInput) {
+  mahjongMatchHistory(input: $input) {
+    items {
+      id
+      tableId
+      table {
+        id
+        name
+      }
+      matchType
+      gszRecordId
+      gszSynced
+      mode
+      format
+      startedAt
+      endedAt
+      terminationReason
+      players {
+        userId
+        nickname
+        seat
+        finalScore
+      }
+      playersJson
+      scores
+      config {
+        type
+        mode
+        format
+      }
+      unsyncableReasons {
+        nickname
+        userId
+        reason
+      }
+    }
+    pageInfo {
+      offset
+      limit
+      total
+      nextCursor
+      hasMore
+    }
+  }
+}

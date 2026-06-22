@@ -1,0 +1,13 @@
+query CaptchaSettings {
+  captchaSettings {
+    enabled
+    disabledUntil
+  }
+}
+
+mutation SetCaptchaEnabled($enabled: Boolean!) {
+  setCaptchaEnabled(enabled: $enabled) {
+    enabled
+    disabledUntil
+  }
+}

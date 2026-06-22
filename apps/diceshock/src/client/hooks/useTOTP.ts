@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { GetTotpSecretDocument } from "@/client/graphql/__generated__";
+import { apolloClient } from "@/client/graphql/client";
 import { generateTOTP, getRemainingSeconds } from "@/shared/utils/totp";
-import trpcClientPublic from "@/shared/utils/trpc";
 
 const TOTP_SECRET_KEY = "diceshock_totp_secret";
 const TOTP_LOGIN_TIME_KEY = "diceshock_totp_login_time";
@@ -62,8 +63,12 @@ export default function useTOTP(enabled: boolean) {
     }
 
     try {
-      const result = await trpcClientPublic.auth.getTotpSecret.query();
-      if (result.success && result.secret) {
+      const { data } = await apolloClient.query({
+        query: GetTotpSecretDocument,
+        fetchPolicy: "network-only",
+      });
+      const result = data?.getTotpSecret;
+      if (result?.success && result?.secret) {
         secretRef.current = result.secret;
         setCachedSecret(result.secret);
         setState((s) => ({
@@ -75,7 +80,7 @@ export default function useTOTP(enabled: boolean) {
         setState((s) => ({
           ...s,
           isLoading: false,
-          error: "message" in result ? result.message : "获取密钥失败",
+          error: result?.message ?? "获取密钥失败",
         }));
       }
     } catch {

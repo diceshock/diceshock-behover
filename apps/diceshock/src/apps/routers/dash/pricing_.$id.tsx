@@ -7,15 +7,15 @@ import { atom, useAtom } from "jotai";
 import { useCallback, useEffect, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
-import type { trpcClientDash } from "@/shared/utils/trpc";
 
 export const Route = createFileRoute("/dash/pricing_/$id")({
   component: PricingDetailPage,
 });
 
-type SnapshotData = Awaited<
-  ReturnType<typeof trpcClientDash.pricingPlansManagement.load.query>
->["data"];
+type SnapshotData = {
+  config: { daytime_start: string; daytime_end: string };
+  plans: Record<string, unknown>[];
+};
 
 type PlanEntry = SnapshotData["plans"][number];
 
@@ -142,14 +142,15 @@ function PricingDetailPage() {
 
   useEffect(() => {
     if (plan) {
-      setName(plan.name);
-      setConditions((plan.conditions as Conditions) ?? defaultConditions());
-      setBillingType(plan.billing_type);
-      setPrice(centsToYuan(plan.price));
-      setCapUnit(plan.cap_unit ?? "per_day");
-      setCapPrice(centsToYuan(plan.cap_price));
-      setCapPriceDay(centsToYuan(plan.cap_price_day));
-      setCapPriceNight(centsToYuan(plan.cap_price_night));
+      const p = plan as Record<string, unknown>;
+      setName((p.name as string) ?? "");
+      setConditions((p.conditions as Conditions) ?? defaultConditions());
+      setBillingType((p.billing_type as "hourly" | "fixed") ?? "hourly");
+      setPrice(centsToYuan(p.price as number));
+      setCapUnit((p.cap_unit as "per_day" | "split_day_night") ?? "per_day");
+      setCapPrice(centsToYuan(p.cap_price as number));
+      setCapPriceDay(centsToYuan(p.cap_price_day as number));
+      setCapPriceNight(centsToYuan(p.cap_price_night as number));
     }
   }, [plan]);
 

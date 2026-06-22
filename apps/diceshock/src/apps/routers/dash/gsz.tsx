@@ -1,3 +1,4 @@
+import { useApolloClient } from "@apollo/client";
 import {
   ArrowsClockwiseIcon,
   CopyIcon,
@@ -12,38 +13,50 @@ import clsx from "clsx";
 import { useCallback, useEffect, useRef, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import type {
+  ActiveMahjongMatchesQuery,
+  MahjongTablesQuery,
+  ManagedMahjongMatchesQuery,
+} from "@/client/graphql/__generated__";
+import {
+  ActiveMahjongMatchesDocument,
+  BatchSyncMahjongMatchesToGszDocument,
+  MahjongMatchType,
+  MahjongMode,
+  MahjongTablesDocument,
+  ManagedMahjongMatchesDocument,
+  SyncMahjongMatchToGszDocument,
+  TerminateMahjongMatchDocument,
+} from "@/client/graphql/__generated__";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import { formatMessage } from "@/shared/i18n";
 import dayjs from "@/shared/utils/dayjs-config";
-import { trpcClientDash } from "@/shared/utils/trpc";
 
-type ModeFilter = "all" | "3p" | "4p";
-type FormatFilter = "all" | "tonpuu" | "hanchan";
+type ModeFilter = "all" | "THREE_PLAYER" | "FOUR_PLAYER";
+type FormatFilter = "all" | "TONPUU" | "HANCHAN";
 type CompletionFilter = "all" | "completed" | "incomplete";
 type GszSyncFilter = "all" | "synced" | "unsynced";
 type Translator = ReturnType<typeof useTranslation>["t"];
 
-type MatchList = Awaited<
-  ReturnType<typeof trpcClientDash.gszManagement.list.query>
->;
-
-type TableOption = Awaited<
-  ReturnType<typeof trpcClientDash.gszManagement.listTables.query>
->[number];
-
-type ActiveMatch = Awaited<
-  ReturnType<typeof trpcClientDash.gszManagement.listActive.query>
+type MatchList = ManagedMahjongMatchesQuery["managedMahjongMatches"];
+type TableOption = NonNullable<MahjongTablesQuery["mahjongTables"]>[number];
+type ActiveMatch = NonNullable<
+  ActiveMahjongMatchesQuery["activeMahjongMatches"]
 >[number];
 
 const MODE_LABEL_KEYS: Record<string, string> = {
   "3p": "dashGsz.modes.threePlayer",
   "4p": "dashGsz.modes.fourPlayer",
+  THREE_PLAYER: "dashGsz.modes.threePlayer",
+  FOUR_PLAYER: "dashGsz.modes.fourPlayer",
 };
 
 const FORMAT_LABEL_KEYS: Record<string, string> = {
   tonpuu: "dashGsz.formats.tonpuuRound",
   hanchan: "dashGsz.formats.hanchan",
+  TONPUU: "dashGsz.formats.tonpuuRound",
+  HANCHAN: "dashGsz.formats.hanchan",
 };
 
 const TERMINATION_LABEL_KEYS: Record<string, string> = {
@@ -51,6 +64,10 @@ const TERMINATION_LABEL_KEYS: Record<string, string> = {
   vote: "dashGsz.terminations.vote",
   admin_abort: "dashGsz.terminations.adminAbort",
   order_invalid: "dashGsz.terminations.orderInvalid",
+  SCORE_COMPLETE: "dashGsz.terminations.scoreComplete",
+  VOTE: "dashGsz.terminations.vote",
+  ADMIN_ABORT: "dashGsz.terminations.adminAbort",
+  ORDER_INVALID: "dashGsz.terminations.orderInvalid",
 };
 
 const PHASE_LABEL_KEYS: Record<string, string> = {
@@ -66,10 +83,10 @@ const INCOMPLETE_REASONS = new Set(["admin_abort", "order_invalid"]);
 export const Route = createFileRoute("/dash/gsz")({
   validateSearch: (search: Record<string, unknown>) => ({
     q: (search.q as string) ?? "",
-    mode: ["all", "3p", "4p"].includes(search.mode as string)
+    mode: ["all", "THREE_PLAYER", "FOUR_PLAYER"].includes(search.mode as string)
       ? (search.mode as ModeFilter)
       : "all",
-    format: ["all", "tonpuu", "hanchan"].includes(search.format as string)
+    format: ["all", "TONPUU", "HANCHAN"].includes(search.format as string)
       ? (search.format as FormatFilter)
       : "all",
     completion: ["all", "completed", "incomplete"].includes(
@@ -101,6 +118,7 @@ function formatTime(val: number | null | undefined): string {
 function RouteComponent() {
   const msg = useMsg();
   const { t } = useTranslation();
+  const client = useApolloClient();
   const isMobile = useIsMobile();
   const {
     q,
@@ -150,7 +168,7 @@ function RouteComponent() {
     Array<{
       nickname: string;
       userId: string;
-      reason: "no_phone" | "temp_user";
+      reason: string;
     }>
   >([]);
 
@@ -162,23 +180,44 @@ function RouteComponent() {
   const fetchMatches = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await trpcClientDash.gszManagement.list.query({
-        search: searchRef.current,
-        mode,
-        format,
-        completion,
-        gszSync,
-        tableId: table,
-        startDate: startDate
-          ? dayjs.tz(startDate, "Asia/Shanghai").startOf("day").valueOf()
-          : null,
-        endDate: endDate
-          ? dayjs.tz(endDate, "Asia/Shanghai").endOf("day").valueOf()
-          : null,
-        page,
-        pageSize,
+      const result = await client.query({
+        query: ManagedMahjongMatchesDocument,
+        variables: {
+          input: {
+            search: searchRef.current || undefined,
+            mode: mode === "all" ? undefined : (mode as any),
+            format: format === "all" ? undefined : (format as any),
+            completion:
+              completion === "all"
+                ? undefined
+                : completion === "completed"
+                  ? "COMPLETED"
+                  : "INCOMPLETE",
+            gszSync:
+              gszSync === "all"
+                ? undefined
+                : gszSync === "synced"
+                  ? "SYNCED"
+                  : "UNSYNCED",
+            tableId: table || undefined,
+            startDate: startDate
+              ? new Date(
+                  dayjs.tz(startDate, "Asia/Shanghai").startOf("day").valueOf(),
+                ).toISOString()
+              : undefined,
+            endDate: endDate
+              ? new Date(
+                  dayjs.tz(endDate, "Asia/Shanghai").endOf("day").valueOf(),
+                ).toISOString()
+              : undefined,
+            pagination: {
+              offset: (page - 1) * pageSize,
+              limit: pageSize,
+            },
+          },
+        },
       });
-      setData(result);
+      setData(result.data?.managedMahjongMatches ?? null);
     } catch (err) {
       msg.error(
         err instanceof Error
@@ -199,19 +238,22 @@ function RouteComponent() {
     page,
     msg,
     t,
+    client,
   ]);
 
   const fetchActive = useCallback(async () => {
     setActiveLoading(true);
     try {
-      const result = await trpcClientDash.gszManagement.listActive.query();
-      setActiveMatches(result);
+      const result = await client.query({
+        query: ActiveMahjongMatchesDocument,
+      });
+      setActiveMatches(result.data?.activeMahjongMatches ?? []);
     } catch {
       // noop
     } finally {
       setActiveLoading(false);
     }
-  }, []);
+  }, [client]);
 
   useEffect(() => {
     void fetchMatches();
@@ -224,11 +266,11 @@ function RouteComponent() {
   }, [fetchActive]);
 
   useEffect(() => {
-    trpcClientDash.gszManagement.listTables
-      .query()
-      .then(setTableOptions)
+    client
+      .query({ query: MahjongTablesDocument })
+      .then((result) => setTableOptions(result.data?.mahjongTables ?? []))
       .catch(() => {});
-  }, []);
+  }, [client]);
 
   const handleSearch = () => {
     setSearch({ page: 1 });
@@ -245,9 +287,9 @@ function RouteComponent() {
 
   const handleTerminate = async (tableCode: string) => {
     try {
-      await trpcClientDash.gszManagement.terminateMatch.mutate({
-        tableCode,
-        reason: "admin_abort",
+      await client.mutate({
+        mutation: TerminateMahjongMatchDocument,
+        variables: { tableCode, reason: "ADMIN_ABORT" },
       });
       msg.success(t("dashGsz.messages.terminated"));
       void fetchActive();
@@ -264,14 +306,16 @@ function RouteComponent() {
   const handleSync = async (matchId: string) => {
     setSyncingId(matchId);
     try {
-      const result = await trpcClientDash.gszManagement.syncToGsz.mutate({
-        matchId,
+      const res = await client.mutate({
+        mutation: SyncMahjongMatchToGszDocument,
+        variables: { matchId },
       });
-      if (result.success) {
+      const result = res.data?.syncMahjongMatchToGsz;
+      if (result?.success) {
         msg.success(t("dashGsz.messages.syncSuccess"));
         void fetchMatches();
       } else {
-        msg.error(result.error ?? t("dashGsz.errors.syncFailed"));
+        msg.error(result?.error ?? t("dashGsz.errors.syncFailed"));
       }
     } catch (err) {
       msg.error(
@@ -286,13 +330,15 @@ function RouteComponent() {
     if (selectedIds.size === 0) return;
     setBatchSyncing(true);
     try {
-      const result = await trpcClientDash.gszManagement.batchSyncToGsz.mutate({
-        matchIds: [...selectedIds],
+      const res = await client.mutate({
+        mutation: BatchSyncMahjongMatchesToGszDocument,
+        variables: { matchIds: [...selectedIds] },
       });
+      const result = res.data?.batchSyncMahjongMatchesToGsz;
       msg.success(
         formatMessage(t("dashGsz.messages.batchSyncComplete"), {
-          successCount: result.successCount,
-          failCount: result.failCount,
+          successCount: result?.successCount ?? 0,
+          failCount: result?.failCount ?? 0,
         }),
       );
       setSelectedIds(new Set());
@@ -319,7 +365,7 @@ function RouteComponent() {
 
   const toggleSelectAll = () => {
     const unsyncedItems = items.filter(
-      (m) => m.match_type === "tournament" && !m.gsz_synced,
+      (m) => m.matchType === MahjongMatchType.Tournament && !m.gszSynced,
     );
     if (unsyncedItems.every((m) => selectedIds.has(m.id))) {
       setSelectedIds(new Set());
@@ -329,7 +375,7 @@ function RouteComponent() {
   };
 
   const items = data?.items ?? [];
-  const total = data?.total ?? 0;
+  const total = data?.pageInfo?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
@@ -354,8 +400,8 @@ function RouteComponent() {
           {(
             [
               ["all", t("dashGsz.filters.all")],
-              ["3p", t("dashGsz.modes.threePlayer")],
-              ["4p", t("dashGsz.modes.fourPlayer")],
+              ["THREE_PLAYER", t("dashGsz.modes.threePlayer")],
+              ["FOUR_PLAYER", t("dashGsz.modes.fourPlayer")],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -375,8 +421,8 @@ function RouteComponent() {
           {(
             [
               ["all", t("dashGsz.filters.all")],
-              ["hanchan", t("dashGsz.formats.hanchan")],
-              ["tonpuu", t("dashGsz.formats.tonpuu")],
+              ["HANCHAN", t("dashGsz.formats.hanchan")],
+              ["TONPUU", t("dashGsz.formats.tonpuu")],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -511,11 +557,15 @@ function RouteComponent() {
                   onChange={toggleSelectAll}
                   checked={
                     items.filter(
-                      (m) => m.match_type === "tournament" && !m.gsz_synced,
+                      (m) =>
+                        m.matchType === MahjongMatchType.Tournament &&
+                        !m.gszSynced,
                     ).length > 0 &&
                     items
                       .filter(
-                        (m) => m.match_type === "tournament" && !m.gsz_synced,
+                        (m) =>
+                          m.matchType === MahjongMatchType.Tournament &&
+                          !m.gszSynced,
                       )
                       .every((m) => selectedIds.has(m.id))
                   }
@@ -578,20 +628,21 @@ function RouteComponent() {
                 <tr
                   key={match.id}
                   className={
-                    INCOMPLETE_REASONS.has(match.termination_reason)
+                    INCOMPLETE_REASONS.has(match.terminationReason)
                       ? "opacity-60"
                       : ""
                   }
                 >
                   <td>
-                    {match.match_type === "tournament" && !match.gsz_synced && (
-                      <input
-                        type="checkbox"
-                        className="checkbox checkbox-xs"
-                        checked={selectedIds.has(match.id)}
-                        onChange={() => toggleSelect(match.id)}
-                      />
-                    )}
+                    {match.matchType === MahjongMatchType.Tournament &&
+                      !match.gszSynced && (
+                        <input
+                          type="checkbox"
+                          className="checkbox checkbox-xs"
+                          checked={selectedIds.has(match.id)}
+                          onChange={() => toggleSelect(match.id)}
+                        />
+                      )}
                   </td>
                   <td className="font-mono">
                     <div className="relative group flex items-center gap-1">
@@ -618,7 +669,7 @@ function RouteComponent() {
                   </td>
                   <td className="whitespace-nowrap">
                     <span
-                      className={`badge badge-sm ${match.mode === "4p" ? "badge-primary" : "badge-secondary"}`}
+                      className={`badge badge-sm ${match.mode === MahjongMode.FourPlayer ? "badge-primary" : "badge-secondary"}`}
                     >
                       {MODE_LABEL_KEYS[match.mode]
                         ? t(MODE_LABEL_KEYS[match.mode])
@@ -633,34 +684,34 @@ function RouteComponent() {
                     </span>
                   </td>
                   <td className="whitespace-nowrap">
-                    {formatTime(match.started_at)}
+                    {formatTime(new Date(match.startedAt).getTime())}
                   </td>
                   <td className="whitespace-nowrap">
-                    {formatTime(match.ended_at)}
+                    {formatTime(new Date(match.endedAt).getTime())}
                   </td>
                   <td
                     className="max-w-[200px] truncate"
-                    title={match.player_names}
+                    title={match.players.map((p) => p.nickname).join(", ")}
                   >
-                    {match.player_names || "—"}
+                    {match.players.map((p) => p.nickname).join(", ") || "—"}
                   </td>
                   <td className="whitespace-nowrap">
                     <span
                       className={clsx(
                         "badge badge-sm",
-                        INCOMPLETE_REASONS.has(match.termination_reason)
+                        INCOMPLETE_REASONS.has(match.terminationReason)
                           ? "badge-warning"
                           : "badge-ghost",
                       )}
                     >
-                      {TERMINATION_LABEL_KEYS[match.termination_reason]
-                        ? t(TERMINATION_LABEL_KEYS[match.termination_reason])
-                        : match.termination_reason}
+                      {TERMINATION_LABEL_KEYS[match.terminationReason]
+                        ? t(TERMINATION_LABEL_KEYS[match.terminationReason])
+                        : match.terminationReason}
                     </span>
                   </td>
                   <td className="whitespace-nowrap">
-                    {match.match_type === "tournament" ? (
-                      match.gsz_synced ? (
+                    {match.matchType === MahjongMatchType.Tournament ? (
+                      match.gszSynced ? (
                         <span className="badge badge-sm badge-success">
                           {t("dashGsz.synced")}
                         </span>
@@ -668,16 +719,16 @@ function RouteComponent() {
                         <div className="flex items-center gap-1">
                           <span
                             className="badge badge-sm badge-warning cursor-help"
-                            title={match.gsz_error ?? t("dashGsz.unsynced")}
+                            title={match.gszError ?? t("dashGsz.unsynced")}
                           >
                             {t("dashGsz.unsynced")}
                           </span>
-                          {match.unsyncable_reasons.length > 0 && (
+                          {match.unsyncableReasons.length > 0 && (
                             <button
                               type="button"
                               className="btn btn-xs btn-ghost btn-square text-error"
                               onClick={() => {
-                                setUnsyncableReasons(match.unsyncable_reasons);
+                                setUnsyncableReasons(match.unsyncableReasons);
                                 unsyncableDialogRef.current?.showModal();
                               }}
                               title={t("dashGsz.unsyncable")}
@@ -847,7 +898,7 @@ function ActiveMatchesSection({
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-medium">{m.tableName}</span>
                 <span
-                  className={`badge badge-xs ${m.mode === "4p" ? "badge-primary" : "badge-secondary"}`}
+                  className={`badge badge-xs ${m.mode === MahjongMode.FourPlayer ? "badge-primary" : "badge-secondary"}`}
                 >
                   {MODE_LABEL_KEYS[m.mode]
                     ? t(MODE_LABEL_KEYS[m.mode])

@@ -1,0 +1,140 @@
+query GetActives($input: ActiveListInput) {
+  actives(input: $input) {
+    items {
+      id
+      creatorId
+      creator {
+        id
+        name
+        nickname
+        uid
+        image
+      }
+      title
+      boardGameId
+      boardGame {
+        id
+        schName
+        engName
+        gstoneRating
+      }
+      boardGames {
+        id
+        schName
+        engName
+        gstoneRating
+      }
+      storeId
+      date
+      time
+      maxPlayers
+      content
+      isGame
+      isSystemRecommended
+      registrations {
+        id
+        activeId
+        userId
+        isWatching
+        nickname
+        uid
+        createdAt
+      }
+      createdAt
+      updatedAt
+    }
+    pageInfo {
+      offset
+      limit
+      total
+      nextCursor
+      hasMore
+    }
+  }
+}
+
+query GetActive($id: ID!) {
+  active(id: $id) {
+    id
+    creatorId
+    creator {
+      id
+      name
+      nickname
+      uid
+      image
+    }
+    title
+    boardGameId
+    boardGame {
+      id
+      schName
+      engName
+      gstoneRating
+    }
+    boardGames {
+      id
+      schName
+      engName
+      gstoneRating
+    }
+    storeId
+    date
+    time
+    maxPlayers
+    content
+    isGame
+    isSystemRecommended
+    registrations {
+      id
+      activeId
+      userId
+      isWatching
+      nickname
+      uid
+      createdAt
+    }
+    createdAt
+    updatedAt
+  }
+}
+
+mutation JoinActive($activeId: ID!, $isWatching: Boolean = false) {
+  joinActive(input: { activeId: $activeId, isWatching: $isWatching }) {
+    id
+    userId
+    isWatching
+    nickname
+  }
+}
+
+mutation LeaveActive($activeId: ID!) {
+  leaveActive(activeId: $activeId) {
+    id
+  }
+}
+
+mutation WatchActive($activeId: ID!) {
+  joinActive(input: { activeId: $activeId, isWatching: true }) {
+    id
+    userId
+    isWatching
+    nickname
+  }
+}
+
+query GetActiveParticipants($activeId: ID!) {
+  activeParticipants(activeId: $activeId) {
+    id
+    userId
+    nickname
+    isWatching
+    createdAt
+  }
+}
+
+subscription ActiveParticipantsChanged($activeId: ID!) {
+  activeParticipantsChanged(activeId: $activeId) {
+    updatedAt
+  }
+}

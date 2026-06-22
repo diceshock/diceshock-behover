@@ -6,6 +6,7 @@ import {
 import { useLocation } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useUpdateMyPreferencesMutation } from "@/client/graphql/__generated__";
 import useAuth from "@/client/hooks/useAuth";
 import { useStoreContext } from "@/client/hooks/useStoreContext";
 import { useTranslation } from "@/client/hooks/useTranslation";
@@ -15,7 +16,6 @@ import {
   STORES,
   type StoreCode,
 } from "@/shared/store-locale";
-import trpcClientPublic from "@/shared/utils/trpc";
 import LanguageSelectorModal from "./LanguageSelectorModal";
 
 interface StoreLocaleDropdownProps {
@@ -30,6 +30,8 @@ function StoreLocaleDropdown({ isOpen, onClose }: StoreLocaleDropdownProps) {
   const location = useLocation();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [langModalOpen, setLangModalOpen] = useState(false);
+
+  const [updateMyPreferences] = useUpdateMyPreferencesMutation();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -73,16 +75,20 @@ function StoreLocaleDropdown({ isOpen, onClose }: StoreLocaleDropdownProps) {
 
       if (session?.user) {
         try {
-          await trpcClientPublic.users.updatePreferences.mutate({
-            preferred_locale: loc,
-            preferred_store_id: store,
+          await updateMyPreferences({
+            variables: {
+              input: {
+                preferredLocale: loc,
+                preferredStoreId: store,
+              },
+            },
           });
         } catch {}
       }
 
       window.location.href = target;
     },
-    [session, getRestOfPath],
+    [session, getRestOfPath, updateMyPreferences],
   );
 
   const navigateHome = useCallback(() => {

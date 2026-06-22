@@ -12,19 +12,27 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AdminStoreFilter from "@/client/components/AdminStoreFilter";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import {
+  TableScope,
+  TableStatus,
+  TableType,
+  useCreateTableMutation,
+  useManagedTablesQuery,
+  useRemoveTableMutation,
+  useToggleTableStatusMutation,
+} from "@/client/graphql/__generated__";
 import { useAdminStoreFilter } from "@/client/hooks/useAdminStoreFilter";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import dayjs from "@/shared/utils/dayjs-config";
-import { trpcClientDash } from "@/shared/utils/trpc";
 
-type TablesList = Awaited<
-  ReturnType<typeof trpcClientDash.tablesManagement.list.query>
->;
-type TableItem = TablesList[number];
+type TablesList = NonNullable<
+  ReturnType<typeof useManagedTablesQuery>["data"]
+>["managedTables"];
+type TableItem = NonNullable<TablesList>[number];
 
-type TypeFilter = "all" | "fixed" | "solo";
-type StatusFilter = "all" | "active" | "inactive";
+type TypeFilter = "all" | "fixed" | TableType.Solo;
+type StatusFilter = "all" | TableStatus.Active | "inactive";
 
 const TYPE_LABEL_KEYS: Record<string, string> = {
   fixed: "dashTables.fixedTable",
@@ -41,10 +49,12 @@ const SCOPE_LABEL_KEYS: Record<string, string> = {
 export const Route = createFileRoute("/dash/tables")({
   validateSearch: (search: Record<string, unknown>) => ({
     q: (search.q as string) ?? "",
-    type: ["all", "fixed", "solo"].includes(search.type as string)
+    type: ["all", "fixed", TableType.Solo].includes(search.type as string)
       ? (search.type as TypeFilter)
       : "all",
-    status: ["all", "active", "inactive"].includes(search.status as string)
+    status: ["all", TableStatus.Active, "inactive"].includes(
+      search.status as string,
+    )
       ? (search.status as StatusFilter)
       : "all",
   }),
@@ -64,12 +74,30 @@ function RouteComponent() {
     [navigate],
   );
   const [tables, setTables] = useState<TableItem[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const { loading, refetch: refreshTables } = useManagedTablesQuery({
+    onCompleted: (res) => {
+      setTables((res.managedTables ?? []) as TableItem[]);
+    },
+    onError: (err) => {
+      msg.error(err.message || t("dashTables.loadFailed"));
+    },
+  });
+
+  const [createTableMutation] = useCreateTableMutation({
+    refetchQueries: ["ManagedTables"],
+  });
+  const [toggleTableStatusMutation] = useToggleTableStatusMutation({
+    refetchQueries: ["ManagedTables"],
+  });
+  const [removeTableMutation] = useRemoveTableMutation({
+    refetchQueries: ["ManagedTables"],
+  });
 
   const createDialogRef = useRef<HTMLDialogElement>(null);
   const [createForm, setCreateForm] = useState({
     name: "",
-    type: "fixed" as "fixed" | "solo",
+    type: "fixed" as "fixed" | TableType.Solo,
     scope: "boardgame" as "trpg" | "boardgame" | "console" | "mahjong",
     capacity: 4,
   });
@@ -79,33 +107,17 @@ function RouteComponent() {
   const [pendingDelete, setPendingDelete] = useState<TableItem | null>(null);
   const [deletePending, setDeletePending] = useState(false);
 
-  const refreshTables = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await trpcClientDash.tablesManagement.list.query();
-      setTables(data);
-    } catch (err) {
-      msg.error(
-        err instanceof Error ? err.message : t("dashTables.loadFailed"),
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [storeFilter, msg]);
-
-  useEffect(() => {
-    void refreshTables();
-  }, [refreshTables]);
-
   const filteredTables = useMemo(() => {
     let result = tables;
 
     if (type !== "all") {
-      result = result.filter((t) => t.type === type);
+      const filterType = type.toUpperCase();
+      result = result.filter((t) => t.type === filterType);
     }
 
     if (status !== "all") {
-      result = result.filter((t) => t.status === status);
+      const filterStatus = status.toUpperCase();
+      result = result.filter((t) => t.status === filterStatus);
     }
 
     if (q.trim()) {
@@ -124,13 +136,25 @@ function RouteComponent() {
     }
     setCreatePending(true);
     try {
-      await trpcClientDash.tablesManagement.create.mutate({
-        name: createForm.name.trim(),
-        type: createForm.type,
-        scope: createForm.scope,
-        ...(createForm.type !== "solo"
-          ? { capacity: createForm.capacity }
-          : {}),
+      await createTableMutation({
+        variables: {
+          input: {
+            name: createForm.name.trim(),
+            type:
+              createForm.type === "fixed" ? TableType.Fixed : TableType.Solo,
+            scope:
+              createForm.scope === "boardgame"
+                ? TableScope.Boardgame
+                : createForm.scope === "trpg"
+                  ? TableScope.Trpg
+                  : createForm.scope === "console"
+                    ? TableScope.Console
+                    : TableScope.Mahjong,
+            ...(createForm.type !== TableType.Solo
+              ? { capacity: createForm.capacity }
+              : {}),
+          },
+        },
       });
       msg.success(t("dashTables.created"));
       createDialogRef.current?.close();
@@ -140,7 +164,6 @@ function RouteComponent() {
         scope: "boardgame",
         capacity: 4,
       });
-      await refreshTables();
     } catch (err) {
       msg.error(
         err instanceof Error ? err.message : t("dashTables.createFailed"),
@@ -152,15 +175,14 @@ function RouteComponent() {
 
   const handleToggleStatus = async (table: TableItem) => {
     try {
-      const res = await trpcClientDash.tablesManagement.toggleStatus.mutate({
-        id: table.id,
+      const res = await toggleTableStatusMutation({
+        variables: { id: table.id },
       });
       msg.success(
-        res.status === "active"
+        res.data?.toggleTableStatus.status === TableStatus.Active
           ? t("dashTables.listed")
           : t("dashTables.unlisted"),
       );
-      await refreshTables();
     } catch (err) {
       msg.error(
         err instanceof Error ? err.message : t("dashTables.operationFailed"),
@@ -177,13 +199,12 @@ function RouteComponent() {
     if (!pendingDelete) return;
     setDeletePending(true);
     try {
-      await trpcClientDash.tablesManagement.remove.mutate({
-        id: pendingDelete.id,
+      await removeTableMutation({
+        variables: { id: pendingDelete.id },
       });
       msg.success(t("dashTables.deleted"));
       deleteDialogRef.current?.close();
       setPendingDelete(null);
-      await refreshTables();
     } catch (err) {
       msg.error(
         err instanceof Error ? err.message : t("dashTables.deleteFailed"),
@@ -244,7 +265,7 @@ function RouteComponent() {
             [
               ["all", t("dashTables.all")],
               ["fixed", t("dashTables.fixedTable")],
-              ["solo", t("dashTables.openTable")],
+              [TableType.Solo, t("dashTables.openTable")],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -261,7 +282,7 @@ function RouteComponent() {
             {(
               [
                 ["all", t("dashTables.all")],
-                ["active", t("dashTables.active")],
+                [TableStatus.Active, t("dashTables.active")],
                 ["inactive", t("dashTables.inactive")],
               ] as const
             ).map(([key, label]) => (
@@ -323,7 +344,7 @@ function RouteComponent() {
                     </td>
                     <td className="whitespace-nowrap">
                       <span
-                        className={`badge badge-sm ${table.type === "solo" ? "badge-secondary" : "badge-info"}`}
+                        className={`badge badge-sm ${table.type === TableType.Solo ? "badge-secondary" : "badge-info"}`}
                       >
                         {typeLabel(table.type)}
                       </span>
@@ -334,7 +355,7 @@ function RouteComponent() {
                       )}
                     </td>
                     <td className="whitespace-nowrap">
-                      {table.status === "active" ? (
+                      {table.status === TableStatus.Active ? (
                         <span className="badge badge-success badge-sm">
                           {t("dashTables.active")}
                         </span>
@@ -345,15 +366,15 @@ function RouteComponent() {
                       )}
                     </td>
                     <td className="whitespace-nowrap">
-                      {table.type === "solo" ? "∞" : table.capacity}
+                      {table.type === TableType.Solo ? "∞" : table.capacity}
                     </td>
                     <td className="whitespace-nowrap">
-                      {table.type === "solo"
+                      {table.type === TableType.Solo
                         ? occupiedCount
                         : `${occupiedCount}/${table.capacity}`}
                     </td>
                     <td className="whitespace-nowrap">
-                      {formatCreateAt(table.create_at)}
+                      {formatCreateAt(table.createdAt)}
                     </td>
                     <th className="whitespace-nowrap">
                       {isMobile ? (
@@ -378,7 +399,7 @@ function RouteComponent() {
                                 onClick={() => void handleToggleStatus(table)}
                               >
                                 <PowerIcon className="size-3.5" />
-                                {table.status === "active"
+                                {table.status === TableStatus.Active
                                   ? t("dashTables.inactive")
                                   : t("dashTables.active")}
                               </button>
@@ -408,11 +429,11 @@ function RouteComponent() {
                         <div className="flex items-center gap-1">
                           <button
                             type="button"
-                            className={`btn btn-xs btn-ghost ${table.status === "active" ? "btn-neutral" : "btn-success"}`}
+                            className={`btn btn-xs btn-ghost ${table.status === TableStatus.Active ? "btn-neutral" : "btn-success"}`}
                             onClick={() => void handleToggleStatus(table)}
                           >
                             <PowerIcon className="size-3.5" />
-                            {table.status === "active"
+                            {table.status === TableStatus.Active
                               ? t("dashTables.inactive")
                               : t("dashTables.active")}
                           </button>
@@ -483,12 +504,14 @@ function RouteComponent() {
                 onChange={(e) =>
                   setCreateForm((p) => ({
                     ...p,
-                    type: e.target.value as "fixed" | "solo",
+                    type: e.target.value as "fixed" | TableType.Solo,
                   }))
                 }
               >
                 <option value="fixed">{t("dashTables.fixedTable")}</option>
-                <option value="solo">{t("dashTables.openTable")}</option>
+                <option value={TableType.Solo}>
+                  {t("dashTables.openTable")}
+                </option>
               </select>
             </label>
 
@@ -517,7 +540,7 @@ function RouteComponent() {
               </select>
             </label>
 
-            {createForm.type !== "solo" && (
+            {createForm.type !== TableType.Solo && (
               <label className="flex flex-col gap-2">
                 <span className="label text-sm font-semibold">
                   {t("dashTables.capacity")}

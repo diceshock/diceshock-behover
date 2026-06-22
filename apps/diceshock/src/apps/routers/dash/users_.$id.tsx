@@ -1,3 +1,4 @@
+import { useApolloClient } from "@apollo/client";
 import {
   CurrencyDollarIcon,
   EyeIcon,
@@ -29,32 +30,60 @@ import MembershipBadge, {
   type PlanType,
 } from "@/client/components/diceshock/MembershipBadge";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import type {
+  ActiveMahjongMatchesQuery,
+  SendWechatTemplateTestMutation,
+  SendWechatTemplateTestMutationVariables,
+} from "@/client/graphql/__generated__";
+import {
+  ActiveMahjongMatchesDocument,
+  SendWechatTemplateTestDocument,
+  useActiveMahjongMatchesQuery,
+  useBatchPauseOrdersMutation,
+  useBatchResumeOrdersMutation,
+  useCreateMembershipPlanMutation,
+  useDeductStoredValueMutation,
+  useMembershipPlansByUserQuery,
+  useOccupanciesByUserQuery,
+  usePauseOrderMutation,
+  useRemoveMembershipPlanMutation,
+  useResumeOrderMutation,
+  useUpdateMembershipPlanMutation,
+  useUpdateUserMutation,
+  useUpdateUserRoleMutation,
+  useUserQuery,
+} from "@/client/graphql/__generated__";
 import type { Wind } from "@/shared/mahjong/constants";
 import { WIND_LABELS } from "@/shared/mahjong/constants";
 import dayjs from "@/shared/utils/dayjs-config";
 import { formatPrice } from "@/shared/utils/pricing";
-import { trpcClientDash } from "@/shared/utils/trpc";
 
 export const Route = createFileRoute("/dash/users_/$id")({
   component: UserDetailPage,
 });
 
-type UserDetail = Awaited<
-  ReturnType<typeof trpcClientDash.users.getById.query>
->;
+type UserDetail = NonNullable<ReturnType<typeof useUserQuery>["data"]>["user"];
 
-type ActiveMatch = Awaited<
-  ReturnType<typeof trpcClientDash.gszManagement.listActive.query>
+type ActiveMatch = NonNullable<
+  ActiveMahjongMatchesQuery["activeMahjongMatches"]
 >[number];
+
+type UserOccupancy = NonNullable<
+  ReturnType<typeof useOccupanciesByUserQuery>["data"]
+>["occupanciesByUser"][number];
 
 const GSZ_MODE_LABELS: Record<string, string> = {
   "3p": "三麻",
   "4p": "四麻",
+  THREE_PLAYER: "三麻",
+  FOUR_PLAYER: "四麻",
 };
 
 const GSZ_FORMAT_LABELS: Record<string, string> = {
   tonpuu: "东风场",
   hanchan: "半庄",
+  TONPUU: "东风场",
+  HANCHAN: "半庄",
 };
 
 const GSZ_PHASE_LABELS: Record<string, string> = {
@@ -140,9 +169,14 @@ function UserDetailPage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const msg = useMsg();
+  const client = useApolloClient();
 
-  const [user, setUser] = useState<UserDetail>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: userQlData, loading } = useUserQuery({
+    variables: { id },
+    skip: !id,
+  });
+  const rawUser = userQlData?.user ?? null;
+
   const [activeTab, setActiveTab] = useState<
     "basic" | "membership" | "occupancy"
   >("basic");
@@ -155,13 +189,23 @@ function UserDetailPage() {
   const [editPending, setEditPending] = useState(false);
   const [rolePending, setRolePending] = useState(false);
 
-  const [plans, setPlans] = useState<MembershipPlan[]>([]);
-  const [plansLoading, setPlansLoading] = useState(false);
+  const { data: plansQlData } = useMembershipPlansByUserQuery({
+    variables: { userId: id },
+    skip: !id,
+  });
+  const membershipPlans = useMemo(
+    () => (plansQlData?.membershipPlansByUser ?? []) as MembershipPlan[],
+    [plansQlData],
+  );
+
   const [serverConflictIds, setServerConflictIds] = useState<Set<string>>(
     new Set(),
   );
 
-  const localConflictIds = useMemo(() => detectAllConflicts(plans), [plans]);
+  const localConflictIds = useMemo(
+    () => detectAllConflicts(membershipPlans),
+    [membershipPlans],
+  );
 
   const allConflictIds = useMemo(() => {
     const merged = new Set(localConflictIds);
@@ -199,13 +243,12 @@ function UserDetailPage() {
   const [deletingPlan, setDeletingPlan] = useState<MembershipPlan | null>(null);
   const [deletePending, setDeletePending] = useState(false);
 
-  type UserOccupancy = Awaited<
-    ReturnType<
-      typeof trpcClientDash.tablesManagement.getOccupancyByUserId.query
-    >
-  >;
-  const [occupancies, setOccupancies] = useState<UserOccupancy>([]);
-  const [occupanciesLoading, setOccupanciesLoading] = useState(false);
+  const { data: occupanciesQlData } = useOccupanciesByUserQuery({
+    variables: { userId: id },
+    skip: !id,
+  });
+  const rawOccupancies = occupanciesQlData?.occupanciesByUser ?? [];
+
   const [orderActionPending, setOrderActionPending] = useState<string | null>(
     null,
   );
@@ -226,23 +269,26 @@ function UserDetailPage() {
     if (ids.length === 0) return;
     void navigate({
       to: "/dash/orders/settle",
-      search: { ids: ids },
+      search: { ids: ids } as any,
     });
   };
 
+  type OccStatus = "active" | "paused" | "ended";
+
   const handleBatchPauseOcc = async () => {
-    const activeIds = occupancies
-      .filter((o) => selectedOccIds.has(o.id) && o.status === "active")
-      .map((o) => o.id);
+    const activeIds = rawOccupancies
+      .filter(
+        (o: UserOccupancy) =>
+          selectedOccIds.has(o.id) &&
+          (o.status as string).toLowerCase() === "active",
+      )
+      .map((o: UserOccupancy) => o.id);
     if (activeIds.length === 0) return;
     setOrderActionPending("batch");
     try {
-      await trpcClientDash.ordersManagement.batchPause.mutate({
-        ids: activeIds,
-      });
+      await batchPauseOrders({ variables: { ids: activeIds } });
       msg.success(`已暂停 ${activeIds.length} 个订单`);
       setSelectedOccIds(new Set());
-      await fetchOccupancies();
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "批量暂停失败");
     } finally {
@@ -251,18 +297,19 @@ function UserDetailPage() {
   };
 
   const handleBatchResumeOcc = async () => {
-    const pausedIds = occupancies
-      .filter((o) => selectedOccIds.has(o.id) && o.status === "paused")
-      .map((o) => o.id);
+    const pausedIds = rawOccupancies
+      .filter(
+        (o: UserOccupancy) =>
+          selectedOccIds.has(o.id) &&
+          (o.status as string).toLowerCase() === "paused",
+      )
+      .map((o: UserOccupancy) => o.id);
     if (pausedIds.length === 0) return;
     setOrderActionPending("batch");
     try {
-      await trpcClientDash.ordersManagement.batchResume.mutate({
-        ids: pausedIds,
-      });
+      await batchResumeOrders({ variables: { ids: pausedIds } });
       msg.success(`已继续 ${pausedIds.length} 个订单`);
       setSelectedOccIds(new Set());
-      await fetchOccupancies();
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "批量继续失败");
     } finally {
@@ -276,14 +323,15 @@ function UserDetailPage() {
   const handleSendTestNotify = async () => {
     setNotifyPending(true);
     try {
-      const res = await trpcClientDash.wechatTemplate.sendTest.mutate({
-        userId: id,
-        slot: notifySlot as any,
+      const res = await client.mutate({
+        mutation: SendWechatTemplateTestDocument,
+        variables: { userId: id, slot: notifySlot as any },
       });
-      if (res.success) {
+      const data = res.data?.sendWechatTemplateTest;
+      if (data?.success) {
         msg.success("通知已发送");
       } else {
-        msg.error((res as any).error ?? "发送失败");
+        msg.error(data?.error ?? "发送失败");
       }
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "发送失败");
@@ -307,11 +355,11 @@ function UserDetailPage() {
     const start = dayjs(addForm.startDate).startOf("day").valueOf();
     const end = dayjs(addForm.endDate).startOf("day").valueOf();
     if (end <= start) return "结束日期必须晚于开始日期";
-    const existing = getAllTimePlanIntervals(plans);
+    const existing = getAllTimePlanIntervals(membershipPlans);
     const conflicts = checkOverlap(existing, { start, end });
     if (conflicts.length > 0) return "与已有通行证计划时间重叠";
     return "";
-  }, [addForm.planType, addForm.startDate, addForm.endDate, plans]);
+  }, [addForm.planType, addForm.startDate, addForm.endDate, membershipPlans]);
 
   const editPlanOverlapError = useMemo(() => {
     if (
@@ -324,7 +372,7 @@ function UserDetailPage() {
     const start = dayjs(editPlanForm.startDate).startOf("day").valueOf();
     const end = dayjs(editPlanForm.endDate).startOf("day").valueOf();
     if (end <= start) return "结束日期必须晚于开始日期";
-    const existing = getAllTimePlanIntervals(plans);
+    const existing = getAllTimePlanIntervals(membershipPlans);
     const conflicts = checkOverlap(existing, { start, end }, editingPlanId);
     if (conflicts.length > 0) return "与已有通行证计划时间重叠";
     return "";
@@ -333,79 +381,29 @@ function UserDetailPage() {
     editPlanForm.planType,
     editPlanForm.startDate,
     editPlanForm.endDate,
-    plans,
+    membershipPlans,
   ]);
-
-  const fetchUser = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await trpcClientDash.users.getById.query({ id });
-      setUser(data);
-      if (data) {
-        setEditForm({
-          name: data.name ?? "",
-          nickname: data.userInfo?.nickname ?? "",
-          phone: data.phone ?? "",
-        });
-      }
-    } catch (err) {
-      msg.error(err instanceof Error ? err.message : "加载用户失败");
-    } finally {
-      setLoading(false);
-    }
-  }, [id, msg]);
-
-  const fetchPlans = useCallback(async () => {
-    setPlansLoading(true);
-    try {
-      const data = await trpcClientDash.membershipPlans.getByUserId.query({
-        userId: id,
-      });
-      setPlans(data as MembershipPlan[]);
-      setServerConflictIds(new Set());
-    } catch (err) {
-      msg.error(err instanceof Error ? err.message : "加载会员计划失败");
-    } finally {
-      setPlansLoading(false);
-    }
-  }, [id, msg]);
-
-  const fetchOccupancies = useCallback(async () => {
-    setOccupanciesLoading(true);
-    try {
-      const data =
-        await trpcClientDash.tablesManagement.getOccupancyByUserId.query({
-          userId: id,
-        });
-      setOccupancies(data);
-    } catch (err) {
-      msg.error(err instanceof Error ? err.message : "加载使用信息失败");
-    } finally {
-      setOccupanciesLoading(false);
-    }
-  }, [id, msg]);
 
   const fetchActiveMatches = useCallback(async () => {
     setActiveMatchesLoading(true);
     try {
-      const all = await trpcClientDash.gszManagement.listActive.query();
+      const result = await client.query({
+        query: ActiveMahjongMatchesDocument,
+      });
+      const all = result.data?.activeMahjongMatches ?? [];
       const userMatches = all.filter((m) =>
         m.players.some((p) => p.userId === id),
       );
-      setActiveMatches(userMatches);
+      setActiveMatches(userMatches as ActiveMatch[]);
     } catch {
-      // noop — active matches are supplementary
     } finally {
       setActiveMatchesLoading(false);
     }
-  }, [id]);
+  }, [id, client]);
 
   useEffect(() => {
-    fetchUser();
-    fetchPlans();
-    fetchOccupancies();
-    fetchActiveMatches();
-  }, [fetchUser, fetchPlans, fetchOccupancies, fetchActiveMatches]);
+    void fetchActiveMatches();
+  }, [fetchActiveMatches]);
 
   useEffect(() => {
     const interval = setInterval(() => void fetchActiveMatches(), 10000);
@@ -416,14 +414,14 @@ function UserDetailPage() {
     setOrderActionPending(occId);
     try {
       if (status === "active") {
-        await trpcClientDash.ordersManagement.pauseOrder.mutate({ id: occId });
+        await pauseOrder({ variables: { id: occId } });
       }
     } catch {
     } finally {
       setOrderActionPending(null);
       void navigate({
         to: "/dash/orders/settle",
-        search: { ids: [occId] },
+        search: { ids: [occId] } as any,
       });
     }
   };
@@ -431,9 +429,8 @@ function UserDetailPage() {
   const handlePauseOccOrder = async (occId: string) => {
     setOrderActionPending(occId);
     try {
-      await trpcClientDash.ordersManagement.pauseOrder.mutate({ id: occId });
+      await pauseOrder({ variables: { id: occId } });
       msg.success("已暂停");
-      await fetchOccupancies();
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "暂停失败");
     } finally {
@@ -444,9 +441,8 @@ function UserDetailPage() {
   const handleResumeOccOrder = async (occId: string) => {
     setOrderActionPending(occId);
     try {
-      await trpcClientDash.ordersManagement.resumeOrder.mutate({ id: occId });
+      await resumeOrder({ variables: { id: occId } });
       msg.success("已继续");
-      await fetchOccupancies();
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "继续失败");
     } finally {
@@ -457,7 +453,7 @@ function UserDetailPage() {
   const computeSmartDates = useCallback(
     (planType: PlanType) => {
       if (!isTimePlan(planType)) return { startDate: "", endDate: "" };
-      const existing = getAllTimePlanIntervals(plans);
+      const existing = getAllTimePlanIntervals(membershipPlans);
       const startDate = findNextAvailableStart(existing);
       const duration = DEFAULT_DURATIONS[planType] ?? 30;
       const endDate = dayjs(startDate)
@@ -465,7 +461,7 @@ function UserDetailPage() {
         .format("YYYY-MM-DD");
       return { startDate, endDate };
     },
-    [plans],
+    [membershipPlans],
   );
 
   const handleAddPlanTypeChange = useCallback(
@@ -486,8 +482,8 @@ function UserDetailPage() {
     if (!(err instanceof Error)) return [];
     try {
       const parsed = JSON.parse(err.message);
-      if (parsed?.data?.message) {
-        const inner = JSON.parse(parsed.data.message);
+      if ((parsed as any)?.data?.message) {
+        const inner = JSON.parse((parsed as any).data.message);
         if (Array.isArray(inner.conflictIds)) return inner.conflictIds;
       }
     } catch {}
@@ -505,14 +501,17 @@ function UserDetailPage() {
     e.preventDefault();
     setEditPending(true);
     try {
-      await trpcClientDash.users.mutation.mutate({
-        id,
-        name: editForm.name.trim() || undefined,
-        nickname: editForm.nickname.trim() || undefined,
-        phone: editForm.phone.trim() || undefined,
+      await updateUser({
+        variables: {
+          input: {
+            id,
+            name: editForm.name.trim() || undefined,
+            nickname: editForm.nickname.trim() || undefined,
+            phone: editForm.phone.trim() || undefined,
+          },
+        },
       });
       msg.success("用户信息已更新");
-      await fetchUser();
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "保存失败");
     } finally {
@@ -523,16 +522,15 @@ function UserDetailPage() {
   const handleRoleChange = async (newRole: string) => {
     setRolePending(true);
     try {
-      const res = await trpcClientDash.users.updateRole.mutate({
-        id,
-        role: newRole as "customer" | "admin" | "staff",
+      await updateUserRole({
+        variables: {
+          input: {
+            id,
+            role: newRole as any,
+          },
+        },
       });
-      if (res.success) {
-        msg.success("角色已更新");
-        await fetchUser();
-      } else {
-        msg.error((res as any).message ?? "修改失败");
-      }
+      msg.success("角色已更新");
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "修改角色失败");
     } finally {
@@ -549,18 +547,23 @@ function UserDetailPage() {
     setAddFormError("");
     setAddPending(true);
     try {
-      await trpcClientDash.membershipPlans.create.mutate({
-        userId: id,
-        planType: addForm.planType,
-        amount:
-          addForm.planType === "stored_value" && addForm.amount
-            ? Math.round(Number.parseFloat(addForm.amount) * 100)
-            : null,
-        startDate: dayjs(addForm.startDate).valueOf(),
-        endDate:
-          addForm.planType === "stored_value"
-            ? null
-            : dayjs(addForm.endDate).valueOf(),
+      await createMembershipPlan({
+        variables: {
+          input: {
+            userId: id,
+            planType: addForm.planType.toUpperCase() as any,
+            amount:
+              addForm.planType === "stored_value" && addForm.amount
+                ? Math.round(Number.parseFloat(addForm.amount) * 100)
+                : null,
+            startDate: new Date(
+              dayjs(addForm.startDate).valueOf(),
+            ).toISOString(),
+            endDate: isTimePlan(addForm.planType)
+              ? new Date(dayjs(addForm.endDate).valueOf()).toISOString()
+              : null,
+          },
+        },
       });
       msg.success("会员计划已添加");
       addDialogRef.current?.close();
@@ -571,7 +574,6 @@ function UserDetailPage() {
         endDate: dayjs().add(30, "day").format("YYYY-MM-DD"),
       });
       setAddFormError("");
-      await fetchPlans();
     } catch (err) {
       const cIds = parseConflictIds(err);
       if (cIds.length > 0) {
@@ -599,18 +601,21 @@ function UserDetailPage() {
     }
     setDeductPending(true);
     try {
-      await trpcClientDash.membershipPlans.deduct.mutate({
-        userId: id,
-        amount: cents,
-        note: deductNote.trim(),
-        date: dayjs(deductDate).valueOf(),
+      await deductStoredValue({
+        variables: {
+          input: {
+            userId: id,
+            amount: cents,
+            note: deductNote.trim(),
+            date: new Date(dayjs(deductDate).valueOf()).toISOString(),
+          },
+        },
       });
       msg.success(`已扣费 ¥${(cents / 100).toFixed(0)}`);
       deductDialogRef.current?.close();
       setDeductAmount("");
       setDeductNote("");
       setDeductDate(dayjs().format("YYYY-MM-DD"));
-      await fetchPlans();
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "扣费失败");
     } finally {
@@ -643,27 +648,29 @@ function UserDetailPage() {
     setEditPlanError("");
     setEditPlanPending(true);
     try {
-      await trpcClientDash.membershipPlans.update.mutate({
-        id: planId,
-        planType: editPlanForm.planType,
-        amount:
-          editPlanForm.planType === "stored_value" && editPlanForm.amount
-            ? Math.round(Number.parseFloat(editPlanForm.amount) * 100)
-            : null,
-        startDate: editPlanForm.startDate
-          ? dayjs(editPlanForm.startDate).valueOf()
-          : undefined,
-        endDate:
-          editPlanForm.planType === "stored_value"
-            ? null
-            : editPlanForm.endDate
-              ? dayjs(editPlanForm.endDate).valueOf()
+      await updateMembershipPlan({
+        variables: {
+          input: {
+            id: planId,
+            planType: editPlanForm.planType.toUpperCase() as any,
+            amount:
+              editPlanForm.planType === "stored_value" && editPlanForm.amount
+                ? Math.round(Number.parseFloat(editPlanForm.amount) * 100)
+                : null,
+            startDate: editPlanForm.startDate
+              ? new Date(dayjs(editPlanForm.startDate).valueOf()).toISOString()
+              : undefined,
+            endDate: isTimePlan(editPlanForm.planType)
+              ? editPlanForm.endDate
+                ? new Date(dayjs(editPlanForm.endDate).valueOf()).toISOString()
+                : null
               : null,
+          },
+        },
       });
       msg.success("会员计划已更新");
       setEditingPlanId(null);
       setEditPlanError("");
-      await fetchPlans();
     } catch (err) {
       const cIds = parseConflictIds(err);
       if (cIds.length > 0) {
@@ -687,13 +694,12 @@ function UserDetailPage() {
     if (!deletingPlan) return;
     setDeletePending(true);
     try {
-      await trpcClientDash.membershipPlans.remove.mutate({
-        id: deletingPlan.id,
+      await removeMembershipPlan({
+        variables: { id: deletingPlan.id },
       });
       msg.success("会员计划已删除");
       deleteDialogRef.current?.close();
       setDeletingPlan(null);
-      await fetchPlans();
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "删除失败");
     } finally {
@@ -709,16 +715,32 @@ function UserDetailPage() {
     );
   }
 
-  if (!user) {
+  if (!rawUser) {
     return (
       <main className="size-full flex flex-col items-center justify-center gap-4">
         <p className="text-base-content/60">用户不存在</p>
-        <Link to="/dash/users" className="btn btn-primary btn-sm">
+        <Link
+          to="/dash/users"
+          search={undefined as any}
+          className="btn btn-primary btn-sm"
+        >
           返回用户列表
         </Link>
       </main>
     );
   }
+
+  const user = rawUser;
+
+  useEffect(() => {
+    if (user) {
+      setEditForm({
+        name: (user as any).name ?? "",
+        nickname: (user as any).nickname ?? "",
+        phone: (user as any).phone ?? "",
+      });
+    }
+  }, [user]);
 
   return (
     <ClientOnly>
@@ -731,13 +753,13 @@ function UserDetailPage() {
           <div className="flex items-center gap-4 mb-6">
             <div>
               <h1 className="text-2xl font-bold">
-                {user.userInfo?.nickname ?? user.name ?? "未命名用户"}
+                {user.nickname || user.name || "未命名用户"}
               </h1>
               <p className="text-sm text-base-content/60 font-mono">
                 {user.id}
               </p>
             </div>
-            <MembershipBadge plans={plans} />
+            <MembershipBadge plans={membershipPlans} />
           </div>
 
           <div role="tablist" className="tabs tabs-bordered mb-6">
@@ -767,8 +789,13 @@ function UserDetailPage() {
               onClick={() => setActiveTab("occupancy")}
             >
               订单 (
-              {occupancies.filter((o) => o.status === "active").length +
-                occupancies.filter((o) => o.status === "paused").length}
+              {
+                rawOccupancies.filter(
+                  (o: UserOccupancy) =>
+                    (o.status as string).toLowerCase() === "active" ||
+                    (o.status as string).toLowerCase() === "paused",
+                ).length
+              }
               )
             </button>
           </div>
@@ -809,7 +836,10 @@ function UserDetailPage() {
                     className="input input-bordered w-full"
                     value={editForm.nickname}
                     onChange={(e) =>
-                      setEditForm((p) => ({ ...p, nickname: e.target.value }))
+                      setEditForm((p) => ({
+                        ...p,
+                        nickname: e.target.value,
+                      }))
                     }
                     placeholder="用户昵称"
                   />
@@ -832,7 +862,11 @@ function UserDetailPage() {
                   <span className="label text-sm font-semibold">角色</span>
                   <select
                     className="select select-bordered w-full"
-                    value={user.role ?? "customer"}
+                    value={
+                      (user as any).role
+                        ? (user as any).role.toLowerCase()
+                        : "customer"
+                    }
                     onChange={(e) => handleRoleChange(e.target.value)}
                     disabled={rolePending}
                   >
@@ -847,7 +881,7 @@ function UserDetailPage() {
                   <input
                     type="email"
                     className="input input-bordered w-full"
-                    value={user.email ?? ""}
+                    value={(user as any).email ?? ""}
                     disabled
                   />
                 </label>
@@ -857,7 +891,7 @@ function UserDetailPage() {
                   <input
                     type="text"
                     className="input input-bordered w-full font-mono"
-                    value={user.userInfo?.uid ?? ""}
+                    value={(user as any).uid ?? ""}
                     disabled
                   />
                 </label>
@@ -866,7 +900,7 @@ function UserDetailPage() {
                   <button
                     type="button"
                     className="btn btn-ghost"
-                    onClick={() => navigate({ to: "/dash/users" })}
+                    onClick={() => navigate({ to: "/dash/users" } as any)}
                   >
                     取消
                   </button>
@@ -934,10 +968,12 @@ function UserDetailPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <h3 className="text-lg font-semibold">会员计划历史</h3>
-                  {getStoredValueBalance(plans) > 0 && (
+                  {getStoredValueBalance(membershipPlans) > 0 && (
                     <span className="badge badge-accent badge-lg">
                       储值余额: ¥
-                      {(getStoredValueBalance(plans) / 100).toFixed(0)}
+                      {(getStoredValueBalance(membershipPlans) / 100).toFixed(
+                        0,
+                      )}
                     </span>
                   )}
                 </div>
@@ -976,11 +1012,7 @@ function UserDetailPage() {
                 </div>
               </div>
 
-              {plansLoading ? (
-                <div className="py-12 text-center">
-                  <span className="loading loading-dots loading-md" />
-                </div>
-              ) : plans.length === 0 ? (
+              {membershipPlans.length === 0 ? (
                 <div className="py-12 text-center text-base-content/60">
                   暂无会员计划
                 </div>
@@ -998,7 +1030,7 @@ function UserDetailPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {plans.map((plan) => {
+                      {membershipPlans.map((plan) => {
                         const config = getPlanConfig(plan.plan_type);
                         const active = isActivePlan(plan);
                         const isEditing = editingPlanId === plan.id;
@@ -1216,254 +1248,250 @@ function UserDetailPage() {
             </div>
           )}
 
-          {activeTab === "occupancy" &&
-            (() => {
-              const sortedOccupancies = [...occupancies].sort((a, b) => {
-                const order = { active: 0, paused: 1, ended: 2 };
-                return (
-                  (order[a.status as keyof typeof order] ?? 3) -
-                  (order[b.status as keyof typeof order] ?? 3)
-                );
-              });
-
-              return (
-                <div className="flex flex-col gap-4">
-                  {!activeMatchesLoading && activeMatches.length > 0 && (
-                    <div className="flex flex-col gap-2">
-                      <div className="text-sm font-semibold flex items-center gap-2">
-                        <span className="relative flex size-2">
-                          <span className="animate-ping absolute inline-flex size-full rounded-full bg-success opacity-75" />
-                          <span className="relative inline-flex rounded-full size-2 bg-success" />
-                        </span>
-                        立直麻将进行中 ({activeMatches.length})
-                      </div>
-                      {activeMatches.map((m) => (
-                        <div
-                          key={m.tableCode}
-                          className="flex items-center gap-3 p-3 bg-base-200 rounded-lg"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-medium">{m.tableName}</span>
-                              <span
-                                className={`badge badge-xs ${m.mode === "4p" ? "badge-primary" : "badge-secondary"}`}
-                              >
-                                {GSZ_MODE_LABELS[m.mode] ?? m.mode}
-                              </span>
-                              <span className="badge badge-xs badge-outline">
-                                {GSZ_FORMAT_LABELS[m.format] ?? m.format}
-                              </span>
-                              <span className="badge badge-xs badge-info">
-                                {GSZ_PHASE_LABELS[m.phase] ?? m.phase}
-                              </span>
-                            </div>
-                            <div className="text-xs text-base-content/50 mt-1 truncate">
-                              {m.players.map((p) => p.nickname).join(", ")}
-                            </div>
-                          </div>
-                          <Link
-                            to="/dash/gsz"
-                            className="btn btn-xs btn-ghost btn-primary shrink-0"
-                          >
-                            <EyeIcon className="size-3.5" />
-                            查看
-                          </Link>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">订单</h3>
-                    <Link
-                      to="/dash/orders"
-                      className="btn btn-xs btn-ghost btn-primary"
-                    >
-                      查看全部订单
-                    </Link>
+          {activeTab === "occupancy" && (
+            <div className="flex flex-col gap-4">
+              {!activeMatchesLoading && activeMatches.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <div className="text-sm font-semibold flex items-center gap-2">
+                    <span className="relative flex size-2">
+                      <span className="animate-ping absolute inline-flex size-full rounded-full bg-success opacity-75" />
+                      <span className="relative inline-flex rounded-full size-2 bg-success" />
+                    </span>
+                    立直麻将进行中 ({activeMatches.length})
                   </div>
-
-                  {occupanciesLoading ? (
-                    <div className="py-12 text-center">
-                      <span className="loading loading-dots loading-md" />
-                    </div>
-                  ) : occupancies.length === 0 ? (
-                    <div className="py-12 text-center text-base-content/60">
-                      该用户暂无订单
-                    </div>
-                  ) : (
-                    <>
-                      <div className="overflow-x-auto">
-                        <table className="table table-sm">
-                          <thead>
-                            <tr>
-                              <td className="w-10">
-                                <input
-                                  type="checkbox"
-                                  className="checkbox checkbox-sm"
-                                  checked={
-                                    sortedOccupancies.filter(
-                                      (o) => o.status !== "ended",
-                                    ).length > 0 &&
-                                    sortedOccupancies
-                                      .filter((o) => o.status !== "ended")
-                                      .every((o) => selectedOccIds.has(o.id))
-                                  }
-                                  onChange={() => {
-                                    const nonEnded = sortedOccupancies
-                                      .filter((o) => o.status !== "ended")
-                                      .map((o) => o.id);
-                                    if (
-                                      nonEnded.every((oid) =>
-                                        selectedOccIds.has(oid),
-                                      )
-                                    ) {
-                                      setSelectedOccIds(new Set());
-                                    } else {
-                                      setSelectedOccIds(new Set(nonEnded));
-                                    }
-                                  }}
-                                />
-                              </td>
-                              <td>状态</td>
-                              <td>桌台</td>
-                              <td>开始时间</td>
-                              <td>时长</td>
-                              <td>费用</td>
-                              <th>操作</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {sortedOccupancies.map((occ) => {
-                              const start = dayjs(occ.start_at);
-                              const diffMin = dayjs().diff(start, "minute");
-                              const hours = Math.floor(diffMin / 60);
-                              const minutes = diffMin % 60;
-                              const durationStr =
-                                hours > 0
-                                  ? `${hours}h${minutes}m`
-                                  : `${minutes}m`;
-
-                              return (
-                                <tr key={occ.id}>
-                                  <td>
-                                    {occ.status !== "ended" && (
-                                      <input
-                                        type="checkbox"
-                                        className="checkbox checkbox-sm"
-                                        checked={selectedOccIds.has(occ.id)}
-                                        onChange={() => toggleOccSelect(occ.id)}
-                                      />
-                                    )}
-                                  </td>
-                                  <td>
-                                    {occ.status === "active" ? (
-                                      <span className="badge badge-success badge-sm">
-                                        进行中
-                                      </span>
-                                    ) : occ.status === "paused" ? (
-                                      <span className="badge badge-neutral badge-sm">
-                                        已暂停
-                                      </span>
-                                    ) : (
-                                      <span className="badge badge-ghost badge-sm">
-                                        已结束
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td>
-                                    <Link
-                                      to="/dash/tables/$id"
-                                      params={{ id: occ.table_id }}
-                                      className="link link-hover"
-                                    >
-                                      {occ.table?.name ?? occ.table_id}
-                                    </Link>
-                                  </td>
-                                  <td className="text-sm">
-                                    {start.isValid()
-                                      ? start.format("MM/DD HH:mm")
-                                      : "—"}
-                                  </td>
-                                  <td className="text-sm">{durationStr}</td>
-                                  <td className="font-mono text-sm">
-                                    {occ.final_price != null
-                                      ? formatPrice(occ.final_price)
-                                      : "—"}
-                                  </td>
-                                  <th>
-                                    <div className="flex items-center gap-1">
-                                      {occ.status === "active" && (
-                                        <button
-                                          type="button"
-                                          className="btn btn-xs btn-ghost"
-                                          onClick={() =>
-                                            void handlePauseOccOrder(occ.id)
-                                          }
-                                          disabled={
-                                            orderActionPending === occ.id
-                                          }
-                                        >
-                                          <PauseIcon className="size-3.5" />
-                                          暂停
-                                        </button>
-                                      )}
-                                      {occ.status === "paused" && (
-                                        <button
-                                          type="button"
-                                          className="btn btn-xs btn-ghost btn-success"
-                                          onClick={() =>
-                                            void handleResumeOccOrder(occ.id)
-                                          }
-                                          disabled={
-                                            orderActionPending === occ.id
-                                          }
-                                        >
-                                          <PlayIcon className="size-3.5" />
-                                          继续
-                                        </button>
-                                      )}
-                                      {occ.status !== "ended" && (
-                                        <button
-                                          type="button"
-                                          className="btn btn-xs btn-ghost btn-error"
-                                          onClick={() =>
-                                            void handleEndOccOrder(
-                                              occ.id,
-                                              occ.status,
-                                            )
-                                          }
-                                          disabled={
-                                            orderActionPending === occ.id
-                                          }
-                                        >
-                                          <StopIcon className="size-3.5" />
-                                          终止
-                                        </button>
-                                      )}
-                                      {occ.status === "ended" && (
-                                        <Link
-                                          to="/dash/orders/settle"
-                                          search={{ ids: [occ.id] }}
-                                          className="btn btn-xs btn-ghost"
-                                        >
-                                          <EyeIcon className="size-3.5" />
-                                          详情
-                                        </Link>
-                                      )}
-                                    </div>
-                                  </th>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
+                  {activeMatches.map((m: any) => (
+                    <div
+                      key={m.tableCode}
+                      className="flex items-center gap-3 p-3 bg-base-200 rounded-lg"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium">{m.tableName}</span>
+                          <span
+                            className={`badge badge-xs ${m.mode === "4p" || m.mode === "FOUR_PLAYER" ? "badge-primary" : "badge-secondary"}`}
+                          >
+                            {GSZ_MODE_LABELS[m.mode] ?? m.mode}
+                          </span>
+                          <span className="badge badge-xs badge-outline">
+                            {GSZ_FORMAT_LABELS[m.format] ?? m.format}
+                          </span>
+                          <span className="badge badge-xs badge-info">
+                            {GSZ_PHASE_LABELS[m.phase] ?? m.phase}
+                          </span>
+                        </div>
+                        <div className="text-xs text-base-content/50 mt-1 truncate">
+                          {m.players.map((p: any) => p.nickname).join(", ")}
+                        </div>
                       </div>
-                    </>
-                  )}
+                      <Link
+                        to="/dash/gsz"
+                        search={undefined as any}
+                        className="btn btn-xs btn-ghost btn-primary shrink-0"
+                      >
+                        <EyeIcon className="size-3.5" />
+                        查看
+                      </Link>
+                    </div>
+                  ))}
                 </div>
-              );
-            })()}
+              )}
+
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">订单</h3>
+                <Link
+                  to="/dash/orders"
+                  search={undefined as any}
+                  className="btn btn-xs btn-ghost btn-primary"
+                >
+                  查看全部订单
+                </Link>
+              </div>
+
+              {rawOccupancies.length === 0 ? (
+                <div className="py-12 text-center text-base-content/60">
+                  该用户暂无订单
+                </div>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="table table-sm">
+                      <thead>
+                        <tr>
+                          <td className="w-10">
+                            <input
+                              type="checkbox"
+                              className="checkbox checkbox-sm"
+                              checked={
+                                rawOccupancies.filter(
+                                  (o: UserOccupancy) =>
+                                    (o.status as string).toLowerCase() !==
+                                    "ended",
+                                ).length > 0 &&
+                                rawOccupancies
+                                  .filter(
+                                    (o: UserOccupancy) =>
+                                      (o.status as string).toLowerCase() !==
+                                      "ended",
+                                  )
+                                  .every((o: UserOccupancy) =>
+                                    selectedOccIds.has(o.id),
+                                  )
+                              }
+                              onChange={() => {
+                                const nonEnded = rawOccupancies
+                                  .filter(
+                                    (o: UserOccupancy) =>
+                                      (o.status as string).toLowerCase() !==
+                                      "ended",
+                                  )
+                                  .map((o: UserOccupancy) => o.id);
+                                if (
+                                  nonEnded.every((oid: string) =>
+                                    selectedOccIds.has(oid),
+                                  )
+                                ) {
+                                  setSelectedOccIds(new Set());
+                                } else {
+                                  setSelectedOccIds(new Set(nonEnded));
+                                }
+                              }}
+                            />
+                          </td>
+                          <td>状态</td>
+                          <td>桌台</td>
+                          <td>开始时间</td>
+                          <td>时长</td>
+                          <td>费用</td>
+                          <th>操作</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rawOccupancies.map((occ: UserOccupancy) => {
+                          const start = dayjs(occ.startAt);
+                          const diffMin = dayjs().diff(start, "minute");
+                          const hours = Math.floor(diffMin / 60);
+                          const minutes = diffMin % 60;
+                          const durationStr =
+                            hours > 0 ? `${hours}h${minutes}m` : `${minutes}m`;
+                          const occStatus = (
+                            occ.status as string
+                          ).toLowerCase() as OccStatus;
+
+                          return (
+                            <tr key={occ.id}>
+                              <td>
+                                {occStatus !== "ended" && (
+                                  <input
+                                    type="checkbox"
+                                    className="checkbox checkbox-sm"
+                                    checked={selectedOccIds.has(occ.id)}
+                                    onChange={() => toggleOccSelect(occ.id)}
+                                  />
+                                )}
+                              </td>
+                              <td>
+                                {occStatus === "active" ? (
+                                  <span className="badge badge-success badge-sm">
+                                    进行中
+                                  </span>
+                                ) : occStatus === "paused" ? (
+                                  <span className="badge badge-neutral badge-sm">
+                                    已暂停
+                                  </span>
+                                ) : (
+                                  <span className="badge badge-ghost badge-sm">
+                                    已结束
+                                  </span>
+                                )}
+                              </td>
+                              <td>
+                                <Link
+                                  to="/dash/tables/$id"
+                                  params={{
+                                    id: occ.tableId,
+                                  }}
+                                  className="link link-hover"
+                                >
+                                  {occ.table?.name ?? occ.tableId}
+                                </Link>
+                              </td>
+                              <td className="text-sm">
+                                {start.isValid()
+                                  ? start.format("MM/DD HH:mm")
+                                  : "—"}
+                              </td>
+                              <td className="text-sm">{durationStr}</td>
+                              <td className="font-mono text-sm">
+                                {occ.finalPrice != null
+                                  ? formatPrice(occ.finalPrice)
+                                  : "—"}
+                              </td>
+                              <th>
+                                <div className="flex items-center gap-1">
+                                  {occStatus === "active" && (
+                                    <button
+                                      type="button"
+                                      className="btn btn-xs btn-ghost"
+                                      onClick={() =>
+                                        void handlePauseOccOrder(occ.id)
+                                      }
+                                      disabled={orderActionPending === occ.id}
+                                    >
+                                      <PauseIcon className="size-3.5" />
+                                      暂停
+                                    </button>
+                                  )}
+                                  {occStatus === "paused" && (
+                                    <button
+                                      type="button"
+                                      className="btn btn-xs btn-ghost btn-success"
+                                      onClick={() =>
+                                        void handleResumeOccOrder(occ.id)
+                                      }
+                                      disabled={orderActionPending === occ.id}
+                                    >
+                                      <PlayIcon className="size-3.5" />
+                                      继续
+                                    </button>
+                                  )}
+                                  {occStatus !== "ended" && (
+                                    <button
+                                      type="button"
+                                      className="btn btn-xs btn-ghost btn-error"
+                                      onClick={() =>
+                                        void handleEndOccOrder(
+                                          occ.id,
+                                          occStatus,
+                                        )
+                                      }
+                                      disabled={orderActionPending === occ.id}
+                                    >
+                                      <StopIcon className="size-3.5" />
+                                      终止
+                                    </button>
+                                  )}
+                                  {occStatus === "ended" && (
+                                    <Link
+                                      to="/dash/orders/settle"
+                                      search={{ ids: [occ.id] } as any}
+                                      className="btn btn-xs btn-ghost"
+                                    >
+                                      <EyeIcon className="size-3.5" />
+                                      详情
+                                    </Link>
+                                  )}
+                                </div>
+                              </th>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {selectedOccIds.size > 0 && (
@@ -1472,8 +1500,10 @@ function UserDetailPage() {
             unit="个订单"
             onClear={() => setSelectedOccIds(new Set())}
             actions={[
-              ...(occupancies.some(
-                (o) => selectedOccIds.has(o.id) && o.status === "active",
+              ...(rawOccupancies.some(
+                (o: UserOccupancy) =>
+                  selectedOccIds.has(o.id) &&
+                  (o.status as string).toLowerCase() === "active",
               )
                 ? [
                     {
@@ -1486,8 +1516,10 @@ function UserDetailPage() {
                     } satisfies BatchAction,
                   ]
                 : []),
-              ...(occupancies.some(
-                (o) => selectedOccIds.has(o.id) && o.status === "paused",
+              ...(rawOccupancies.some(
+                (o: UserOccupancy) =>
+                  selectedOccIds.has(o.id) &&
+                  (o.status as string).toLowerCase() === "paused",
               )
                 ? [
                     {
@@ -1552,7 +1584,10 @@ function UserDetailPage() {
                     className="input input-bordered w-full"
                     value={addForm.amount}
                     onChange={(e) =>
-                      setAddForm((p) => ({ ...p, amount: e.target.value }))
+                      setAddForm((p) => ({
+                        ...p,
+                        amount: e.target.value,
+                      }))
                     }
                     placeholder="输入金额"
                     min="0"
@@ -1571,7 +1606,10 @@ function UserDetailPage() {
                   )}
                   value={addForm.startDate}
                   onChange={(e) => {
-                    setAddForm((p) => ({ ...p, startDate: e.target.value }));
+                    setAddForm((p) => ({
+                      ...p,
+                      startDate: e.target.value,
+                    }));
                     setAddFormError("");
                   }}
                 />
@@ -1588,7 +1626,10 @@ function UserDetailPage() {
                     )}
                     value={addForm.endDate}
                     onChange={(e) => {
-                      setAddForm((p) => ({ ...p, endDate: e.target.value }));
+                      setAddForm((p) => ({
+                        ...p,
+                        endDate: e.target.value,
+                      }));
                       setAddFormError("");
                     }}
                   />
@@ -1632,7 +1673,7 @@ function UserDetailPage() {
               <p className="text-sm text-base-content/70">
                 当前储值余额:{" "}
                 <span className="font-mono font-bold text-accent">
-                  ¥{(getStoredValueBalance(plans) / 100).toFixed(0)}
+                  ¥{(getStoredValueBalance(membershipPlans) / 100).toFixed(0)}
                 </span>
               </p>
               <label className="flex flex-col gap-2">

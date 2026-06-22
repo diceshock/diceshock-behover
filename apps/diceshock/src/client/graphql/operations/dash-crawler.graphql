@@ -1,0 +1,30 @@
+query CrawlerStats {
+  crawlerStats {
+    total
+    crawled
+    errors
+    imagesCached
+    maxId
+    estimatedMax
+  }
+}
+
+query CrawlerErrors($limit: Int = 20) {
+  crawlerErrors(limit: $limit) {
+    gstoneId
+    error
+    retryCount
+    updatedAt
+  }
+}
+
+mutation ResetCrawlerErrors {
+  resetCrawlerErrors {
+    total
+    crawled
+    errors
+    imagesCached
+    maxId
+    estimatedMax
+  }
+}

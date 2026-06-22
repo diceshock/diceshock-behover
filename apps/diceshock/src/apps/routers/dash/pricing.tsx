@@ -17,10 +17,17 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import AdminStoreFilter from "@/client/components/AdminStoreFilter";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import {
+  usePricingDraftQuery,
+  usePricingSnapshotQuery,
+  usePricingSnapshotsQuery,
+  usePublishPricingSnapshotMutation,
+  useRestorePricingSnapshotMutation,
+  useSavePricingSnapshotMutation,
+} from "@/client/graphql/__generated__";
 import { useAdminStoreFilter } from "@/client/hooks/useAdminStoreFilter";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import { formatMessage } from "@/shared/i18n";
-import { trpcClientDash } from "@/shared/utils/trpc";
 import { pricingDataAtom } from "./pricing_.$id";
 
 function isEqual(a: unknown, b: unknown): boolean {
@@ -31,9 +38,10 @@ export const Route = createFileRoute("/dash/pricing")({
   component: PricingPage,
 });
 
-type SnapshotData = Awaited<
-  ReturnType<typeof trpcClientDash.pricingPlansManagement.load.query>
->["data"];
+type SnapshotData = {
+  config: { daytime_start: string; daytime_end: string };
+  plans: Record<string, unknown>[];
+};
 
 type PlanEntry = SnapshotData["plans"][number];
 type Identity = "temporary" | "registered";
@@ -60,9 +68,9 @@ type Conditions = NonNullable<PlanEntry["conditions"]> & {
   scope: string[];
 };
 
-type SnapshotRow = Awaited<
-  ReturnType<typeof trpcClientDash.pricingPlansManagement.listSnapshots.query>
->[number];
+type SnapshotRow = NonNullable<
+  ReturnType<typeof usePricingSnapshotsQuery>["data"]
+>["pricingSnapshots"][number];
 
 const PLAN_TYPE_OPTIONS = [
   { value: "yearly", labelKey: "dashPricing.planTypes.yearly" },
@@ -190,6 +198,24 @@ function formatTime(val: Date | number | string | null | undefined): string {
   });
 }
 
+function parseSnapshotData(raw: {
+  config?: { daytimeStart?: string | null; daytimeEnd?: string | null } | null;
+  plans?: string | null;
+}): SnapshotData | null {
+  if (!raw.plans) return null;
+  try {
+    return {
+      config: {
+        daytime_start: raw.config?.daytimeStart ?? "10:00",
+        daytime_end: raw.config?.daytimeEnd ?? "18:00",
+      },
+      plans: JSON.parse(raw.plans),
+    };
+  } catch {
+    return null;
+  }
+}
+
 const EMPTY_DATA: SnapshotData = {
   config: { daytime_start: "10:00", daytime_end: "18:00" },
   plans: [],
@@ -203,44 +229,42 @@ function PricingPage() {
 
   const [data, setData] = useAtom(pricingDataAtom);
   const [savedData, setSavedData] = useState<SnapshotData>(EMPTY_DATA);
-  const [snapshots, setSnapshots] = useState<SnapshotRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [historyOpen, setHistoryOpen] = useState(false);
   const [snapshotName, setSnapshotName] = useState(t("dashPricing.untitled"));
+
+  const { data: qlData, loading } = usePricingDraftQuery();
+  const { data: snapshotsData } = usePricingSnapshotsQuery();
+  const [saveSnapshot] = useSavePricingSnapshotMutation();
+  const [publishSnapshot] = usePublishPricingSnapshotMutation();
+  const [restoreSnapshot] = useRestorePricingSnapshotMutation();
+  const { data: detailData, refetch: refetchDetail } = usePricingSnapshotQuery({
+    variables: { id: "" },
+    skip: true,
+  });
+
+  const snapshots = snapshotsData?.pricingSnapshots ?? [];
+
+  useEffect(() => {
+    if (qlData?.pricingDraft) {
+      const parsed = parseSnapshotData(qlData.pricingDraft.data);
+      const d = parsed ?? EMPTY_DATA;
+      setData(d);
+      setSavedData(d);
+      setSnapshotName(
+        qlData.pricingDraft.snapshotName ?? t("dashPricing.untitled"),
+      );
+    }
+  }, [qlData, setData, t]);
 
   const effectiveData = data ?? EMPTY_DATA;
   const hasChanges = !isEqual(effectiveData, savedData);
-  const hasDraft = snapshots.some((s) => s.status === "draft");
-
-  const refreshData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [loaded, snapshotList] = await Promise.all([
-        trpcClientDash.pricingPlansManagement.load.query(),
-        trpcClientDash.pricingPlansManagement.listSnapshots.query(),
-      ]);
-      const d = loaded.data ?? EMPTY_DATA;
-      setData(d);
-      setSavedData(d);
-      setSnapshots(snapshotList);
-      setSnapshotName(loaded.snapshotName ?? t("dashPricing.untitled"));
-    } catch (err) {
-      msg.error(
-        err instanceof Error ? err.message : t("dashPricing.errors.loadFailed"),
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [storeFilter, msg, t]);
-
-  useEffect(() => {
-    void refreshData();
-  }, [refreshData]);
+  const hasDraft = snapshots.some((s) => s.status === "DRAFT");
 
   const fallbackPlan =
-    effectiveData.plans.find((p) => p.plan_type === "fallback") ?? null;
+    effectiveData.plans.find(
+      (p: Record<string, unknown>) => p.plan_type === "fallback",
+    ) ?? null;
   const conditionalPlans = effectiveData.plans.filter(
-    (p) => p.plan_type === "conditional",
+    (p: Record<string, unknown>) => p.plan_type === "conditional",
   );
 
   const updatePlan = (index: number, updates: Partial<PlanEntry>) => {
@@ -248,7 +272,9 @@ function PricingPage() {
       const d = prev ?? EMPTY_DATA;
       return {
         ...d,
-        plans: d.plans.map((p, i) => (i === index ? { ...p, ...updates } : p)),
+        plans: d.plans.map((p, i) =>
+          i === index ? ({ ...p, ...updates } as Record<string, unknown>) : p,
+        ),
       };
     });
   };
@@ -308,6 +334,8 @@ function PricingPage() {
   const configDialogRef = useRef<HTMLDialogElement>(null);
   const deleteDialogRef = useRef<HTMLDialogElement>(null);
 
+  const [historyOpen, setHistoryOpen] = useState(false);
+
   const [configForm, setConfigForm] = useState({
     daytime_start: "10:00",
     daytime_end: "18:00",
@@ -366,8 +394,9 @@ function PricingPage() {
   };
 
   const handleToggle = (globalIdx: number) => {
+    const plan = effectiveData.plans[globalIdx] as Record<string, unknown>;
     updatePlan(globalIdx, {
-      enabled: !effectiveData.plans[globalIdx].enabled,
+      enabled: !plan.enabled,
     });
   };
 
@@ -383,15 +412,21 @@ function PricingPage() {
     }
     setSavePending(true);
     try {
-      const result = await trpcClientDash.pricingPlansManagement.save.mutate({
-        data: effectiveData,
-        name: snapshotName.trim(),
+      await saveSnapshot({
+        variables: {
+          input: {
+            name: snapshotName.trim(),
+            data: {
+              config: JSON.stringify({
+                daytimeStart: effectiveData.config.daytime_start,
+                daytimeEnd: effectiveData.config.daytime_end,
+              }),
+              plans: JSON.stringify(effectiveData.plans),
+            },
+          },
+        },
       });
       setSavedData(effectiveData);
-      setSnapshotName(result.name);
-      const snapshotList =
-        await trpcClientDash.pricingPlansManagement.listSnapshots.query();
-      setSnapshots(snapshotList);
       saveDialogRef.current?.close();
       msg.success(t("dashPricing.messages.draftSaved"));
     } catch (err) {
@@ -406,10 +441,7 @@ function PricingPage() {
   const handlePublish = async () => {
     setPublishPending(true);
     try {
-      await trpcClientDash.pricingPlansManagement.publish.mutate();
-      const snapshotList =
-        await trpcClientDash.pricingPlansManagement.listSnapshots.query();
-      setSnapshots(snapshotList);
+      await publishSnapshot();
       msg.success(t("dashPricing.messages.published"));
     } catch (err) {
       msg.error(
@@ -425,16 +457,15 @@ function PricingPage() {
   const handleRestore = async (snapshotId: string) => {
     setRestorePending(snapshotId);
     try {
-      const result =
-        await trpcClientDash.pricingPlansManagement.restoreSnapshot.mutate({
-          id: snapshotId,
-        });
-      const d = (result.data ?? EMPTY_DATA) as SnapshotData;
+      const result = await restoreSnapshot({
+        variables: { id: snapshotId },
+      });
+      const parsed = parseSnapshotData(
+        result.data?.restorePricingSnapshot?.data ?? {},
+      );
+      const d = parsed ?? EMPTY_DATA;
       setData(d);
       setSavedData(d);
-      const snapshotList =
-        await trpcClientDash.pricingPlansManagement.listSnapshots.query();
-      setSnapshots(snapshotList);
       msg.success(t("dashPricing.messages.restored"));
     } catch (err) {
       msg.error(
@@ -448,21 +479,18 @@ function PricingPage() {
   };
 
   const detailDialogRef = useRef<HTMLDialogElement>(null);
-  const [detailSnapshot, setDetailSnapshot] = useState<Awaited<
-    ReturnType<
-      typeof trpcClientDash.pricingPlansManagement.getSnapshotDetail.query
-    >
-  > | null>(null);
+  const [detailSnapshot, setDetailSnapshot] = useState<SnapshotRow | null>(
+    null,
+  );
   const [detailLoading, setDetailLoading] = useState(false);
 
   const handleViewDetail = async (snapshotId: string) => {
     setDetailLoading(true);
     try {
-      const detail =
-        await trpcClientDash.pricingPlansManagement.getSnapshotDetail.query({
-          id: snapshotId,
-        });
-      setDetailSnapshot(detail);
+      const result = await refetchDetail({ id: snapshotId });
+      if (result.data?.pricingSnapshot) {
+        setDetailSnapshot(result.data.pricingSnapshot);
+      }
       detailDialogRef.current?.showModal();
     } catch (err) {
       msg.error(
@@ -482,7 +510,11 @@ function PricingPage() {
   }
 
   const pendingDeletePlan =
-    pendingDeleteIdx != null ? effectiveData.plans[pendingDeleteIdx] : null;
+    pendingDeleteIdx != null
+      ? (effectiveData.plans[pendingDeleteIdx] as
+          | Record<string, unknown>
+          | undefined)
+      : null;
 
   return (
     <main className="size-full overflow-y-auto">
@@ -523,7 +555,6 @@ function PricingPage() {
           })}
         </div>
 
-        {/* Fallback */}
         {!fallbackPlan ? (
           <div className="card bg-base-100 shadow-sm">
             <div className="card-body items-center py-8 gap-4">
@@ -544,14 +575,13 @@ function PricingPage() {
             plan={fallbackPlan}
             onChange={(updates) => {
               const idx = effectiveData.plans.findIndex(
-                (p) => p.plan_type === "fallback",
+                (p: Record<string, unknown>) => p.plan_type === "fallback",
               );
               if (idx !== -1) updatePlan(idx, updates);
             }}
           />
         )}
 
-        {/* Conditional */}
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold">
             {t("dashPricing.conditionalPlans")}
@@ -573,8 +603,9 @@ function PricingPage() {
         ) : (
           <div className="flex flex-col gap-3">
             {effectiveData.plans.map((plan, globalIdx) => {
-              if (plan.plan_type !== "conditional") return null;
-              const cond = (plan.conditions ?? {
+              const p = plan as Record<string, unknown>;
+              if (p.plan_type !== "conditional") return null;
+              const cond = ((p.conditions as Conditions) ?? {
                 date: { type: "workdays" },
                 time: { type: "all_day" },
                 identity: ["registered"],
@@ -609,8 +640,10 @@ function PricingPage() {
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold">{plan.name}</span>
-                          {!plan.enabled && (
+                          <span className="font-semibold">
+                            {p.name as string}
+                          </span>
+                          {!p.enabled && (
                             <span className="badge badge-ghost badge-sm">
                               {t("dashPricing.disabled")}
                             </span>
@@ -652,12 +685,12 @@ function PricingPage() {
                             </span>
                           )}
                           <span className="badge badge-outline badge-xs">
-                            {plan.billing_type === "fixed"
+                            {p.billing_type === "fixed"
                               ? formatMessage(t("dashPricing.billing.fixed"), {
-                                  price: centsToYuan(plan.price),
+                                  price: centsToYuan(p.price as number),
                                 })
                               : formatMessage(t("dashPricing.billing.hourly"), {
-                                  price: centsToYuan(plan.price),
+                                  price: centsToYuan(p.price as number),
                                 })}
                           </span>
                         </div>
@@ -667,7 +700,7 @@ function PricingPage() {
                         <input
                           type="checkbox"
                           className="toggle toggle-sm toggle-success"
-                          checked={plan.enabled}
+                          checked={!!p.enabled}
                           onChange={() => handleToggle(globalIdx)}
                         />
                         <Link
@@ -694,7 +727,6 @@ function PricingPage() {
           </div>
         )}
 
-        {/* History */}
         <div className="mt-8">
           <button
             type="button"
@@ -724,9 +756,9 @@ function PricingPage() {
                     <div className="flex flex-col gap-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         <span
-                          className={`badge badge-sm shrink-0 ${s.status === "published" ? "badge-success" : "badge-ghost"}`}
+                          className={`badge badge-sm shrink-0 ${s.status === "PUBLISHED" ? "badge-success" : "badge-ghost"}`}
                         >
-                          {s.status === "published"
+                          {s.status === "PUBLISHED"
                             ? t("dashPricing.published")
                             : t("dashPricing.draft")}
                         </span>
@@ -734,12 +766,12 @@ function PricingPage() {
                           {s.name}
                         </span>
                         <span className="text-xs text-base-content/40 whitespace-nowrap">
-                          {formatTime(s.created_at)}
+                          {formatTime(s.createdAt)}
                         </span>
-                        {s.published_at && (
+                        {s.publishedAt && (
                           <span className="text-xs text-base-content/50 whitespace-nowrap">
                             {formatMessage(t("dashPricing.publishedAtPrefix"), {
-                              time: formatTime(s.published_at),
+                              time: formatTime(s.publishedAt),
                             })}
                           </span>
                         )}
@@ -778,7 +810,6 @@ function PricingPage() {
         </div>
       </div>
 
-      {/* Sticky bar */}
       <div className="fixed bottom-0 right-0 left-0 lg:left-20 bg-base-100 border-t border-base-200 px-4 py-2 flex items-center justify-end gap-2 z-40">
         {hasChanges && (
           <span className="text-xs text-warning mr-auto">
@@ -814,7 +845,6 @@ function PricingPage() {
         </button>
       </div>
 
-      {/* Config dialog */}
       <dialog ref={configDialogRef} className="modal">
         <div className="modal-box">
           <div className="flex items-center justify-between mb-4">
@@ -875,7 +905,6 @@ function PricingPage() {
         </div>
       </dialog>
 
-      {/* Delete dialog */}
       <dialog ref={deleteDialogRef} className="modal">
         {pendingDeletePlan && (
           <div className="modal-box">
@@ -884,7 +913,9 @@ function PricingPage() {
             </h3>
             <p>
               {formatMessage(t("dashPricing.deletePlanPrefix"), { name: "" })}
-              <strong>{pendingDeletePlan.name}</strong>{" "}
+              <strong>
+                {(pendingDeletePlan as Record<string, unknown>).name as string}
+              </strong>{" "}
               {t("dashPricing.deletePlanSuffix")}
             </p>
             <div className="modal-action mt-6">
@@ -969,21 +1000,21 @@ function PricingPage() {
             <div className="flex flex-col gap-4 text-sm">
               <div className="flex items-center gap-3 flex-wrap">
                 <span
-                  className={`badge badge-sm ${detailSnapshot.status === "published" ? "badge-success" : "badge-ghost"}`}
+                  className={`badge badge-sm ${detailSnapshot.status === "PUBLISHED" ? "badge-success" : "badge-ghost"}`}
                 >
-                  {detailSnapshot.status === "published"
+                  {detailSnapshot.status === "PUBLISHED"
                     ? t("dashPricing.published")
                     : t("dashPricing.draft")}
                 </span>
                 <span className="text-base-content/60">
                   {formatMessage(t("dashPricing.savedAt"), {
-                    time: formatTime(detailSnapshot.created_at),
+                    time: formatTime(detailSnapshot.createdAt),
                   })}
                 </span>
-                {detailSnapshot.published_at && (
+                {detailSnapshot.publishedAt && (
                   <span className="text-base-content/60">
                     {formatMessage(t("dashPricing.publishedAtPrefix"), {
-                      time: formatTime(detailSnapshot.published_at),
+                      time: formatTime(detailSnapshot.publishedAt),
                     })}
                   </span>
                 )}
@@ -996,142 +1027,166 @@ function PricingPage() {
                 <div className="mt-2 grid grid-cols-2 gap-2 text-base-content/60">
                   <p>
                     {formatMessage(t("dashPricing.detailDaytime"), {
-                      start: detailSnapshot.data.config.daytime_start,
-                      end: detailSnapshot.data.config.daytime_end,
+                      start: detailSnapshot.data.config.daytimeStart,
+                      end: detailSnapshot.data.config.daytimeEnd,
                     })}
                   </p>
                   <p>
                     {formatMessage(t("dashPricing.detailNighttime"), {
-                      start: detailSnapshot.data.config.daytime_end,
-                      end: detailSnapshot.data.config.daytime_start,
+                      start: detailSnapshot.data.config.daytimeEnd,
+                      end: detailSnapshot.data.config.daytimeStart,
                     })}
                   </p>
                 </div>
               </div>
 
-              {detailSnapshot.data.plans.map((plan, i) => {
-                const cond = plan.conditions as Conditions | null;
-                return (
-                  <div
-                    key={i}
-                    className={`rounded-lg p-3 ${plan.enabled ? "bg-base-200" : "bg-base-200/50 opacity-60"}`}
-                  >
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold">{plan.name}</span>
-                      <span
-                        className={`badge badge-xs ${plan.plan_type === "fallback" ? "badge-success" : "badge-info"}`}
-                      >
-                        {plan.plan_type === "fallback"
-                          ? t("dashPricing.fallback")
-                          : t("dashPricing.conditional")}
-                      </span>
-                      {!plan.enabled && (
-                        <span className="badge badge-xs badge-ghost">
-                          {t("dashPricing.disabled")}
+              {(() => {
+                let parsedPlans: Record<string, unknown>[] = [];
+                try {
+                  parsedPlans = JSON.parse(detailSnapshot.data.plans);
+                } catch {}
+                return parsedPlans.map((plan, i) => {
+                  const p = plan as Record<string, unknown>;
+                  const cond = (p.conditions as Conditions) ?? null;
+                  return (
+                    <div
+                      key={i}
+                      className={`rounded-lg p-3 ${p.enabled ? "bg-base-200" : "bg-base-200/50 opacity-60"}`}
+                    >
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold">
+                          {p.name as string}
                         </span>
-                      )}
-                      <span className="badge badge-xs badge-outline">
-                        #{plan.sort_order}
-                      </span>
-                    </div>
+                        <span
+                          className={`badge badge-xs ${p.plan_type === "fallback" ? "badge-success" : "badge-info"}`}
+                        >
+                          {p.plan_type === "fallback"
+                            ? t("dashPricing.fallback")
+                            : t("dashPricing.conditional")}
+                        </span>
+                        {!p.enabled && (
+                          <span className="badge badge-xs badge-ghost">
+                            {t("dashPricing.disabled")}
+                          </span>
+                        )}
+                        <span className="badge badge-xs badge-outline">
+                          #{p.sort_order as number}
+                        </span>
+                      </div>
 
-                    {cond && plan.plan_type === "conditional" && (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        <span className="badge badge-outline badge-xs">
-                          📅 {getDateLabel(cond.date, t)}
-                        </span>
-                        <span className="badge badge-outline badge-xs">
-                          🕐 {getTimeLabel(cond.time, t)}
-                        </span>
-                        {cond.identity &&
-                          !(
-                            cond.identity.length === 1 &&
-                            cond.identity[0] === "registered"
-                          ) && (
+                      {cond && p.plan_type === "conditional" && (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          <span className="badge badge-outline badge-xs">
+                            📅 {getDateLabel(cond.date, t)}
+                          </span>
+                          <span className="badge badge-outline badge-xs">
+                            🕐 {getTimeLabel(cond.time, t)}
+                          </span>
+                          {cond.identity &&
+                            !(
+                              cond.identity.length === 1 &&
+                              cond.identity[0] === "registered"
+                            ) && (
+                              <span className="badge badge-outline badge-xs">
+                                🪪 {getIdentityLabel(cond.identity, t)}
+                              </span>
+                            )}
+                          {cond.member.type !== "irrelevant" && (
                             <span className="badge badge-outline badge-xs">
-                              🪪 {getIdentityLabel(cond.identity, t)}
+                              👤 {getMemberLabel(cond.member, t)}
                             </span>
                           )}
-                        {cond.member.type !== "irrelevant" && (
-                          <span className="badge badge-outline badge-xs">
-                            👤 {getMemberLabel(cond.member, t)}
-                          </span>
-                        )}
-                        {cond.scope.length > 0 && (
-                          <span className="badge badge-outline badge-xs">
-                            🎮{" "}
-                            {cond.scope
-                              .map((s: string) =>
-                                (() => {
-                                  const option = SCOPE_OPTIONS.find(
-                                    (o) => o.value === s,
-                                  );
-                                  return option ? t(option.labelKey) : s;
-                                })(),
-                              )
-                              .join("/")}
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="mt-2 text-base-content/60 space-y-1">
-                      <p>
-                        💰 {t("dashPricing.billingLabel")}{" "}
-                        {plan.billing_type === "fixed"
-                          ? formatMessage(t("dashPricing.billing.fixed"), {
-                              price: (plan.price / 100).toFixed(2),
-                            })
-                          : formatMessage(
-                              t("dashPricing.billing.hourlyWithHalfHour"),
-                              {
-                                price: (plan.price / 100).toFixed(2),
-                                halfHourPrice: (plan.price / 200).toFixed(2),
-                              },
-                            )}
-                      </p>
-                      {plan.billing_type === "hourly" && (
-                        <p className="text-xs">
-                          ⏳ {t("dashPricing.firstThirtyFree")}
-                        </p>
+                          {cond.scope.length > 0 && (
+                            <span className="badge badge-outline badge-xs">
+                              🎮{" "}
+                              {cond.scope
+                                .map((s: string) =>
+                                  (() => {
+                                    const option = SCOPE_OPTIONS.find(
+                                      (o) => o.value === s,
+                                    );
+                                    return option ? t(option.labelKey) : s;
+                                  })(),
+                                )
+                                .join("/")}
+                            </span>
+                          )}
+                        </div>
                       )}
-                      {plan.cap_enabled &&
-                        plan.cap_unit === "per_day" &&
-                        plan.cap_price != null && (
-                          <p>
-                            🔒{" "}
-                            {formatMessage(t("dashPricing.cap.perDay"), {
-                              price: (plan.cap_price / 100).toFixed(2),
-                            })}
+
+                      <div className="mt-2 text-base-content/60 space-y-1">
+                        <p>
+                          💰 {t("dashPricing.billingLabel")}{" "}
+                          {p.billing_type === "fixed"
+                            ? formatMessage(t("dashPricing.billing.fixed"), {
+                                price: (
+                                  ((p.price as number) ?? 0) / 100
+                                ).toFixed(2),
+                              })
+                            : formatMessage(
+                                t("dashPricing.billing.hourlyWithHalfHour"),
+                                {
+                                  price: (
+                                    ((p.price as number) ?? 0) / 100
+                                  ).toFixed(2),
+                                  halfHourPrice: (
+                                    ((p.price as number) ?? 0) / 200
+                                  ).toFixed(2),
+                                },
+                              )}
+                        </p>
+                        {p.billing_type === "hourly" && (
+                          <p className="text-xs">
+                            ⏳ {t("dashPricing.firstThirtyFree")}
                           </p>
                         )}
-                      {plan.cap_enabled &&
-                        plan.cap_unit === "split_day_night" && (
+                        {p.cap_enabled &&
+                          p.cap_unit === "per_day" &&
+                          p.cap_price != null && (
+                            <p>
+                              🔒{" "}
+                              {formatMessage(t("dashPricing.cap.perDay"), {
+                                price: (
+                                  ((p.cap_price as number) ?? 0) / 100
+                                ).toFixed(2),
+                              })}
+                            </p>
+                          )}
+                        {p.cap_enabled && p.cap_unit === "split_day_night" && (
                           <p>
                             🔒{" "}
                             {formatMessage(t("dashPricing.cap.splitDayNight"), {
                               dayPrice: (
-                                (plan.cap_price_day ?? 0) / 100
+                                ((p.cap_price_day as number) ?? 0) / 100
                               ).toFixed(2),
                               nightPrice: (
-                                (plan.cap_price_night ?? 0) / 100
+                                ((p.cap_price_night as number) ?? 0) / 100
                               ).toFixed(2),
                             })}
                           </p>
                         )}
-                      {!plan.cap_enabled && plan.billing_type === "hourly" && (
-                        <p className="text-xs">{t("dashPricing.noCap")}</p>
-                      )}
+                        {!p.cap_enabled && p.billing_type === "hourly" && (
+                          <p className="text-xs">{t("dashPricing.noCap")}</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                });
+              })()}
 
-              {detailSnapshot.data.plans.length === 0 && (
-                <div className="py-6 text-center text-base-content/50">
-                  {t("dashPricing.snapshotNoPlans")}
-                </div>
-              )}
+              {(() => {
+                let parsedPlans: Record<string, unknown>[] = [];
+                try {
+                  parsedPlans = JSON.parse(detailSnapshot.data.plans);
+                } catch {}
+                if (parsedPlans.length === 0)
+                  return (
+                    <div className="py-6 text-center text-base-content/50">
+                      {t("dashPricing.snapshotNoPlans")}
+                    </div>
+                  );
+                return null;
+              })()}
             </div>
           )}
         </div>
@@ -1168,7 +1223,9 @@ function FallbackSection({
             <input
               type="number"
               className="input input-bordered w-full max-w-xs"
-              value={centsToYuan(plan.price)}
+              value={centsToYuan(
+                (plan as Record<string, unknown>).price as number,
+              )}
               onChange={(e) => {
                 const n = Number.parseFloat(e.target.value);
                 onChange({ price: Number.isNaN(n) ? 0 : Math.round(n * 100) });
@@ -1188,7 +1245,9 @@ function FallbackSection({
                   type="radio"
                   name="fallback-cap-unit"
                   className="radio radio-sm"
-                  checked={plan.cap_unit === "per_day"}
+                  checked={
+                    (plan as Record<string, unknown>).cap_unit === "per_day"
+                  }
                   onChange={() =>
                     onChange({
                       cap_unit: "per_day",
@@ -1204,9 +1263,15 @@ function FallbackSection({
                   type="radio"
                   name="fallback-cap-unit"
                   className="radio radio-sm"
-                  checked={plan.cap_unit === "split_day_night"}
+                  checked={
+                    (plan as Record<string, unknown>).cap_unit ===
+                    "split_day_night"
+                  }
                   onChange={() =>
-                    onChange({ cap_unit: "split_day_night", cap_price: null })
+                    onChange({
+                      cap_unit: "split_day_night",
+                      cap_price: null,
+                    })
                   }
                 />
                 <span className="text-sm">
@@ -1215,7 +1280,7 @@ function FallbackSection({
               </label>
             </div>
 
-            {plan.cap_unit === "per_day" ? (
+            {(plan as Record<string, unknown>).cap_unit === "per_day" ? (
               <label className="flex flex-col gap-1">
                 <span className="text-sm text-base-content/60">
                   {t("dashPricing.capPriceYuan")}
@@ -1223,7 +1288,9 @@ function FallbackSection({
                 <input
                   type="number"
                   className="input input-bordered input-sm w-full max-w-xs"
-                  value={centsToYuan(plan.cap_price)}
+                  value={centsToYuan(
+                    (plan as Record<string, unknown>).cap_price as number,
+                  )}
                   onChange={(e) => {
                     const n = Number.parseFloat(e.target.value);
                     onChange({
@@ -1243,7 +1310,9 @@ function FallbackSection({
                   <input
                     type="number"
                     className="input input-bordered input-sm w-full"
-                    value={centsToYuan(plan.cap_price_day)}
+                    value={centsToYuan(
+                      (plan as Record<string, unknown>).cap_price_day as number,
+                    )}
                     onChange={(e) => {
                       const n = Number.parseFloat(e.target.value);
                       onChange({
@@ -1263,7 +1332,10 @@ function FallbackSection({
                   <input
                     type="number"
                     className="input input-bordered input-sm w-full"
-                    value={centsToYuan(plan.cap_price_night)}
+                    value={centsToYuan(
+                      (plan as Record<string, unknown>)
+                        .cap_price_night as number,
+                    )}
                     onChange={(e) => {
                       const n = Number.parseFloat(e.target.value);
                       onChange({

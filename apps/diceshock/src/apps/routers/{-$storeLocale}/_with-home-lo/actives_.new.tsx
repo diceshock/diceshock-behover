@@ -1,3 +1,4 @@
+import { useApolloClient } from "@apollo/client";
 import {
   CalendarBlankIcon,
   ClockIcon,
@@ -13,6 +14,7 @@ import {
 import clsx from "clsx";
 import { useCallback, useEffect, useRef, useState } from "react";
 import TiptapEditor from "@/client/components/diceshock/TiptapEditor";
+import { GetOwnedBoardGamesDocument } from "@/client/graphql/__generated__";
 import useAuth from "@/client/hooks/useAuth";
 import { useMessages } from "@/client/hooks/useMessages";
 import { useTranslation } from "@/client/hooks/useTranslation";
@@ -249,6 +251,7 @@ function BoardGameSearch({
   onSelect: (id: string, name: string) => void;
 }) {
   const { t } = useTranslation();
+  const client = useApolloClient();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<GameResult[]>([]);
   const [focused, setFocused] = useState(false);
@@ -267,22 +270,27 @@ function BoardGameSearch({
 
     const timer = setTimeout(async () => {
       try {
-        const data = await trpcClientPublic.owned.get.query({
-          page: 1,
-          pageSize: 8,
-          params: {
-            searchWords: query,
-            tags: [],
-            numOfPlayers: null,
-            isBestNumOfPlayers: false,
+        const { data } = await client.query({
+          query: GetOwnedBoardGamesDocument,
+          variables: {
+            input: {
+              pagination: { offset: 0, limit: 8 },
+              searchWords: query,
+            },
           },
         });
         if (!ctrl.signal.aborted) {
           setResults(
-            data.map((g) => ({
+            (
+              data.ownedBoardGames as Array<{
+                id: string;
+                schName: string | null;
+                engName: string | null;
+              }>
+            ).map((g) => ({
               id: g.id,
-              sch_name: g.sch_name,
-              eng_name: g.eng_name,
+              sch_name: g.schName,
+              eng_name: g.engName,
             })),
           );
         }
@@ -295,7 +303,7 @@ function BoardGameSearch({
       clearTimeout(timer);
       ctrl.abort();
     };
-  }, [query]);
+  }, [query, client]);
 
   const showDropdown = focused && query.trim().length > 0;
 

@@ -14,13 +14,16 @@ import {
   type MembershipPlan,
 } from "@/client/components/diceshock/MembershipBadge";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import {
+  useDisableUserMutation,
+  useUsersQuery,
+} from "@/client/graphql/__generated__";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import dayjs from "@/shared/utils/dayjs-config";
-import { trpcClientDash } from "@/shared/utils/trpc";
 
-type UserList = Awaited<ReturnType<typeof trpcClientDash.users.get.query>>;
-type UserItem = UserList[number];
+type UserList = NonNullable<ReturnType<typeof useUsersQuery>["data"]>["users"];
+type UserItem = UserList["items"][number];
 
 const PAGE_SIZE = 30;
 
@@ -47,8 +50,21 @@ function RouteComponent() {
       }),
     [navigate],
   );
-  const [users, setUsers] = useState<UserItem[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const { data, loading } = useUsersQuery({
+    variables: {
+      input: {
+        searchWords: q.trim() || undefined,
+        pagination: {
+          offset: (page - 1) * PAGE_SIZE,
+          limit: PAGE_SIZE,
+        },
+      },
+    },
+    fetchPolicy: "cache-and-network",
+  });
+
+  const [disableUser] = useDisableUserMutation();
 
   const disableDialogRef = useRef<HTMLDialogElement>(null);
 
@@ -64,37 +80,6 @@ function RouteComponent() {
     }
   };
 
-  const refreshUsers = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params: {
-        searchWords?: string;
-      } = {};
-
-      if (q.trim()) {
-        params.searchWords = q.trim();
-      }
-
-      const data = await trpcClientDash.users.get.query({
-        page,
-        pageSize: PAGE_SIZE,
-        params,
-      });
-
-      setUsers(data);
-    } catch (err) {
-      msg.error(
-        err instanceof Error ? err.message : t("dashUsers.fetchFailed"),
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [q, page, msg, t]);
-
-  useEffect(() => {
-    void refreshUsers();
-  }, [refreshUsers]);
-
   const openDisableDialog = (user: UserItem) => {
     setPendingDisable(user);
     setTimeout(() => {
@@ -106,11 +91,10 @@ function RouteComponent() {
     if (!pendingDisable) return;
     setDisablePending(true);
     try {
-      await trpcClientDash.users.disable.mutate({ id: pendingDisable.id });
+      await disableUser({ variables: { id: pendingDisable.id } });
       msg.success(t("dashUsers.disableSuccess"));
       disableDialogRef.current?.close();
       setPendingDisable(null);
-      await refreshUsers();
     } catch (err) {
       msg.error(
         err instanceof Error ? err.message : t("dashUsers.disableFailed"),
@@ -119,6 +103,8 @@ function RouteComponent() {
       setDisablePending(false);
     }
   };
+
+  const users = data?.users?.items ?? [];
 
   return (
     <main className="size-full flex flex-col">
@@ -182,8 +168,8 @@ function RouteComponent() {
               </tr>
             ) : (
               users.map((user) => {
-                const plans = ((user as any).membershipPlans ??
-                  []) as MembershipPlan[];
+                const plans = (user.membershipPlans ??
+                  []) as unknown as MembershipPlan[];
                 const storedBalance = getStoredValueBalance(plans);
                 return (
                   <tr key={user.id}>
@@ -209,15 +195,15 @@ function RouteComponent() {
                       </div>
                     </td>
                     <td className="whitespace-nowrap">
-                      {user.userInfo?.nickname || "—"}
+                      {user.nickname || "—"}
                     </td>
                     <td className="whitespace-nowrap">{user.name || "—"}</td>
                     <td className="whitespace-nowrap">
-                      {user.role === "admin" ? (
+                      {user.role === "ADMIN" ? (
                         <span className="badge badge-sm badge-error">
                           {t("dashUsers.admin")}
                         </span>
-                      ) : user.role === "staff" ? (
+                      ) : user.role === "STAFF" ? (
                         <span className="badge badge-sm badge-info">
                           {t("dashUsers.staff")}
                         </span>
@@ -281,13 +267,11 @@ function RouteComponent() {
                     </td>
                     <td className="whitespace-nowrap">{user.phone || "—"}</td>
                     <td className="font-mono whitespace-nowrap">
-                      {user.userInfo?.uid || "—"}
+                      {user.uid || "—"}
                     </td>
                     <td className="whitespace-nowrap">
-                      {user.userInfo?.create_at
-                        ? dayjs(user.userInfo.create_at).format(
-                            "YYYY/MM/DD HH:mm",
-                          )
+                      {user.createdAt
+                        ? dayjs(user.createdAt).format("YYYY/MM/DD HH:mm")
                         : "—"}
                     </td>
                     <th className="whitespace-nowrap">
@@ -372,7 +356,7 @@ function RouteComponent() {
               </p>
               <p className="text-sm">
                 <strong>{t("dashUsers.nicknameLabel")}</strong>{" "}
-                {pendingDisable.userInfo?.nickname || "—"}
+                {pendingDisable.nickname || "—"}
               </p>
               <p className="text-sm">
                 <strong>{t("dashUsers.emailLabel")}</strong>{" "}

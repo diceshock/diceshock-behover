@@ -1,0 +1,25 @@
+query GetEvents($storeId: ID) {
+  events(storeId: $storeId) {
+    id
+    title
+    description
+    coverImageUrl
+    content
+    isPublished
+    createdAt
+    updatedAt
+  }
+}
+
+query GetEvent($id: ID!) {
+  event(id: $id) {
+    id
+    title
+    description
+    coverImageUrl
+    content
+    isPublished
+    createdAt
+    updatedAt
+  }
+}

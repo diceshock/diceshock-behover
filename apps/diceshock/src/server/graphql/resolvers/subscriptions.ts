@@ -1,3 +1,5 @@
+import dbFactory from "@lib/db";
+import { fetchTableStateForDOByCode } from "@/server/utils/seatTimer";
 import type { GQLContext } from "../context";
 import { forbidden } from "../errors";
 import { requireAuth, requireStaff } from "../guards";
@@ -15,10 +17,8 @@ interface SubscriptionResolver<TArgs extends Record<string, unknown>> {
     source: unknown,
     args: TArgs,
     ctx: GQLContext,
-  ) =>
-    | Promise<AsyncIterableIterator<PubSubEvent>>
-    | AsyncIterableIterator<PubSubEvent>;
-  resolve: (event: PubSubEvent) => Record<string, unknown>;
+  ) => Promise<AsyncIterableIterator<unknown>> | AsyncIterableIterator<unknown>;
+  resolve: (event: unknown) => Record<string, unknown>;
 }
 
 function ownUserOnly(ctx: GQLContext, userId: string): void {
@@ -31,7 +31,8 @@ function timestampToIso(timestamp: number | undefined): string {
   return new Date(timestamp ?? Date.now()).toISOString();
 }
 
-function payloadWithTimestamp(event: PubSubEvent): Record<string, unknown> {
+function payloadWithTimestamp(e: unknown): Record<string, unknown> {
+  const event = e as PubSubEvent;
   return {
     ...(event.payload ?? {}),
     updatedAt: timestampToIso(event.timestamp),
@@ -72,6 +73,23 @@ export async function* createPubSubIterator(
   }
 }
 
+async function* resolveSeatEvents(
+  rawIter: AsyncGenerator<PubSubEvent>,
+  ctx: GQLContext,
+  tableCode: string,
+): AsyncGenerator<Record<string, unknown>> {
+  const tdb = dbFactory(ctx.env.DB);
+  for await (const event of rawIter) {
+    const state = await fetchTableStateForDOByCode(tdb, tableCode);
+    yield {
+      tableCode,
+      table: state?.table ?? null,
+      occupancies: state?.occupancies ?? [],
+      updatedAt: timestampToIso(event.timestamp),
+    };
+  }
+}
+
 function pubsub(ctx: GQLContext): PubSubNamespace {
   return (ctx.env as GQLContext["env"] & { PUBSUB: PubSubNamespace }).PUBSUB;
 }
@@ -94,10 +112,11 @@ export const subscriptionResolvers: {
       subscribe(_source, args, ctx) {
         requireAuth(ctx);
         const tableCode = String(args.tableCode ?? "");
-        return createPubSubIterator(pubsub(ctx), `seat:${tableCode}`);
+        const rawIter = createPubSubIterator(pubsub(ctx), `seat:${tableCode}`);
+        return resolveSeatEvents(rawIter, ctx, tableCode);
       },
       resolve(event) {
-        return payloadWithTimestamp(event);
+        return event as Record<string, unknown>;
       },
     },
 
@@ -120,9 +139,10 @@ export const subscriptionResolvers: {
         return createPubSubIterator(pubsub(ctx), `user:${userId}`);
       },
       resolve(event) {
+        const e = event as PubSubEvent;
         return {
-          ...(event.payload ?? {}),
-          createdAt: timestampToIso(event.timestamp),
+          ...(e.payload ?? {}),
+          createdAt: timestampToIso(e.timestamp),
         };
       },
     },
@@ -134,9 +154,10 @@ export const subscriptionResolvers: {
         return createPubSubIterator(pubsub(ctx), `leaderboard:${category}`);
       },
       resolve(event) {
+        const e = event as PubSubEvent;
         return {
-          ...(event.payload ?? event),
-          updatedAt: timestampToIso(event.timestamp),
+          ...((e.payload ?? {}) as Record<string, unknown>),
+          updatedAt: timestampToIso(e.timestamp),
         };
       },
     },
@@ -148,10 +169,12 @@ export const subscriptionResolvers: {
         return createPubSubIterator(pubsub(ctx), `order:${orderId}`);
       },
       resolve(event) {
+        const e = event as PubSubEvent;
+        const p = (e.payload ?? {}) as Record<string, unknown>;
         return {
-          ...(event.payload ?? {}),
-          currentStatus: event.payload?.currentStatus ?? event.payload?.status,
-          updatedAt: timestampToIso(event.timestamp),
+          ...p,
+          currentStatus: p.currentStatus ?? p.status,
+          updatedAt: timestampToIso(e.timestamp),
         };
       },
     },

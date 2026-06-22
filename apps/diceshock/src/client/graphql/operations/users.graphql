@@ -1,0 +1,123 @@
+query GetMyBusinessCard {
+  myBusinessCard {
+    userId
+    nickname
+    uid
+    sharePhone
+    phone
+    wechat
+    qq
+    customContent
+    isWatching
+    registrationId
+    createdAt
+    updatedAt
+  }
+}
+
+mutation UpsertBusinessCard($input: UpsertBusinessCardInput!) {
+  upsertBusinessCard(input: $input) {
+    userId
+    nickname
+    uid
+    sharePhone
+    phone
+    wechat
+    qq
+    customContent
+    isWatching
+    registrationId
+    createdAt
+    updatedAt
+  }
+}
+
+query GetMyMembershipPlans {
+  myMembershipPlans {
+    id
+    userId
+    planType
+    amount
+    note
+    startDate
+    endDate
+    createdAt
+    updatedAt
+  }
+}
+
+mutation UpdateMyUserInfo($input: UpdateMyUserInfoInput!) {
+  updateMyUserInfo(input: $input) {
+    success
+    message
+    user {
+      id
+      uid
+      name
+      email
+      image
+      role
+      nickname
+      phone
+      preferredLocale
+      preferredStoreId
+      meta
+      createdAt
+      membershipPlans {
+        id
+        userId
+        planType
+        amount
+        note
+        startDate
+        endDate
+        createdAt
+        updatedAt
+      }
+    }
+  }
+}
+
+mutation UpdateMyPreferences($input: UpdatePreferencesInput!) {
+  updateMyPreferences(input: $input) {
+    id
+    uid
+    name
+    email
+    image
+    role
+    nickname
+    phone
+    preferredLocale
+    preferredStoreId
+    meta
+    createdAt
+    membershipPlans {
+      id
+      userId
+      planType
+      amount
+      note
+      startDate
+      endDate
+      createdAt
+      updatedAt
+    }
+  }
+}
+
+mutation RequestSmsCode($input: RequestSmsCodeInput!) {
+  requestSmsCode(input: $input) {
+    success
+    message
+    expiresInMs
+  }
+}
+
+query GetTotpSecret {
+  getTotpSecret {
+    success
+    message
+    secret
+  }
+}

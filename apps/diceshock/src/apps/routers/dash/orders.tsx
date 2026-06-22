@@ -24,6 +24,19 @@ import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import {
+  OrderGroupBy,
+  OrderSortBy,
+  OrderStatusFilter,
+  SortOrder,
+  useBatchPauseOrdersMutation,
+  useBatchResumeOrdersMutation,
+  useOrderStatusChangedSubscription,
+  useOrdersQuery,
+  usePauseOrderMutation,
+  usePublishedPricingQuery,
+  useResumeOrderMutation,
+} from "@/client/graphql/__generated__";
 import { useAdminStoreFilter } from "@/client/hooks/useAdminStoreFilter";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
 import { useTranslation } from "@/client/hooks/useTranslation";
@@ -34,16 +47,15 @@ import {
   formatPrice,
   type SnapshotData,
 } from "@/shared/utils/pricing";
-import trpcClientPublic, { trpcClientDash } from "@/shared/utils/trpc";
 
 type StatusFilter = "all" | "active" | "paused" | "ended";
 type SortBy = "start_at" | "end_at";
-type SortOrder = "asc" | "desc";
+type SortOrderVal = "asc" | "desc";
 type GroupBy = "table" | "user" | "date" | "none";
 
-type OrdersList = Awaited<
-  ReturnType<typeof trpcClientDash.ordersManagement.list.query>
->;
+type OrdersList = NonNullable<
+  ReturnType<typeof useOrdersQuery>["data"]
+>["orders"];
 type OrderItem = OrdersList["items"][number];
 
 export const Route = createFileRoute("/dash/orders")({
@@ -59,7 +71,7 @@ export const Route = createFileRoute("/dash/orders")({
       ? (search.sortBy as SortBy)
       : "start_at",
     sortOrder: ["asc", "desc"].includes(search.sortOrder as string)
-      ? (search.sortOrder as SortOrder)
+      ? (search.sortOrder as SortOrderVal)
       : "desc",
     groupBy: ["table", "user", "date", "none"].includes(
       search.groupBy as string,
@@ -80,17 +92,63 @@ function formatTime(val: number | null | undefined): string {
   }
 }
 
+function parsePricingData(
+  publishedPricing:
+    | {
+        data?: {
+          config?: { daytimeStart?: string; daytimeEnd?: string } | null;
+          plans?: string | null;
+        } | null;
+      }
+    | null
+    | undefined,
+): SnapshotData | null {
+  if (!publishedPricing?.data?.plans) return null;
+  try {
+    const plans = JSON.parse(publishedPricing.data.plans);
+    const config = publishedPricing.data.config;
+    return {
+      config: {
+        daytime_start: config?.daytimeStart ?? "10:00",
+        daytime_end: config?.daytimeEnd ?? "18:00",
+      },
+      plans,
+    };
+  } catch {
+    return null;
+  }
+}
+
+const STATUS_TO_GQL: Record<StatusFilter, OrderStatusFilter> = {
+  all: OrderStatusFilter.All,
+  active: OrderStatusFilter.Active,
+  paused: OrderStatusFilter.Paused,
+  ended: OrderStatusFilter.Settled,
+};
+
+const SORT_BY_TO_GQL: Record<SortBy, OrderSortBy> = {
+  start_at: OrderSortBy.StartAt,
+  end_at: OrderSortBy.EndAt,
+};
+
+const SORT_ORDER_TO_GQL: Record<SortOrderVal, SortOrder> = {
+  asc: SortOrder.Asc,
+  desc: SortOrder.Desc,
+};
+
+const GROUP_BY_TO_GQL: Record<GroupBy, OrderGroupBy> = {
+  table: OrderGroupBy.Table,
+  user: OrderGroupBy.User,
+  date: OrderGroupBy.Date,
+  none: OrderGroupBy.None,
+};
+
 function RouteComponent() {
   const msg = useMsg();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { t } = useTranslation();
   const { storeFilter } = useAdminStoreFilter();
-  const [data, setData] = useState<OrdersList | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [pricingSnapshot, setPricingSnapshot] = useState<SnapshotData | null>(
-    null,
-  );
   const [, setTick] = useState(0);
 
   const { q, status, sortBy, sortOrder, groupBy, page } = Route.useSearch();
@@ -100,7 +158,7 @@ function RouteComponent() {
         q: string;
         status: StatusFilter;
         sortBy: SortBy;
-        sortOrder: SortOrder;
+        sortOrder: SortOrderVal;
         groupBy: GroupBy;
         page: number;
       }>,
@@ -120,45 +178,45 @@ function RouteComponent() {
     searchRef.current = q;
   }, [q]);
 
-  const fetchOrders = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [result, published] = await Promise.all([
-        trpcClientDash.ordersManagement.list.query({
-          search: searchRef.current,
-          status,
-          sortBy,
-          sortOrder,
-          groupBy,
-          page,
-          pageSize,
-        }),
-        trpcClientPublic.pricing.getPublished.query(),
-      ]);
-      setData(result);
-      setSelectedIds(new Set());
-      setPricingSnapshot(published?.data ?? null);
-    } catch (err) {
-      msg.error(
-        err instanceof Error ? err.message : t("dashOrders.loadFailed"),
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [status, sortBy, sortOrder, groupBy, page, storeFilter, msg]);
+  const { data: qlData, loading } = useOrdersQuery({
+    variables: {
+      input: {
+        search: searchRef.current || undefined,
+        status: STATUS_TO_GQL[status],
+        sortBy: SORT_BY_TO_GQL[sortBy],
+        sortOrder: SORT_ORDER_TO_GQL[sortOrder],
+        groupBy: GROUP_BY_TO_GQL[groupBy],
+        pagination: {
+          offset: (page - 1) * pageSize,
+          limit: pageSize,
+        },
+      },
+    },
+    fetchPolicy: "cache-and-network",
+  });
 
-  useEffect(() => {
-    void fetchOrders();
-  }, [fetchOrders]);
+  const { data: pricingData } = usePublishedPricingQuery();
+
+  const data = qlData?.orders ?? null;
+  const pricingSnapshot = useMemo(
+    () => parsePricingData(pricingData?.publishedPricing),
+    [pricingData],
+  );
 
   useEffect(() => {
     const timer = setInterval(() => setTick((t) => t + 1), 30000);
     return () => clearInterval(timer);
   }, []);
 
+  const [pauseOrder, { loading: pauseLoading }] = usePauseOrderMutation();
+  const [resumeOrder, { loading: resumeLoading }] = useResumeOrderMutation();
+  const [batchPause, { loading: batchPauseLoading }] =
+    useBatchPauseOrdersMutation();
+  const [batchResume, { loading: batchResumeLoading }] =
+    useBatchResumeOrdersMutation();
+
   const handleSearch = () => {
     setSearch({ page: 1 });
-    void fetchOrders();
   };
 
   const handleCopy = (text: string) => {
@@ -172,11 +230,11 @@ function RouteComponent() {
 
   const [actionPending, setActionPending] = useState<string | null>(null);
 
-  const handleEndOrder = async (id: string, status: string) => {
+  const handleEndOrder = async (id: string, orderStatus: string) => {
     setActionPending(id);
     try {
-      if (status === "active") {
-        await trpcClientDash.ordersManagement.pauseOrder.mutate({ id });
+      if (orderStatus === "ACTIVE") {
+        await pauseOrder({ variables: { id } });
       }
     } catch {
     } finally {
@@ -188,9 +246,8 @@ function RouteComponent() {
   const handlePauseOrder = async (id: string) => {
     setActionPending(id);
     try {
-      await trpcClientDash.ordersManagement.pauseOrder.mutate({ id });
+      await pauseOrder({ variables: { id } });
       msg.success(t("dashOrders.paused"));
-      await fetchOrders();
     } catch (err) {
       msg.error(
         err instanceof Error ? err.message : t("dashOrders.pauseFailed"),
@@ -203,9 +260,8 @@ function RouteComponent() {
   const handleResumeOrder = async (id: string) => {
     setActionPending(id);
     try {
-      await trpcClientDash.ordersManagement.resumeOrder.mutate({ id });
+      await resumeOrder({ variables: { id } });
       msg.success(t("dashOrders.resumed"));
-      await fetchOrders();
     } catch (err) {
       msg.error(
         err instanceof Error ? err.message : t("dashOrders.resumeFailed"),
@@ -220,7 +276,7 @@ function RouteComponent() {
   };
 
   const items = data?.items ?? [];
-  const total = data?.total ?? 0;
+  const total = data?.pageInfo?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const toggleSelect = (id: string) => {
@@ -243,31 +299,32 @@ function RouteComponent() {
     }
   };
 
-  const selectAllByStatus = (status: "active" | "paused") => {
-    const matching = items.filter((o) => o.status === status).map((o) => o.id);
+  const selectAllByStatus = (targetStatus: "ACTIVE" | "PAUSED") => {
+    const matching = items
+      .filter((o) => o.status === targetStatus)
+      .map((o) => o.id);
     setSelectedIds(new Set(matching));
   };
 
   const selectedItems = items.filter((o) => selectedIds.has(o.id));
-  const hasActiveSelected = selectedItems.some((o) => o.status === "active");
-  const hasPausedSelected = selectedItems.some((o) => o.status === "paused");
-  const hasNonEndedSelected = selectedItems.some((o) => o.status !== "ended");
+  const hasActiveSelected = selectedItems.some((o) => o.status === "ACTIVE");
+  const hasPausedSelected = selectedItems.some((o) => o.status === "PAUSED");
+  const hasNonSettledSelected = selectedItems.some(
+    (o) => o.status !== "SETTLED",
+  );
 
   const handleBatchPause = async () => {
     const activeIds = selectedItems
-      .filter((o) => o.status === "active")
+      .filter((o) => o.status === "ACTIVE")
       .map((o) => o.id);
     if (activeIds.length === 0) return;
     setActionPending("batch");
     try {
-      await trpcClientDash.ordersManagement.batchPause.mutate({
-        ids: activeIds,
-      });
+      await batchPause({ variables: { ids: activeIds } });
       msg.success(
         formatMessage(t("dashOrders.batchPaused"), { count: activeIds.length }),
       );
       setSelectedIds(new Set());
-      await fetchOrders();
     } catch (err) {
       msg.error(
         err instanceof Error ? err.message : t("dashOrders.batchPauseFailed"),
@@ -279,21 +336,18 @@ function RouteComponent() {
 
   const handleBatchResume = async () => {
     const pausedIds = selectedItems
-      .filter((o) => o.status === "paused")
+      .filter((o) => o.status === "PAUSED")
       .map((o) => o.id);
     if (pausedIds.length === 0) return;
     setActionPending("batch");
     try {
-      await trpcClientDash.ordersManagement.batchResume.mutate({
-        ids: pausedIds,
-      });
+      await batchResume({ variables: { ids: pausedIds } });
       msg.success(
         formatMessage(t("dashOrders.batchResumed"), {
           count: pausedIds.length,
         }),
       );
       setSelectedIds(new Set());
-      await fetchOrders();
     } catch (err) {
       msg.error(
         err instanceof Error ? err.message : t("dashOrders.batchResumeFailed"),
@@ -304,13 +358,13 @@ function RouteComponent() {
   };
 
   const handleBatchSettle = () => {
-    const nonEndedIds = selectedItems
-      .filter((o) => o.status !== "ended")
+    const nonSettledIds = selectedItems
+      .filter((o) => o.status !== "SETTLED")
       .map((o) => o.id);
-    if (nonEndedIds.length === 0) return;
+    if (nonSettledIds.length === 0) return;
     void navigate({
       to: "/dash/orders/settle",
-      search: { ids: nonEndedIds },
+      search: { ids: nonSettledIds },
     });
   };
 
@@ -325,11 +379,11 @@ function RouteComponent() {
           key = item.table?.name ?? t("dashOrders.unknownTable");
           break;
         case "user":
-          key = item.nickname;
+          key = item.nickname ?? t("dashOrders.unknownUser");
           break;
         case "date":
-          key = item.start_at
-            ? dayjs.tz(item.start_at, "Asia/Shanghai").format("YYYY/MM/DD")
+          key = item.startAt
+            ? dayjs(item.startAt).format("YYYY/MM/DD")
             : t("dashOrders.unknownDate");
           break;
         default:
@@ -339,7 +393,7 @@ function RouteComponent() {
       groups.get(key)!.push(item);
     }
     return Array.from(groups.entries()).map(([key, items]) => ({ key, items }));
-  }, [items, groupBy]);
+  }, [items, groupBy, t]);
 
   const groupLabel = (key: string): string => {
     switch (groupBy) {
@@ -353,6 +407,8 @@ function RouteComponent() {
         return key;
     }
   };
+
+  useOrderStatusChangedSubscription();
 
   return (
     <main className="size-full flex flex-col overflow-hidden relative">
@@ -398,14 +454,14 @@ function RouteComponent() {
             <button
               type="button"
               className="btn btn-xs btn-ghost"
-              onClick={() => selectAllByStatus("active")}
+              onClick={() => selectAllByStatus("ACTIVE")}
             >
               {t("dashOrders.selectAllActive")}
             </button>
             <button
               type="button"
               className="btn btn-xs btn-ghost"
-              onClick={() => selectAllByStatus("paused")}
+              onClick={() => selectAllByStatus("PAUSED")}
             >
               {t("dashOrders.selectAllPaused")}
             </button>
@@ -546,11 +602,11 @@ function RouteComponent() {
                         </div>
                       </td>
                       <td className="whitespace-nowrap">
-                        {order.status === "active" ? (
+                        {order.status === "ACTIVE" ? (
                           <span className="badge badge-success badge-sm">
                             {t("dashOrders.active")}
                           </span>
-                        ) : order.status === "paused" ? (
+                        ) : order.status === "PAUSED" ? (
                           <span className="badge badge-neutral badge-sm">
                             {t("dashOrders.statusPaused")}
                           </span>
@@ -561,16 +617,20 @@ function RouteComponent() {
                         )}
                       </td>
                       <td className="whitespace-nowrap">
-                        {formatTime(order.start_at)}
+                        {order.startAt
+                          ? formatTime(new Date(order.startAt).getTime())
+                          : "—"}
                       </td>
                       <td className="whitespace-nowrap">
-                        {formatTime(order.end_at)}
+                        {order.endAt
+                          ? formatTime(new Date(order.endAt).getTime())
+                          : "—"}
                       </td>
                       <td className="whitespace-nowrap">
                         {order.table && order.table.code !== "DELETED" ? (
                           <Link
                             to="/dash/tables/$id"
-                            params={{ id: order.table_id }}
+                            params={{ id: order.tableId }}
                             className="link link-hover"
                           >
                             {order.table.name}
@@ -582,19 +642,19 @@ function RouteComponent() {
                         )}
                       </td>
                       <td className="max-w-[120px]">
-                        {order.user_id ? (
+                        {order.userId ? (
                           <Link
                             to="/dash/users/$id"
-                            params={{ id: order.user_id }}
+                            params={{ id: order.userId }}
                             className="link link-hover block truncate"
-                            title={order.nickname}
+                            title={order.nickname ?? undefined}
                           >
                             {order.nickname}
                           </Link>
                         ) : (
                           <span
                             className="block truncate text-base-content/70"
-                            title={order.nickname}
+                            title={order.nickname ?? undefined}
                           >
                             {order.nickname}
                             <span className="badge badge-outline badge-xs ml-1">
@@ -604,12 +664,14 @@ function RouteComponent() {
                         )}
                       </td>
                       <td className="font-mono whitespace-nowrap">
-                        {order.final_price != null
-                          ? formatPrice(order.final_price)
-                          : order.status !== "ended" && pricingSnapshot
+                        {order.finalPrice != null
+                          ? formatPrice(order.finalPrice)
+                          : order.status !== "SETTLED" && pricingSnapshot
                             ? (() => {
                                 const p = calculatePrice(
-                                  order.start_at,
+                                  order.startAt
+                                    ? new Date(order.startAt).getTime()
+                                    : Date.now(),
                                   Date.now(),
                                   order.table?.scope ?? "boardgame",
                                   pricingSnapshot,
@@ -641,7 +703,7 @@ function RouteComponent() {
                               tabIndex={0}
                               className="dropdown-content menu bg-base-200 rounded-box z-50 w-32 p-2 shadow-lg"
                             >
-                              {order.status === "active" && (
+                              {order.status === "ACTIVE" && (
                                 <>
                                   <li>
                                     <button
@@ -673,7 +735,7 @@ function RouteComponent() {
                                   </li>
                                 </>
                               )}
-                              {order.status === "paused" && (
+                              {order.status === "PAUSED" && (
                                 <>
                                   <li>
                                     <button
@@ -705,7 +767,7 @@ function RouteComponent() {
                                   </li>
                                 </>
                               )}
-                              {order.status === "ended" && (
+                              {order.status === "SETTLED" && (
                                 <li>
                                   <Link
                                     to="/dash/orders/$id/settle"
@@ -720,7 +782,7 @@ function RouteComponent() {
                           </div>
                         ) : (
                           <div className="flex items-center gap-1">
-                            {order.status === "active" && (
+                            {order.status === "ACTIVE" && (
                               <>
                                 <button
                                   type="button"
@@ -754,7 +816,7 @@ function RouteComponent() {
                                 </button>
                               </>
                             )}
-                            {order.status === "paused" && (
+                            {order.status === "PAUSED" && (
                               <>
                                 <button
                                   type="button"
@@ -788,7 +850,7 @@ function RouteComponent() {
                                 </button>
                               </>
                             )}
-                            {order.status === "ended" && (
+                            {order.status === "SETTLED" && (
                               <Link
                                 to="/dash/orders/$id/settle"
                                 params={{ id: order.id }}
@@ -845,7 +907,7 @@ function RouteComponent() {
                   {
                     key: "pause",
                     label: formatMessage(t("dashOrders.batchPause"), {
-                      count: selectedItems.filter((o) => o.status === "active")
+                      count: selectedItems.filter((o) => o.status === "ACTIVE")
                         .length,
                     }),
                     icon: <PauseIcon className="size-4" />,
@@ -860,7 +922,7 @@ function RouteComponent() {
                   {
                     key: "resume",
                     label: formatMessage(t("dashOrders.batchResume"), {
-                      count: selectedItems.filter((o) => o.status === "paused")
+                      count: selectedItems.filter((o) => o.status === "PAUSED")
                         .length,
                     }),
                     icon: <PlayIcon className="size-4" />,
@@ -870,12 +932,12 @@ function RouteComponent() {
                   } satisfies BatchAction,
                 ]
               : []),
-            ...(hasNonEndedSelected
+            ...(hasNonSettledSelected
               ? [
                   {
                     key: "settle",
                     label: formatMessage(t("dashOrders.batchSettle"), {
-                      count: selectedItems.filter((o) => o.status !== "ended")
+                      count: selectedItems.filter((o) => o.status !== "SETTLED")
                         .length,
                     }),
                     icon: <StopIcon className="size-4" />,

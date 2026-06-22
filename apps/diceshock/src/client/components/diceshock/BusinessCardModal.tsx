@@ -2,8 +2,12 @@ import { XIcon } from "@phosphor-icons/react/dist/ssr";
 import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import Modal from "@/client/components/modal";
+import {
+  type GetMyBusinessCardQuery,
+  useGetMyBusinessCardQuery,
+  useUpsertBusinessCardMutation,
+} from "@/client/graphql/__generated__";
 import { useMessages } from "@/client/hooks/useMessages";
-import trpcClientPublic from "@/shared/utils/trpc";
 
 type BusinessCardModalProps = {
   isOpen: boolean;
@@ -11,6 +15,8 @@ type BusinessCardModalProps = {
   onSuccess?: () => void;
   required?: boolean; // 是否必须填写（报名时）
 };
+
+type BusinessCardData = NonNullable<GetMyBusinessCardQuery["myBusinessCard"]>;
 
 export default function BusinessCardModal({
   isOpen,
@@ -20,77 +26,69 @@ export default function BusinessCardModal({
 }: BusinessCardModalProps) {
   const messages = useMessages();
   const [loading, setLoading] = useState(false);
-  const [isLoadingCard, setIsLoadingCard] = useState(false);
-  const [businessCard, setBusinessCard] = useState<{
-    share_phone: boolean | null;
-    wechat: string | null;
-    qq: string | null;
-    custom_content: string | null;
-  } | null>(null);
+
+  const { data: businessCardData, loading: isLoadingCard } =
+    useGetMyBusinessCardQuery({
+      skip: !isOpen,
+      fetchPolicy: "network-only",
+    });
+
+  const businessCard = businessCardData?.myBusinessCard ?? null;
+
   const [formData, setFormData] = useState({
-    share_phone: false,
+    sharePhone: false,
     wechat: "",
     qq: "",
-    custom_content: "",
+    customContent: "",
   });
 
-  // 获取当前名片
+  // 获取当前名片 — sync formData when businessCard loads
   useEffect(() => {
-    if (!isOpen) return;
+    if (businessCard) {
+      setFormData({
+        sharePhone: businessCard.sharePhone ?? false,
+        wechat: businessCard.wechat ?? "",
+        qq: businessCard.qq ?? "",
+        customContent: businessCard.customContent ?? "",
+      });
+    }
+  }, [businessCard]);
 
-    const fetchBusinessCard = async () => {
-      try {
-        setIsLoadingCard(true);
-        const data =
-          await trpcClientPublic.businessCard.getMyBusinessCard.query({});
-        setBusinessCard(data);
-        if (data) {
-          setFormData({
-            share_phone: data.share_phone ?? false,
-            wechat: data.wechat ?? "",
-            qq: data.qq ?? "",
-            custom_content: data.custom_content ?? "",
-          });
-        }
-      } catch (error) {
-        console.error("获取名片失败", error);
-      } finally {
-        setIsLoadingCard(false);
+  const [upsertBusinessCard] = useUpsertBusinessCardMutation({
+    refetchQueries: ["GetMyBusinessCard"],
+    onCompleted: (data) => {
+      messages.success("名片保存成功");
+      onSuccess?.();
+      if (!required) {
+        onClose();
       }
-    };
-
-    fetchBusinessCard();
-  }, [isOpen]);
+    },
+    onError: (error) => {
+      console.error("保存名片失败", error);
+      messages.error(error.message || "保存名片失败");
+    },
+  });
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
-
+      setLoading(true);
       try {
-        setLoading(true);
-        await trpcClientPublic.businessCard.upsertBusinessCard.mutate({
-          share_phone: formData.share_phone,
-          wechat: formData.wechat.trim() || undefined,
-          qq: formData.qq.trim() || undefined,
-          custom_content: formData.custom_content.trim() || undefined,
+        await upsertBusinessCard({
+          variables: {
+            input: {
+              sharePhone: formData.sharePhone,
+              wechat: formData.wechat.trim() || null,
+              qq: formData.qq.trim() || null,
+              customContent: formData.customContent.trim() || null,
+            },
+          },
         });
-        messages.success("名片保存成功");
-        // 重新获取名片数据
-        const data =
-          await trpcClientPublic.businessCard.getMyBusinessCard.query({});
-        setBusinessCard(data);
-        onSuccess?.();
-        if (!required) {
-          onClose();
-        }
-      } catch (error) {
-        console.error("保存名片失败", error);
-        messages.error(error instanceof Error ? error.message : "保存名片失败");
       } finally {
         setLoading(false);
       }
     },
-    [formData, messages, onSuccess, onClose, required],
+    [formData, upsertBusinessCard],
   );
 
   const handleClose = useCallback(() => {
@@ -161,11 +159,11 @@ export default function BusinessCardModal({
             <input
               type="checkbox"
               className="checkbox checkbox-primary"
-              checked={formData.share_phone}
+              checked={formData.sharePhone}
               onChange={(e) =>
                 setFormData((prev) => ({
                   ...prev,
-                  share_phone: e.target.checked,
+                  sharePhone: e.target.checked,
                 }))
               }
               disabled={loading}
@@ -215,11 +213,11 @@ export default function BusinessCardModal({
             <textarea
               placeholder="请输入自定义内容"
               className="textarea textarea-sm min-h-24"
-              value={formData.custom_content}
+              value={formData.customContent}
               onChange={(e) =>
                 setFormData((prev) => ({
                   ...prev,
-                  custom_content: e.target.value,
+                  customContent: e.target.value,
                 }))
               }
               disabled={loading}

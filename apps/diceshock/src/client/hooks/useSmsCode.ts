@@ -2,7 +2,8 @@ import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { z } from "zod/v4";
 import { themeA } from "@/client/components/ThemeSwap";
-import trpcClientPublic from "@/shared/utils/trpc";
+import { RequestSmsCodeDocument } from "@/client/graphql/__generated__";
+import { apolloClient } from "@/client/graphql/client";
 
 /**
  * 阿里云验证码 2.0 (CAPTCHA 2.0)
@@ -130,12 +131,17 @@ export default function useSmsCode({
             }
 
             try {
-              const result = await trpcClientPublic.auth.smsCode.mutate({
-                botcheck: captchaVerifyParam,
-                phone: phoneRef.current,
+              const { data } = await apolloClient.mutate({
+                mutation: RequestSmsCodeDocument,
+                variables: {
+                  input: {
+                    botcheck: captchaVerifyParam,
+                    phone: phoneRef.current,
+                  },
+                },
               });
 
-              if (result.success) {
+              if (data?.requestSmsCode?.success) {
                 return { captchaResult: true, bizResult: true };
               }
 
@@ -230,15 +236,18 @@ export default function useSmsCode({
     // 非生产环境或验证码未启用时直接发送
     if (!import.meta.env.PROD || !enabled) {
       try {
-        const result = await trpcClientPublic.auth.smsCode.mutate({
-          botcheck: null,
-          phone,
+        const { data } = await apolloClient.mutate({
+          mutation: RequestSmsCodeDocument,
+          variables: {
+            input: { botcheck: null, phone },
+          },
         });
 
-        if (result.success) return setCountdown(20);
+        if (data?.requestSmsCode?.success) return setCountdown(20);
 
-        if (!result.success && "message" in result)
-          return setError(result.message);
+        if (data?.requestSmsCode?.message) {
+          return setError(data.requestSmsCode.message);
+        }
 
         setError("发送失败，请稍后重试");
       } catch {
@@ -257,15 +266,18 @@ export default function useSmsCode({
       // 重置标志位，防止 SDK 初始化完成后的自动静默验证回调再次发送短信
       userRequestedRef.current = false;
       try {
-        const result = await trpcClientPublic.auth.smsCode.mutate({
-          botcheck: null,
-          phone,
+        const { data } = await apolloClient.mutate({
+          mutation: RequestSmsCodeDocument,
+          variables: {
+            input: { botcheck: null, phone },
+          },
         });
 
-        if (result.success) return setCountdown(20);
+        if (data?.requestSmsCode?.success) return setCountdown(20);
 
-        if (!result.success && "message" in result)
-          return setError(result.message);
+        if (data?.requestSmsCode?.message) {
+          return setError(data.requestSmsCode.message);
+        }
 
         setError("发送失败，请稍后重试");
       } catch {

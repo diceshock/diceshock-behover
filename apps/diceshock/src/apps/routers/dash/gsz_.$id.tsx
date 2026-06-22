@@ -1,19 +1,23 @@
+import { useApolloClient } from "@apollo/client";
 import { ArrowsClockwiseIcon } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import type { MahjongMatchQuery } from "@/client/graphql/__generated__";
+import {
+  MahjongMatchDocument,
+  SyncMahjongMatchToGszDocument,
+  UpdateMahjongScoreDocument,
+} from "@/client/graphql/__generated__";
 import type { Seat } from "@/shared/mahjong/constants";
 import { SEAT_LABELS } from "@/shared/mahjong/constants";
 import { formatPP, getMatchPPIfValid } from "@/shared/mahjong/pp";
 import type { MatchFormat, MatchMode, MatchType } from "@/shared/mahjong/types";
 import dayjs from "@/shared/utils/dayjs-config";
-import { trpcClientDash } from "@/shared/utils/trpc";
 
-type MatchDetail = Awaited<
-  ReturnType<typeof trpcClientDash.gszManagement.getById.query>
->;
+type MatchDetail = NonNullable<MahjongMatchQuery["mahjongMatch"]>;
 type PlayerJSON = MatchDetail["players"][number];
 
 const MODE_LABELS: Record<string, string> = {
@@ -55,6 +59,7 @@ function formatTime(val: number | null | undefined): string {
 function MatchDetailPage() {
   const { id } = Route.useParams();
   const msg = useMsg();
+  const client = useApolloClient();
 
   const [match, setMatch] = useState<MatchDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,34 +68,39 @@ function MatchDetailPage() {
   const fetchMatch = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await trpcClientDash.gszManagement.getById.query({ id });
-      setMatch(data);
+      const { data } = await client.query({
+        query: MahjongMatchDocument,
+        variables: { id },
+      });
+      setMatch(data.mahjongMatch as MatchDetail);
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "加载对局失败");
     } finally {
       setLoading(false);
     }
-  }, [id, msg]);
+  }, [id, client, msg]);
 
   const handleSync = useCallback(async () => {
     if (!match) return;
     setSyncing(true);
     try {
-      const result = await trpcClientDash.gszManagement.syncToGsz.mutate({
-        matchId: match.id,
+      const res = await client.mutate({
+        mutation: SyncMahjongMatchToGszDocument,
+        variables: { matchId: match.id },
       });
-      if (result.success) {
+      const result = res.data?.syncMahjongMatchToGsz;
+      if (result?.success) {
         msg.success("同步成功");
         void fetchMatch();
       } else {
-        msg.error(result.error ?? "同步失败");
+        msg.error(result?.error ?? "同步失败");
       }
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "同步失败");
     } finally {
       setSyncing(false);
     }
-  }, [match, msg, fetchMatch]);
+  }, [match, client, msg, fetchMatch]);
 
   useEffect(() => {
     void fetchMatch();
@@ -117,7 +127,8 @@ function MatchDetailPage() {
     (a, b) => b.finalScore - a.finalScore,
   );
 
-  const durationMs = match.ended_at - match.started_at;
+  const durationMs =
+    new Date(match.endedAt).getTime() - new Date(match.startedAt).getTime();
   const durationMin = Math.floor(durationMs / 60000);
   const durationStr =
     durationMin >= 60
@@ -134,13 +145,14 @@ function MatchDetailPage() {
         <h1 className="text-2xl font-bold mb-2">立直麻将详情</h1>
 
         <div className="flex flex-wrap items-center gap-2 mb-6">
-          {match.match_type && (
+          {match.matchType && (
             <span className="badge badge-primary">
-              {MATCH_TYPE_LABELS[match.match_type] ?? match.match_type}
+              {MATCH_TYPE_LABELS[match.matchType.toLowerCase()] ??
+                match.matchType}
             </span>
           )}
           <span
-            className={`badge ${match.mode === "4p" ? "badge-primary" : "badge-secondary"}`}
+            className={`badge ${match.mode === "FOUR_PLAYER" ? "badge-primary" : "badge-secondary"}`}
           >
             {MODE_LABELS[match.mode] ?? match.mode}
           </span>
@@ -148,8 +160,8 @@ function MatchDetailPage() {
             {FORMAT_LABELS[match.format] ?? match.format}
           </span>
           <span className="badge badge-ghost">
-            {TERMINATION_LABELS[match.termination_reason] ??
-              match.termination_reason}
+            {TERMINATION_LABELS[match.terminationReason] ??
+              match.terminationReason}
           </span>
           {match.table && (
             <span className="badge badge-info badge-outline">
@@ -157,19 +169,19 @@ function MatchDetailPage() {
             </span>
           )}
           <span className="text-sm text-base-content/50">{durationStr}</span>
-          {match.gsz_record_id && (
+          {match.gszRecordId && (
             <span className="badge badge-success badge-outline badge-sm">
-              GSZ #{match.gsz_record_id}
+              GSZ #{match.gszRecordId}
             </span>
           )}
-          {match.match_type === "tournament" &&
-            (match.gsz_synced ? (
+          {match.matchType === "TOURNAMENT" &&
+            (match.gszSynced ? (
               <span className="badge badge-success badge-sm">已同步</span>
             ) : (
               <div className="flex items-center gap-1">
                 <span
                   className="badge badge-warning badge-sm cursor-help"
-                  title={match.gsz_error ?? "未同步到公式战"}
+                  title={match.gszError ?? "未同步到公式战"}
                 >
                   未同步
                 </span>
@@ -194,13 +206,13 @@ function MatchDetailPage() {
           <div className="bg-base-200 rounded-lg p-3">
             <div className="text-xs text-base-content/50">开始时间</div>
             <div className="text-sm font-medium">
-              {formatTime(match.started_at)}
+              {formatTime(new Date(match.startedAt).getTime())}
             </div>
           </div>
           <div className="bg-base-200 rounded-lg p-3">
             <div className="text-xs text-base-content/50">结束时间</div>
             <div className="text-sm font-medium">
-              {formatTime(match.ended_at)}
+              {formatTime(new Date(match.endedAt).getTime())}
             </div>
           </div>
           <div className="bg-base-200 rounded-lg p-3">
@@ -216,10 +228,10 @@ function MatchDetailPage() {
           players={sortedPlayers}
           mode={match.mode as MatchMode}
           format={match.format as MatchFormat}
-          matchType={(match.match_type ?? "store") as MatchType}
-          terminationReason={match.termination_reason}
-          isTournament={match.match_type === "tournament"}
-          hasGszRecord={!!match.gsz_record_id}
+          matchType={(match.matchType?.toLowerCase() ?? "store") as MatchType}
+          terminationReason={match.terminationReason}
+          isTournament={match.matchType === "TOURNAMENT"}
+          hasGszRecord={!!match.gszRecordId}
           onUpdated={fetchMatch}
         />
       </div>
@@ -249,6 +261,7 @@ function PlayersSection({
   onUpdated: () => void;
 }) {
   const msg = useMsg();
+  const client = useApolloClient();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editScores, setEditScores] = useState<Record<string, string>>({});
@@ -280,9 +293,9 @@ function PlayersSection({
         ...p,
         finalScore: Number.parseInt(editScores[p.userId] ?? "0", 10),
       }));
-      await trpcClientDash.gszManagement.updateScore.mutate({
-        matchId,
-        players: updatedPlayers,
+      await client.mutate({
+        mutation: UpdateMahjongScoreDocument,
+        variables: { matchId, players: updatedPlayers },
       });
       msg.success(
         isTournament && hasGszRecord
@@ -302,6 +315,7 @@ function PlayersSection({
     matchId,
     isTournament,
     hasGszRecord,
+    client,
     msg,
     onUpdated,
   ]);

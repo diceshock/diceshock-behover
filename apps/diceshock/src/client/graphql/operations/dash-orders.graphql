@@ -1,0 +1,315 @@
+query Orders($input: OrderListInput = {}) {
+  orders(input: $input) {
+    items {
+      id
+      tableId
+      userId
+      tempId
+      nickname
+      uid
+      phone
+      seats
+      status
+      startAt
+      endAt
+      finalPrice
+      pricingSnapshotId
+      table {
+        id
+        name
+        code
+        scope
+      }
+    }
+    pageInfo {
+      offset
+      limit
+      total
+      nextCursor
+      hasMore
+    }
+  }
+}
+
+query Order($id: ID!) {
+  order(id: $id) {
+    id
+    tableId
+    userId
+    tempId
+    nickname
+    uid
+    phone
+    seats
+    status
+    startAt
+    endAt
+    finalPrice
+    pricingSnapshotId
+    priceBreakdown
+    settlementSnapshot
+    table {
+      id
+      name
+      code
+      scope
+    }
+    user {
+      id
+      uid
+      name
+      nickname
+      role
+    }
+  }
+}
+
+query SettlementPreview($id: ID!) {
+  settlementPreview(id: $id) {
+    order {
+      id
+      tableId
+      userId
+      tempId
+      nickname
+      uid
+      status
+      startAt
+      endAt
+      finalPrice
+      table {
+        id
+        name
+        code
+        scope
+      }
+    }
+    totalMinutes
+    pausedMinutes
+    billableMinutes
+    finalPrice
+    priceBreakdown {
+      planName
+      planType
+      billingType
+      unitPrice
+      totalMinutes
+      billableHalfHours
+      rawPrice
+      capApplied
+      capType
+      finalPrice
+    }
+    membership {
+      hasTimePlan
+      timePlanActive
+      timePlanType
+      timePlanEndDate
+      storedValueBalance
+    }
+    pauseLogs {
+      pausedAt
+      resumedAt
+    }
+    pricingPlans {
+      name
+      planType
+      billingType
+      price
+      matched
+    }
+    recentOrders {
+      id
+      tableName
+      startAt
+      endAt
+      finalPrice
+      status
+    }
+  }
+}
+
+mutation BatchSettlementPreview($ids: [ID!]!) {
+  batchSettlementPreview(ids: $ids) {
+    order {
+      id
+      tableId
+      userId
+      tempId
+      nickname
+      uid
+      status
+      startAt
+      endAt
+      finalPrice
+      table {
+        id
+        name
+        code
+        scope
+      }
+    }
+    totalMinutes
+    pausedMinutes
+    billableMinutes
+    finalPrice
+    priceBreakdown {
+      planName
+      planType
+      billingType
+      unitPrice
+      totalMinutes
+      billableHalfHours
+      rawPrice
+      capApplied
+      capType
+      finalPrice
+    }
+    membership {
+      hasTimePlan
+      timePlanActive
+      timePlanType
+      timePlanEndDate
+      storedValueBalance
+    }
+    pauseLogs {
+      pausedAt
+      resumedAt
+    }
+    pricingPlans {
+      name
+      planType
+      billingType
+      price
+      matched
+    }
+    recentOrders {
+      id
+      tableName
+      startAt
+      endAt
+      finalPrice
+      status
+    }
+  }
+}
+
+mutation PauseOrder($id: ID!) {
+  pauseOrder(id: $id) {
+    id
+    status
+  }
+}
+
+mutation ResumeOrder($id: ID!) {
+  resumeOrder(id: $id) {
+    id
+    status
+  }
+}
+
+mutation EndOrder($id: ID!) {
+  endOrder(id: $id) {
+    id
+    status
+    endAt
+  }
+}
+
+mutation SettleOrder($input: SettleOrderInput!) {
+  settleOrder(input: $input) {
+    order {
+      id
+      status
+      finalPrice
+    }
+    price
+    snapshot
+    storedValueDeduction {
+      deducted
+      amount
+      note
+      balanceBefore
+      balanceAfter
+    }
+  }
+}
+
+mutation BatchSettleOrders($input: BatchSettleInput!) {
+  batchSettleOrders(input: $input) {
+    batchId
+    results {
+      id
+      success
+      price
+      restored
+      error
+    }
+  }
+}
+
+mutation CancelBatchSettlement($ids: [ID!]!) {
+  cancelBatchSettlement(ids: $ids) {
+    id
+    success
+    restored
+    error
+  }
+}
+
+mutation BatchPauseOrders($ids: [ID!]!) {
+  batchPauseOrders(ids: $ids) {
+    id
+    success
+    error
+  }
+}
+
+mutation BatchResumeOrders($ids: [ID!]!) {
+  batchResumeOrders(ids: $ids) {
+    id
+    success
+    error
+  }
+}
+
+query PublishedPricing($storeId: ID) {
+  publishedPricing(storeId: $storeId) {
+    id
+    data {
+      config {
+        daytimeStart
+        daytimeEnd
+      }
+      plans
+    }
+  }
+}
+
+subscription OrderStatusChanged($orderId: ID, $tableId: ID, $storeId: ID) {
+  orderStatusChanged(orderId: $orderId, tableId: $tableId, storeId: $storeId) {
+    order {
+      id
+      tableId
+      userId
+      tempId
+      nickname
+      uid
+      phone
+      seats
+      status
+      startAt
+      endAt
+      finalPrice
+      table {
+        id
+        name
+        code
+        scope
+      }
+    }
+    previousStatus
+    currentStatus
+    updatedAt
+  }
+}

@@ -1,0 +1,108 @@
+query ManagedTables {
+  managedTables {
+    id
+    name
+    type
+    scope
+    status
+    capacity
+    code
+    description
+    storeId
+    occupancies {
+      id
+      tableId
+      userId
+      nickname
+      uid
+      seats
+      status
+    }
+    createdAt
+    updatedAt
+  }
+}
+
+query ManagedTable($id: ID!) {
+  managedTable(id: $id) {
+    id
+    name
+    type
+    scope
+    status
+    capacity
+    code
+    description
+    storeId
+    occupancies {
+      id
+      tableId
+      userId
+      nickname
+      uid
+      phone
+      seats
+      status
+      startAt
+      endAt
+      finalPrice
+    }
+    createdAt
+    updatedAt
+  }
+}
+
+mutation CreateTable($input: CreateTableInput!) {
+  createTable(input: $input) {
+    id
+    name
+    type
+    scope
+    status
+    capacity
+    code
+  }
+}
+
+mutation UpdateTable($input: UpdateTableInput!) {
+  updateTable(input: $input) {
+    id
+    name
+    type
+    scope
+    status
+    capacity
+    description
+  }
+}
+
+mutation RemoveTable($id: ID!) {
+  removeTable(id: $id) {
+    id
+  }
+}
+
+mutation ToggleTableStatus($id: ID!) {
+  toggleTableStatus(id: $id) {
+    id
+    status
+  }
+}
+
+mutation RegenerateTableCode($id: ID!) {
+  regenerateTableCode(id: $id) {
+    id
+    code
+  }
+}
+
+mutation AddTableOccupancy($input: AddOccupancyInput!) {
+  addTableOccupancy(input: $input) {
+    id
+    tableId
+    userId
+    nickname
+    uid
+    status
+  }
+}

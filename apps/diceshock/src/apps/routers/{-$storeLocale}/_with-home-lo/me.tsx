@@ -27,11 +27,18 @@ import {
   getStoredValueBalance,
   isActivePlan,
   type MembershipPlan,
+  type PlanType,
 } from "@/client/components/diceshock/MembershipBadge";
 import TOTPCard from "@/client/components/diceshock/TOTPCard";
 import LanguageSelectorModal from "@/client/components/LanguageSelectorModal";
 import Modal from "@/client/components/modal";
 import StoreSelectorModal from "@/client/components/StoreSelectorModal";
+import {
+  type UpdateMyUserInfoMutation,
+  useGetMyMembershipPlansQuery,
+  useUpdateMyPreferencesMutation,
+  useUpdateMyUserInfoMutation,
+} from "@/client/graphql/__generated__";
 import useAuth from "@/client/hooks/useAuth";
 import useCrossData from "@/client/hooks/useCrossData";
 import { useMessages } from "@/client/hooks/useMessages";
@@ -46,6 +53,25 @@ import {
 } from "@/shared/store-locale";
 import dayjs from "@/shared/utils/dayjs-config";
 import trpcClientPublic from "@/shared/utils/trpc";
+
+type GqlMembershipPlan = NonNullable<
+  NonNullable<
+    ReturnType<typeof useGetMyMembershipPlansQuery>["data"]
+  >["myMembershipPlans"]
+>[number];
+
+function toLocalPlan(plan: GqlMembershipPlan): MembershipPlan {
+  return {
+    id: plan.id,
+    user_id: plan.userId,
+    plan_type: plan.planType.toLowerCase() as PlanType,
+    amount: plan.amount,
+    start_date: plan.startDate ?? null,
+    end_date: plan.endDate ?? null,
+    create_at: plan.createdAt ?? null,
+    update_at: plan.updatedAt ?? null,
+  };
+}
 
 function MeSkeleton() {
   return (
@@ -173,7 +199,6 @@ function RouteComponent() {
   const [isLoading, setIsLoading] = useState(false);
   const messages = useMessages();
 
-  const [myPlans, setMyPlans] = useState<MembershipPlan[]>([]);
   const [captchaEnabled, setCaptchaEnabled] = useState(true);
 
   const isAutoNickname = (userInfo?.meta as { auto_nickname?: boolean } | null)
@@ -182,6 +207,14 @@ function RouteComponent() {
   const isInWechat =
     typeof navigator !== "undefined" &&
     /MicroMessenger/i.test(navigator.userAgent);
+
+  const { data: membershipPlansData } = useGetMyMembershipPlansQuery();
+  const myPlans: MembershipPlan[] = (
+    membershipPlansData?.myMembershipPlans ?? []
+  ).map(toLocalPlan);
+
+  const [updateMyUserInfo] = useUpdateMyUserInfoMutation();
+  const [updateMyPreferences] = useUpdateMyPreferencesMutation();
 
   useEffect(() => {
     if (typeof navigator === "undefined") return;
@@ -220,13 +253,6 @@ function RouteComponent() {
     trpcClientPublic.settings.getCaptchaEnabled
       .query()
       .then((res) => setCaptchaEnabled(res.enabled))
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    trpcClientPublic.membershipPlans.getMyPlans
-      .query()
-      .then((data) => setMyPlans(data as MembershipPlan[]))
       .catch(() => {});
   }, []);
 
@@ -321,16 +347,16 @@ function RouteComponent() {
       setIsLoading(true);
 
       try {
-        const result = await trpcClientPublic.auth.updateUserInfo.mutate({
-          nickname: trimmedNickname,
+        const { data } = await updateMyUserInfo({
+          variables: { input: { nickname: trimmedNickname } },
         });
 
-        if (result.success) {
-          if ("data" in result && result.data) {
-            const updatedNickname =
-              typeof result.data.nickname === "string"
-                ? result.data.nickname
-                : "";
+        const result: UpdateMyUserInfoMutation["updateMyUserInfo"] | null =
+          data?.updateMyUserInfo ?? null;
+
+        if (result?.success) {
+          if (result.user) {
+            const updatedNickname = result.user.nickname ?? "";
             setUserInfoIm((draft) => {
               if (!draft) return undefined;
               (draft as unknown as { nickname: string }).nickname =
@@ -343,8 +369,7 @@ function RouteComponent() {
             messages.error(t("me.updateFailed"));
           }
         } else {
-          const errorMessage =
-            "message" in result ? result.message : t("me.updateFailed");
+          const errorMessage = result?.message ?? t("me.updateFailed");
           messages.error(errorMessage);
         }
       } catch (error) {
@@ -354,7 +379,7 @@ function RouteComponent() {
         setIsLoading(false);
       }
     },
-    [nickname, userInfo?.nickname, setUserInfoIm, messages],
+    [nickname, userInfo?.nickname, setUserInfoIm, messages, updateMyUserInfo],
   );
 
   const handleCopyUid = useCallback(async () => {
@@ -404,19 +429,18 @@ function RouteComponent() {
       setIsLoadingPhone(true);
 
       try {
-        const result = await trpcClientPublic.auth.updateUserInfo.mutate({
-          phone: trimmedPhone,
-          code: smsForm.code,
+        const { data } = await updateMyUserInfo({
+          variables: {
+            input: { phone: trimmedPhone, code: smsForm.code },
+          },
         });
 
-        if (result.success) {
-          if ("data" in result && result.data) {
-            const updatedPhone =
-              typeof result.data.phone === "string"
-                ? result.data.phone
-                : result.data.phone === null
-                  ? null
-                  : "";
+        const result: UpdateMyUserInfoMutation["updateMyUserInfo"] | null =
+          data?.updateMyUserInfo ?? null;
+
+        if (result?.success) {
+          if (result.user) {
+            const updatedPhone = result.user.phone ?? null;
             setUserInfoIm((draft) => {
               if (!draft) return undefined;
               (draft as unknown as { phone: string | null }).phone =
@@ -429,8 +453,7 @@ function RouteComponent() {
             messages.error(t("me.updateFailed"));
           }
         } else {
-          const errorMessage =
-            "message" in result ? result.message : t("me.updateFailed");
+          const errorMessage = result?.message ?? t("me.updateFailed");
           messages.error(errorMessage);
         }
       } catch (error) {
@@ -440,7 +463,14 @@ function RouteComponent() {
         setIsLoadingPhone(false);
       }
     },
-    [phone, smsForm.code, setUserInfoIm, messages, handleClosePhone],
+    [
+      phone,
+      smsForm.code,
+      setUserInfoIm,
+      messages,
+      handleClosePhone,
+      updateMyUserInfo,
+    ],
   );
 
   const [isStoreSelectorOpen, setIsStoreSelectorOpen] = useState(false);
@@ -450,22 +480,21 @@ function RouteComponent() {
       setPreferredLocale(locale);
       setIsSavingPrefs(true);
       try {
-        const result = await trpcClientPublic.users.updatePreferences.mutate({
-          preferred_locale: locale || null,
-          preferred_store_id: preferredStore || null,
+        await updateMyPreferences({
+          variables: {
+            input: {
+              preferredLocale: locale || null,
+              preferredStoreId: preferredStore || null,
+            },
+          },
         });
-        if (result.success) {
-          window.location.reload();
-        } else {
-          messages.error(t("me.updateFailed"));
-          setIsSavingPrefs(false);
-        }
+        window.location.reload();
       } catch {
         messages.error(t("me.networkError"));
         setIsSavingPrefs(false);
       }
     },
-    [preferredStore, messages, t],
+    [preferredStore, messages, updateMyPreferences],
   );
 
   const handleSaveStore = useCallback(
@@ -474,22 +503,21 @@ function RouteComponent() {
       setIsStoreSelectorOpen(false);
       setIsSavingPrefs(true);
       try {
-        const result = await trpcClientPublic.users.updatePreferences.mutate({
-          preferred_locale: preferredLocale || null,
-          preferred_store_id: store || null,
+        await updateMyPreferences({
+          variables: {
+            input: {
+              preferredLocale: preferredLocale || null,
+              preferredStoreId: store || null,
+            },
+          },
         });
-        if (result.success) {
-          window.location.reload();
-        } else {
-          messages.error(t("me.updateFailed"));
-          setIsSavingPrefs(false);
-        }
+        window.location.reload();
       } catch {
         messages.error(t("me.networkError"));
         setIsSavingPrefs(false);
       }
     },
-    [preferredLocale, messages, t],
+    [preferredLocale, messages, updateMyPreferences],
   );
 
   return (

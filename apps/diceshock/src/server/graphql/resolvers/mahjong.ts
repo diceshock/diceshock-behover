@@ -498,6 +498,24 @@ function withVirtualBadges(
   return [...virtual, ...dbBadges];
 }
 
+const managedMahjongMatchesInputSchema = z.object({
+  search: z.string().optional(),
+  mode: z.enum(["FOUR_PLAYER", "THREE_PLAYER"]).optional(),
+  format: z.enum(["HANCHAN", "TONPUU"]).optional(),
+  completion: z.enum(["COMPLETED", "INCOMPLETE"]).optional(),
+  gszSync: z.enum(["SYNCED", "UNSYNCED"]).optional(),
+  tableId: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  storeId: z.string().optional(),
+  pagination: z
+    .object({
+      offset: z.number().int().min(0).default(0),
+      limit: z.number().int().min(1).max(100).default(50),
+    })
+    .optional(),
+});
+
 // ─── Type Definitions ─────────────────────────────────────────────────────
 
 export const mahjongTypeDefs = `
@@ -930,6 +948,200 @@ export const mahjongResolvers = {
       }
 
       return JSON.stringify(heatmap);
+    },
+
+    async managedMahjongMatches(
+      _source: unknown,
+      args: { input?: Record<string, unknown> },
+      ctx: GQLContext,
+    ) {
+      requireStaff(ctx);
+      const rawInput = args.input ?? {};
+      const input = zodToGraphQLError(
+        managedMahjongMatchesInputSchema,
+        rawInput,
+      );
+      const tdb = dbFactory(ctx.env.DB);
+      const pagination = input.pagination ?? { offset: 0, limit: 50 };
+
+      const matches = await tdb.query.mahjongMatchesTable.findMany({
+        orderBy: (m, { desc }) => desc(m.created_at),
+      });
+
+      const allTables = await tdb.query.tablesTable.findMany({
+        columns: { id: true, name: true, code: true, scope: true },
+      });
+      const tableMap = new Map(allTables.map((t) => [t.id, t]));
+
+      const allMatches: Record<string, unknown>[] = matches.map((m) => {
+        const table = m.table_id ? (tableMap.get(m.table_id) ?? null) : null;
+        const gql = toGqlMatch(m as unknown as MatchRow);
+        gql.table = table
+          ? {
+              id: table.id,
+              name: table.name,
+              code: table.code,
+              scope: table.scope?.toUpperCase() ?? null,
+            }
+          : null;
+        gql.matchType = m.match_type?.toUpperCase() ?? null;
+        return gql;
+      });
+
+      const gqlMatches: Record<string, unknown>[] = allMatches.filter(
+        (m: Record<string, unknown>) => {
+          if (input.mode && m.mode !== input.mode) return false;
+          if (input.format && m.format !== input.format) return false;
+          if (input.tableId && (m.table as any)?.id !== input.tableId)
+            return false;
+          if (input.search?.trim()) {
+            const q = input.search.trim().toLowerCase();
+            const playersJson = (m as any).playersJson ?? "";
+            if (
+              !(m.id as string).toLowerCase().includes(q) &&
+              !playersJson.toLowerCase().includes(q) &&
+              !((m.table as any)?.name ?? "").toLowerCase().includes(q) &&
+              !((m.table as any)?.code ?? "").toLowerCase().includes(q)
+            )
+              return false;
+          }
+          if (input.completion) {
+            const isIncomplete = ["ADMIN_ABORT", "ORDER_INVALID"].includes(
+              m.terminationReason as string,
+            );
+            if (input.completion === "COMPLETED" && isIncomplete) return false;
+            if (input.completion === "INCOMPLETE" && !isIncomplete)
+              return false;
+          }
+          if (input.gszSync) {
+            if (input.gszSync === "SYNCED" && !m.gszSynced) return false;
+            if (
+              input.gszSync === "UNSYNCED" &&
+              (m.matchType !== "TOURNAMENT" || m.gszSynced)
+            )
+              return false;
+          }
+          if (input.startDate) {
+            const ms = new Date(input.startDate).getTime();
+            const startedAt = new Date(m.startedAt as string).getTime();
+            if (startedAt < ms) return false;
+          }
+          if (input.endDate) {
+            const ms = new Date(input.endDate).getTime();
+            const startedAt = new Date(m.startedAt as string).getTime();
+            if (startedAt > ms) return false;
+          }
+          return true;
+        },
+      );
+
+      const total = gqlMatches.length;
+      const items = gqlMatches.slice(
+        pagination.offset,
+        pagination.offset + pagination.limit,
+      );
+
+      return {
+        items,
+        pageInfo: {
+          offset: pagination.offset,
+          limit: pagination.limit,
+          total,
+          nextCursor: null,
+          hasMore: pagination.offset + pagination.limit < total,
+        },
+      };
+    },
+
+    async activeMahjongMatches(
+      _source: unknown,
+      _args: unknown,
+      ctx: GQLContext,
+    ) {
+      requireStaff(ctx);
+      const tdb = dbFactory(ctx.env.DB);
+      const mahjongTables = await tdb.query.tablesTable.findMany({
+        where: (t, { eq }) => eq(t.scope, "mahjong"),
+        columns: { id: true, name: true, code: true },
+      });
+
+      const results: Array<Record<string, unknown>> = [];
+
+      await Promise.all(
+        mahjongTables.map(async (table) => {
+          try {
+            const env = ctx.env as unknown as {
+              SOCKET: DurableObjectNamespace;
+            };
+            const doId = env.SOCKET.idFromName(table.code);
+            const stub = env.SOCKET.get(doId);
+            const res = await stub.fetch(
+              new Request("https://do/mahjong-state", { method: "GET" }),
+            );
+            if (!res.ok) return;
+
+            const data = (await res.json()) as {
+              mahjong: {
+                phase: string;
+                config?: { type?: string; mode?: string; format?: string };
+                players: Array<{
+                  userId: string;
+                  nickname: string;
+                  seat: string | null;
+                  currentPoints: number;
+                }>;
+                startedAt?: number;
+              } | null;
+            };
+
+            if (!data.mahjong) return;
+            if (data.mahjong.phase === "ended") return;
+            if (data.mahjong.phase === "config_select") return;
+
+            results.push({
+              tableCode: table.code,
+              tableName: table.name,
+              tableId: table.id,
+              phase: data.mahjong.phase,
+              matchType: (data.mahjong.config?.type ?? "store").toUpperCase(),
+              mode:
+                (data.mahjong.config?.mode ?? "4p") === "4p"
+                  ? "FOUR_PLAYER"
+                  : "THREE_PLAYER",
+              format: (data.mahjong.config?.format ?? "hanchan").toUpperCase(),
+              players: data.mahjong.players.map((p) => ({
+                userId: p.userId,
+                nickname: p.nickname,
+                seat: p.seat,
+                currentPoints: p.currentPoints,
+                finalScore: p.currentPoints,
+              })),
+              startedAt: data.mahjong.startedAt
+                ? new Date(data.mahjong.startedAt).toISOString()
+                : null,
+            });
+          } catch {
+            // noop
+          }
+        }),
+      );
+
+      return results;
+    },
+
+    async mahjongTables(_source: unknown, _args: unknown, ctx: GQLContext) {
+      requireStaff(ctx);
+      const tdb = dbFactory(ctx.env.DB);
+      const tables = await tdb.query.tablesTable.findMany({
+        where: (t, { eq }) => eq(t.scope, "mahjong"),
+        columns: { id: true, name: true, code: true },
+        orderBy: (t, { asc }) => asc(t.name),
+      });
+      return tables.map((t) => ({
+        id: t.id,
+        name: t.name,
+        code: t.code,
+      }));
     },
   },
 

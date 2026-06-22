@@ -13,8 +13,9 @@ import {
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import LoadingImg from "@/client/components/diceshock/GameList/LoadingImg";
+import type { GetOwnedBoardGameQuery } from "@/client/graphql/__generated__";
+import { useGetOwnedBoardGameQuery } from "@/client/graphql/__generated__";
 import { useTranslation } from "@/client/hooks/useTranslation";
-import trpcClientPublic from "@/shared/utils/trpc";
 
 const SITE_URL = "https://origin.runespark.fun";
 
@@ -40,7 +41,7 @@ export const Route = createFileRoute(
   component: BoardGameDetailPage,
 });
 
-type GameRow = Awaited<ReturnType<typeof trpcClientPublic.owned.getById.query>>;
+type GameRow = NonNullable<GetOwnedBoardGameQuery["ownedBoardGame"]>;
 
 function formatPlayerRange(nums: number[] | null | undefined): string {
   if (!nums || nums.length === 0) return "—";
@@ -215,21 +216,19 @@ function BoardGameDetailPage() {
   const [game, setGame] = useState<GameRow | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchGame = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await trpcClientPublic.owned.getById.query({ id });
-      setGame(result);
-    } catch (error) {
-      console.error("Failed to fetch board game:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
+  const { data, loading: queryLoading } = useGetOwnedBoardGameQuery({
+    variables: { id },
+  });
 
   useEffect(() => {
-    fetchGame();
-  }, [fetchGame]);
+    setLoading(queryLoading);
+  }, [queryLoading]);
+
+  useEffect(() => {
+    if (data?.ownedBoardGame) {
+      setGame(data.ownedBoardGame);
+    }
+  }, [data]);
 
   if (loading) {
     return (
@@ -248,10 +247,7 @@ function BoardGameDetailPage() {
           <p className="text-lg text-base-content/60">
             {t("inventory.gameNotFound")}
           </p>
-          <Link
-            to="/{-$storeLocale}/inventory"
-            className="btn btn-ghost mt-4"
-          >
+          <Link to="/{-$storeLocale}/inventory" className="btn btn-ghost mt-4">
             {t("inventory.backToInventory")}
           </Link>
         </div>
@@ -259,21 +255,29 @@ function BoardGameDetailPage() {
     );
   }
 
-  const content = game.content as BoardGame.BoardGameCol | null;
+  const content = (
+    game.content ? JSON.parse(game.content) : null
+  ) as BoardGame.BoardGameCol | null;
   const coverUrl = content?.sch_cover_url || content?.eng_cover_url || "";
-  const gameName = game.sch_name || game.eng_name || "Unknown";
-  const engName = game.eng_name || "";
-  const rating = game.gstone_rating ?? 0;
-  const playerNum = game.player_num ?? [];
-  const bestPlayerNum = game.best_player_num ?? [];
+  const gameName = game.schName || game.engName || "Unknown";
+  const engName = game.engName || "";
+  const rating = game.gstoneRating ?? 0;
+  const playerNum = (
+    game.playerNum ? JSON.parse(game.playerNum) : []
+  ) as number[];
+  const bestPlayerNum = (
+    game.bestPlayerNum ? JSON.parse(game.bestPlayerNum) : []
+  ) as number[];
+  const parsedCategory = game.category ? JSON.parse(game.category) : null;
   const categories = (
-    Array.isArray(game.category)
-      ? game.category
-      : game.category
-        ? [game.category]
+    Array.isArray(parsedCategory)
+      ? parsedCategory
+      : parsedCategory
+        ? [parsedCategory]
         : []
   ) as BoardGame.Category[];
-  const mode = game.mode as BoardGame.Mode | BoardGame.Mode[] | null;
+  const parsedMode = game.mode ? JSON.parse(game.mode) : null;
+  const mode = parsedMode as BoardGame.Mode | BoardGame.Mode[] | null;
   const modes: BoardGame.Mode[] = Array.isArray(mode)
     ? mode
     : mode

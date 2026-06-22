@@ -197,6 +197,8 @@ export const activesTypeDefs = `
 
   extend type Query {
     activeParticipants(activeId: ID!): [ActiveRegistration!]!
+    managedActives(storeId: ID): [Active!]!
+    managedActive(id: ID!): Active!
   }
 `;
 
@@ -531,6 +533,46 @@ export const activesResolvers = {
       );
 
       return participants;
+    },
+
+    async managedActives(
+      _source: unknown,
+      args: { storeId?: string },
+      ctx: GQLContext,
+    ) {
+      requireStaff(ctx);
+      const tdb = dbFactory(ctx.env.DB);
+
+      const storeId = args.storeId;
+      const rows = await tdb.query.activesTable.findMany({
+        where: storeId ? (a, { eq }) => eq(a.store_id, storeId) : undefined,
+        orderBy: (a, { desc }) => desc(a.create_at),
+        with: {
+          creator: { columns: { id: true, name: true, image: true } },
+          registrations: {
+            columns: {
+              id: true,
+              active_id: true,
+              user_id: true,
+              is_watching: true,
+              create_at: true,
+            },
+          },
+        },
+      });
+
+      return rows.map((r) => toGqlActive(r as Record<string, unknown>));
+    },
+
+    async managedActive(
+      _source: unknown,
+      args: { id: string },
+      ctx: GQLContext,
+    ) {
+      requireStaff(ctx);
+      const tdb = dbFactory(ctx.env.DB);
+      const active = await fetchActiveOrThrow(tdb, args.id);
+      return toGqlActive(active);
     },
   },
 };
