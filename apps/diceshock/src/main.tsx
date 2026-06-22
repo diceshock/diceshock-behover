@@ -6,6 +6,7 @@ import { boardGameCard } from "@/server/apis/boardGameCard";
 import fileRoute from "@/server/apis/fileRoute";
 import { fontCss } from "@/server/apis/fontCss";
 import { graphqlHandler } from "@/server/apis/graphqlEndpoint";
+import { graphqlStreamHandler } from "@/server/apis/graphqlStream";
 import {
   imageProcessStatus,
   imageProcessSubmit,
@@ -61,6 +62,7 @@ app.use(serverMetaInj);
 
 app.get("/graphql", graphqlHandler);
 app.post("/graphql", graphqlHandler);
+app.get("/graphql/stream", graphqlStreamHandler);
 
 app.post("/edge/media/upload", mediaUpload);
 app.post("/edge/media/process", imageProcessSubmit);

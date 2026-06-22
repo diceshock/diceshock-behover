@@ -1,4 +1,5 @@
 import { createRootRoute, Outlet, Scripts } from "@tanstack/react-router";
+import { GraphQLProvider } from "@/client/graphql/provider";
 import { useAuthRegister } from "@/client/hooks/useAuth";
 import { useCrossDataRegister } from "@/client/hooks/useCrossData";
 import { useI18nDataRegister } from "@/client/hooks/useI18nData";
@@ -16,12 +17,14 @@ function RootComponent() {
   useAuthRegister();
 
   return (
-    <StoreProvider>
-      <I18nProvider>
-        <Outlet />
-        <Scripts />
-        <MessagesContainer />
-      </I18nProvider>
-    </StoreProvider>
+    <GraphQLProvider>
+      <StoreProvider>
+        <I18nProvider>
+          <Outlet />
+          <Scripts />
+          <MessagesContainer />
+        </I18nProvider>
+      </StoreProvider>
+    </GraphQLProvider>
   );
 }

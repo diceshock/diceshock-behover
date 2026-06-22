@@ -1,0 +1,14 @@
+query GetLeaderboard($category: LeaderboardCategory!, $period: LeaderboardPeriod!) {
+  leaderboard(category: $category, period: $period) {
+    category
+    period
+    computedAt
+    entries {
+      nickname
+      totalPP
+      matchCount
+      rank
+      prevRank
+    }
+  }
+}

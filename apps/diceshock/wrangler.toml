@@ -63,12 +63,8 @@ new_sqlite_classes = ["SeatTimerDO"]
 
 [[migrations]]
 tag = "v2"
-new_sqlite_classes = ["SocketDO"]
+new_sqlite_classes = ["SocketDO", "PubSubDO"]
 deleted_classes = ["SeatTimerDO"]
-
-[[migrations]]
-tag = "v3"
-new_classes = ["PubSubDO"]
 
 [browser]
 binding = "BROWSER"
