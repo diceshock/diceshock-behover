@@ -3,10 +3,6 @@
 
 # ─── Shared ────────────────────────────────────────────────────────────────
 
-type Query
-type Mutation
-type Subscription
-
 input PaginationInput {
   offset: Int = 0
   limit: Int = 20
@@ -706,7 +702,7 @@ input UpdatePreferencesInput {
 }
 
 extend type Query {
-  users(input: UserSearchInput = {}): UserListResult! # @auth(role: STAFF)
+  managedUsers(input: UserSearchInput = {}): UserListResult! # @auth(role: STAFF)
   user(id: ID!): UserProfile # @auth(role: STAFF)
 }
 
@@ -1396,10 +1392,10 @@ type OrderStatusChangedPayload {
   updatedAt: String!
 }
 
-extend type Subscription {
+type Subscription {
   seatUpdated(tableCode: String, storeId: ID): SeatUpdatePayload!
   activeParticipantsChanged(activeId: ID, storeId: ID): ActiveParticipantsChangedPayload!
-  notificationReceived(userId: ID!): NotificationPayload! # @auth(role: CUSTOMER)
+  notificationReceived(userId: ID!): NotificationPayload!
   leaderboardUpdated(category: LeaderboardCategory, period: LeaderboardPeriod, storeId: ID): LeaderboardUpdatedPayload!
-  orderStatusChanged(orderId: ID, tableId: ID, storeId: ID): OrderStatusChangedPayload! # @auth(role: STAFF)
+  orderStatusChanged(orderId: ID, tableId: ID, storeId: ID): OrderStatusChangedPayload!
 }

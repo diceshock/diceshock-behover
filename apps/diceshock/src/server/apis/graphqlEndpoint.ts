@@ -52,55 +52,61 @@ function resolveUserId(
 function resolvePreferredStoreId(
   authUser: Awaited<ReturnType<typeof getAuthUser>>,
 ): string | null {
-  const prefs = authUser?.user?.preferredStoreId as string | undefined;
+  const prefs = (authUser?.token as Record<string, unknown>)
+    ?.preferredStoreId as string | undefined;
   return prefs ?? null;
 }
 
 export async function graphqlHandler(
   c: Context<HonoCtxEnv>,
 ): Promise<Response> {
-  if (c.req.method === "GET") {
-    const authUser = await getAuthUser(c);
-    const role = resolveRole(authUser);
-    if (!hasRole(role, "staff")) {
-      return c.text("Unauthorized", 401);
+  try {
+    if (c.req.method === "GET") {
+      const authUser = await getAuthUser(c).catch(() => null);
+      const role = resolveRole(authUser);
+      if (!hasRole(role, "staff")) {
+        return c.text("Unauthorized", 401);
+      }
+      return c.html(GRAPHIQL_HTML);
     }
-    return c.html(GRAPHIQL_HTML);
+
+    if (c.req.method === "POST") {
+      const authUser = await getAuthUser(c).catch(() => null);
+      const role = resolveRole(authUser);
+      const userId = resolveUserId(authUser);
+
+      let body: { query?: string; variables?: Record<string, unknown> };
+      try {
+        body = await c.req.json();
+      } catch {
+        return c.json({ errors: ["Invalid JSON body"] }, 400);
+      }
+
+      if (!body.query || typeof body.query !== "string") {
+        return c.json({ errors: ["Missing or invalid 'query' field"] }, 400);
+      }
+
+      const database = db(c.env.DB);
+
+      const context: GraphQLContext = {
+        db: database,
+        userId,
+        openId: "",
+        auth: { role, userId },
+        env: c.env,
+        role,
+        preferredStoreId: resolvePreferredStoreId(authUser),
+      };
+
+      const result = await executeGraphQL(body.query, body.variables, context);
+      return c.json(result);
+    }
+
+    return c.text("Method Not Allowed", 405);
+  } catch (err) {
+    console.error("[graphql] handler error:", err);
+    return c.json({ errors: [{ message: "Internal server error" }] }, 500);
   }
-
-  if (c.req.method === "POST") {
-    const authUser = await getAuthUser(c);
-    const role = resolveRole(authUser);
-    const userId = resolveUserId(authUser);
-
-    let body: { query?: string; variables?: Record<string, unknown> };
-    try {
-      body = await c.req.json();
-    } catch {
-      return c.json({ errors: ["Invalid JSON body"] }, 400);
-    }
-
-    if (!body.query || typeof body.query !== "string") {
-      return c.json({ errors: ["Missing or invalid 'query' field"] }, 400);
-    }
-
-    const database = db(c.env.DB);
-
-    const context: GraphQLContext = {
-      db: database,
-      userId,
-      openId: "",
-      auth: { role, userId },
-      env: c.env,
-      role,
-      preferredStoreId: resolvePreferredStoreId(authUser),
-    };
-
-    const result = await executeGraphQL(body.query, body.variables, context);
-    return c.json(result);
-  }
-
-  return c.text("Method Not Allowed", 405);
 }
 
 export default graphqlHandler;

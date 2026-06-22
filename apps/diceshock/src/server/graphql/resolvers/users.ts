@@ -305,7 +305,11 @@ export const usersResolvers = {
 
     // ── Users ────────────────────────────────────────────────────────
 
-    async users(_source: unknown, args: { input?: unknown }, ctx: GQLContext) {
+    async managedUsers(
+      _source: unknown,
+      args: { input?: unknown },
+      ctx: GQLContext,
+    ) {
       requireStaff(ctx);
       const input = zodToGraphQLError(userSearchSchema, args.input ?? {});
       const tdb = dbFactory(ctx.env.DB);

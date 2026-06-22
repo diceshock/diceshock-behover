@@ -22,7 +22,6 @@ const TEMPLATE_KEYS = {
   ORDER_SETTLED: "wechat:template:order_settled",
   MEMBERSHIP_CHANGE: "wechat:template:membership_change",
   PASS_EXPIRING: "wechat:template:pass_expiring",
-  PREFERENCE_MATCH: "wechat:template:preference_match",
 } as const;
 
 async function getTemplateId(env: any, key: string): Promise<string | null> {
@@ -339,23 +338,148 @@ interface PreferenceNotificationData {
   manageUrl: string;
 }
 
+async function resolvePreferenceTemplateId(env: any): Promise<string | null> {
+  const cached = await env.KV.get("wechat:template:preference_match:resolved");
+  if (cached) return cached;
+
+  const token = await getWechatAccessToken(env);
+  const url = `${WECHAT_API_BASE}/cgi-bin/template/get_all_private_template?access_token=${token}`;
+  const res = await fetch(url, { method: "GET" });
+  const data = (await res.json()) as {
+    template_list?: Array<{
+      template_id: string;
+      title: string;
+      content: string;
+      example: string;
+    }>;
+  };
+
+  const templates = data.template_list ?? [];
+  if (templates.length === 0) return null;
+
+  const PRIORITY_KEYWORDS = [
+    "活动通知",
+    "活动推荐",
+    "活动提醒",
+    "预约提醒",
+    "预约通知",
+    "新活动",
+    "报名通知",
+    "服务通知",
+    "消息通知",
+  ];
+
+  let bestMatch: {
+    template_id: string;
+    title: string;
+    content: string;
+  } | null = null;
+
+  for (const keyword of PRIORITY_KEYWORDS) {
+    const match = templates.find((t) => t.title.includes(keyword));
+    if (match) {
+      bestMatch = match;
+      break;
+    }
+  }
+
+  if (!bestMatch) {
+    bestMatch =
+      templates.find(
+        (t) => t.title.includes("通知") || t.title.includes("提醒"),
+      ) ?? null;
+  }
+
+  if (!bestMatch) {
+    console.warn(
+      "[wechat:template] no suitable template found for preference match, available:",
+      templates.map((t) => t.title),
+    );
+    return null;
+  }
+
+  console.log(
+    "[wechat:template] auto-resolved preference template:",
+    bestMatch.title,
+    bestMatch.template_id,
+  );
+
+  await env.KV.put(
+    "wechat:template:preference_match:resolved",
+    bestMatch.template_id,
+    { expirationTtl: 7 * 24 * 3600 },
+  );
+  await env.KV.put(
+    "wechat:template:preference_match:content",
+    bestMatch.content,
+    { expirationTtl: 7 * 24 * 3600 },
+  );
+
+  return bestMatch.template_id;
+}
+
+/** Extracts field names from WeChat template content: "{{field.DATA}}" → ["field"] */
+function extractTemplateFields(content: string): string[] {
+  const matches = content.match(/\{\{(\w+)\.DATA\}\}/g) ?? [];
+  return matches.map((m) => m.replace("{{", "").replace(".DATA}}", ""));
+}
+
 export async function sendPreferenceMatchNotification(
   env: any,
   openId: string,
   data: PreferenceNotificationData,
 ): Promise<SendResult> {
-  return sendTemplateMessage(
-    env,
-    openId,
-    TEMPLATE_KEYS.PREFERENCE_MATCH,
-    {
-      first: { value: data.reason },
-      keyword1: { value: data.activeTitle },
-      keyword2: { value: data.activeDate },
-      remark: { value: `管理偏好: ${data.manageUrl}` },
-    },
-    data.activeUrl,
-  );
+  const templateId = await resolvePreferenceTemplateId(env);
+  if (!templateId) {
+    return { success: false, errmsg: "no suitable template found" };
+  }
+
+  const templateContent =
+    (await env.KV.get("wechat:template:preference_match:content")) ?? "";
+  const fields = extractTemplateFields(templateContent);
+
+  const templateData: Record<string, TemplateDataItem> = {
+    first: { value: data.reason },
+  };
+
+  const dataFields = fields.filter((f) => f !== "first" && f !== "remark");
+  const values = [data.activeTitle, data.activeDate];
+  for (let i = 0; i < Math.min(dataFields.length, values.length); i++) {
+    templateData[dataFields[i]] = { value: values[i] };
+  }
+  templateData.remark = { value: `管理偏好: ${data.manageUrl}` };
+
+  const token = await getWechatAccessToken(env);
+  const apiUrl = `${WECHAT_API_BASE}/cgi-bin/message/template/send?access_token=${token}`;
+
+  const body: Record<string, unknown> = {
+    touser: openId,
+    template_id: templateId,
+    data: templateData,
+    url: data.activeUrl,
+  };
+
+  const res2 = await fetch(apiUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  const result = (await res2.json()) as {
+    errcode?: number;
+    errmsg?: string;
+    msgid?: number;
+  };
+
+  if (result.errcode && result.errcode !== 0) {
+    console.error("[wechat:template:preference] send failed", {
+      errcode: result.errcode,
+      errmsg: result.errmsg,
+    });
+    return { success: false, errcode: result.errcode, errmsg: result.errmsg };
+  }
+
+  return { success: true };
 }
 
 /**

@@ -49,18 +49,20 @@ function attachResolvers(schema: GraphQLSchema, resolvers: ResolverMap): void {
   for (const [typeName, fieldResolvers] of Object.entries(resolvers)) {
     const type = typeMap[typeName];
     if (!(type instanceof GraphQLObjectType)) {
-      throw internalError(
-        `Cannot attach resolvers to unknown object type: ${typeName}`,
+      console.warn(
+        `[gql:schema] Skipping resolvers for unknown type: ${typeName}`,
       );
+      continue;
     }
 
     const fields = type.getFields();
     for (const [fieldName, resolver] of Object.entries(fieldResolvers)) {
       const field = fields[fieldName];
       if (!field) {
-        throw internalError(
-          `Cannot attach resolver to unknown field: ${typeName}.${fieldName}`,
+        console.warn(
+          `[gql:schema] Skipping resolver for unknown field: ${typeName}.${fieldName}`,
         );
+        continue;
       }
       attachResolver(field, resolver);
     }

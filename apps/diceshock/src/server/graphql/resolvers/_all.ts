@@ -1,41 +1,27 @@
-// Auto-generated barrel file — merges ALL custom resolvers into the schema
-import { activesResolvers, activesTypeDefs } from "./actives";
-import { adminResolvers, adminTypeDefs } from "./admin";
-import { authResolvers, authTypeDefs } from "./auth";
-import { mahjongResolvers, mahjongTypeDefs } from "./mahjong";
-import { membershipResolvers, membershipTypeDefs } from "./membership";
-import { ordersResolvers, ordersTypeDefs } from "./orders";
-import { preferencesResolvers, preferencesTypeDefs } from "./preferences";
-import {
-  subscriptionResolvers,
-  subscriptionTypeDefs,
-} from "./subscriptions";
-import { tablesResolvers, tablesTypeDefs } from "./tables";
-import { usersResolvers, usersTypeDefs } from "./users";
+import baseSchema from "../../../../schema.graphql?raw";
 import type { ResolverMap } from "../schema";
+import { activesResolvers } from "./actives";
+import { adminResolvers } from "./admin";
+import { authResolvers } from "./auth";
+import { mahjongResolvers } from "./mahjong";
+import { membershipResolvers } from "./membership";
+import { ordersResolvers } from "./orders";
+import { preferencesResolvers } from "./preferences";
+import { subscriptionResolvers } from "./subscriptions";
+import { tablesResolvers } from "./tables";
+import { usersResolvers } from "./users";
 
 export const ALL_RESOLVERS: ResolverMap = {
-  ...activesResolvers,
-  ...adminResolvers,
-  ...authResolvers,
-  ...mahjongResolvers,
-  ...membershipResolvers,
-  ...ordersResolvers,
-  ...preferencesResolvers,
-  ...subscriptionResolvers,
-  ...tablesResolvers,
-  ...usersResolvers,
+  ...(activesResolvers as ResolverMap),
+  ...(adminResolvers as ResolverMap),
+  ...(authResolvers as ResolverMap),
+  ...(mahjongResolvers as ResolverMap),
+  ...(membershipResolvers as ResolverMap),
+  ...(ordersResolvers as ResolverMap),
+  ...(preferencesResolvers as ResolverMap),
+  ...(subscriptionResolvers as ResolverMap),
+  ...(tablesResolvers as ResolverMap),
+  ...(usersResolvers as ResolverMap),
 };
 
-export const ALL_TYPEDEFS = [
-  activesTypeDefs,
-  adminTypeDefs,
-  authTypeDefs,
-  mahjongTypeDefs,
-  membershipTypeDefs,
-  ordersTypeDefs,
-  preferencesTypeDefs,
-  subscriptionTypeDefs,
-  tablesTypeDefs,
-  usersTypeDefs,
-].join("\n");
+export const ALL_TYPEDEFS = baseSchema;

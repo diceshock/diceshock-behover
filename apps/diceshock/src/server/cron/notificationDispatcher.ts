@@ -4,7 +4,6 @@ import {
   checkDailyPushLimit,
   logPushNotification,
   resolveUserOpenId,
-  sendPreferenceMatchNotification,
 } from "@/server/apis/wechat/templateMessage";
 import {
   PUSH_WINDOW_END,
@@ -100,6 +99,9 @@ export async function dispatchPreferenceNotifications(
         ? `https://diceshock.com/actives/${match.activeId}`
         : "https://diceshock.com/actives";
 
+      const { sendPreferenceMatchNotification } = await import(
+        "@/server/apis/wechat/templateMessage"
+      );
       await sendPreferenceMatchNotification(env, openId, {
         reason,
         activeTitle:
