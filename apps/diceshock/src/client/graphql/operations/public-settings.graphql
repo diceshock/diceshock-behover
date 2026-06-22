@@ -1,0 +1,18 @@
+query WechatOpenConfig {
+  wechatOpenConfig {
+    appId
+  }
+}
+
+query PublishedPricing($storeId: ID) {
+  publishedPricing(storeId: $storeId) {
+    id
+    data {
+      config {
+        daytimeStart
+        daytimeEnd
+      }
+      plans
+    }
+  }
+}

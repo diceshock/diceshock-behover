@@ -11,7 +11,11 @@ import clsx from "clsx";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import { formatMessage } from "@/shared/i18n";
-import { trpcClientDash } from "@/shared/utils/trpc";
+import { useApolloClient } from "@apollo/client";
+import {
+  TableByCodeDocument,
+  VerifyTotpDashDocument,
+} from "@/client/graphql/__generated__";
 import Modal from "../modal";
 
 const INTERNAL_HOSTS = [
@@ -85,6 +89,7 @@ export default function DashQRScannerDialog({
   const scannerRef = useRef<import("qr-scanner").default | null>(null);
   const [scanState, setScanState] = useState<ScanState>({ status: "scanning" });
   const navigate = useNavigate();
+  const client = useApolloClient();
 
   const handleClose = useCallback(() => {
     scannerRef.current?.stop();
@@ -107,9 +112,11 @@ export default function DashQRScannerDialog({
       const tableCode = tryParseTableCode(data);
       if (tableCode) {
         try {
-          const table = await trpcClientDash.tablesManagement.getByCode.query({
-            code: tableCode,
+          const { data: resultData } = await client.query({
+            query: TableByCodeDocument,
+            variables: { code: tableCode },
           });
+          const table = resultData.tableByCode;
           setScanState({
             status: "resolved",
             type: "table",
@@ -131,8 +138,17 @@ export default function DashQRScannerDialog({
       const totpPayload = tryParseTotpPayload(data);
       if (totpPayload) {
         try {
-          const result =
-            await trpcClientDash.users.verifyTotp.mutate(totpPayload);
+          const { data: verifyData } = await client.mutate({
+            mutation: VerifyTotpDashDocument,
+            variables: {
+              input: {
+                totp: totpPayload.totp,
+                userAgent: totpPayload.ua,
+                loginTime: totpPayload.lt,
+              },
+            },
+          });
+          const result = verifyData.verifyTotp;
           if (result.success) {
             setScanState({
               status: "resolved",
@@ -145,7 +161,7 @@ export default function DashQRScannerDialog({
           } else {
             setScanState({
               status: "error",
-              message: result.message,
+              message: t("dashScan.verifyFailed"),
             });
           }
         } catch (err) {
@@ -165,7 +181,7 @@ export default function DashQRScannerDialog({
         }),
       });
     },
-    [t],
+    [t, client],
   );
 
   const handleNavigate = useCallback(() => {

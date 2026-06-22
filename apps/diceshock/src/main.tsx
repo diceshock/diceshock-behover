@@ -40,8 +40,6 @@ import {
 import requestEndpoint from "./server/middlewares/requestEndpoint";
 import serverMetaInj from "./server/middlewares/serverMetaInj";
 import storeLocaleMiddleware from "./server/middlewares/storeLocale";
-import trpcServerDash from "./server/middlewares/trpcServerDash";
-import trpcServerPublic from "./server/middlewares/trpcServerPublic";
 import { wechatSilentAuth } from "./server/middlewares/wechatSilentAuth";
 
 export { PubSubDO } from "./server/durableObjects/PubSubDO";
@@ -77,9 +75,6 @@ app.get("/edge/media/card/event/:id", eventCard);
 app.get("/edge/media/card/inventory", inventoryCard);
 app.get("/edge/media/card/site-og", siteOgCard);
 
-app.use("/edge/*", trpcServerDash);
-app.use("/apis/*", trpcServerPublic);
-
 app.use("/api/auth/*", authHandler());
 
 app.use("*", wechatSilentAuth);
@@ -90,19 +85,6 @@ app.get("/fonts/css/:locale.css", fontCss);
 app.get("/x/:id", shortlinkRedirect);
 
 app.get("/MP_verify_yvnJDKhKIBUZ0DgN.txt", (c) => c.text("yvnJDKhKIBUZ0DgN"));
-
-app.get("/sse/seat/:code", async (c) => {
-  const code = c.req.param("code");
-  const id = c.env.SOCKET.idFromName(code);
-  const stub = c.env.SOCKET.get(id);
-  const url = new URL(c.req.url);
-  url.searchParams.set("code", code);
-  return stub.fetch(
-    new Request(`${url.origin}/sse?${url.searchParams.toString()}`, {
-      headers: c.req.raw.headers,
-    }),
-  );
-});
 
 app.post("/action/seat/:code", async (c) => {
   const code = c.req.param("code");

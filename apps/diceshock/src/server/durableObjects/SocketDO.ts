@@ -1,8 +1,8 @@
 import { DurableObject } from "cloudflare:workers";
 import db, { mahjongMatchesTable } from "@lib/db";
 import { eq } from "drizzle-orm";
-import { gszFetch } from "@/server/apis/trpc/gszApi";
 import { queueNotification } from "@/server/apis/wechat/templateMessage";
+import { gszFetch } from "@/server/utils/gszFetch";
 import {
   fetchTableStateForDO,
   fetchTableStateForDOByCode,

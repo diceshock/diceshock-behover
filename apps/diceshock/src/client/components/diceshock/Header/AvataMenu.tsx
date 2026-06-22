@@ -10,7 +10,11 @@ import { ClientOnly, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import useAuth from "@/client/hooks/useAuth";
 import useTempIdentity from "@/client/hooks/useTempIdentity";
-import trpcClientPublic from "@/shared/utils/trpc";
+import { useApolloClient } from "@apollo/client";
+import {
+  MyActiveOccupanciesDocument,
+  TempIdentityActiveOccupanciesDocument,
+} from "@/client/graphql/__generated__";
 import ThemeSwap from "../../ThemeSwap";
 import LoginDialog from "./LoginDialog";
 import QRScannerDialog from "./QRScannerDialog";
@@ -24,6 +28,7 @@ function useActiveOccupancy(): ActiveOccupancy | null {
   const { userInfo } = useAuth();
   const { tempIdentity } = useTempIdentity();
   const [occupancy, setOccupancy] = useState<ActiveOccupancy | null>(null);
+  const client = useApolloClient();
 
   useEffect(() => {
     let cancelled = false;
@@ -33,16 +38,23 @@ function useActiveOccupancy(): ActiveOccupancy | null {
         let occs: Array<{ code: string; name: string }> = [];
 
         if (userInfo) {
-          occs = await trpcClientPublic.tables.getMyActiveOccupancy.query();
-        } else if (tempIdentity) {
-          occs = await trpcClientPublic.tempIdentity.getActiveOccupancy.query({
-            tempId: tempIdentity.tempId,
+          const { data } = await client.query({
+            query: MyActiveOccupanciesDocument,
           });
+          occs = data.myActiveOccupancies;
+        } else if (tempIdentity) {
+          const { data } = await client.query({
+            query: TempIdentityActiveOccupanciesDocument,
+            variables: { tempId: tempIdentity.tempId },
+          });
+          occs = data.tempIdentityActiveOccupancies;
         }
 
         if (!cancelled) {
           const first = occs[0] ?? null;
-          setOccupancy(first ? { code: first.code, name: first.name } : null);
+          setOccupancy(
+            first ? { code: first.code, name: first.name } : null,
+          );
         }
       } catch {
         if (!cancelled) setOccupancy(null);
@@ -55,7 +67,7 @@ function useActiveOccupancy(): ActiveOccupancy | null {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [userInfo, tempIdentity]);
+  }, [userInfo, tempIdentity, client]);
 
   return occupancy;
 }
@@ -88,7 +100,9 @@ function AvatarMenuContent() {
               <HourglassIcon
                 weight="duotone"
                 className="size-6 text-primary"
-                style={{ animation: "hourglass-flip 3s ease-in-out infinite" }}
+                style={{
+                  animation: "hourglass-flip 3s ease-in-out infinite",
+                }}
               />
             </div>
           ) : (
@@ -177,7 +191,9 @@ function AvatarMenuContent() {
             <HourglassIcon
               weight="duotone"
               className="size-6 text-primary"
-              style={{ animation: "hourglass-flip 3s ease-in-out infinite" }}
+              style={{
+                animation: "hourglass-flip 3s ease-in-out infinite",
+              }}
             />
           </div>
         ) : (

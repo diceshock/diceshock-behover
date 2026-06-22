@@ -14,6 +14,12 @@ import {
   visit,
 } from "graphql";
 import {
+  ALL_RESOLVERS,
+  ALL_TYPEDEFS,
+} from "../../../graphql/resolvers/_all";
+import type { HonoCtxEnv } from "@/shared/types";
+import { mergeSchemas } from "../../../graphql/schema";
+import {
   type AuthContext,
   hasRole,
   isRowVisible,
@@ -27,6 +33,10 @@ export interface GraphQLContext {
   userId: string | null;
   openId: string;
   auth: AuthContext;
+  env: HonoCtxEnv["Bindings"];
+  /** For custom resolver compatibility */
+  role: Role;
+  preferredStoreId: string | null;
 }
 
 type BuiltSchema = ReturnType<typeof buildSchema>;
@@ -34,15 +44,20 @@ const buildDrizzleSchema = buildSchema as (db: unknown) => BuiltSchema;
 
 const MAX_FIND_MANY_LIMIT = 50;
 
-const schemaCache = new WeakMap<GraphQLContext["db"], BuiltSchema>();
+const schemaCache = new WeakMap<
+  GraphQLContext["db"],
+  { schema: GraphQLSchema }
+>();
 
-function getSchema(db: GraphQLContext["db"]): BuiltSchema {
+function getSchema(db: GraphQLContext["db"]): { schema: GraphQLSchema } {
   const cached = schemaCache.get(db);
   if (cached) return cached;
 
   const built = buildDrizzleSchema(db);
-  schemaCache.set(db, built);
-  return built;
+  const merged = mergeSchemas(built.schema, ALL_TYPEDEFS, ALL_RESOLVERS);
+  const result = { schema: merged };
+  schemaCache.set(db, result);
+  return result;
 }
 
 function rootFieldBaseName(fieldName: string): string {

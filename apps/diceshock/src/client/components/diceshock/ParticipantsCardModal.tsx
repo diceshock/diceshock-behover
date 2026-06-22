@@ -1,9 +1,17 @@
+import { useApolloClient } from "@apollo/client";
 import { CopyIcon, XIcon } from "@phosphor-icons/react/dist/ssr";
 import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import Modal from "@/client/components/modal";
+import {
+  BusinessCardByUserIdDocument,
+  type BusinessCardByUserIdQuery,
+  type BusinessCardByUserIdQueryVariables,
+  ParticipantBusinessCardsDocument,
+  type ParticipantBusinessCardsQuery,
+  type ParticipantBusinessCardsQueryVariables,
+} from "@/client/graphql/__generated__";
 import { useMessages } from "@/client/hooks/useMessages";
-import trpcClientPublic from "@/shared/utils/trpc";
 
 type ParticipantsCardModalProps = {
   isOpen: boolean;
@@ -12,28 +20,28 @@ type ParticipantsCardModalProps = {
 };
 
 type ParticipantItem = {
-  user_id: string;
+  userId: string;
   nickname: string;
   uid: string | null;
-  is_watching: boolean | null;
-  share_phone: boolean;
+  isWatching: boolean | null;
+  sharePhone: boolean;
   phone: string | null;
   wechat: string | null;
   qq: string | null;
-  custom_content: string | null;
-  registration_id: string;
-  create_at: string | null;
+  customContent: string | null;
+  registrationId: string;
+  createdAt: string | null;
 };
 
 type BusinessCardDetail = {
-  user_id: string;
+  userId: string;
   nickname: string;
   uid: string | null;
-  share_phone: boolean | null;
+  sharePhone: boolean | null;
   phone: string | null;
   wechat: string | null;
   qq: string | null;
-  custom_content: string | null;
+  customContent: string | null;
 };
 
 function CopyButton({ value }: { value: string }) {
@@ -76,6 +84,7 @@ export default function ParticipantsCardModal({
   onClose,
   activeId,
 }: ParticipantsCardModalProps) {
+  const client = useApolloClient();
   const messages = useMessages();
   const [loading, setLoading] = useState(false);
   const [participants, setParticipants] = useState<ParticipantItem[]>([]);
@@ -93,15 +102,18 @@ export default function ParticipantsCardModal({
     const fetchParticipants = async () => {
       setLoading(true);
       try {
-        const result =
-          await trpcClientPublic.businessCard.getParticipantsBusinessCards.query(
-            { active_id: activeId },
-          );
-        const sorted = [...result].sort((a, b) => {
-          if (a.is_watching === b.is_watching) return 0;
-          return a.is_watching ? 1 : -1;
+        const { data } = await client.query<
+          ParticipantBusinessCardsQuery,
+          ParticipantBusinessCardsQueryVariables
+        >({
+          query: ParticipantBusinessCardsDocument,
+          variables: { activeId },
         });
-        setParticipants(sorted);
+        const sorted = [...data.participantBusinessCards].sort((a, b) => {
+          if (a.isWatching === b.isWatching) return 0;
+          return a.isWatching ? 1 : -1;
+        });
+        setParticipants(sorted as ParticipantItem[]);
       } catch (error) {
         messages.error("获取参与者信息失败");
       } finally {
@@ -110,19 +122,21 @@ export default function ParticipantsCardModal({
     };
 
     fetchParticipants();
-  }, [isOpen, activeId, messages]);
+  }, [isOpen, activeId, messages, client]);
 
   const handleSelectUser = useCallback(
     async (userId: string) => {
       setSelectedUserId(userId);
       setCardLoading(true);
       try {
-        const result =
-          await trpcClientPublic.businessCard.getBusinessCardByUserId.query({
-            user_id: userId,
-            active_id: activeId,
-          });
-        setCardDetail(result);
+        const { data } = await client.query<
+          BusinessCardByUserIdQuery,
+          BusinessCardByUserIdQueryVariables
+        >({
+          query: BusinessCardByUserIdDocument,
+          variables: { userId, activeId },
+        });
+        setCardDetail(data.businessCard as BusinessCardDetail);
       } catch (error) {
         messages.error("获取名片失败");
         setCardDetail(null);
@@ -130,7 +144,7 @@ export default function ParticipantsCardModal({
         setCardLoading(false);
       }
     },
-    [activeId, messages],
+    [activeId, messages, client],
   );
 
   return (
@@ -172,22 +186,22 @@ export default function ParticipantsCardModal({
             <div className="w-48 shrink-0 border-r border-base-content/10 overflow-y-auto">
               {participants.map((p) => (
                 <button
-                  key={p.user_id}
+                  key={p.userId}
                   type="button"
                   className={clsx(
                     "w-full text-left px-4 py-3 hover:bg-base-200 transition-colors border-b border-base-content/5",
-                    selectedUserId === p.user_id && "bg-base-200",
+                    selectedUserId === p.userId && "bg-base-200",
                   )}
-                  onClick={() => handleSelectUser(p.user_id)}
+                  onClick={() => handleSelectUser(p.userId)}
                 >
                   <p className="text-sm font-medium truncate">{p.nickname}</p>
                   <span
                     className={clsx(
                       "text-xs",
-                      p.is_watching ? "text-base-content/40" : "text-primary",
+                      p.isWatching ? "text-base-content/40" : "text-primary",
                     )}
                   >
-                    {p.is_watching ? "观望" : "参与者"}
+                    {p.isWatching ? "观望" : "参与者"}
                   </span>
                 </button>
               ))}
@@ -210,22 +224,22 @@ export default function ParticipantsCardModal({
                     {cardDetail.nickname}
                   </h4>
 
-                  <CardField label="用户ID" value={cardDetail.user_id} />
+                  <CardField label="用户ID" value={cardDetail.userId} />
                   <CardField label="UID" value={cardDetail.uid} />
-                  {cardDetail.share_phone === true && (
+                  {cardDetail.sharePhone === true && (
                     <CardField label="手机号" value={cardDetail.phone} />
                   )}
                   <CardField label="微信" value={cardDetail.wechat} />
                   <CardField label="QQ" value={cardDetail.qq} />
                   <CardField
                     label="自定义内容"
-                    value={cardDetail.custom_content}
+                    value={cardDetail.customContent}
                   />
 
-                  {!cardDetail.share_phone &&
+                  {!cardDetail.sharePhone &&
                     !cardDetail.wechat &&
                     !cardDetail.qq &&
-                    !cardDetail.custom_content && (
+                    !cardDetail.customContent && (
                       <p className="text-sm text-base-content/40 mt-4">
                         该用户未填写额外联系方式
                       </p>

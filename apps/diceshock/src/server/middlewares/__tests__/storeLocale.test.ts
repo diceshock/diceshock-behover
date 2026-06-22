@@ -49,8 +49,8 @@ describe("storeLocaleMiddleware", () => {
     await expect(res.json()).resolves.toEqual({});
   });
 
-  it("skips /apis/trpc (no redirect)", async () => {
-    const res = await createTestApp().request("/apis/trpc");
+  it("skips /apis/graphql (no redirect)", async () => {
+    const res = await createTestApp().request("/apis/graphql");
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({});

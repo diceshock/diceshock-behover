@@ -1,7 +1,15 @@
+import { useApolloClient } from "@apollo/client";
 import { atom, useAtom } from "jotai";
 import { useCallback, useEffect, useRef } from "react";
+import {
+  CreateTempIdentityDocument,
+  type CreateTempIdentityMutation,
+  type CreateTempIdentityMutationVariables,
+  ValidateTempIdentityDocument,
+  type ValidateTempIdentityQuery,
+  type ValidateTempIdentityQueryVariables,
+} from "@/client/graphql/__generated__";
 import type { TempIdentityData } from "@/shared/types";
-import trpcClientPublic from "@/shared/utils/trpc";
 
 const STORAGE_KEY = "diceshock_temp_identity";
 
@@ -38,6 +46,7 @@ const tempIdentityAtom = atom<TempIdentityData | null>(null);
 const initializedAtom = atom(false);
 
 export default function useTempIdentity() {
+  const client = useApolloClient();
   const [tempIdentity, setTempIdentity] = useAtom(tempIdentityAtom);
   const [initialized, setInitialized] = useAtom(initializedAtom);
   const validatingRef = useRef(false);
@@ -59,10 +68,13 @@ export default function useTempIdentity() {
     if (validatingRef.current) return;
     validatingRef.current = true;
 
-    trpcClientPublic.tempIdentity.validate
-      .query({ tempId: stored.tempId })
+    client
+      .query<ValidateTempIdentityQuery, ValidateTempIdentityQueryVariables>({
+        query: ValidateTempIdentityDocument,
+        variables: { tempId: stored.tempId },
+      })
       .then((result) => {
-        if (result.valid) {
+        if (result.data.validateTempIdentity.valid) {
           setTempIdentity(stored);
         } else {
           clearTempIdentityStorage();
@@ -75,7 +87,7 @@ export default function useTempIdentity() {
         validatingRef.current = false;
         setInitialized(true);
       });
-  }, [initialized, setTempIdentity, setInitialized]);
+  }, [initialized, setTempIdentity, setInitialized, client]);
 
   useEffect(() => {
     if (!tempIdentity) return;
@@ -93,18 +105,24 @@ export default function useTempIdentity() {
   }, [tempIdentity, setTempIdentity]);
 
   const create = useCallback(async () => {
-    const result = await trpcClientPublic.tempIdentity.create.mutate();
+    const result = await client.mutate<
+      CreateTempIdentityMutation,
+      CreateTempIdentityMutationVariables
+    >({
+      mutation: CreateTempIdentityDocument,
+    });
+    const created = result.data!.createTempIdentity;
     const data: TempIdentityData = {
       kind: "temp",
-      tempId: result.id,
-      nickname: result.nickname,
-      totpSecret: result.totpSecret,
-      expiresAt: result.expiresAt,
+      tempId: created.id,
+      nickname: created.nickname,
+      totpSecret: created.totpSecret,
+      expiresAt: created.expiresAt,
     };
     setTempIdentity(data);
     saveToStorage(data);
     return data;
-  }, [setTempIdentity]);
+  }, [setTempIdentity, client]);
 
   const clear = useCallback(() => {
     setTempIdentity(null);

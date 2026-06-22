@@ -1,0 +1,67 @@
+query TableByCode($code: String!, $storeId: ID) {
+  tableByCode(code: $code, storeId: $storeId) {
+    id
+    name
+    type
+    scope
+    status
+    capacity
+    code
+    description
+    storeId
+    occupancies {
+      id
+      tableId
+      userId
+      tempId
+      nickname
+      uid
+      seats
+      status
+      startAt
+      endAt
+      finalPrice
+    }
+    createdAt
+    updatedAt
+  }
+}
+
+query MyActiveOccupancies($storeId: ID) {
+  myActiveOccupancies(storeId: $storeId) {
+    code
+    name
+    status
+  }
+}
+
+mutation PauseMyOrder($input: LeaveTableInput!) {
+  pauseMyOrder(input: $input) {
+    id
+    tableId
+    userId
+    nickname
+    status
+    startAt
+    endAt
+  }
+}
+
+mutation OccupyTable($input: OccupyTableInput!) {
+  occupyTable(input: $input) {
+    occupancy {
+      id
+      tableId
+      userId
+      nickname
+      status
+      startAt
+      endAt
+    }
+    table {
+      id
+      code
+      name
+    }
+  }
+}

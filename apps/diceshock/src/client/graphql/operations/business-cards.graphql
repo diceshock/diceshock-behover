@@ -1,0 +1,33 @@
+query ParticipantBusinessCards($activeId: ID!) {
+  participantBusinessCards(activeId: $activeId) {
+    userId
+    nickname
+    uid
+    sharePhone
+    phone
+    wechat
+    qq
+    customContent
+    isWatching
+    registrationId
+    createdAt
+    updatedAt
+  }
+}
+
+query BusinessCardByUserId($userId: ID!, $activeId: ID!) {
+  businessCard(userId: $userId, activeId: $activeId) {
+    userId
+    nickname
+    uid
+    sharePhone
+    phone
+    wechat
+    qq
+    customContent
+    isWatching
+    registrationId
+    createdAt
+    updatedAt
+  }
+}

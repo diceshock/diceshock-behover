@@ -1,12 +1,13 @@
 import type { Context } from "hono";
 import { nanoid } from "nanoid";
 import type { HonoCtxEnv } from "@/shared/types";
-import { KV_PREFIX, type ShortlinkData } from "./shortlink";
 import {
   isAllowedHost,
   KV_INDEX_PREFIX,
+  KV_PREFIX,
+  type ShortlinkData,
   SLUG_REGEX,
-} from "./trpc/shortlinkManagement";
+} from "./shortlink";
 
 export async function shortlinkCreate(c: Context<HonoCtxEnv>) {
   const body = await c.req.json<{

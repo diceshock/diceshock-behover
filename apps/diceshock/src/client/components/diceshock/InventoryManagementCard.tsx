@@ -3,7 +3,11 @@ import { CheckIcon, WarningIcon } from "@phosphor-icons/react/dist/ssr";
 import _ from "lodash";
 import { useCallback, useEffect, useState } from "react";
 import { useGetOwnedBoardGameCountQuery } from "@/client/graphql/__generated__";
-import { trpcClientDash } from "@/shared/utils/trpc";
+import { useApolloClient } from "@apollo/client";
+import {
+  SyncOwnedBoardGamesDocument,
+  WakeOwnedBoardGamesDocument,
+} from "@/client/graphql/__generated__";
 
 export default function InventoryManagementCard() {
   const [count, setCount] = useState<{
@@ -12,6 +16,7 @@ export default function InventoryManagementCard() {
   }>({});
 
   const { data: countData, refetch } = useGetOwnedBoardGameCountQuery();
+  const client = useApolloClient();
 
   useEffect(() => {
     if (countData?.ownedBoardGameCount) {
@@ -48,25 +53,44 @@ export default function InventoryManagementCard() {
       const fetched: BoardGame.BoardGameCol[] = [];
 
       for await (const chunk of reqChunks) {
-        const patch = await trpcClientDash.ownedManagement.sync.mutate({
-          pageFrom: chunk.at(0)!,
-          pageTo: chunk.at(-1)!,
-          date,
+        const { data } = await client.mutate({
+          mutation: SyncOwnedBoardGamesDocument,
+          variables: {
+            pageFrom: chunk.at(0)!,
+            pageTo: chunk.at(-1)!,
+            date,
+          },
         });
 
-        if (!patch) break;
+        const patch = data.syncOwnedBoardGames;
+        const fetchedItems = (patch as any).fetched as
+          | BoardGame.BoardGameCol[]
+          | undefined;
 
-        fetched.unshift(...patch.fetched);
+        if (!fetchedItems || fetchedItems.length === 0) break;
+
+        fetched.unshift(...fetchedItems);
         setSynced({ syncing: true, fetched });
       }
 
-      const { clean, hidded } =
-        await trpcClientDash.ownedManagement.wake.mutate({ date });
+      const { data: wakeData } = await client.mutate({
+        mutation: WakeOwnedBoardGamesDocument,
+        variables: { date },
+      });
+
+      const clean = (wakeData.wakeOwnedBoardGames as any).clean as
+        | number
+        | undefined;
+      const hidded = (wakeData.wakeOwnedBoardGames as any).hidded as
+        | number
+        | undefined;
 
       let menuSynced = false;
       let menuError: string | undefined;
       try {
-        const menuRes = await window.fetch("/wechat/menu", { method: "POST" });
+        const menuRes = await window.fetch("/wechat/menu", {
+          method: "POST",
+        });
         const menuData = (await menuRes.json()) as {
           success?: boolean;
           error?: string;
@@ -89,7 +113,7 @@ export default function InventoryManagementCard() {
     } catch {
       setSynced({ syncing: false });
     }
-  }, [fetch, synced.syncing]);
+  }, [fetch, synced.syncing, client]);
 
   useEffect(() => {
     fetch();

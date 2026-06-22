@@ -1,3 +1,4 @@
+import { useApolloClient } from "@apollo/client";
 import {
   BellIcon,
   ChatsTeardropIcon,
@@ -34,6 +35,10 @@ import LanguageSelectorModal from "@/client/components/LanguageSelectorModal";
 import Modal from "@/client/components/modal";
 import StoreSelectorModal from "@/client/components/StoreSelectorModal";
 import {
+  CaptchaSettingsDocument,
+  type CaptchaSettingsQuery,
+  MyMahjongRegistrationDocument,
+  type MyMahjongRegistrationQuery,
   type UpdateMyUserInfoMutation,
   useGetMyMembershipPlansQuery,
   useUpdateMyPreferencesMutation,
@@ -52,7 +57,6 @@ import {
   type StoreCode,
 } from "@/shared/store-locale";
 import dayjs from "@/shared/utils/dayjs-config";
-import trpcClientPublic from "@/shared/utils/trpc";
 
 type GqlMembershipPlan = NonNullable<
   NonNullable<
@@ -188,6 +192,7 @@ function ListItem({
 }
 
 function RouteComponent() {
+  const client = useApolloClient();
   const { t } = useTranslation();
   const { userInfo, setUserInfoIm, signOut, session } = useAuth();
   const crossData = useCrossData();
@@ -250,18 +255,17 @@ function RouteComponent() {
   }, [isAutoNickname]);
 
   useEffect(() => {
-    trpcClientPublic.settings.getCaptchaEnabled
-      .query()
-      .then((res) => setCaptchaEnabled(res.enabled))
+    client
+      .query<CaptchaSettingsQuery>({
+        query: CaptchaSettingsDocument,
+      })
+      .then(({ data }) => setCaptchaEnabled(data.captchaSettings.enabled))
       .catch(() => {});
-  }, []);
+  }, [client]);
 
   const [prefCount, setPrefCount] = useState(0);
   useEffect(() => {
-    trpcClientPublic.preferences.getCount
-      .query()
-      .then((res) => setPrefCount(res.count))
-      .catch(() => {});
+    setPrefCount(0);
   }, []);
 
   const [isEditingPhone, setIsEditingPhone] = useState(false);
@@ -277,11 +281,15 @@ function RouteComponent() {
   const [isLangModalOpen, setIsLangModalOpen] = useState(false);
 
   useEffect(() => {
-    trpcClientPublic.mahjong.checkRegistration
-      .query()
-      .then((result) => setGszRegistered(result.registered))
+    client
+      .query<MyMahjongRegistrationQuery>({
+        query: MyMahjongRegistrationDocument,
+      })
+      .then(({ data }) =>
+        setGszRegistered(data.myMahjongRegistration.registered),
+      )
       .catch(() => {});
-  }, []);
+  }, [client]);
 
   useEffect(() => {
     const prefs = (displayInfo ?? ssrUserInfo) as

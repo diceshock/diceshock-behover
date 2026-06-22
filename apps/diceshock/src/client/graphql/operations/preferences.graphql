@@ -1,0 +1,67 @@
+query MyPreferences {
+  myPreferences {
+    id
+    userId
+    rawText
+    rrule
+    categories
+    playerCount
+    enabled
+    createdAt
+    updatedAt
+  }
+}
+
+query MyPreferencesCount {
+  myPreferencesCount
+}
+
+mutation ParsePreference($rawText: String!) {
+  parsePreference(rawText: $rawText) {
+    ... on PreferenceParseSuccess {
+      success
+      rrule
+      categories
+      playerCount
+      confidence
+    }
+    ... on PreferenceParseError {
+      success
+      error
+    }
+  }
+}
+
+mutation CreatePreference($input: CreatePreferenceInput!) {
+  createPreference(input: $input) {
+    id
+    userId
+    rawText
+    rrule
+    categories
+    playerCount
+    enabled
+    createdAt
+    updatedAt
+  }
+}
+
+mutation DeletePreference($id: ID!) {
+  deletePreference(id: $id) {
+    success
+  }
+}
+
+mutation TogglePreference($id: ID!) {
+  togglePreference(id: $id) {
+    id
+    userId
+    rawText
+    rrule
+    categories
+    playerCount
+    enabled
+    createdAt
+    updatedAt
+  }
+}

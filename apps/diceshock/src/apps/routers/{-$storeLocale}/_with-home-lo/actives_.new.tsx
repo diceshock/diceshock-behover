@@ -14,12 +14,16 @@ import {
 import clsx from "clsx";
 import { useCallback, useEffect, useRef, useState } from "react";
 import TiptapEditor from "@/client/components/diceshock/TiptapEditor";
-import { GetOwnedBoardGamesDocument } from "@/client/graphql/__generated__";
+import {
+  CreateActiveDocument,
+  type CreateActiveMutation,
+  type CreateActiveMutationVariables,
+  GetOwnedBoardGamesDocument,
+} from "@/client/graphql/__generated__";
 import useAuth from "@/client/hooks/useAuth";
 import { useMessages } from "@/client/hooks/useMessages";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import dayjs from "@/shared/utils/dayjs-config";
-import trpcClientPublic from "@/shared/utils/trpc";
 
 export const Route = createFileRoute(
   "/{-$storeLocale}/_with-home-lo/actives_/new",
@@ -28,6 +32,7 @@ export const Route = createFileRoute(
 });
 
 function NewActivePage() {
+  const client = useApolloClient();
   const { t } = useTranslation();
   const { userInfo } = useAuth();
   const navigate = useNavigate();
@@ -56,15 +61,24 @@ function NewActivePage() {
 
       setSubmitting(true);
       try {
-        const active = await trpcClientPublic.actives.create.mutate({
-          title: title.trim(),
-          date,
-          time: time || undefined,
-          max_players: maxPlayers,
-          content: content || undefined,
-          board_game_id: boardGameId,
-          is_game: true,
+        const { data } = await client.mutate<
+          CreateActiveMutation,
+          CreateActiveMutationVariables
+        >({
+          mutation: CreateActiveDocument,
+          variables: {
+            input: {
+              title: title.trim(),
+              date,
+              time: time || undefined,
+              maxPlayers,
+              content: content || undefined,
+              boardGameId: boardGameId || undefined,
+              isGame: true,
+            },
+          },
         });
+        const active = data!.createActive;
         messages.success(t("actives.newCreateSuccess"));
         navigate({ to: "/actives/$id", params: { id: active.id } });
       } catch (error) {
@@ -81,6 +95,7 @@ function NewActivePage() {
       maxPlayers,
       content,
       boardGameId,
+      client,
       messages,
       navigate,
       t,

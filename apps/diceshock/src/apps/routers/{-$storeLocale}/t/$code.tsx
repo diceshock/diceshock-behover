@@ -1,3 +1,4 @@
+import { useApolloClient } from "@apollo/client";
 import {
   CalendarDotsIcon,
   ClockIcon,
@@ -15,6 +16,15 @@ import DisconnectionOverlay from "@/client/components/diceshock/DisconnectionOve
 import QRScannerDialog from "@/client/components/diceshock/Header/QRScannerDialog";
 import MahjongMatchStepper from "@/client/components/diceshock/MahjongMatch/MahjongMatchStepper";
 import NetworkSignalIndicator from "@/client/components/diceshock/NetworkSignalIndicator";
+import {
+  MyMahjongRegistrationDocument,
+  type MyMahjongRegistrationQuery,
+  PublishedPricingDocument,
+  type PublishedPricingQuery,
+  TableByCodeDocument,
+  type TableByCodeQuery,
+  type TableByCodeQueryVariables,
+} from "@/client/graphql/__generated__";
 import useAuth from "@/client/hooks/useAuth";
 import useCrossData from "@/client/hooks/useCrossData";
 import useMahjongMatch from "@/client/hooks/useMahjongMatch";
@@ -30,7 +40,6 @@ import {
   type SnapshotData,
 } from "@/shared/utils/pricing";
 import { generateTOTP, getRemainingSeconds } from "@/shared/utils/totp";
-import trpcClientPublic from "@/shared/utils/trpc";
 
 export const Route = createFileRoute("/{-$storeLocale}/t/$code")({
   component: SeatTimerPage,
@@ -96,6 +105,7 @@ function useSeatIdentity(): {
 }
 
 function SeatTimerPage() {
+  const client = useApolloClient();
   const { code } = Route.useParams();
   const { from } = Route.useSearch();
   const { t } = useTranslation();
@@ -103,9 +113,9 @@ function SeatTimerPage() {
   const { setUserInfoIm } = useAuth();
   const [redirectedFrom, setRedirectedFrom] = useState(from || "");
 
-  const [tableData, setTableData] = useState<Awaited<
-    ReturnType<typeof trpcClientPublic.tables.getByCode.query>
-  > | null>(null);
+  const [tableData, setTableData] = useState<
+    TableByCodeQuery["tableByCode"] | null
+  >(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"main" | "mahjong">("main");
@@ -155,19 +165,25 @@ function SeatTimerPage() {
     setLoading(true);
     setError(null);
     try {
-      const [data, published] = await Promise.all([
-        trpcClientPublic.tables.getByCode.query({ code }),
-        trpcClientPublic.pricing.getPublished.query(),
+      const [{ data: tableRes }, { data: pricingRes }] = await Promise.all([
+        client.query<TableByCodeQuery, TableByCodeQueryVariables>({
+          query: TableByCodeDocument,
+          variables: { code },
+        }),
+        client.query<PublishedPricingQuery>({
+          query: PublishedPricingDocument,
+        }),
       ]);
-      setTableData(data);
-      pricingCache.snapshot = published?.data ?? null;
+      setTableData(tableRes.tableByCode);
+      pricingCache.snapshot = (pricingRes.publishedPricing?.data ??
+        null) as SnapshotData | null;
       setPricingSnapshot(pricingCache.snapshot);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("errors.loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [code]);
+  }, [code, client]);
 
   useEffect(() => {
     void fetchTable();
@@ -176,11 +192,13 @@ function SeatTimerPage() {
   useEffect(() => {
     if (identity?.kind !== "real" || gszCheckedRef.current) return;
     gszCheckedRef.current = true;
-    trpcClientPublic.mahjong.checkRegistration
-      .query()
-      .then((result) => {
-        setGszRegistered(result.registered);
-        setGszName(result.gszName ?? null);
+    client
+      .query<MyMahjongRegistrationQuery>({
+        query: MyMahjongRegistrationDocument,
+      })
+      .then(({ data }) => {
+        setGszRegistered(data.myMahjongRegistration.registered);
+        setGszName(data.myMahjongRegistration.gszName ?? null);
       })
       .catch(() => {});
   }, [identity]);

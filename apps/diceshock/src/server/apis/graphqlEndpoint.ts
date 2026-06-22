@@ -49,6 +49,13 @@ function resolveUserId(
   return authUser?.token?.sub || authUser?.user?.id || null;
 }
 
+function resolvePreferredStoreId(
+  authUser: Awaited<ReturnType<typeof getAuthUser>>,
+): string | null {
+  const prefs = authUser?.user?.preferredStoreId as string | undefined;
+  return prefs ?? null;
+}
+
 export async function graphqlHandler(
   c: Context<HonoCtxEnv>,
 ): Promise<Response> {
@@ -84,6 +91,9 @@ export async function graphqlHandler(
       userId,
       openId: "",
       auth: { role, userId },
+      env: c.env,
+      role,
+      preferredStoreId: resolvePreferredStoreId(authUser),
     };
 
     const result = await executeGraphQL(body.query, body.variables, context);

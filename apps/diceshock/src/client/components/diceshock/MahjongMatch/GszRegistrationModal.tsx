@@ -2,7 +2,11 @@ import { Link } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import Modal from "@/client/components/modal";
-import trpcClientPublic from "@/shared/utils/trpc";
+import { useApolloClient } from "@apollo/client";
+import {
+  RegisterMahjongDocument,
+  RequestSmsCodeDocument,
+} from "@/client/graphql/__generated__";
 
 interface GszRegistrationModalProps {
   isOpen: boolean;
@@ -45,6 +49,7 @@ export default function GszRegistrationModal({
   } | null>(null);
   const [smsSending, setSmsSending] = useState(false);
   const [smsCooldown, setSmsCooldown] = useState(0);
+  const client = useApolloClient();
 
   useEffect(() => {
     if (isOpen) {
@@ -71,12 +76,17 @@ export default function GszRegistrationModal({
     setSmsSending(true);
     setError(null);
     try {
-      const result = await trpcClientPublic.auth.smsCode.mutate({
-        phone: phone.trim(),
-        botcheck: null,
+      const { data } = await client.mutate({
+        mutation: RequestSmsCodeDocument,
+        variables: {
+          input: {
+            phone: phone.trim(),
+            botcheck: null,
+          },
+        },
       });
-      if (!result.success) {
-        setError((result as { message?: string }).message ?? "发送失败");
+      if (!data.requestSmsCode.success) {
+        setError(data.requestSmsCode.message ?? "发送失败");
         return;
       }
       setSmsCooldown(60);
@@ -85,7 +95,7 @@ export default function GszRegistrationModal({
     } finally {
       setSmsSending(false);
     }
-  }, [phone, smsSending]);
+  }, [phone, smsSending, client]);
 
   const handlePhoneVerified = useCallback(() => {
     if (!phone.trim() || !smsCode.trim()) return;
@@ -101,12 +111,18 @@ export default function GszRegistrationModal({
     setError(null);
     setWarning(null);
     try {
-      const result = await trpcClientPublic.mahjong.register.mutate({
-        phone: phone.trim(),
-        smsCode: needsPhone ? smsCode.trim() : "0",
-        gszName: gszName.trim(),
-        syncNickname,
+      const { data } = await client.mutate({
+        mutation: RegisterMahjongDocument,
+        variables: {
+          input: {
+            phone: phone.trim(),
+            smsCode: needsPhone ? smsCode.trim() : "0",
+            gszName: gszName.trim(),
+            syncNickname,
+          },
+        },
       });
+      const result = data.registerMahjong;
       if (result.registered) {
         if (result.gszSynced === false) {
           setPendingRegistration({
@@ -131,7 +147,7 @@ export default function GszRegistrationModal({
     } finally {
       setLoading(false);
     }
-  }, [gszName, phone, smsCode, needsPhone, syncNickname, onRegistered]);
+  }, [gszName, phone, smsCode, needsPhone, syncNickname, onRegistered, client]);
 
   return (
     <Modal isCloseOnClick isOpen={isOpen} onToggle={() => onClose()}>

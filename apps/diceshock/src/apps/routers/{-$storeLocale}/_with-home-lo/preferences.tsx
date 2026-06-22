@@ -4,7 +4,6 @@ import { useMessages } from "@/client/hooks/useMessages";
 import { CATEGORY_LABELS } from "@/shared/preferences/constants";
 import { rruleToHumanReadable } from "@/shared/preferences/rruleDisplay";
 import type { PreferenceCategory } from "@/shared/preferences/types";
-import trpcClientPublic from "@/shared/utils/trpc";
 
 export const Route = createFileRoute(
   "/{-$storeLocale}/_with-home-lo/preferences",
@@ -40,13 +39,9 @@ function PreferencesPage() {
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
-    trpcClientPublic.preferences.list
-      .query()
-      .then((data) => {
-        setPreferences(data);
-        setIsLoading(false);
-      })
-      .catch(() => setIsLoading(false));
+    // TODO: preferences GQL resolvers not yet implemented - showing empty state
+    setPreferences([]);
+    setIsLoading(false);
   }, []);
 
   const handleInputSubmit = useCallback(
@@ -59,19 +54,8 @@ function PreferencesPage() {
 
       setIsParsing(true);
       try {
-        const result =
-          await trpcClientPublic.preferenceParser.parsePreference.mutate({
-            rawText: text,
-          });
-        if (result.success) {
-          setParseResult({
-            rrule: result.rrule,
-            categories: result.categories,
-            playerCount: result.playerCount,
-          });
-        } else {
-          messages.error(result.error);
-        }
+        // TODO: preferences.parsePreference GQL resolver not yet implemented
+        messages.error("偏好解析功能暂不可用");
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "";
         if (msg.includes("额度") || msg.includes("limit")) {
@@ -90,19 +74,7 @@ function PreferencesPage() {
     if (!parseResult) return;
     setIsCreating(true);
     try {
-      const created = await trpcClientPublic.preferences.create.mutate({
-        rawText: inputText.trim(),
-        rrule: parseResult.rrule,
-        categories: parseResult.categories as PreferenceCategory[],
-        playerCount: parseResult.playerCount,
-      });
-      setPreferences((prev) => [
-        { ...created, displayText: rruleToHumanReadable(created.rrule) },
-        ...prev,
-      ]);
-      setInputText("");
-      setParseResult(null);
-      messages.success("偏好已添加");
+      messages.error("偏好创建功能暂不可用");
     } catch {
       messages.error("添加失败");
     } finally {
@@ -117,9 +89,7 @@ function PreferencesPage() {
   const handleDelete = useCallback(
     async (id: string) => {
       try {
-        await trpcClientPublic.preferences.delete.mutate({ id });
-        setPreferences((prev) => prev.filter((p) => p.id !== id));
-        messages.success("偏好已删除");
+        messages.error("偏好删除功能暂不可用");
       } catch {
         messages.error("删除失败");
       }
@@ -130,12 +100,7 @@ function PreferencesPage() {
   const handleToggle = useCallback(
     async (id: string) => {
       try {
-        const result = await trpcClientPublic.preferences.toggle.mutate({ id });
-        setPreferences((prev) =>
-          prev.map((p) =>
-            p.id === id ? { ...p, enabled: result.enabled } : p,
-          ),
-        );
+        messages.error("偏好切换功能暂不可用");
       } catch {
         messages.error("操作失败");
       }

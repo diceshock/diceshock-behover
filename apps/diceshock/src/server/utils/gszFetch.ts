@@ -1,9 +1,8 @@
-import { TRPCError } from "@trpc/server";
-
 const GSZ_BASE = "https://gsz.rmlinking.com";
 
+// biome-ignore lint/suspicious/noExplicitAny: env typing varies by context
 export async function gszFetch<T = unknown>(
-  env: Cloudflare.Env,
+  env: any,
   path: string,
   body: Record<string, unknown>,
   query?: Record<string, string | number>,
@@ -19,7 +18,7 @@ export async function gszFetch<T = unknown>(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      token: env.GSZ_TOKEN,
+      token: String(env.GSZ_TOKEN ?? ""),
     },
     body: JSON.stringify(body),
   });
@@ -35,11 +34,7 @@ export async function gszFetch<T = unknown>(
     } catch {
       /* non-JSON body */
     }
-    throw new TRPCError({
-      code: "BAD_GATEWAY",
-      message: gszMessage || `GSZ API HTTP ${res.status}`,
-      cause: { gszHttpStatus: res.status, gszMessage },
-    });
+    throw new Error(gszMessage || `GSZ API HTTP ${res.status}`);
   }
 
   const json = (await res.json()) as {
@@ -50,11 +45,7 @@ export async function gszFetch<T = unknown>(
   };
 
   if (json.code !== 200) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: json.message || `GSZ API error code ${json.code}`,
-      cause: { gszCode: json.code, gszData: json.data },
-    });
+    throw new Error(json.message || `GSZ API error code ${json.code}`);
   }
 
   return json.data;

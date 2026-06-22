@@ -5,7 +5,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import WechatIcon from "@/client/assets/svg/wechat.svg?react";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import { formatMessage } from "@/shared/i18n";
-import trpcClientPublic from "../../../../shared/utils/trpc";
+import { useApolloClient } from "@apollo/client";
+import {
+  CaptchaSettingsDocument,
+  TransferTempIdentityDocument,
+  WechatOpenConfigDocument,
+} from "@/client/graphql/__generated__";
 import useSmsCode from "../../../hooks/useSmsCode";
 import useTempIdentity from "../../../hooks/useTempIdentity";
 import Modal from "../../modal";
@@ -21,18 +26,19 @@ function WechatQREmbed({ onFallback }: { onFallback: () => void }) {
   const [appId, setAppId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [key, setKey] = useState(0);
+  const client = useApolloClient();
 
   useEffect(() => {
-    trpcClientPublic.settings.getWechatOpenConfig
-      .query()
-      .then((res) => {
-        setAppId(res.appId);
+    client
+      .query({ query: WechatOpenConfigDocument })
+      .then(({ data }) => {
+        setAppId(data.wechatOpenConfig.appId);
         setLoading(false);
       })
       .catch(() => {
         setLoading(false);
       });
-  }, []);
+  }, [client]);
 
   useEffect(() => {
     if (!appId || !containerRef.current) return;
@@ -106,13 +112,14 @@ export default function LoginDialog({
 
   const [captchaEnabled, setCaptchaEnabled] = useState(true);
   const [useQRFallback, setUseQRFallback] = useState(false);
+  const client = useApolloClient();
 
   useEffect(() => {
-    trpcClientPublic.settings.getCaptchaEnabled
-      .query()
-      .then((res) => setCaptchaEnabled(res.enabled))
+    client
+      .query({ query: CaptchaSettingsDocument })
+      .then(({ data }) => setCaptchaEnabled(data.captchaSettings.enabled))
       .catch(() => {});
-  }, []);
+  }, [client]);
 
   const {
     smsForm,
@@ -160,9 +167,12 @@ export default function LoginDialog({
                 const sessionData: any = await session.json();
                 const userId = sessionData?.user?.id;
                 if (userId) {
-                  await trpcClientPublic.tempIdentity.transfer.mutate({
-                    tempId: parsed.tempId,
-                    userId,
+                  await client.mutate({
+                    mutation: TransferTempIdentityDocument,
+                    variables: {
+                      tempId: parsed.tempId,
+                      userId,
+                    },
                   });
                 }
                 localStorage.removeItem("diceshock_temp_identity");
@@ -178,7 +188,7 @@ export default function LoginDialog({
       );
       console.error(`Login failed: ${result?.error ?? "unknown"}`);
     },
-    [phone, smsForm.code, setError, isSeatPage],
+    [phone, smsForm.code, setError, isSeatPage, client, t],
   );
 
   const handleWechatLogin = useCallback(() => {

@@ -20,7 +20,8 @@ import {
 } from "@/shared/mahjong/pp";
 import type { MatchType } from "@/shared/mahjong/types";
 import dayjs from "@/shared/utils/dayjs-config";
-import trpcClientPublic from "@/shared/utils/trpc";
+import { useApolloClient } from "@apollo/client";
+import { MyMahjongMatchesDocument } from "@/client/graphql/__generated__";
 
 interface MatchPlayer {
   userId: string;
@@ -224,14 +225,15 @@ export default function MahjongMatchHistory() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const client = useApolloClient();
 
   useEffect(() => {
-    trpcClientPublic.mahjong.getMyMatches
-      .query()
-      .then((data) => setMatches(data as Match[]))
+    client
+      .query({ query: MyMahjongMatchesDocument })
+      .then(({ data }) => setMatches(data.myMahjongMatches as Match[]))
       .catch(() => {})
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [client]);
 
   const ppStats = useMemo(() => {
     if (!userId || matches.length === 0) return [];

@@ -1,0 +1,65 @@
+query MyMahjongMatches($storeId: ID) {
+  myMahjongMatches(storeId: $storeId) {
+    id
+    tableId
+    table {
+      id
+      name
+      code
+    }
+    matchType
+    gszRecordId
+    gszSynced
+    gszError
+    gszSyncedAt
+    mode
+    format
+    startedAt
+    endedAt
+    terminationReason
+    players {
+      userId
+      nickname
+      seat
+      finalScore
+    }
+    playersJson
+    scores
+    config {
+      type
+      mode
+      format
+    }
+    createdAt
+  }
+}
+
+query MyMahjongRegistration {
+  myMahjongRegistration {
+    hasPhone
+    phone
+    nickname
+    registered
+    gszName
+    gszId
+    gszSynced
+    gszError
+    alreadyExisted
+    nicknameSynced
+  }
+}
+
+mutation RegisterMahjong($input: RegisterMahjongInput!) {
+  registerMahjong(input: $input) {
+    hasPhone
+    phone
+    nickname
+    registered
+    gszName
+    gszId
+    gszSynced
+    gszError
+    alreadyExisted
+    nicknameSynced
+  }
+}

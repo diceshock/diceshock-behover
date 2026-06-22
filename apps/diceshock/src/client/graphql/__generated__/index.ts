@@ -2034,6 +2034,17 @@ export type BoardGameFilterInput = {
   tags?: Array<string> | null | undefined;
 };
 
+export type CreateActiveInput = {
+  boardGameId?: string | number | null | undefined;
+  content?: string | null | undefined;
+  date: string;
+  isGame?: boolean | null | undefined;
+  maxPlayers: number;
+  storeId?: string | number | null | undefined;
+  time?: string | null | undefined;
+  title: string;
+};
+
 export type CreateMembershipPlanInput = {
   amount?: number | null | undefined;
   endDate?: string | null | undefined;
@@ -2087,6 +2098,11 @@ export type LeaderboardPeriod =
   | 'DAY'
   | 'MONTH'
   | 'WEEK';
+
+export type LeaveTableInput = {
+  code: string;
+  occupancyId: string | number;
+};
 
 export type MahjongCompletionFilter =
   | 'ALL'
@@ -2156,6 +2172,10 @@ export type MembershipPlanType =
   | 'STORED_VALUE'
   | 'YEARLY';
 
+export type OccupyTableInput = {
+  code: string;
+};
+
 export type OrderGroupBy =
   | 'DATE'
   | 'NONE'
@@ -2202,6 +2222,13 @@ export type PricingSnapshotStatus =
   | 'DRAFT'
   | 'PUBLISHED';
 
+export type RegisterMahjongInput = {
+  gszName: string;
+  phone: string;
+  smsCode: string;
+  syncNickname?: boolean | null | undefined;
+};
+
 export type RequestSmsCodeInput = {
   botcheck?: string | null | undefined;
   phone: string;
@@ -2235,6 +2262,11 @@ export type TableStatus =
 export type TableType =
   | 'FIXED'
   | 'SOLO';
+
+export type TempIdentityOccupyInput = {
+  code: string;
+  tempId: string | number;
+};
 
 export type UnsyncableReasonCode =
   | 'NO_PHONE'
@@ -2314,6 +2346,12 @@ export type UserRole =
 export type UserSearchInput = {
   pagination?: PaginationInput | null | undefined;
   searchWords?: string | null | undefined;
+};
+
+export type VerifyTotpInput = {
+  loginTime: number;
+  totp: string;
+  userAgent: string;
 };
 
 export type WechatTemplateSlotKey =
@@ -2402,6 +2440,28 @@ export type GetOwnedBoardGamesQueryVariables = Exact<{
 
 
 export type GetOwnedBoardGamesQuery = { ownedBoardGames: Array<{ id: string, schName: string | null, engName: string | null, gstoneId: number | null, gstoneRating: number | null, category: string | null, mode: string | null, playerNum: string | null, bestPlayerNum: string | null, content: string | null, removeDate: string | null }> };
+
+export type ParticipantBusinessCardsQueryVariables = Exact<{
+  activeId: string | number;
+}>;
+
+
+export type ParticipantBusinessCardsQuery = { participantBusinessCards: Array<{ userId: string, nickname: string | null, uid: string | null, sharePhone: boolean, phone: string | null, wechat: string | null, qq: string | null, customContent: string | null, isWatching: boolean | null, registrationId: string | null, createdAt: string | null, updatedAt: string | null }> };
+
+export type BusinessCardByUserIdQueryVariables = Exact<{
+  userId: string | number;
+  activeId: string | number;
+}>;
+
+
+export type BusinessCardByUserIdQuery = { businessCard: { userId: string, nickname: string | null, uid: string | null, sharePhone: boolean, phone: string | null, wechat: string | null, qq: string | null, customContent: string | null, isWatching: boolean | null, registrationId: string | null, createdAt: string | null, updatedAt: string | null } | null };
+
+export type CreateActiveMutationVariables = Exact<{
+  input: CreateActiveInput;
+}>;
+
+
+export type CreateActiveMutation = { createActive: { id: string, creatorId: string, title: string, boardGameId: string | null, storeId: string | null, date: string, time: string | null, maxPlayers: number, content: string | null, isGame: boolean, createdAt: string | null, boardGame: { id: string, schName: string | null, engName: string | null, gstoneRating: number | null } | null, registrations: Array<{ id: string, activeId: string, userId: string, isWatching: boolean, nickname: string | null, uid: string | null, createdAt: string | null }> } };
 
 export type ManagedActivesQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -2862,6 +2922,29 @@ export type OccupanciesByUserQueryVariables = Exact<{
 
 export type OccupanciesByUserQuery = { occupanciesByUser: Array<{ id: string, tableId: string, userId: string | null, tempId: string | null, nickname: string | null, uid: string | null, phone: string | null, seats: number, status: OrderStatus, startAt: string, endAt: string | null, finalPrice: number | null, table: { id: string, name: string, code: string, scope: TableScope } | null }> };
 
+export type VerifyTotpDashMutationVariables = Exact<{
+  input: VerifyTotpInput;
+}>;
+
+
+export type VerifyTotpDashMutation = { verifyTotp: { success: boolean, userId: string | null } };
+
+export type SyncOwnedBoardGamesMutationVariables = Exact<{
+  pageFrom: number;
+  pageTo: number;
+  date: string;
+}>;
+
+
+export type SyncOwnedBoardGamesMutation = { syncOwnedBoardGames: { success: boolean, message: string | null, processed: number | null } };
+
+export type WakeOwnedBoardGamesMutationVariables = Exact<{
+  date: string;
+}>;
+
+
+export type WakeOwnedBoardGamesMutation = { wakeOwnedBoardGames: { success: boolean, message: string | null, processed: number | null } };
+
 export type WechatTemplatesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -2960,6 +3043,25 @@ export type GetMahjongMatchHistoryQueryVariables = Exact<{
 
 export type GetMahjongMatchHistoryQuery = { mahjongMatchHistory: { items: Array<{ id: string, tableId: string | null, matchType: MahjongMatchType | null, gszRecordId: number | null, gszSynced: boolean, mode: MahjongMode, format: MahjongFormat, startedAt: string, endedAt: string, terminationReason: MahjongTerminationReason, playersJson: string, scores: string | null, table: { id: string, name: string } | null, players: Array<{ userId: string, nickname: string, seat: string | null, finalScore: number }>, config: { type: string | null, mode: string, format: string } | null, unsyncableReasons: Array<{ nickname: string, userId: string, reason: UnsyncableReasonCode }> }>, pageInfo: { offset: number, limit: number, total: number | null, nextCursor: string | null, hasMore: boolean } } };
 
+export type MyMahjongMatchesQueryVariables = Exact<{
+  storeId?: string | number | null | undefined;
+}>;
+
+
+export type MyMahjongMatchesQuery = { myMahjongMatches: Array<{ id: string, tableId: string | null, matchType: MahjongMatchType | null, gszRecordId: number | null, gszSynced: boolean, gszError: string | null, gszSyncedAt: string | null, mode: MahjongMode, format: MahjongFormat, startedAt: string, endedAt: string, terminationReason: MahjongTerminationReason, playersJson: string, scores: string | null, createdAt: string | null, table: { id: string, name: string, code: string } | null, players: Array<{ userId: string, nickname: string, seat: string | null, finalScore: number }>, config: { type: string | null, mode: string, format: string } | null }> };
+
+export type MyMahjongRegistrationQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type MyMahjongRegistrationQuery = { myMahjongRegistration: { hasPhone: boolean, phone: string | null, nickname: string | null, registered: boolean, gszName: string | null, gszId: number | null, gszSynced: boolean, gszError: string | null, alreadyExisted: boolean | null, nicknameSynced: boolean | null } };
+
+export type RegisterMahjongMutationVariables = Exact<{
+  input: RegisterMahjongInput;
+}>;
+
+
+export type RegisterMahjongMutation = { registerMahjong: { hasPhone: boolean, phone: string | null, nickname: string | null, registered: boolean, gszName: string | null, gszId: number | null, gszSynced: boolean, gszError: string | null, alreadyExisted: boolean | null, nicknameSynced: boolean | null } };
+
 export type NotificationReceivedSubscriptionVariables = Exact<{
   userId: string | number;
 }>;
@@ -2967,12 +3069,80 @@ export type NotificationReceivedSubscriptionVariables = Exact<{
 
 export type NotificationReceivedSubscription = { notificationReceived: { id: string, userId: string, type: string, title: string | null, body: string | null, activeId: string | null, createdAt: string } };
 
+export type WechatOpenConfigQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type WechatOpenConfigQuery = { wechatOpenConfig: { appId: string | null } };
+
 export type SeatUpdatedSubscriptionVariables = Exact<{
   tableCode: string;
 }>;
 
 
 export type SeatUpdatedSubscription = { seatUpdated: { tableCode: string, updatedAt: string, table: { id: string, name: string, type: TableType, scope: TableScope, status: TableStatus, capacity: number, code: string }, occupancies: Array<{ id: string, userId: string | null, nickname: string | null, uid: string | null, seats: number, startAt: string, status: OrderStatus, tableId: string }> } };
+
+export type TableByCodeQueryVariables = Exact<{
+  code: string;
+  storeId?: string | number | null | undefined;
+}>;
+
+
+export type TableByCodeQuery = { tableByCode: { id: string, name: string, type: TableType, scope: TableScope, status: TableStatus, capacity: number, code: string, description: string | null, storeId: string | null, createdAt: string | null, updatedAt: string | null, occupancies: Array<{ id: string, tableId: string, userId: string | null, tempId: string | null, nickname: string | null, uid: string | null, seats: number, status: OrderStatus, startAt: string, endAt: string | null, finalPrice: number | null }> } };
+
+export type MyActiveOccupanciesQueryVariables = Exact<{
+  storeId?: string | number | null | undefined;
+}>;
+
+
+export type MyActiveOccupanciesQuery = { myActiveOccupancies: Array<{ code: string, name: string, status: OrderStatus }> };
+
+export type PauseMyOrderMutationVariables = Exact<{
+  input: LeaveTableInput;
+}>;
+
+
+export type PauseMyOrderMutation = { pauseMyOrder: { id: string, tableId: string, userId: string | null, nickname: string | null, status: OrderStatus, startAt: string, endAt: string | null } };
+
+export type OccupyTableMutationVariables = Exact<{
+  input: OccupyTableInput;
+}>;
+
+
+export type OccupyTableMutation = { occupyTable: { occupancy: { id: string, tableId: string, userId: string | null, nickname: string | null, status: OrderStatus, startAt: string, endAt: string | null }, table: { id: string, code: string, name: string } } };
+
+export type CreateTempIdentityMutationVariables = Exact<{ [key: string]: never; }>;
+
+
+export type CreateTempIdentityMutation = { createTempIdentity: { id: string, nickname: string, totpSecret: string, expiresAt: string, valid: boolean } };
+
+export type ValidateTempIdentityQueryVariables = Exact<{
+  tempId: string | number;
+}>;
+
+
+export type ValidateTempIdentityQuery = { validateTempIdentity: { id: string, nickname: string, totpSecret: string, expiresAt: string, valid: boolean } };
+
+export type TempIdentityActiveOccupanciesQueryVariables = Exact<{
+  tempId: string | number;
+}>;
+
+
+export type TempIdentityActiveOccupanciesQuery = { tempIdentityActiveOccupancies: Array<{ code: string, name: string, status: OrderStatus }> };
+
+export type TransferTempIdentityMutationVariables = Exact<{
+  tempId: string | number;
+  userId: string | number;
+}>;
+
+
+export type TransferTempIdentityMutation = { transferTempIdentity: { transferred: boolean, occupancy: { id: string, tableId: string, userId: string | null, nickname: string | null, status: OrderStatus } | null } };
+
+export type OccupyTableWithTempIdentityMutationVariables = Exact<{
+  input: TempIdentityOccupyInput;
+}>;
+
+
+export type OccupyTableWithTempIdentityMutation = { occupyTableWithTempIdentity: { occupancy: { id: string, tableId: string, userId: string | null, nickname: string | null, status: OrderStatus }, table: { id: string, code: string, name: string } } };
 
 export type GetMyBusinessCardQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -3580,6 +3750,173 @@ export type GetOwnedBoardGamesQueryHookResult = ReturnType<typeof useGetOwnedBoa
 export type GetOwnedBoardGamesLazyQueryHookResult = ReturnType<typeof useGetOwnedBoardGamesLazyQuery>;
 export type GetOwnedBoardGamesSuspenseQueryHookResult = ReturnType<typeof useGetOwnedBoardGamesSuspenseQuery>;
 export type GetOwnedBoardGamesQueryResult = Apollo.QueryResult<GetOwnedBoardGamesQuery, GetOwnedBoardGamesQueryVariables>;
+export const ParticipantBusinessCardsDocument = gql`
+    query ParticipantBusinessCards($activeId: ID!) {
+  participantBusinessCards(activeId: $activeId) {
+    userId
+    nickname
+    uid
+    sharePhone
+    phone
+    wechat
+    qq
+    customContent
+    isWatching
+    registrationId
+    createdAt
+    updatedAt
+  }
+}
+    `;
+
+/**
+ * __useParticipantBusinessCardsQuery__
+ *
+ * To run a query within a React component, call `useParticipantBusinessCardsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useParticipantBusinessCardsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useParticipantBusinessCardsQuery({
+ *   variables: {
+ *      activeId: // value for 'activeId'
+ *   },
+ * });
+ */
+export function useParticipantBusinessCardsQuery(baseOptions: Apollo.QueryHookOptions<ParticipantBusinessCardsQuery, ParticipantBusinessCardsQueryVariables> & ({ variables: ParticipantBusinessCardsQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ParticipantBusinessCardsQuery, ParticipantBusinessCardsQueryVariables>(ParticipantBusinessCardsDocument, options);
+      }
+export function useParticipantBusinessCardsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ParticipantBusinessCardsQuery, ParticipantBusinessCardsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ParticipantBusinessCardsQuery, ParticipantBusinessCardsQueryVariables>(ParticipantBusinessCardsDocument, options);
+        }
+// @ts-ignore
+export function useParticipantBusinessCardsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<ParticipantBusinessCardsQuery, ParticipantBusinessCardsQueryVariables>): Apollo.UseSuspenseQueryResult<ParticipantBusinessCardsQuery, ParticipantBusinessCardsQueryVariables>;
+export function useParticipantBusinessCardsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<ParticipantBusinessCardsQuery, ParticipantBusinessCardsQueryVariables>): Apollo.UseSuspenseQueryResult<ParticipantBusinessCardsQuery | undefined, ParticipantBusinessCardsQueryVariables>;
+export function useParticipantBusinessCardsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<ParticipantBusinessCardsQuery, ParticipantBusinessCardsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<ParticipantBusinessCardsQuery, ParticipantBusinessCardsQueryVariables>(ParticipantBusinessCardsDocument, options);
+        }
+export type ParticipantBusinessCardsQueryHookResult = ReturnType<typeof useParticipantBusinessCardsQuery>;
+export type ParticipantBusinessCardsLazyQueryHookResult = ReturnType<typeof useParticipantBusinessCardsLazyQuery>;
+export type ParticipantBusinessCardsSuspenseQueryHookResult = ReturnType<typeof useParticipantBusinessCardsSuspenseQuery>;
+export type ParticipantBusinessCardsQueryResult = Apollo.QueryResult<ParticipantBusinessCardsQuery, ParticipantBusinessCardsQueryVariables>;
+export const BusinessCardByUserIdDocument = gql`
+    query BusinessCardByUserId($userId: ID!, $activeId: ID!) {
+  businessCard(userId: $userId, activeId: $activeId) {
+    userId
+    nickname
+    uid
+    sharePhone
+    phone
+    wechat
+    qq
+    customContent
+    isWatching
+    registrationId
+    createdAt
+    updatedAt
+  }
+}
+    `;
+
+/**
+ * __useBusinessCardByUserIdQuery__
+ *
+ * To run a query within a React component, call `useBusinessCardByUserIdQuery` and pass it any options that fit your needs.
+ * When your component renders, `useBusinessCardByUserIdQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useBusinessCardByUserIdQuery({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *      activeId: // value for 'activeId'
+ *   },
+ * });
+ */
+export function useBusinessCardByUserIdQuery(baseOptions: Apollo.QueryHookOptions<BusinessCardByUserIdQuery, BusinessCardByUserIdQueryVariables> & ({ variables: BusinessCardByUserIdQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<BusinessCardByUserIdQuery, BusinessCardByUserIdQueryVariables>(BusinessCardByUserIdDocument, options);
+      }
+export function useBusinessCardByUserIdLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<BusinessCardByUserIdQuery, BusinessCardByUserIdQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<BusinessCardByUserIdQuery, BusinessCardByUserIdQueryVariables>(BusinessCardByUserIdDocument, options);
+        }
+// @ts-ignore
+export function useBusinessCardByUserIdSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<BusinessCardByUserIdQuery, BusinessCardByUserIdQueryVariables>): Apollo.UseSuspenseQueryResult<BusinessCardByUserIdQuery, BusinessCardByUserIdQueryVariables>;
+export function useBusinessCardByUserIdSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<BusinessCardByUserIdQuery, BusinessCardByUserIdQueryVariables>): Apollo.UseSuspenseQueryResult<BusinessCardByUserIdQuery | undefined, BusinessCardByUserIdQueryVariables>;
+export function useBusinessCardByUserIdSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<BusinessCardByUserIdQuery, BusinessCardByUserIdQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<BusinessCardByUserIdQuery, BusinessCardByUserIdQueryVariables>(BusinessCardByUserIdDocument, options);
+        }
+export type BusinessCardByUserIdQueryHookResult = ReturnType<typeof useBusinessCardByUserIdQuery>;
+export type BusinessCardByUserIdLazyQueryHookResult = ReturnType<typeof useBusinessCardByUserIdLazyQuery>;
+export type BusinessCardByUserIdSuspenseQueryHookResult = ReturnType<typeof useBusinessCardByUserIdSuspenseQuery>;
+export type BusinessCardByUserIdQueryResult = Apollo.QueryResult<BusinessCardByUserIdQuery, BusinessCardByUserIdQueryVariables>;
+export const CreateActiveDocument = gql`
+    mutation CreateActive($input: CreateActiveInput!) {
+  createActive(input: $input) {
+    id
+    creatorId
+    title
+    boardGameId
+    boardGame {
+      id
+      schName
+      engName
+      gstoneRating
+    }
+    storeId
+    date
+    time
+    maxPlayers
+    content
+    isGame
+    registrations {
+      id
+      activeId
+      userId
+      isWatching
+      nickname
+      uid
+      createdAt
+    }
+    createdAt
+  }
+}
+    `;
+export type CreateActiveMutationFn = Apollo.MutationFunction<CreateActiveMutation, CreateActiveMutationVariables>;
+
+/**
+ * __useCreateActiveMutation__
+ *
+ * To run a mutation, you first call `useCreateActiveMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateActiveMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createActiveMutation, { data, loading, error }] = useCreateActiveMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useCreateActiveMutation(baseOptions?: Apollo.MutationHookOptions<CreateActiveMutation, CreateActiveMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateActiveMutation, CreateActiveMutationVariables>(CreateActiveDocument, options);
+      }
+export type CreateActiveMutationHookResult = ReturnType<typeof useCreateActiveMutation>;
+export type CreateActiveMutationResult = Apollo.MutationResult<CreateActiveMutation>;
+export type CreateActiveMutationOptions = Apollo.BaseMutationOptions<CreateActiveMutation, CreateActiveMutationVariables>;
 export const ManagedActivesDocument = gql`
     query ManagedActives {
   managedActives {
@@ -6731,6 +7068,112 @@ export type OccupanciesByUserQueryHookResult = ReturnType<typeof useOccupanciesB
 export type OccupanciesByUserLazyQueryHookResult = ReturnType<typeof useOccupanciesByUserLazyQuery>;
 export type OccupanciesByUserSuspenseQueryHookResult = ReturnType<typeof useOccupanciesByUserSuspenseQuery>;
 export type OccupanciesByUserQueryResult = Apollo.QueryResult<OccupanciesByUserQuery, OccupanciesByUserQueryVariables>;
+export const VerifyTotpDashDocument = gql`
+    mutation VerifyTotpDash($input: VerifyTotpInput!) {
+  verifyTotp(input: $input) {
+    success
+    userId
+  }
+}
+    `;
+export type VerifyTotpDashMutationFn = Apollo.MutationFunction<VerifyTotpDashMutation, VerifyTotpDashMutationVariables>;
+
+/**
+ * __useVerifyTotpDashMutation__
+ *
+ * To run a mutation, you first call `useVerifyTotpDashMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useVerifyTotpDashMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [verifyTotpDashMutation, { data, loading, error }] = useVerifyTotpDashMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useVerifyTotpDashMutation(baseOptions?: Apollo.MutationHookOptions<VerifyTotpDashMutation, VerifyTotpDashMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<VerifyTotpDashMutation, VerifyTotpDashMutationVariables>(VerifyTotpDashDocument, options);
+      }
+export type VerifyTotpDashMutationHookResult = ReturnType<typeof useVerifyTotpDashMutation>;
+export type VerifyTotpDashMutationResult = Apollo.MutationResult<VerifyTotpDashMutation>;
+export type VerifyTotpDashMutationOptions = Apollo.BaseMutationOptions<VerifyTotpDashMutation, VerifyTotpDashMutationVariables>;
+export const SyncOwnedBoardGamesDocument = gql`
+    mutation SyncOwnedBoardGames($pageFrom: Int!, $pageTo: Int!, $date: String!) {
+  syncOwnedBoardGames(pageFrom: $pageFrom, pageTo: $pageTo, date: $date) {
+    success
+    message
+    processed
+  }
+}
+    `;
+export type SyncOwnedBoardGamesMutationFn = Apollo.MutationFunction<SyncOwnedBoardGamesMutation, SyncOwnedBoardGamesMutationVariables>;
+
+/**
+ * __useSyncOwnedBoardGamesMutation__
+ *
+ * To run a mutation, you first call `useSyncOwnedBoardGamesMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSyncOwnedBoardGamesMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [syncOwnedBoardGamesMutation, { data, loading, error }] = useSyncOwnedBoardGamesMutation({
+ *   variables: {
+ *      pageFrom: // value for 'pageFrom'
+ *      pageTo: // value for 'pageTo'
+ *      date: // value for 'date'
+ *   },
+ * });
+ */
+export function useSyncOwnedBoardGamesMutation(baseOptions?: Apollo.MutationHookOptions<SyncOwnedBoardGamesMutation, SyncOwnedBoardGamesMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<SyncOwnedBoardGamesMutation, SyncOwnedBoardGamesMutationVariables>(SyncOwnedBoardGamesDocument, options);
+      }
+export type SyncOwnedBoardGamesMutationHookResult = ReturnType<typeof useSyncOwnedBoardGamesMutation>;
+export type SyncOwnedBoardGamesMutationResult = Apollo.MutationResult<SyncOwnedBoardGamesMutation>;
+export type SyncOwnedBoardGamesMutationOptions = Apollo.BaseMutationOptions<SyncOwnedBoardGamesMutation, SyncOwnedBoardGamesMutationVariables>;
+export const WakeOwnedBoardGamesDocument = gql`
+    mutation WakeOwnedBoardGames($date: String!) {
+  wakeOwnedBoardGames(date: $date) {
+    success
+    message
+    processed
+  }
+}
+    `;
+export type WakeOwnedBoardGamesMutationFn = Apollo.MutationFunction<WakeOwnedBoardGamesMutation, WakeOwnedBoardGamesMutationVariables>;
+
+/**
+ * __useWakeOwnedBoardGamesMutation__
+ *
+ * To run a mutation, you first call `useWakeOwnedBoardGamesMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useWakeOwnedBoardGamesMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [wakeOwnedBoardGamesMutation, { data, loading, error }] = useWakeOwnedBoardGamesMutation({
+ *   variables: {
+ *      date: // value for 'date'
+ *   },
+ * });
+ */
+export function useWakeOwnedBoardGamesMutation(baseOptions?: Apollo.MutationHookOptions<WakeOwnedBoardGamesMutation, WakeOwnedBoardGamesMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<WakeOwnedBoardGamesMutation, WakeOwnedBoardGamesMutationVariables>(WakeOwnedBoardGamesDocument, options);
+      }
+export type WakeOwnedBoardGamesMutationHookResult = ReturnType<typeof useWakeOwnedBoardGamesMutation>;
+export type WakeOwnedBoardGamesMutationResult = Apollo.MutationResult<WakeOwnedBoardGamesMutation>;
+export type WakeOwnedBoardGamesMutationOptions = Apollo.BaseMutationOptions<WakeOwnedBoardGamesMutation, WakeOwnedBoardGamesMutationVariables>;
 export const WechatTemplatesDocument = gql`
     query WechatTemplates {
   wechatTemplates {
@@ -7395,6 +7838,172 @@ export type GetMahjongMatchHistoryQueryHookResult = ReturnType<typeof useGetMahj
 export type GetMahjongMatchHistoryLazyQueryHookResult = ReturnType<typeof useGetMahjongMatchHistoryLazyQuery>;
 export type GetMahjongMatchHistorySuspenseQueryHookResult = ReturnType<typeof useGetMahjongMatchHistorySuspenseQuery>;
 export type GetMahjongMatchHistoryQueryResult = Apollo.QueryResult<GetMahjongMatchHistoryQuery, GetMahjongMatchHistoryQueryVariables>;
+export const MyMahjongMatchesDocument = gql`
+    query MyMahjongMatches($storeId: ID) {
+  myMahjongMatches(storeId: $storeId) {
+    id
+    tableId
+    table {
+      id
+      name
+      code
+    }
+    matchType
+    gszRecordId
+    gszSynced
+    gszError
+    gszSyncedAt
+    mode
+    format
+    startedAt
+    endedAt
+    terminationReason
+    players {
+      userId
+      nickname
+      seat
+      finalScore
+    }
+    playersJson
+    scores
+    config {
+      type
+      mode
+      format
+    }
+    createdAt
+  }
+}
+    `;
+
+/**
+ * __useMyMahjongMatchesQuery__
+ *
+ * To run a query within a React component, call `useMyMahjongMatchesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useMyMahjongMatchesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useMyMahjongMatchesQuery({
+ *   variables: {
+ *      storeId: // value for 'storeId'
+ *   },
+ * });
+ */
+export function useMyMahjongMatchesQuery(baseOptions?: Apollo.QueryHookOptions<MyMahjongMatchesQuery, MyMahjongMatchesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<MyMahjongMatchesQuery, MyMahjongMatchesQueryVariables>(MyMahjongMatchesDocument, options);
+      }
+export function useMyMahjongMatchesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<MyMahjongMatchesQuery, MyMahjongMatchesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<MyMahjongMatchesQuery, MyMahjongMatchesQueryVariables>(MyMahjongMatchesDocument, options);
+        }
+// @ts-ignore
+export function useMyMahjongMatchesSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<MyMahjongMatchesQuery, MyMahjongMatchesQueryVariables>): Apollo.UseSuspenseQueryResult<MyMahjongMatchesQuery, MyMahjongMatchesQueryVariables>;
+export function useMyMahjongMatchesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<MyMahjongMatchesQuery, MyMahjongMatchesQueryVariables>): Apollo.UseSuspenseQueryResult<MyMahjongMatchesQuery | undefined, MyMahjongMatchesQueryVariables>;
+export function useMyMahjongMatchesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<MyMahjongMatchesQuery, MyMahjongMatchesQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<MyMahjongMatchesQuery, MyMahjongMatchesQueryVariables>(MyMahjongMatchesDocument, options);
+        }
+export type MyMahjongMatchesQueryHookResult = ReturnType<typeof useMyMahjongMatchesQuery>;
+export type MyMahjongMatchesLazyQueryHookResult = ReturnType<typeof useMyMahjongMatchesLazyQuery>;
+export type MyMahjongMatchesSuspenseQueryHookResult = ReturnType<typeof useMyMahjongMatchesSuspenseQuery>;
+export type MyMahjongMatchesQueryResult = Apollo.QueryResult<MyMahjongMatchesQuery, MyMahjongMatchesQueryVariables>;
+export const MyMahjongRegistrationDocument = gql`
+    query MyMahjongRegistration {
+  myMahjongRegistration {
+    hasPhone
+    phone
+    nickname
+    registered
+    gszName
+    gszId
+    gszSynced
+    gszError
+    alreadyExisted
+    nicknameSynced
+  }
+}
+    `;
+
+/**
+ * __useMyMahjongRegistrationQuery__
+ *
+ * To run a query within a React component, call `useMyMahjongRegistrationQuery` and pass it any options that fit your needs.
+ * When your component renders, `useMyMahjongRegistrationQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useMyMahjongRegistrationQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useMyMahjongRegistrationQuery(baseOptions?: Apollo.QueryHookOptions<MyMahjongRegistrationQuery, MyMahjongRegistrationQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<MyMahjongRegistrationQuery, MyMahjongRegistrationQueryVariables>(MyMahjongRegistrationDocument, options);
+      }
+export function useMyMahjongRegistrationLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<MyMahjongRegistrationQuery, MyMahjongRegistrationQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<MyMahjongRegistrationQuery, MyMahjongRegistrationQueryVariables>(MyMahjongRegistrationDocument, options);
+        }
+// @ts-ignore
+export function useMyMahjongRegistrationSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<MyMahjongRegistrationQuery, MyMahjongRegistrationQueryVariables>): Apollo.UseSuspenseQueryResult<MyMahjongRegistrationQuery, MyMahjongRegistrationQueryVariables>;
+export function useMyMahjongRegistrationSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<MyMahjongRegistrationQuery, MyMahjongRegistrationQueryVariables>): Apollo.UseSuspenseQueryResult<MyMahjongRegistrationQuery | undefined, MyMahjongRegistrationQueryVariables>;
+export function useMyMahjongRegistrationSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<MyMahjongRegistrationQuery, MyMahjongRegistrationQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<MyMahjongRegistrationQuery, MyMahjongRegistrationQueryVariables>(MyMahjongRegistrationDocument, options);
+        }
+export type MyMahjongRegistrationQueryHookResult = ReturnType<typeof useMyMahjongRegistrationQuery>;
+export type MyMahjongRegistrationLazyQueryHookResult = ReturnType<typeof useMyMahjongRegistrationLazyQuery>;
+export type MyMahjongRegistrationSuspenseQueryHookResult = ReturnType<typeof useMyMahjongRegistrationSuspenseQuery>;
+export type MyMahjongRegistrationQueryResult = Apollo.QueryResult<MyMahjongRegistrationQuery, MyMahjongRegistrationQueryVariables>;
+export const RegisterMahjongDocument = gql`
+    mutation RegisterMahjong($input: RegisterMahjongInput!) {
+  registerMahjong(input: $input) {
+    hasPhone
+    phone
+    nickname
+    registered
+    gszName
+    gszId
+    gszSynced
+    gszError
+    alreadyExisted
+    nicknameSynced
+  }
+}
+    `;
+export type RegisterMahjongMutationFn = Apollo.MutationFunction<RegisterMahjongMutation, RegisterMahjongMutationVariables>;
+
+/**
+ * __useRegisterMahjongMutation__
+ *
+ * To run a mutation, you first call `useRegisterMahjongMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRegisterMahjongMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [registerMahjongMutation, { data, loading, error }] = useRegisterMahjongMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useRegisterMahjongMutation(baseOptions?: Apollo.MutationHookOptions<RegisterMahjongMutation, RegisterMahjongMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<RegisterMahjongMutation, RegisterMahjongMutationVariables>(RegisterMahjongDocument, options);
+      }
+export type RegisterMahjongMutationHookResult = ReturnType<typeof useRegisterMahjongMutation>;
+export type RegisterMahjongMutationResult = Apollo.MutationResult<RegisterMahjongMutation>;
+export type RegisterMahjongMutationOptions = Apollo.BaseMutationOptions<RegisterMahjongMutation, RegisterMahjongMutationVariables>;
 export const NotificationReceivedDocument = gql`
     subscription NotificationReceived($userId: ID!) {
   notificationReceived(userId: $userId) {
@@ -7431,6 +8040,48 @@ export function useNotificationReceivedSubscription(baseOptions: Apollo.Subscrip
       }
 export type NotificationReceivedSubscriptionHookResult = ReturnType<typeof useNotificationReceivedSubscription>;
 export type NotificationReceivedSubscriptionResult = Apollo.SubscriptionResult<NotificationReceivedSubscription>;
+export const WechatOpenConfigDocument = gql`
+    query WechatOpenConfig {
+  wechatOpenConfig {
+    appId
+  }
+}
+    `;
+
+/**
+ * __useWechatOpenConfigQuery__
+ *
+ * To run a query within a React component, call `useWechatOpenConfigQuery` and pass it any options that fit your needs.
+ * When your component renders, `useWechatOpenConfigQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useWechatOpenConfigQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useWechatOpenConfigQuery(baseOptions?: Apollo.QueryHookOptions<WechatOpenConfigQuery, WechatOpenConfigQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<WechatOpenConfigQuery, WechatOpenConfigQueryVariables>(WechatOpenConfigDocument, options);
+      }
+export function useWechatOpenConfigLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<WechatOpenConfigQuery, WechatOpenConfigQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<WechatOpenConfigQuery, WechatOpenConfigQueryVariables>(WechatOpenConfigDocument, options);
+        }
+// @ts-ignore
+export function useWechatOpenConfigSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<WechatOpenConfigQuery, WechatOpenConfigQueryVariables>): Apollo.UseSuspenseQueryResult<WechatOpenConfigQuery, WechatOpenConfigQueryVariables>;
+export function useWechatOpenConfigSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<WechatOpenConfigQuery, WechatOpenConfigQueryVariables>): Apollo.UseSuspenseQueryResult<WechatOpenConfigQuery | undefined, WechatOpenConfigQueryVariables>;
+export function useWechatOpenConfigSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<WechatOpenConfigQuery, WechatOpenConfigQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<WechatOpenConfigQuery, WechatOpenConfigQueryVariables>(WechatOpenConfigDocument, options);
+        }
+export type WechatOpenConfigQueryHookResult = ReturnType<typeof useWechatOpenConfigQuery>;
+export type WechatOpenConfigLazyQueryHookResult = ReturnType<typeof useWechatOpenConfigLazyQuery>;
+export type WechatOpenConfigSuspenseQueryHookResult = ReturnType<typeof useWechatOpenConfigSuspenseQuery>;
+export type WechatOpenConfigQueryResult = Apollo.QueryResult<WechatOpenConfigQuery, WechatOpenConfigQueryVariables>;
 export const SeatUpdatedDocument = gql`
     subscription SeatUpdated($tableCode: String!) {
   seatUpdated(tableCode: $tableCode) {
@@ -7481,6 +8132,416 @@ export function useSeatUpdatedSubscription(baseOptions: Apollo.SubscriptionHookO
       }
 export type SeatUpdatedSubscriptionHookResult = ReturnType<typeof useSeatUpdatedSubscription>;
 export type SeatUpdatedSubscriptionResult = Apollo.SubscriptionResult<SeatUpdatedSubscription>;
+export const TableByCodeDocument = gql`
+    query TableByCode($code: String!, $storeId: ID) {
+  tableByCode(code: $code, storeId: $storeId) {
+    id
+    name
+    type
+    scope
+    status
+    capacity
+    code
+    description
+    storeId
+    occupancies {
+      id
+      tableId
+      userId
+      tempId
+      nickname
+      uid
+      seats
+      status
+      startAt
+      endAt
+      finalPrice
+    }
+    createdAt
+    updatedAt
+  }
+}
+    `;
+
+/**
+ * __useTableByCodeQuery__
+ *
+ * To run a query within a React component, call `useTableByCodeQuery` and pass it any options that fit your needs.
+ * When your component renders, `useTableByCodeQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useTableByCodeQuery({
+ *   variables: {
+ *      code: // value for 'code'
+ *      storeId: // value for 'storeId'
+ *   },
+ * });
+ */
+export function useTableByCodeQuery(baseOptions: Apollo.QueryHookOptions<TableByCodeQuery, TableByCodeQueryVariables> & ({ variables: TableByCodeQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<TableByCodeQuery, TableByCodeQueryVariables>(TableByCodeDocument, options);
+      }
+export function useTableByCodeLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<TableByCodeQuery, TableByCodeQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<TableByCodeQuery, TableByCodeQueryVariables>(TableByCodeDocument, options);
+        }
+// @ts-ignore
+export function useTableByCodeSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<TableByCodeQuery, TableByCodeQueryVariables>): Apollo.UseSuspenseQueryResult<TableByCodeQuery, TableByCodeQueryVariables>;
+export function useTableByCodeSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<TableByCodeQuery, TableByCodeQueryVariables>): Apollo.UseSuspenseQueryResult<TableByCodeQuery | undefined, TableByCodeQueryVariables>;
+export function useTableByCodeSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<TableByCodeQuery, TableByCodeQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<TableByCodeQuery, TableByCodeQueryVariables>(TableByCodeDocument, options);
+        }
+export type TableByCodeQueryHookResult = ReturnType<typeof useTableByCodeQuery>;
+export type TableByCodeLazyQueryHookResult = ReturnType<typeof useTableByCodeLazyQuery>;
+export type TableByCodeSuspenseQueryHookResult = ReturnType<typeof useTableByCodeSuspenseQuery>;
+export type TableByCodeQueryResult = Apollo.QueryResult<TableByCodeQuery, TableByCodeQueryVariables>;
+export const MyActiveOccupanciesDocument = gql`
+    query MyActiveOccupancies($storeId: ID) {
+  myActiveOccupancies(storeId: $storeId) {
+    code
+    name
+    status
+  }
+}
+    `;
+
+/**
+ * __useMyActiveOccupanciesQuery__
+ *
+ * To run a query within a React component, call `useMyActiveOccupanciesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useMyActiveOccupanciesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useMyActiveOccupanciesQuery({
+ *   variables: {
+ *      storeId: // value for 'storeId'
+ *   },
+ * });
+ */
+export function useMyActiveOccupanciesQuery(baseOptions?: Apollo.QueryHookOptions<MyActiveOccupanciesQuery, MyActiveOccupanciesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<MyActiveOccupanciesQuery, MyActiveOccupanciesQueryVariables>(MyActiveOccupanciesDocument, options);
+      }
+export function useMyActiveOccupanciesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<MyActiveOccupanciesQuery, MyActiveOccupanciesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<MyActiveOccupanciesQuery, MyActiveOccupanciesQueryVariables>(MyActiveOccupanciesDocument, options);
+        }
+// @ts-ignore
+export function useMyActiveOccupanciesSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<MyActiveOccupanciesQuery, MyActiveOccupanciesQueryVariables>): Apollo.UseSuspenseQueryResult<MyActiveOccupanciesQuery, MyActiveOccupanciesQueryVariables>;
+export function useMyActiveOccupanciesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<MyActiveOccupanciesQuery, MyActiveOccupanciesQueryVariables>): Apollo.UseSuspenseQueryResult<MyActiveOccupanciesQuery | undefined, MyActiveOccupanciesQueryVariables>;
+export function useMyActiveOccupanciesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<MyActiveOccupanciesQuery, MyActiveOccupanciesQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<MyActiveOccupanciesQuery, MyActiveOccupanciesQueryVariables>(MyActiveOccupanciesDocument, options);
+        }
+export type MyActiveOccupanciesQueryHookResult = ReturnType<typeof useMyActiveOccupanciesQuery>;
+export type MyActiveOccupanciesLazyQueryHookResult = ReturnType<typeof useMyActiveOccupanciesLazyQuery>;
+export type MyActiveOccupanciesSuspenseQueryHookResult = ReturnType<typeof useMyActiveOccupanciesSuspenseQuery>;
+export type MyActiveOccupanciesQueryResult = Apollo.QueryResult<MyActiveOccupanciesQuery, MyActiveOccupanciesQueryVariables>;
+export const PauseMyOrderDocument = gql`
+    mutation PauseMyOrder($input: LeaveTableInput!) {
+  pauseMyOrder(input: $input) {
+    id
+    tableId
+    userId
+    nickname
+    status
+    startAt
+    endAt
+  }
+}
+    `;
+export type PauseMyOrderMutationFn = Apollo.MutationFunction<PauseMyOrderMutation, PauseMyOrderMutationVariables>;
+
+/**
+ * __usePauseMyOrderMutation__
+ *
+ * To run a mutation, you first call `usePauseMyOrderMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `usePauseMyOrderMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [pauseMyOrderMutation, { data, loading, error }] = usePauseMyOrderMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function usePauseMyOrderMutation(baseOptions?: Apollo.MutationHookOptions<PauseMyOrderMutation, PauseMyOrderMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<PauseMyOrderMutation, PauseMyOrderMutationVariables>(PauseMyOrderDocument, options);
+      }
+export type PauseMyOrderMutationHookResult = ReturnType<typeof usePauseMyOrderMutation>;
+export type PauseMyOrderMutationResult = Apollo.MutationResult<PauseMyOrderMutation>;
+export type PauseMyOrderMutationOptions = Apollo.BaseMutationOptions<PauseMyOrderMutation, PauseMyOrderMutationVariables>;
+export const OccupyTableDocument = gql`
+    mutation OccupyTable($input: OccupyTableInput!) {
+  occupyTable(input: $input) {
+    occupancy {
+      id
+      tableId
+      userId
+      nickname
+      status
+      startAt
+      endAt
+    }
+    table {
+      id
+      code
+      name
+    }
+  }
+}
+    `;
+export type OccupyTableMutationFn = Apollo.MutationFunction<OccupyTableMutation, OccupyTableMutationVariables>;
+
+/**
+ * __useOccupyTableMutation__
+ *
+ * To run a mutation, you first call `useOccupyTableMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useOccupyTableMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [occupyTableMutation, { data, loading, error }] = useOccupyTableMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useOccupyTableMutation(baseOptions?: Apollo.MutationHookOptions<OccupyTableMutation, OccupyTableMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<OccupyTableMutation, OccupyTableMutationVariables>(OccupyTableDocument, options);
+      }
+export type OccupyTableMutationHookResult = ReturnType<typeof useOccupyTableMutation>;
+export type OccupyTableMutationResult = Apollo.MutationResult<OccupyTableMutation>;
+export type OccupyTableMutationOptions = Apollo.BaseMutationOptions<OccupyTableMutation, OccupyTableMutationVariables>;
+export const CreateTempIdentityDocument = gql`
+    mutation CreateTempIdentity {
+  createTempIdentity {
+    id
+    nickname
+    totpSecret
+    expiresAt
+    valid
+  }
+}
+    `;
+export type CreateTempIdentityMutationFn = Apollo.MutationFunction<CreateTempIdentityMutation, CreateTempIdentityMutationVariables>;
+
+/**
+ * __useCreateTempIdentityMutation__
+ *
+ * To run a mutation, you first call `useCreateTempIdentityMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateTempIdentityMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createTempIdentityMutation, { data, loading, error }] = useCreateTempIdentityMutation({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useCreateTempIdentityMutation(baseOptions?: Apollo.MutationHookOptions<CreateTempIdentityMutation, CreateTempIdentityMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateTempIdentityMutation, CreateTempIdentityMutationVariables>(CreateTempIdentityDocument, options);
+      }
+export type CreateTempIdentityMutationHookResult = ReturnType<typeof useCreateTempIdentityMutation>;
+export type CreateTempIdentityMutationResult = Apollo.MutationResult<CreateTempIdentityMutation>;
+export type CreateTempIdentityMutationOptions = Apollo.BaseMutationOptions<CreateTempIdentityMutation, CreateTempIdentityMutationVariables>;
+export const ValidateTempIdentityDocument = gql`
+    query ValidateTempIdentity($tempId: ID!) {
+  validateTempIdentity(tempId: $tempId) {
+    id
+    nickname
+    totpSecret
+    expiresAt
+    valid
+  }
+}
+    `;
+
+/**
+ * __useValidateTempIdentityQuery__
+ *
+ * To run a query within a React component, call `useValidateTempIdentityQuery` and pass it any options that fit your needs.
+ * When your component renders, `useValidateTempIdentityQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useValidateTempIdentityQuery({
+ *   variables: {
+ *      tempId: // value for 'tempId'
+ *   },
+ * });
+ */
+export function useValidateTempIdentityQuery(baseOptions: Apollo.QueryHookOptions<ValidateTempIdentityQuery, ValidateTempIdentityQueryVariables> & ({ variables: ValidateTempIdentityQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ValidateTempIdentityQuery, ValidateTempIdentityQueryVariables>(ValidateTempIdentityDocument, options);
+      }
+export function useValidateTempIdentityLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ValidateTempIdentityQuery, ValidateTempIdentityQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ValidateTempIdentityQuery, ValidateTempIdentityQueryVariables>(ValidateTempIdentityDocument, options);
+        }
+// @ts-ignore
+export function useValidateTempIdentitySuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<ValidateTempIdentityQuery, ValidateTempIdentityQueryVariables>): Apollo.UseSuspenseQueryResult<ValidateTempIdentityQuery, ValidateTempIdentityQueryVariables>;
+export function useValidateTempIdentitySuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<ValidateTempIdentityQuery, ValidateTempIdentityQueryVariables>): Apollo.UseSuspenseQueryResult<ValidateTempIdentityQuery | undefined, ValidateTempIdentityQueryVariables>;
+export function useValidateTempIdentitySuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<ValidateTempIdentityQuery, ValidateTempIdentityQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<ValidateTempIdentityQuery, ValidateTempIdentityQueryVariables>(ValidateTempIdentityDocument, options);
+        }
+export type ValidateTempIdentityQueryHookResult = ReturnType<typeof useValidateTempIdentityQuery>;
+export type ValidateTempIdentityLazyQueryHookResult = ReturnType<typeof useValidateTempIdentityLazyQuery>;
+export type ValidateTempIdentitySuspenseQueryHookResult = ReturnType<typeof useValidateTempIdentitySuspenseQuery>;
+export type ValidateTempIdentityQueryResult = Apollo.QueryResult<ValidateTempIdentityQuery, ValidateTempIdentityQueryVariables>;
+export const TempIdentityActiveOccupanciesDocument = gql`
+    query TempIdentityActiveOccupancies($tempId: ID!) {
+  tempIdentityActiveOccupancies(tempId: $tempId) {
+    code
+    name
+    status
+  }
+}
+    `;
+
+/**
+ * __useTempIdentityActiveOccupanciesQuery__
+ *
+ * To run a query within a React component, call `useTempIdentityActiveOccupanciesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useTempIdentityActiveOccupanciesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useTempIdentityActiveOccupanciesQuery({
+ *   variables: {
+ *      tempId: // value for 'tempId'
+ *   },
+ * });
+ */
+export function useTempIdentityActiveOccupanciesQuery(baseOptions: Apollo.QueryHookOptions<TempIdentityActiveOccupanciesQuery, TempIdentityActiveOccupanciesQueryVariables> & ({ variables: TempIdentityActiveOccupanciesQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<TempIdentityActiveOccupanciesQuery, TempIdentityActiveOccupanciesQueryVariables>(TempIdentityActiveOccupanciesDocument, options);
+      }
+export function useTempIdentityActiveOccupanciesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<TempIdentityActiveOccupanciesQuery, TempIdentityActiveOccupanciesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<TempIdentityActiveOccupanciesQuery, TempIdentityActiveOccupanciesQueryVariables>(TempIdentityActiveOccupanciesDocument, options);
+        }
+// @ts-ignore
+export function useTempIdentityActiveOccupanciesSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<TempIdentityActiveOccupanciesQuery, TempIdentityActiveOccupanciesQueryVariables>): Apollo.UseSuspenseQueryResult<TempIdentityActiveOccupanciesQuery, TempIdentityActiveOccupanciesQueryVariables>;
+export function useTempIdentityActiveOccupanciesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<TempIdentityActiveOccupanciesQuery, TempIdentityActiveOccupanciesQueryVariables>): Apollo.UseSuspenseQueryResult<TempIdentityActiveOccupanciesQuery | undefined, TempIdentityActiveOccupanciesQueryVariables>;
+export function useTempIdentityActiveOccupanciesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<TempIdentityActiveOccupanciesQuery, TempIdentityActiveOccupanciesQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<TempIdentityActiveOccupanciesQuery, TempIdentityActiveOccupanciesQueryVariables>(TempIdentityActiveOccupanciesDocument, options);
+        }
+export type TempIdentityActiveOccupanciesQueryHookResult = ReturnType<typeof useTempIdentityActiveOccupanciesQuery>;
+export type TempIdentityActiveOccupanciesLazyQueryHookResult = ReturnType<typeof useTempIdentityActiveOccupanciesLazyQuery>;
+export type TempIdentityActiveOccupanciesSuspenseQueryHookResult = ReturnType<typeof useTempIdentityActiveOccupanciesSuspenseQuery>;
+export type TempIdentityActiveOccupanciesQueryResult = Apollo.QueryResult<TempIdentityActiveOccupanciesQuery, TempIdentityActiveOccupanciesQueryVariables>;
+export const TransferTempIdentityDocument = gql`
+    mutation TransferTempIdentity($tempId: ID!, $userId: ID!) {
+  transferTempIdentity(tempId: $tempId, userId: $userId) {
+    transferred
+    occupancy {
+      id
+      tableId
+      userId
+      nickname
+      status
+    }
+  }
+}
+    `;
+export type TransferTempIdentityMutationFn = Apollo.MutationFunction<TransferTempIdentityMutation, TransferTempIdentityMutationVariables>;
+
+/**
+ * __useTransferTempIdentityMutation__
+ *
+ * To run a mutation, you first call `useTransferTempIdentityMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useTransferTempIdentityMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [transferTempIdentityMutation, { data, loading, error }] = useTransferTempIdentityMutation({
+ *   variables: {
+ *      tempId: // value for 'tempId'
+ *      userId: // value for 'userId'
+ *   },
+ * });
+ */
+export function useTransferTempIdentityMutation(baseOptions?: Apollo.MutationHookOptions<TransferTempIdentityMutation, TransferTempIdentityMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<TransferTempIdentityMutation, TransferTempIdentityMutationVariables>(TransferTempIdentityDocument, options);
+      }
+export type TransferTempIdentityMutationHookResult = ReturnType<typeof useTransferTempIdentityMutation>;
+export type TransferTempIdentityMutationResult = Apollo.MutationResult<TransferTempIdentityMutation>;
+export type TransferTempIdentityMutationOptions = Apollo.BaseMutationOptions<TransferTempIdentityMutation, TransferTempIdentityMutationVariables>;
+export const OccupyTableWithTempIdentityDocument = gql`
+    mutation OccupyTableWithTempIdentity($input: TempIdentityOccupyInput!) {
+  occupyTableWithTempIdentity(input: $input) {
+    occupancy {
+      id
+      tableId
+      userId
+      nickname
+      status
+    }
+    table {
+      id
+      code
+      name
+    }
+  }
+}
+    `;
+export type OccupyTableWithTempIdentityMutationFn = Apollo.MutationFunction<OccupyTableWithTempIdentityMutation, OccupyTableWithTempIdentityMutationVariables>;
+
+/**
+ * __useOccupyTableWithTempIdentityMutation__
+ *
+ * To run a mutation, you first call `useOccupyTableWithTempIdentityMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useOccupyTableWithTempIdentityMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [occupyTableWithTempIdentityMutation, { data, loading, error }] = useOccupyTableWithTempIdentityMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useOccupyTableWithTempIdentityMutation(baseOptions?: Apollo.MutationHookOptions<OccupyTableWithTempIdentityMutation, OccupyTableWithTempIdentityMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<OccupyTableWithTempIdentityMutation, OccupyTableWithTempIdentityMutationVariables>(OccupyTableWithTempIdentityDocument, options);
+      }
+export type OccupyTableWithTempIdentityMutationHookResult = ReturnType<typeof useOccupyTableWithTempIdentityMutation>;
+export type OccupyTableWithTempIdentityMutationResult = Apollo.MutationResult<OccupyTableWithTempIdentityMutation>;
+export type OccupyTableWithTempIdentityMutationOptions = Apollo.BaseMutationOptions<OccupyTableWithTempIdentityMutation, OccupyTableWithTempIdentityMutationVariables>;
 export const GetMyBusinessCardDocument = gql`
     query GetMyBusinessCard {
   myBusinessCard {

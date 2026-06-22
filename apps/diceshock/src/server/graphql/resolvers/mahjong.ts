@@ -8,7 +8,7 @@ import dbFactory, {
 } from "@lib/db";
 import { desc, eq, like } from "drizzle-orm";
 import { z } from "zod/v4";
-import { gszFetch } from "@/server/apis/trpc/gszApi";
+import { gszFetch } from "@/server/utils/gszFetch";
 import {
   aggregatePP,
   PP_CATEGORY_LABELS,

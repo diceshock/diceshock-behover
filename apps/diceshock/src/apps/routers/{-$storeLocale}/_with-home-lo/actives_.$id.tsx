@@ -1,3 +1,4 @@
+import { useApolloClient } from "@apollo/client";
 import {
   CalendarBlankIcon,
   ClockIcon,
@@ -19,6 +20,8 @@ import ParticipantsCardModal from "@/client/components/diceshock/ParticipantsCar
 import TiptapViewer from "@/client/components/diceshock/TiptapEditor/TiptapViewer";
 import type { GetActiveQuery } from "@/client/graphql/__generated__";
 import {
+  GetMyBusinessCardDocument,
+  type GetMyBusinessCardQuery,
   useActiveParticipantsChangedSubscription,
   useGetActiveQuery,
   useJoinActiveMutation,
@@ -28,7 +31,6 @@ import useAuth from "@/client/hooks/useAuth";
 import { useMessages } from "@/client/hooks/useMessages";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import dayjs from "@/shared/utils/dayjs-config";
-import trpcClientPublic from "@/shared/utils/trpc";
 
 const SITE_URL = "https://origin.runespark.fun";
 
@@ -54,6 +56,7 @@ export const Route = createFileRoute(
 type ActiveDetail = NonNullable<GetActiveQuery["active"]>;
 
 function ActiveDetailPage() {
+  const client = useApolloClient();
   const { id } = Route.useParams();
   const { t } = useTranslation();
   const { userInfo, session } = useAuth();
@@ -119,8 +122,10 @@ function ActiveDetailPage() {
       if (!isWatching && !myRegistration) {
         try {
           setActionLoading(true);
-          const card =
-            await trpcClientPublic.businessCard.getMyBusinessCard.query({});
+          const { data } = await client.query<GetMyBusinessCardQuery>({
+            query: GetMyBusinessCardDocument,
+          });
+          const card = data.myBusinessCard;
           if (!card) {
             setActionLoading(false);
             setShowBusinessCard(true);
@@ -158,6 +163,7 @@ function ActiveDetailPage() {
       }
     },
     [
+      client,
       userId,
       id,
       messages,

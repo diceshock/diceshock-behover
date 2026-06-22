@@ -1,0 +1,22 @@
+mutation VerifyTotpDash($input: VerifyTotpInput!) {
+  verifyTotp(input: $input) {
+    success
+    userId
+  }
+}
+
+mutation SyncOwnedBoardGames($pageFrom: Int!, $pageTo: Int!, $date: String!) {
+  syncOwnedBoardGames(pageFrom: $pageFrom, pageTo: $pageTo, date: $date) {
+    success
+    message
+    processed
+  }
+}
+
+mutation WakeOwnedBoardGames($date: String!) {
+  wakeOwnedBoardGames(date: $date) {
+    success
+    message
+    processed
+  }
+}

@@ -1,0 +1,57 @@
+mutation CreateTempIdentity {
+  createTempIdentity {
+    id
+    nickname
+    totpSecret
+    expiresAt
+    valid
+  }
+}
+
+query ValidateTempIdentity($tempId: ID!) {
+  validateTempIdentity(tempId: $tempId) {
+    id
+    nickname
+    totpSecret
+    expiresAt
+    valid
+  }
+}
+
+query TempIdentityActiveOccupancies($tempId: ID!) {
+  tempIdentityActiveOccupancies(tempId: $tempId) {
+    code
+    name
+    status
+  }
+}
+
+mutation TransferTempIdentity($tempId: ID!, $userId: ID!) {
+  transferTempIdentity(tempId: $tempId, userId: $userId) {
+    transferred
+    occupancy {
+      id
+      tableId
+      userId
+      nickname
+      status
+    }
+  }
+}
+
+mutation OccupyTableWithTempIdentity($input: TempIdentityOccupyInput!) {
+  occupyTableWithTempIdentity(input: $input) {
+    occupancy {
+      id
+      tableId
+      userId
+      nickname
+      status
+    }
+    table {
+      id
+      code
+      name
+    }
+  }
+}

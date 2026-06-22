@@ -794,7 +794,7 @@ async function handleUpdatePreferences(
   return `[通知] 偏好设置已更新\n${confirmParts.join(" | ")}`;
 }
 
-// ── DeepSeek preference parser (inline, no tRPC) ──────────────────
+// ── DeepSeek preference parser ────────────────────────────────────
 
 const PARSE_SYSTEM_PROMPT = `你是一个偏好解析助手。用户会描述他们的约局偏好（什么时间想玩什么）。
 你的任务是将自然语言描述解析为结构化 JSON。

@@ -1,12 +1,20 @@
+import { useApolloClient } from "@apollo/client";
 import { HashIcon, UserIcon } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  MyActiveOccupanciesDocument,
+  OccupyTableDocument,
+  OccupyTableWithTempIdentityDocument,
+  TableByCodeDocument,
+  type TableByCodeQuery,
+  TempIdentityActiveOccupanciesDocument,
+} from "@/client/graphql/__generated__";
 import useAuth from "@/client/hooks/useAuth";
 import useTempIdentity from "@/client/hooks/useTempIdentity";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import type { SeatIdentity } from "@/shared/types";
-import trpcClientPublic from "@/shared/utils/trpc";
 
 export const Route = createFileRoute("/{-$storeLocale}/ready/$code")({
   component: ReadyPage,
@@ -46,10 +54,9 @@ function ReadyPage() {
   const { code } = Route.useParams();
   const { t } = useTranslation();
   const identity = useSeatIdentity();
+  const client = useApolloClient();
 
-  const [tableData, setTableData] = useState<Awaited<
-    ReturnType<typeof trpcClientPublic.tables.getByCode.query>
-  > | null>(null);
+  const [tableData, setTableData] = useState<TableByCodeQuery["tableByCode"] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [occupying, setOccupying] = useState(false);
@@ -61,14 +68,17 @@ function ReadyPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await trpcClientPublic.tables.getByCode.query({ code });
-      setTableData(data);
+      const { data } = await client.query({
+        query: TableByCodeDocument,
+        variables: { code },
+      });
+      setTableData(data.tableByCode);
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载失败");
     } finally {
       setLoading(false);
     }
-  }, [code]);
+  }, [code, client]);
 
   useEffect(() => {
     void fetchTable();
@@ -77,21 +87,30 @@ function ReadyPage() {
   useEffect(() => {
     if (!identity) return;
     if (identity.kind === "real") {
-      trpcClientPublic.tables.getMyActiveOccupancy
-        .query()
-        .then((occs) => {
-          setExistingOrders(occs.filter((o) => o.code !== code));
+      client
+        .query({
+          query: MyActiveOccupanciesDocument,
+        })
+        .then(({ data }) => {
+          setExistingOrders(
+            data.myActiveOccupancies.filter((o) => o.code !== code),
+          );
         })
         .catch(() => {});
     } else if (identity.kind === "temp") {
-      trpcClientPublic.tempIdentity.getActiveOccupancy
-        .query({ tempId: identity.tempId })
-        .then((occs) => {
-          setExistingOrders(occs.filter((o) => o.code !== code));
+      client
+        .query({
+          query: TempIdentityActiveOccupanciesDocument,
+          variables: { tempId: identity.tempId },
+        })
+        .then(({ data }) => {
+          setExistingOrders(
+            data.tempIdentityActiveOccupancies.filter((o) => o.code !== code),
+          );
         })
         .catch(() => {});
     }
-  }, [identity, code]);
+  }, [identity, code, client]);
 
   const table = tableData
     ? {
@@ -107,7 +126,7 @@ function ReadyPage() {
 
   const occupancies = tableData?.occupancies ?? [];
   const totalOccupied = occupancies.length;
-  const isSolo = table?.type === "solo";
+  const isSolo = table?.type === "SOLO";
   const remainingCapacity = isSolo
     ? Number.MAX_SAFE_INTEGER
     : (table?.capacity ?? 0) - totalOccupied;
@@ -166,12 +185,20 @@ function ReadyPage() {
     setOccupying(true);
     try {
       if (identity.kind === "temp") {
-        await trpcClientPublic.tempIdentity.occupy.mutate({
-          tempId: identity.tempId,
-          code,
+        await client.mutate({
+          mutation: OccupyTableWithTempIdentityDocument,
+          variables: {
+            input: {
+              tempId: identity.tempId,
+              code,
+            },
+          },
         });
       } else {
-        await trpcClientPublic.tables.occupy.mutate({ code });
+        await client.mutate({
+          mutation: OccupyTableDocument,
+          variables: { input: { code } },
+        });
       }
       window.location.href = `/t/${code}`;
     } catch (err) {
@@ -244,7 +271,7 @@ function ReadyPage() {
           <span>
             {t("seat.hasActiveOrders", {
               names: existingOrders.map((o) => o.name).join("、"),
-              status: existingOrders.some((o) => o.status === "active")
+              status: existingOrders.some((o) => o.status === "ACTIVE")
                 ? t("seat.active")
                 : t("seat.paused"),
             })}
@@ -263,7 +290,7 @@ function ReadyPage() {
         >
           {occupying ? (
             <span className="loading loading-spinner loading-sm" />
-          ) : existingOrders.some((o) => o.status === "active") ? (
+          ) : existingOrders.some((o) => o.status === "ACTIVE") ? (
             t("seat.pauseAndStart")
           ) : (
             t("seat.startTimer")
@@ -288,7 +315,7 @@ function TableInfoSection({
   totalOccupied: number;
 }) {
   const { t } = useTranslation();
-  const isSolo = table.type === "solo";
+  const isSolo = table.type === "SOLO";
   return (
     <div className="bg-base-200 rounded-xl p-4 flex flex-col gap-2">
       <div className="flex items-center justify-between">
@@ -297,7 +324,7 @@ function TableInfoSection({
           <span
             className={clsx(
               "badge badge-sm",
-              table.type === "solo" ? "badge-secondary" : "badge-info",
+              table.type === "SOLO" ? "badge-secondary" : "badge-info",
             )}
           >
             {t(TYPE_LABEL_KEYS[table.type]) ?? table.type}

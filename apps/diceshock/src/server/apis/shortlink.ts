@@ -169,3 +169,24 @@ export async function shortlinkRedirect(c: Context<HonoCtxEnv>) {
 }
 
 export { KV_PREFIX, type ShortlinkData };
+
+const ALLOWED_HOSTS = new Set([
+  "diceshock.com",
+  "www.diceshock.com",
+  "runespark.fun",
+  "www.runespark.fun",
+  "origin.runespark.fun",
+]);
+
+export const KV_INDEX_PREFIX = "shortlink-index:";
+
+export function isAllowedHost(url: string): boolean {
+  try {
+    const { hostname } = new URL(url);
+    return ALLOWED_HOSTS.has(hostname);
+  } catch {
+    return false;
+  }
+}
+
+export const SLUG_REGEX = /^[a-zA-Z0-9_-]{1,64}$/;

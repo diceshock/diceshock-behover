@@ -1,0 +1,30 @@
+mutation CreateActive($input: CreateActiveInput!) {
+  createActive(input: $input) {
+    id
+    creatorId
+    title
+    boardGameId
+    boardGame {
+      id
+      schName
+      engName
+      gstoneRating
+    }
+    storeId
+    date
+    time
+    maxPlayers
+    content
+    isGame
+    registrations {
+      id
+      activeId
+      userId
+      isWatching
+      nickname
+      uid
+      createdAt
+    }
+    createdAt
+  }
+}

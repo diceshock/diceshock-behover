@@ -3,7 +3,6 @@
 import type Dysmsapi20170525 from "@alicloud/dysmsapi20170525";
 import type { Env } from "hono";
 import z from "zod/v4";
-import type * as trpcServer from "@/server/apis/trpc";
 import { userInfoZ } from "@/server/middlewares/auth";
 import { userAgentMetaZ } from "@/server/middlewares/serverMetaInj";
 
@@ -25,9 +24,6 @@ export interface HonoCtxEnv extends Env {
     LocaleCode?: string;
   };
 }
-
-export type ApiRouterPublic = typeof trpcServer.appRouterPublic;
-export type ApiRouterDash = typeof trpcServer.appRouterDash;
 
 export interface TempIdentityData {
   kind: "temp";
