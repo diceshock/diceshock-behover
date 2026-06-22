@@ -282,6 +282,74 @@ DM费用另计, 具体咨询客服
 
 设置后用新语言确认: "Language set to English." / "言語を日本語に設定しました。"`,
   },
+
+  preference: {
+    id: "preference",
+    keywords: [
+      "偏好",
+      "喜好",
+      "设置",
+      "提醒",
+      "推荐",
+      "通知",
+      "我想玩",
+      "帮我找",
+    ],
+    description: "偏好管理 - 添加/查看/删除/启停约局偏好",
+    content: () => `用户约局偏好系统:
+- 用户设置时间+类型偏好,系统自动匹配推荐约局
+- 偏好格式: 自然语言描述 → 系统解析为: 时间段(rrule) + 类别(trpg/boardgame/mahjong) + 人数(可选)
+
+操作:
+- add_preference(raw_text): 添加偏好,系统自动解析时间和类别
+- list_preferences(): 查看所有偏好
+- delete_preference(preference_index): 删除指定偏好(按序号)
+- toggle_preference(preference_index): 启用/停用偏好
+
+示例:
+- "每周三晚上想打麻将" → 解析为: 每周三 19:00-22:00 | 日麻
+- "周末有空想玩桌游" → 解析为: 每周六、日 14:00-22:00 | 桌游
+- "工作日晚上找跑团" → 解析为: 工作日 19:00-22:00 | 跑团
+
+用户说"看看我的偏好"→ list_preferences
+用户说"删掉第2个偏好"→ delete_preference(2)
+用户说想玩xxx → 先判断是约局意图还是偏好意图:
+- 约局意图: 有具体日期 → 走 active 技能
+- 偏好意图: 描述 recurring 习惯 → 走 preference 技能`,
+    children: ["preference.add", "preference.list", "preference.delete"],
+  },
+
+  "preference.add": {
+    id: "preference.add",
+    keywords: ["添加偏好", "设置偏好", "新建偏好", "想玩", "帮我约"],
+    description: "添加新的约局偏好",
+    content: () => `调用 add_preference(raw_text)
+raw_text 为用户原始描述文本
+系统自动解析出: rrule + categories + player_count
+解析成功后直接保存,回复确认信息(含解析结果)
+解析失败则告知用户重新描述`,
+  },
+
+  "preference.list": {
+    id: "preference.list",
+    keywords: ["我的偏好", "查看偏好", "看看偏好", "偏好列表"],
+    description: "查看当前用户所有偏好",
+    content: () => `调用 list_preferences()
+返回编号列表格式:
+1. [启用] 每周三 19:00-22:00 | 日麻 — "原文描述"
+2. [停用] 每周六、日 14:00-22:00 | 桌游 — "原文描述"
+无偏好时提示用户如何添加`,
+  },
+
+  "preference.delete": {
+    id: "preference.delete",
+    keywords: ["删除偏好", "删掉偏好", "移除偏好", "取消偏好"],
+    description: "删除指定偏好",
+    content: () => `调用 delete_preference(preference_index)
+preference_index 为列表中的序号(从1开始)
+用户说"删掉第2个" → delete_preference(2)
+删除前不需要二次确认(系统层面不可恢复但不严重)`,
+  },
 };
 
 export function getNode(id: string): SkillNode | undefined {

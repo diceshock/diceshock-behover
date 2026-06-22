@@ -192,10 +192,7 @@ function ActiveDetailPage() {
           <p className="text-lg text-base-content/60">
             {t("actives.notFound")}
           </p>
-          <Link
-            to="/{-$storeLocale}/actives"
-            className="btn btn-ghost mt-4"
-          >
+          <Link to="/{-$storeLocale}/actives" className="btn btn-ghost mt-4">
             {t("actives.backToList")}
           </Link>
         </div>
@@ -245,6 +242,9 @@ function ActiveDetailPage() {
                     {t("actives.watching")}
                   </span>
                 )}
+                {active.is_system_recommended && (
+                  <span className="badge badge-primary badge-xs">推荐</span>
+                )}
                 {active.boardGames?.map(
                   (g) =>
                     g && (
@@ -255,6 +255,14 @@ function ActiveDetailPage() {
                 )}
               </div>
             </div>
+
+            {active.is_system_recommended && (
+              <div className="alert alert-info alert-soft">
+                <span className="text-xs">
+                  这是系统根据多位用户的偏好自动推荐的约局
+                </span>
+              </div>
+            )}
 
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-base-content/70">
               <span className="flex items-center gap-1.5">
@@ -325,14 +333,16 @@ function ActiveDetailPage() {
                         {t("actives.switchToWatching")}
                       </button>
                     )}
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-error gap-2"
-                      onClick={handleLeave}
-                      disabled={actionLoading}
-                    >
-                      {t("actives.leave")}
-                    </button>
+                    {!active.is_system_recommended && (
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-error gap-2"
+                        onClick={handleLeave}
+                        disabled={actionLoading}
+                      >
+                        {t("actives.leave")}
+                      </button>
+                    )}
                   </>
                 ) : (
                   <>

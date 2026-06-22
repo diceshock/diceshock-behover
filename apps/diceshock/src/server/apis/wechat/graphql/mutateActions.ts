@@ -19,7 +19,11 @@ export type MutateAction =
   | "bind_gsz"
   | "upsert_business_card"
   | "update_profile"
-  | "update_preferences";
+  | "update_preferences"
+  | "add_preference"
+  | "list_preferences"
+  | "delete_preference"
+  | "toggle_preference";
 
 // ── Typed params interfaces ───────────────────────────────────────────
 
@@ -85,6 +89,20 @@ export interface UpdateProfileParams {
   nickname?: string;
 }
 
+export interface AddPreferenceParams {
+  raw_text: string;
+}
+
+export type ListPreferencesParams = Record<string, never>;
+
+export interface DeletePreferenceParams {
+  preference_index: number;
+}
+
+export interface TogglePreferenceParams {
+  preference_index: number;
+}
+
 // ── Discriminated union ──────────────────────────────────────────────
 
 export type MutateArgs =
@@ -137,6 +155,26 @@ export type MutateArgs =
       action: "update_profile";
       params: UpdateProfileParams;
       description: string;
+    }
+  | {
+      action: "add_preference";
+      params: AddPreferenceParams;
+      description: string;
+    }
+  | {
+      action: "list_preferences";
+      params: ListPreferencesParams;
+      description: string;
+    }
+  | {
+      action: "delete_preference";
+      params: DeletePreferenceParams;
+      description: string;
+    }
+  | {
+      action: "toggle_preference";
+      params: TogglePreferenceParams;
+      description: string;
     };
 
 // ── OpenAI function-calling tool definition ──────────────────────────
@@ -153,6 +191,10 @@ export const MUTATE_ACTIONS = [
   "upsert_business_card",
   "update_profile",
   "update_preferences",
+  "add_preference",
+  "list_preferences",
+  "delete_preference",
+  "toggle_preference",
 ] as const satisfies MutateAction[];
 
 export const MUTATE_TOOL_DEFINITION = {
@@ -160,7 +202,7 @@ export const MUTATE_TOOL_DEFINITION = {
   function: {
     name: "mutate",
     description:
-      "写数据库。action必须是枚举值之一。没有delete操作,删除约局=创建者调leave_active。create_active需要title/date/startTime/maxPlayers。join/watch/leave_active需要activeId。",
+      "写数据库。action必须是枚举值之一。没有delete操作,删除约局=创建者调leave_active。create_active需要title/date/startTime/maxPlayers。join/watch/leave_active需要activeId。add_preference需要raw_text(自然语言描述偏好)。list_preferences/delete_preference/toggle_preference不需要特殊参数。",
     parameters: {
       type: "object",
       properties: {
@@ -168,12 +210,12 @@ export const MUTATE_TOOL_DEFINITION = {
           type: "string",
           enum: MUTATE_ACTIONS,
           description:
-            "create_active/join_active/watch_active/leave_active(也用于删除)/update_active/send_sms_code/verify_phone/bind_gsz/upsert_business_card",
+            "create_active/join_active/watch_active/leave_active(也用于删除)/update_active/send_sms_code/verify_phone/bind_gsz/upsert_business_card/add_preference/list_preferences/delete_preference/toggle_preference",
         },
         params: {
           type: "object",
           description:
-            "create_active:{title,date,startTime,maxPlayers,location?,gameId?} join/watch/leave_active:{activeId} update_active:{activeId,fields:{...}}",
+            "create_active:{title,date,startTime,maxPlayers,location?,gameId?} join/watch/leave_active:{activeId} update_active:{activeId,fields:{...}} add_preference:{raw_text} delete_preference/toggle_preference:{preference_index}",
         },
         description: {
           type: "string",

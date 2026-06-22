@@ -1,4 +1,5 @@
 import {
+  BellIcon,
   ChatsTeardropIcon,
   CopyIcon,
   GameControllerIcon,
@@ -226,6 +227,14 @@ function RouteComponent() {
     trpcClientPublic.membershipPlans.getMyPlans
       .query()
       .then((data) => setMyPlans(data as MembershipPlan[]))
+      .catch(() => {});
+  }, []);
+
+  const [prefCount, setPrefCount] = useState(0);
+  useEffect(() => {
+    trpcClientPublic.preferences.getCount
+      .query()
+      .then((res) => setPrefCount(res.count))
       .catch(() => {});
   }, []);
 
@@ -531,6 +540,31 @@ function RouteComponent() {
                 href="/inventory"
               />
             </div>
+          </section>
+
+          <section className="mb-4">
+            <SectionHeader title="偏好" />
+            <Link
+              to="/{-$storeLocale}/preferences"
+              className="flex items-center gap-3 bg-base-200 hover:bg-base-300 rounded-2xl px-4 py-4 border border-base-content/5 transition-colors"
+            >
+              <div className="shrink-0 p-2 bg-primary/10 rounded-lg">
+                <BellIcon className="size-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold">约局偏好</p>
+                <p className="text-xs text-base-content/50">
+                  {prefCount > 0
+                    ? `${prefCount} 条偏好已设置`
+                    : "添加偏好, 系统自动为你匹配约局"}
+                </p>
+              </div>
+              {prefCount > 0 && (
+                <span className="badge badge-primary badge-sm">
+                  {prefCount}
+                </span>
+              )}
+            </Link>
           </section>
 
           <section className="mb-4">

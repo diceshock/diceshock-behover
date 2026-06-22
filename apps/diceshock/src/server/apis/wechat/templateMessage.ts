@@ -1,4 +1,4 @@
-import db, { accounts, drizzle } from "@lib/db";
+import db, { accounts, drizzle, preferencePushLogTable } from "@lib/db";
 import { getWechatAccessToken } from "./wechatApi";
 
 const WECHAT_API_BASE = "https://diceshock.com/wx-proxy";
@@ -22,6 +22,7 @@ const TEMPLATE_KEYS = {
   ORDER_SETTLED: "wechat:template:order_settled",
   MEMBERSHIP_CHANGE: "wechat:template:membership_change",
   PASS_EXPIRING: "wechat:template:pass_expiring",
+  PREFERENCE_MATCH: "wechat:template:preference_match",
 } as const;
 
 async function getTemplateId(env: any, key: string): Promise<string | null> {
@@ -326,6 +327,88 @@ export async function notifyPassExpiring(
     },
     "https://diceshock.com",
   );
+}
+
+// ─── Preference Notification Helpers ────────────────────────────
+
+interface PreferenceNotificationData {
+  reason: string;
+  activeTitle: string;
+  activeDate: string;
+  activeUrl: string;
+  manageUrl: string;
+}
+
+export async function sendPreferenceMatchNotification(
+  env: any,
+  openId: string,
+  data: PreferenceNotificationData,
+): Promise<SendResult> {
+  return sendTemplateMessage(
+    env,
+    openId,
+    TEMPLATE_KEYS.PREFERENCE_MATCH,
+    {
+      first: { value: data.reason },
+      keyword1: { value: data.activeTitle },
+      keyword2: { value: data.activeDate },
+      remark: { value: `管理偏好: ${data.manageUrl}` },
+    },
+    data.activeUrl,
+  );
+}
+
+/**
+ * Check if user has reached daily push limit (MAX_DAILY_PUSHES = 2)
+ */
+export async function checkDailyPushLimit(
+  env: { DB: D1Database },
+  userId: string,
+  date?: string,
+): Promise<{ allowed: boolean; remaining: number }> {
+  const today = date ?? new Date().toISOString().slice(0, 10);
+  const tdb = db(env.DB);
+  const logs = await tdb
+    .select()
+    .from(preferencePushLogTable)
+    .where(
+      drizzle.and(
+        drizzle.eq(preferencePushLogTable.user_id, userId),
+        drizzle.eq(preferencePushLogTable.push_date, today),
+      ),
+    );
+
+  const count = logs.length;
+  const MAX = 2;
+  return {
+    allowed: count < MAX,
+    remaining: Math.max(0, MAX - count),
+  };
+}
+
+/**
+ * Log a sent push notification for dedup and rate limiting
+ */
+export async function logPushNotification(
+  env: { DB: D1Database },
+  params: {
+    userId: string;
+    preferenceId: string | null;
+    activeId: string | null;
+    pushType: "preference_match" | "active_match";
+    pushDate: string;
+    messageSummary: string;
+  },
+): Promise<void> {
+  const tdb = db(env.DB);
+  await tdb.insert(preferencePushLogTable).values({
+    user_id: params.userId,
+    preference_id: params.preferenceId,
+    active_id: params.activeId,
+    push_type: params.pushType,
+    push_date: params.pushDate,
+    message_summary: params.messageSummary,
+  });
 }
 
 // ─── Queue-based Dispatch ───────────────────────────────────────

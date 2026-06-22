@@ -58,12 +58,18 @@ function ActiveTags({
     : undefined;
 
   const hasAny =
-    isCreator || myReg || (active.boardGames && active.boardGames.length > 0);
+    isCreator ||
+    myReg ||
+    (active.boardGames && active.boardGames.length > 0) ||
+    active.is_system_recommended;
 
   if (!hasAny) return null;
 
   return (
     <div className="flex flex-wrap items-center gap-1 mt-1">
+      {active.is_system_recommended && (
+        <span className="badge badge-primary badge-xs">推荐</span>
+      )}
       {isCreator && (
         <span className="badge badge-accent badge-xs">
           {t("actives.creator")}

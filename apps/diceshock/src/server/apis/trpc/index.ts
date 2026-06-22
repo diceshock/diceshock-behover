@@ -15,6 +15,8 @@ import membershipPlans from "./membershipPlans";
 import ordersManagement from "./ordersManagement";
 import owned from "./owned";
 import ownedManagement from "./ownedManagement";
+import preferenceParser from "./preferenceParser";
+import preferences from "./preferences";
 import pricingPlansManagement from "./pricingPlansManagement";
 import rules from "./rules";
 import settingsManagement from "./settingsManagement";
@@ -111,6 +113,16 @@ export const appRouterPublic = router({
     getMyPPStats: leaderboard.getMyPPStats,
     getMatchHistory: leaderboard.getMatchHistory,
     getHeatmapData: leaderboard.getHeatmapData,
+  },
+  preferences: {
+    create: preferences.create,
+    list: preferences.list,
+    delete: preferences.delete,
+    toggle: preferences.toggle,
+    getCount: preferences.getCount,
+  },
+  preferenceParser: {
+    parsePreference: preferenceParser.parsePreference,
   },
   rules: {
     searchRules: rules.searchRules,

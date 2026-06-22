@@ -5,6 +5,7 @@ import apisRoot from "@/server/apis/apisRoot";
 import { boardGameCard } from "@/server/apis/boardGameCard";
 import fileRoute from "@/server/apis/fileRoute";
 import { fontCss } from "@/server/apis/fontCss";
+import { graphqlHandler } from "@/server/apis/graphqlEndpoint";
 import {
   imageProcessStatus,
   imageProcessSubmit,
@@ -42,6 +43,7 @@ import trpcServerDash from "./server/middlewares/trpcServerDash";
 import trpcServerPublic from "./server/middlewares/trpcServerPublic";
 import { wechatSilentAuth } from "./server/middlewares/wechatSilentAuth";
 
+export { PubSubDO } from "./server/durableObjects/PubSubDO";
 export { SocketDO } from "./server/durableObjects/SocketDO";
 
 export const app = new Hono<HonoCtxEnv>();
@@ -56,6 +58,9 @@ app.post("/wechat/menu", wechatCreateMenu);
 app.use(authInit);
 
 app.use(serverMetaInj);
+
+app.get("/graphql", graphqlHandler);
+app.post("/graphql", graphqlHandler);
 
 app.post("/edge/media/upload", mediaUpload);
 app.post("/edge/media/process", imageProcessSubmit);
@@ -158,6 +163,42 @@ export default {
         "./server/cron/passExpiration"
       );
       await checkPassExpiration({ DB: env.DB, KV: env.KV });
+
+      // Dispatch preference notifications during push window
+      const { dispatchPreferenceNotifications } = await import(
+        "./server/cron/notificationDispatcher"
+      );
+      await dispatchPreferenceNotifications({
+        DB: env.DB as unknown as D1Database,
+        KV: env.KV,
+      });
+    }
+
+    // Midnight matching (0:00 Shanghai = 16:00 UTC)
+    if (event.cron === "0 16 * * *") {
+      const { runPreferenceMatching } = await import(
+        "./server/cron/preferenceMatching"
+      );
+      const { createRecommendedActive } = await import(
+        "./server/cron/recommendedActiveCreator"
+      );
+      const { storeMatchQueue } = await import(
+        "./server/cron/notificationDispatcher"
+      );
+
+      const matches = await runPreferenceMatching({
+        DB: env.DB as unknown as D1Database,
+      });
+
+      // Create recommended actives for cross-matches
+      for (const match of matches.filter(
+        (m) => m.type === "preference_cross",
+      )) {
+        await createRecommendedActive(env, match);
+      }
+
+      // Store results in KV for later dispatch
+      await storeMatchQueue({ KV: env.KV }, matches);
     }
   },
   async queue(

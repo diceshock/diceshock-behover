@@ -6,7 +6,11 @@ import db, {
   mahjongRegistrationsTable,
   userBusinessCardTable,
   userInfoTable,
+  userPreferencesTable,
 } from "@lib/db";
+import { CATEGORY_LABELS } from "@/shared/preferences/constants";
+import { rruleToHumanReadable } from "@/shared/preferences/rruleDisplay";
+import type { PreferenceCategory } from "@/shared/preferences/types";
 import type { MutateAction, MutateArgs } from "../graphql/mutateActions";
 import { MUTATE_ACTIONS } from "../graphql/mutateActions";
 import { SITE_LINKS } from "../linkRegistry";
@@ -22,6 +26,9 @@ interface MutateEnv {
   aliyunClient?: unknown;
   GSZ_TOKEN?: string;
   DEV_SMS_CODE?: string;
+  DEEPSEEK_API_KEY?: string;
+  CF_ACCOUNT_ID?: string;
+  CF_AI_GATEWAY_ID?: string;
 }
 
 // ─── User resolution ────────────────────────────────────────────────
@@ -70,6 +77,10 @@ const REQUIRED_PARAMS: Record<MutateAction, string[]> = {
   upsert_business_card: [],
   update_profile: ["nickname"],
   update_preferences: [],
+  add_preference: ["raw_text"],
+  list_preferences: [],
+  delete_preference: ["preference_index"],
+  toggle_preference: ["preference_index"],
 };
 
 function validateParams(
@@ -331,6 +342,30 @@ export async function executeMutateTool(
           userId,
           params as Record<string, unknown>,
         );
+      case "add_preference":
+        return await handleAddPreference(
+          env,
+          userId,
+          params as Record<string, unknown>,
+        );
+      case "list_preferences":
+        return await handleListPreferences(
+          env,
+          userId,
+          params as Record<string, unknown>,
+        );
+      case "delete_preference":
+        return await handleDeletePreference(
+          env,
+          userId,
+          params as Record<string, unknown>,
+        );
+      case "toggle_preference":
+        return await handleTogglePreference(
+          env,
+          userId,
+          params as Record<string, unknown>,
+        );
       default:
         return `操作失败: 未知操作类型 ${typedAction}`;
     }
@@ -517,7 +552,11 @@ async function handleLeaveActive(
   const activeId = params.active_id as string;
 
   const active = await d
-    .select({ creator_id: activesTable.creator_id, title: activesTable.title })
+    .select({
+      creator_id: activesTable.creator_id,
+      title: activesTable.title,
+      is_system_recommended: activesTable.is_system_recommended,
+    })
     .from(activesTable)
     .where(eq(activesTable.id, activeId))
     .limit(1);
@@ -526,7 +565,10 @@ async function handleLeaveActive(
     return "操作失败: 约局不存在";
   }
 
-  // Creator leaving → delete entire active including all registrations
+  if (active[0].is_system_recommended) {
+    return "这是系统推荐的约局，无法退出或删除。如果不想收到推荐，请在偏好设置中停用对应偏好。";
+  }
+
   if (active[0].creator_id === userId) {
     try {
       await d
@@ -750,6 +792,277 @@ async function handleUpdatePreferences(
     .where(eq(userInfoTable.id, userId));
 
   return `[通知] 偏好设置已更新\n${confirmParts.join(" | ")}`;
+}
+
+// ── DeepSeek preference parser (inline, no tRPC) ──────────────────
+
+const PARSE_SYSTEM_PROMPT = `你是一个偏好解析助手。用户会描述他们的约局偏好（什么时间想玩什么）。
+你的任务是将自然语言描述解析为结构化 JSON。
+
+输出格式:
+{
+  "rrule": "FREQ=WEEKLY;BYDAY=XX;DTSTART=THH:mm;DTEND=THH:mm",
+  "categories": ["mahjong" | "boardgame" | "trpg"],
+  "playerCount": number | null,
+  "confidence": 0.0-1.0
+}
+
+规则:
+- FREQ 只支持 WEEKLY
+- BYDAY: MO,TU,WE,TH,FR,SA,SU (可多个逗号分隔)
+- DTSTART/DTEND 表示时间窗口 (营业时间 13:00-22:00 范围内)
+- categories: "mahjong"(日麻/麻将), "boardgame"(桌游/卡牌/聚会游戏), "trpg"(跑团/DND/COC/龙与地下城)
+- 如果用户没明确说时间,默认晚上 19:00-22:00
+- 如果用户说"工作日",BYDAY=MO,TU,WE,TH,FR
+- 如果用户说"周末",BYDAY=SA,SU
+- playerCount 只在用户明确提到人数时填写
+- confidence: 你对解析正确性的置信度
+
+只输出 JSON,不要其他文字。`;
+
+const VALID_WEEKDAYS = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"];
+const VALID_CATEGORIES: PreferenceCategory[] = ["trpg", "boardgame", "mahjong"];
+
+interface ParseResult {
+  success: true;
+  rrule: string;
+  categories: PreferenceCategory[];
+  playerCount: number | null;
+  confidence: number;
+}
+
+async function parsePreferenceWithDeepSeek(
+  env: MutateEnv,
+  rawText: string,
+): Promise<ParseResult | { success: false; error: string }> {
+  const apiKey = env.DEEPSEEK_API_KEY;
+  const accountId = env.CF_ACCOUNT_ID || "3244c8f91cd34317ce18652158e5853a";
+  const gatewayId = env.CF_AI_GATEWAY_ID;
+
+  if (!apiKey) {
+    return { success: false, error: "AI 服务未配置，请联系管理员" };
+  }
+
+  const baseUrl = gatewayId
+    ? `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/deepseek`
+    : "https://api.deepseek.com/v1";
+
+  try {
+    const response = await fetch(`${baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "deepseek-v4-flash",
+        messages: [
+          { role: "system", content: PARSE_SYSTEM_PROMPT },
+          { role: "user", content: rawText },
+        ],
+        temperature: 0.1,
+        max_tokens: 200,
+        response_format: { type: "json_object" },
+      }),
+    });
+
+    if (!response.ok) {
+      return { success: false, error: "AI 服务暂时不可用，请稍后再试" };
+    }
+
+    const data = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string | null } }>;
+    };
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) {
+      return { success: false, error: "解析失败：AI 返回为空" };
+    }
+
+    const parsed = JSON.parse(content) as Record<string, unknown>;
+
+    if (!parsed.rrule || typeof parsed.rrule !== "string") {
+      return { success: false, error: "解析失败：无法识别时间规律" };
+    }
+
+    const rrule = parsed.rrule;
+    if (!rrule.includes("FREQ=WEEKLY")) {
+      return { success: false, error: "解析失败：时间格式不合法" };
+    }
+
+    const byDayMatch = rrule.match(/BYDAY=([A-Z,]+)/);
+    if (
+      !byDayMatch ||
+      !byDayMatch[1].split(",").every((d) => VALID_WEEKDAYS.includes(d))
+    ) {
+      return { success: false, error: "解析失败：时间格式不合法" };
+    }
+
+    const categories = Array.isArray(parsed.categories)
+      ? parsed.categories
+      : [];
+    if (
+      !categories.every((c: unknown) =>
+        VALID_CATEGORIES.includes(c as PreferenceCategory),
+      )
+    ) {
+      return { success: false, error: "解析失败：游戏类别不合法" };
+    }
+
+    const confidence =
+      typeof parsed.confidence === "number" ? parsed.confidence : 0;
+    if (confidence < 0.5) {
+      return {
+        success: false,
+        error: "描述不够明确，请更具体地说明时间和想玩的类型",
+      };
+    }
+
+    const playerCount =
+      typeof parsed.playerCount === "number" ? parsed.playerCount : null;
+
+    return {
+      success: true,
+      rrule,
+      categories: categories as PreferenceCategory[],
+      playerCount,
+      confidence,
+    };
+  } catch {
+    return { success: false, error: "解析服务暂时不可用，请稍后再试" };
+  }
+}
+
+// ── Preference handlers ────────────────────────────────────────────
+
+async function handleAddPreference(
+  env: MutateEnv,
+  userId: string,
+  params: Record<string, unknown>,
+): Promise<string> {
+  const rawText = String(params.raw_text || "").trim();
+  if (!rawText || rawText.length < 2 || rawText.length > 200) {
+    return "添加偏好失败: 描述需 2-200 字";
+  }
+
+  const parsed = await parsePreferenceWithDeepSeek(env, rawText);
+  if (!parsed.success) {
+    return `添加偏好失败: ${parsed.error}`;
+  }
+
+  const d = db(env.DB);
+  await d.insert(userPreferencesTable).values({
+    id: crypto.randomUUID(),
+    user_id: userId,
+    raw_text: rawText,
+    rrule: parsed.rrule,
+    categories: parsed.categories,
+    player_count: parsed.playerCount,
+    enabled: true,
+  });
+
+  const humanRrule = rruleToHumanReadable(parsed.rrule);
+  const catLabels = parsed.categories
+    .map((c: PreferenceCategory) => CATEGORY_LABELS[c])
+    .join("、");
+
+  return `已添加偏好: ${humanRrule} | ${catLabels}\n原文: "${rawText}"`;
+}
+
+async function handleListPreferences(
+  env: MutateEnv,
+  userId: string,
+  _params: Record<string, unknown>,
+): Promise<string> {
+  const d = db(env.DB);
+  const rows = await d
+    .select()
+    .from(userPreferencesTable)
+    .where(eq(userPreferencesTable.user_id, userId))
+    .orderBy(userPreferencesTable.created_at);
+
+  if (rows.length === 0) {
+    return "你还没有设置任何偏好。试试说'每周三晚上想打日麻'来添加吧！";
+  }
+
+  const lines = rows.map((row, i) => {
+    const status = row.enabled ? "启用" : "停用";
+    const humanRrule = rruleToHumanReadable(row.rrule);
+    const catLabels = (row.categories as string[])
+      .map((c: string) => CATEGORY_LABELS[c as PreferenceCategory] ?? c)
+      .join("、");
+    return `${i + 1}. [${status}] ${humanRrule} | ${catLabels} — "${row.raw_text}"`;
+  });
+
+  return `你的偏好 (共${rows.length}条):\n${lines.join("\n")}`;
+}
+
+async function handleDeletePreference(
+  env: MutateEnv,
+  userId: string,
+  params: Record<string, unknown>,
+): Promise<string> {
+  const index =
+    typeof params.preference_index === "number"
+      ? params.preference_index
+      : Number(params.preference_index);
+  if (!Number.isFinite(index) || index < 1) {
+    return "删除偏好失败: preference_index 需为正整数";
+  }
+
+  const d = db(env.DB);
+  const rows = await d
+    .select({ id: userPreferencesTable.id })
+    .from(userPreferencesTable)
+    .where(eq(userPreferencesTable.user_id, userId))
+    .orderBy(userPreferencesTable.created_at);
+
+  if (index > rows.length) {
+    return `删除偏好失败: 你只有 ${rows.length} 条偏好，不存在第 ${index} 条`;
+  }
+
+  await d
+    .delete(userPreferencesTable)
+    .where(eq(userPreferencesTable.id, rows[index - 1].id));
+
+  return `已删除偏好 #${index}`;
+}
+
+async function handleTogglePreference(
+  env: MutateEnv,
+  userId: string,
+  params: Record<string, unknown>,
+): Promise<string> {
+  const index =
+    typeof params.preference_index === "number"
+      ? params.preference_index
+      : Number(params.preference_index);
+  if (!Number.isFinite(index) || index < 1) {
+    return "切换偏好失败: preference_index 需为正整数";
+  }
+
+  const d = db(env.DB);
+  const rows = await d
+    .select({
+      id: userPreferencesTable.id,
+      enabled: userPreferencesTable.enabled,
+    })
+    .from(userPreferencesTable)
+    .where(eq(userPreferencesTable.user_id, userId))
+    .orderBy(userPreferencesTable.created_at);
+
+  if (index > rows.length) {
+    return `切换偏好失败: 你只有 ${rows.length} 条偏好，不存在第 ${index} 条`;
+  }
+
+  const row = rows[index - 1];
+  const newEnabled = !row.enabled;
+  await d
+    .update(userPreferencesTable)
+    .set({ enabled: newEnabled, updated_at: new Date() })
+    .where(eq(userPreferencesTable.id, row.id));
+
+  const status = newEnabled ? "启用" : "停用";
+  return `已${status}偏好 #${index}`;
 }
 
 async function handleSendSmsCode(

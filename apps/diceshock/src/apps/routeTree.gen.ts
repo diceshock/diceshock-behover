@@ -30,6 +30,7 @@ import { Route as Char123StoreLocaleChar125TCodeRouteImport } from './routers/{-
 import { Route as Char123StoreLocaleChar125ReadyCodeRouteImport } from './routers/{-$storeLocale}/ready/$code'
 import { Route as Char123StoreLocaleChar125MyRiichiIdRouteImport } from './routers/{-$storeLocale}/my-riichi/$id'
 import { Route as Char123StoreLocaleChar125WithHomeLoRiichiRouteImport } from './routers/{-$storeLocale}/_with-home-lo/riichi'
+import { Route as Char123StoreLocaleChar125WithHomeLoPreferencesRouteImport } from './routers/{-$storeLocale}/_with-home-lo/preferences'
 import { Route as Char123StoreLocaleChar125WithHomeLoMeRouteImport } from './routers/{-$storeLocale}/_with-home-lo/me'
 import { Route as Char123StoreLocaleChar125WithHomeLoInventoryRouteImport } from './routers/{-$storeLocale}/_with-home-lo/inventory'
 import { Route as Char123StoreLocaleChar125WithHomeLoExternalRedirectRouteImport } from './routers/{-$storeLocale}/_with-home-lo/external-redirect'
@@ -163,6 +164,12 @@ const Char123StoreLocaleChar125WithHomeLoRiichiRoute =
     path: '/riichi',
     getParentRoute: () => Char123StoreLocaleChar125WithHomeLoRoute,
   } as any)
+const Char123StoreLocaleChar125WithHomeLoPreferencesRoute =
+  Char123StoreLocaleChar125WithHomeLoPreferencesRouteImport.update({
+    id: '/preferences',
+    path: '/preferences',
+    getParentRoute: () => Char123StoreLocaleChar125WithHomeLoRoute,
+  } as any)
 const Char123StoreLocaleChar125WithHomeLoMeRoute =
   Char123StoreLocaleChar125WithHomeLoMeRouteImport.update({
     id: '/me',
@@ -293,6 +300,7 @@ export interface FileRoutesByFullPath {
   '/{-$storeLocale}/external-redirect': typeof Char123StoreLocaleChar125WithHomeLoExternalRedirectRoute
   '/{-$storeLocale}/inventory': typeof Char123StoreLocaleChar125WithHomeLoInventoryRoute
   '/{-$storeLocale}/me': typeof Char123StoreLocaleChar125WithHomeLoMeRoute
+  '/{-$storeLocale}/preferences': typeof Char123StoreLocaleChar125WithHomeLoPreferencesRoute
   '/{-$storeLocale}/riichi': typeof Char123StoreLocaleChar125WithHomeLoRiichiRoute
   '/{-$storeLocale}/my-riichi/$id': typeof Char123StoreLocaleChar125MyRiichiIdRoute
   '/{-$storeLocale}/ready/$code': typeof Char123StoreLocaleChar125ReadyCodeRoute
@@ -332,6 +340,7 @@ export interface FileRoutesByTo {
   '/{-$storeLocale}/external-redirect': typeof Char123StoreLocaleChar125WithHomeLoExternalRedirectRoute
   '/{-$storeLocale}/inventory': typeof Char123StoreLocaleChar125WithHomeLoInventoryRoute
   '/{-$storeLocale}/me': typeof Char123StoreLocaleChar125WithHomeLoMeRoute
+  '/{-$storeLocale}/preferences': typeof Char123StoreLocaleChar125WithHomeLoPreferencesRoute
   '/{-$storeLocale}/riichi': typeof Char123StoreLocaleChar125WithHomeLoRiichiRoute
   '/{-$storeLocale}/my-riichi/$id': typeof Char123StoreLocaleChar125MyRiichiIdRoute
   '/{-$storeLocale}/ready/$code': typeof Char123StoreLocaleChar125ReadyCodeRoute
@@ -373,6 +382,7 @@ export interface FileRoutesById {
   '/{-$storeLocale}/_with-home-lo/external-redirect': typeof Char123StoreLocaleChar125WithHomeLoExternalRedirectRoute
   '/{-$storeLocale}/_with-home-lo/inventory': typeof Char123StoreLocaleChar125WithHomeLoInventoryRoute
   '/{-$storeLocale}/_with-home-lo/me': typeof Char123StoreLocaleChar125WithHomeLoMeRoute
+  '/{-$storeLocale}/_with-home-lo/preferences': typeof Char123StoreLocaleChar125WithHomeLoPreferencesRoute
   '/{-$storeLocale}/_with-home-lo/riichi': typeof Char123StoreLocaleChar125WithHomeLoRiichiRoute
   '/{-$storeLocale}/my-riichi/$id': typeof Char123StoreLocaleChar125MyRiichiIdRoute
   '/{-$storeLocale}/ready/$code': typeof Char123StoreLocaleChar125ReadyCodeRoute
@@ -415,6 +425,7 @@ export interface FileRouteTypes {
     | '/{-$storeLocale}/external-redirect'
     | '/{-$storeLocale}/inventory'
     | '/{-$storeLocale}/me'
+    | '/{-$storeLocale}/preferences'
     | '/{-$storeLocale}/riichi'
     | '/{-$storeLocale}/my-riichi/$id'
     | '/{-$storeLocale}/ready/$code'
@@ -454,6 +465,7 @@ export interface FileRouteTypes {
     | '/{-$storeLocale}/external-redirect'
     | '/{-$storeLocale}/inventory'
     | '/{-$storeLocale}/me'
+    | '/{-$storeLocale}/preferences'
     | '/{-$storeLocale}/riichi'
     | '/{-$storeLocale}/my-riichi/$id'
     | '/{-$storeLocale}/ready/$code'
@@ -494,6 +506,7 @@ export interface FileRouteTypes {
     | '/{-$storeLocale}/_with-home-lo/external-redirect'
     | '/{-$storeLocale}/_with-home-lo/inventory'
     | '/{-$storeLocale}/_with-home-lo/me'
+    | '/{-$storeLocale}/_with-home-lo/preferences'
     | '/{-$storeLocale}/_with-home-lo/riichi'
     | '/{-$storeLocale}/my-riichi/$id'
     | '/{-$storeLocale}/ready/$code'
@@ -658,6 +671,13 @@ declare module '@tanstack/react-router' {
       path: '/riichi'
       fullPath: '/{-$storeLocale}/riichi'
       preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoRiichiRouteImport
+      parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute
+    }
+    '/{-$storeLocale}/_with-home-lo/preferences': {
+      id: '/{-$storeLocale}/_with-home-lo/preferences'
+      path: '/preferences'
+      fullPath: '/{-$storeLocale}/preferences'
+      preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoPreferencesRouteImport
       parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute
     }
     '/{-$storeLocale}/_with-home-lo/me': {
@@ -840,6 +860,7 @@ interface Char123StoreLocaleChar125WithHomeLoRouteChildren {
   Char123StoreLocaleChar125WithHomeLoExternalRedirectRoute: typeof Char123StoreLocaleChar125WithHomeLoExternalRedirectRoute
   Char123StoreLocaleChar125WithHomeLoInventoryRoute: typeof Char123StoreLocaleChar125WithHomeLoInventoryRoute
   Char123StoreLocaleChar125WithHomeLoMeRoute: typeof Char123StoreLocaleChar125WithHomeLoMeRoute
+  Char123StoreLocaleChar125WithHomeLoPreferencesRoute: typeof Char123StoreLocaleChar125WithHomeLoPreferencesRoute
   Char123StoreLocaleChar125WithHomeLoRiichiRoute: typeof Char123StoreLocaleChar125WithHomeLoRiichiRoute
   Char123StoreLocaleChar125WithHomeLoIndexRoute: typeof Char123StoreLocaleChar125WithHomeLoIndexRoute
   Char123StoreLocaleChar125WithHomeLoActivesIdRoute: typeof Char123StoreLocaleChar125WithHomeLoActivesIdRoute
@@ -862,6 +883,8 @@ const Char123StoreLocaleChar125WithHomeLoRouteChildren: Char123StoreLocaleChar12
       Char123StoreLocaleChar125WithHomeLoInventoryRoute,
     Char123StoreLocaleChar125WithHomeLoMeRoute:
       Char123StoreLocaleChar125WithHomeLoMeRoute,
+    Char123StoreLocaleChar125WithHomeLoPreferencesRoute:
+      Char123StoreLocaleChar125WithHomeLoPreferencesRoute,
     Char123StoreLocaleChar125WithHomeLoRiichiRoute:
       Char123StoreLocaleChar125WithHomeLoRiichiRoute,
     Char123StoreLocaleChar125WithHomeLoIndexRoute:

@@ -170,6 +170,9 @@ export const activesTable = sqlite.sqliteTable(
     max_players: sqlite.int().notNull(),
     content: sqlite.text(), // tiptap JSON
     is_game: sqlite.int({ mode: "boolean" }).$default(() => true),
+    is_system_recommended: sqlite
+      .integer("is_system_recommended", { mode: "boolean" })
+      .$default(() => false),
     create_at: sqlite
       .integer("create_at", { mode: "timestamp_ms" })
       .$defaultFn(() => new Date(Date.now())),
@@ -816,6 +819,95 @@ export const userBadgesTable = sqlite.sqliteTable("user_badges", {
     .integer("created_at", { mode: "timestamp_ms" })
     .$defaultFn(() => new Date(Date.now())),
 });
+
+// ─── User Preferences ───────────────────────────────────────────
+
+export const userPreferencesTable = sqlite.sqliteTable(
+  "user_preferences",
+  {
+    id: sqlite.text().$defaultFn(createId).primaryKey(),
+    user_id: sqlite
+      .text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    raw_text: sqlite.text("raw_text").notNull(),
+    rrule: sqlite.text("rrule").notNull(),
+    categories: sqlite
+      .text("categories", { mode: "json" })
+      .$type<string[]>()
+      .notNull()
+      .$default(() => []),
+    player_count: sqlite.integer("player_count"),
+    enabled: sqlite
+      .integer("enabled", { mode: "boolean" })
+      .notNull()
+      .$default(() => true),
+    created_at: sqlite
+      .integer("created_at", { mode: "timestamp_ms" })
+      .$defaultFn(() => new Date(Date.now())),
+    updated_at: sqlite
+      .integer("updated_at", { mode: "timestamp_ms" })
+      .$defaultFn(() => new Date(Date.now())),
+  },
+  (table) => [sqlite.index("idx_user_preferences_user_id").on(table.user_id)],
+);
+
+export const preferencePushLogTable = sqlite.sqliteTable(
+  "preference_push_log",
+  {
+    id: sqlite.text().$defaultFn(createId).primaryKey(),
+    user_id: sqlite
+      .text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    preference_id: sqlite
+      .text("preference_id")
+      .references(() => userPreferencesTable.id, { onDelete: "set null" }),
+    active_id: sqlite
+      .text("active_id")
+      .references(() => activesTable.id, { onDelete: "set null" }),
+    push_type: sqlite
+      .text("push_type", { enum: ["preference_match", "active_match"] })
+      .notNull(),
+    push_date: sqlite.text("push_date").notNull(), // "YYYY-MM-DD"
+    sent_at: sqlite
+      .integer("sent_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date(Date.now())),
+    message_summary: sqlite.text("message_summary"),
+  },
+  (table) => [
+    sqlite.index("idx_push_log_user_date").on(table.user_id, table.push_date),
+  ],
+);
+
+export const userPreferencesRelations = relations(
+  userPreferencesTable,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [userPreferencesTable.user_id],
+      references: [users.id],
+    }),
+  }),
+);
+
+export const preferencePushLogRelations = relations(
+  preferencePushLogTable,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [preferencePushLogTable.user_id],
+      references: [users.id],
+    }),
+    preference: one(userPreferencesTable, {
+      fields: [preferencePushLogTable.preference_id],
+      references: [userPreferencesTable.id],
+    }),
+    active: one(activesTable, {
+      fields: [preferencePushLogTable.active_id],
+      references: [activesTable.id],
+    }),
+  }),
+);
 
 export const storesRelations = relations(storesTable, ({ many }) => ({
   inventory: many(storeInventoryTable),

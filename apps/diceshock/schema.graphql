@@ -1,0 +1,1402 @@
+# Diceshock custom GraphQL schema extensions.
+# DateTime values are ISO 8601 strings. JSON fields are JSON-encoded strings.
+
+# ─── Shared ────────────────────────────────────────────────────────────────
+
+type Query
+type Mutation
+type Subscription
+
+input PaginationInput {
+  offset: Int = 0
+  limit: Int = 20
+}
+
+input CursorPaginationInput {
+  cursor: String
+  limit: Int = 20
+}
+
+type PageInfo {
+  offset: Int!
+  limit: Int!
+  total: Int
+  nextCursor: String
+  hasMore: Boolean!
+}
+
+type OperationResult {
+  success: Boolean!
+  message: String
+}
+
+type BatchOperationResult {
+  id: ID!
+  success: Boolean!
+  error: String
+}
+
+enum StoreCode {
+  gg
+  jdk
+}
+
+enum SortOrder {
+  ASC
+  DESC
+}
+
+# ─── Core Custom Rows ──────────────────────────────────────────────────────
+
+enum UserRole {
+  CUSTOMER
+  STAFF
+  ADMIN
+}
+
+type Store {
+  id: ID!
+  code: StoreCode
+  name: String!
+  address: String
+  isActive: Boolean!
+  createdAt: String
+}
+
+type UserProfile {
+  id: ID!
+  uid: String
+  name: String
+  email: String
+  image: String
+  role: UserRole!
+  nickname: String
+  phone: String
+  preferredLocale: String
+  preferredStoreId: ID
+  meta: String
+  createdAt: String
+  membershipPlans: [MembershipPlan!]!
+}
+
+type BoardGameSummary {
+  id: ID!
+  schName: String
+  engName: String
+  gstoneId: Int
+  gstoneRating: Float
+  category: String
+  mode: String
+  playerNum: String
+  bestPlayerNum: String
+  content: String
+  removeDate: String
+}
+
+type BoardGameCounts {
+  current: Int!
+  removed: Int!
+  latestDate: String
+}
+
+input BoardGameFilterInput {
+  searchWords: String
+  numOfPlayers: Int
+  isBestNumOfPlayers: Boolean = false
+  tags: [String!] = []
+  pagination: PaginationInput = { offset: 0, limit: 20 }
+}
+
+# ─── Auth ──────────────────────────────────────────────────────────────────
+
+type SmsCodeResult {
+  success: Boolean!
+  message: String
+  expiresInMs: Int
+}
+
+type UserInfoUpdateResult {
+  success: Boolean!
+  message: String
+  user: UserProfile
+}
+
+type TotpSecretResult {
+  success: Boolean!
+  message: String
+  secret: String
+}
+
+type TotpVerificationResult {
+  success: Boolean!
+  message: String
+  userId: ID
+}
+
+input RequestSmsCodeInput {
+  phone: String!
+  botcheck: String
+}
+
+input UpdateMyUserInfoInput {
+  nickname: String
+  phone: String
+  code: String
+}
+
+input VerifyTotpInput {
+  totp: String!
+  userAgent: String!
+  loginTime: Float!
+}
+
+extend type Query {
+  getTotpSecret: TotpSecretResult! # @auth(role: CUSTOMER)
+}
+
+extend type Mutation {
+  requestSmsCode(input: RequestSmsCodeInput!): SmsCodeResult!
+  updateMyUserInfo(input: UpdateMyUserInfoInput!): UserInfoUpdateResult! # @auth(role: CUSTOMER)
+  verifyTotp(input: VerifyTotpInput!): TotpVerificationResult! # @auth(role: STAFF)
+}
+
+# ─── Actives ───────────────────────────────────────────────────────────────
+
+enum ActiveDateRange {
+  TODAY
+  WEEK
+  MONTH
+  YEAR
+}
+
+type ActiveRegistration {
+  id: ID!
+  activeId: ID!
+  userId: ID!
+  isWatching: Boolean!
+  nickname: String
+  uid: String
+  createdAt: String
+}
+
+type Active {
+  id: ID!
+  creatorId: ID!
+  creator: UserProfile
+  title: String!
+  boardGameId: ID
+  boardGame: BoardGameSummary
+  boardGames: [BoardGameSummary!]!
+  storeId: ID
+  date: String!
+  time: String
+  maxPlayers: Int!
+  content: String
+  isGame: Boolean!
+  isSystemRecommended: Boolean!
+  registrations: [ActiveRegistration!]!
+  createdAt: String
+  updatedAt: String
+}
+
+type ActiveListResult {
+  items: [Active!]!
+  pageInfo: PageInfo!
+}
+
+input ActiveListInput {
+  pagination: CursorPaginationInput = { limit: 20 }
+  showExpired: Boolean = false
+  dateRange: ActiveDateRange
+  storeId: ID
+}
+
+input CreateActiveInput {
+  title: String!
+  boardGameId: ID
+  date: String!
+  time: String
+  maxPlayers: Int!
+  content: String
+  isGame: Boolean = true
+  storeId: ID
+}
+
+input UpdateActiveInput {
+  id: ID!
+  title: String
+  boardGameId: ID
+  date: String
+  time: String
+  maxPlayers: Int
+  content: String
+  isGame: Boolean
+}
+
+input JoinActiveInput {
+  activeId: ID!
+  isWatching: Boolean = false
+}
+
+extend type Query {
+  actives(input: ActiveListInput = {}): ActiveListResult!
+  active(id: ID!): Active!
+  activeParticipants(activeId: ID!): [ActiveRegistration!]! # @auth(role: CUSTOMER)
+  managedActives(storeId: ID): [Active!]! # @auth(role: STAFF)
+  managedActive(id: ID!): Active! # @auth(role: STAFF)
+}
+
+extend type Mutation {
+  createActive(input: CreateActiveInput!): Active! # @auth(role: CUSTOMER)
+  joinActive(input: JoinActiveInput!): ActiveRegistration! # @auth(role: CUSTOMER)
+  leaveActive(activeId: ID!): Active # @auth(role: CUSTOMER)
+  updateActive(input: UpdateActiveInput!): Active! # @auth(role: STAFF)
+  removeActive(id: ID!): Active! # @auth(role: STAFF)
+  removeActiveRegistration(registrationId: ID!): ActiveRegistration! # @auth(role: STAFF)
+  batchRemoveActives(ids: [ID!]!): [Active!]! # @auth(role: STAFF)
+}
+
+# ─── Tables And Orders ─────────────────────────────────────────────────────
+
+enum TableType {
+  FIXED
+  SOLO
+}
+
+enum TableScope {
+  TRPG
+  BOARDGAME
+  CONSOLE
+  MAHJONG
+}
+
+enum TableStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum OrderStatus {
+  ACTIVE
+  PAUSED
+  SETTLED
+  CANCELLED
+}
+
+enum OrderStatusFilter {
+  ALL
+  ACTIVE
+  PAUSED
+  SETTLED
+}
+
+enum OrderSortBy {
+  START_AT
+  END_AT
+}
+
+enum OrderGroupBy {
+  TABLE
+  USER
+  DATE
+  NONE
+}
+
+type TableOccupancy {
+  id: ID!
+  tableId: ID!
+  userId: ID
+  tempId: ID
+  nickname: String
+  uid: String
+  phone: String
+  seats: Int!
+  status: OrderStatus!
+  startAt: String!
+  endAt: String
+  finalPrice: Int
+  pricingSnapshotId: ID
+  priceBreakdown: String
+  settlementSnapshot: String
+  table: Table
+  user: UserProfile
+}
+
+type Table {
+  id: ID!
+  name: String!
+  type: TableType!
+  scope: TableScope!
+  status: TableStatus!
+  capacity: Int!
+  code: String!
+  description: String
+  storeId: ID
+  occupancies: [TableOccupancy!]!
+  createdAt: String
+  updatedAt: String
+}
+
+type ActiveOccupancySummary {
+  code: String!
+  name: String!
+  status: OrderStatus!
+}
+
+type OccupyTableResult {
+  occupancy: TableOccupancy!
+  table: Table!
+}
+
+type OrderListResult {
+  items: [TableOccupancy!]!
+  pageInfo: PageInfo!
+}
+
+type PriceBreakdown {
+  planName: String!
+  planType: String!
+  billingType: String!
+  unitPrice: Int!
+  totalMinutes: Int!
+  billableHalfHours: Int!
+  rawPrice: Int!
+  capApplied: Boolean!
+  capType: String
+  finalPrice: Int!
+}
+
+type OrderPauseLogView {
+  pausedAt: String!
+  resumedAt: String
+}
+
+type SettlementMembershipInfo {
+  hasTimePlan: Boolean!
+  timePlanActive: Boolean!
+  timePlanType: String
+  timePlanEndDate: String
+  storedValueBalance: Int!
+}
+
+type StoredValueDeduction {
+  deducted: Boolean!
+  amount: Int!
+  note: String!
+  balanceBefore: Int!
+  balanceAfter: Int!
+}
+
+type PricingPlanMatch {
+  name: String!
+  planType: String!
+  billingType: String!
+  price: Int!
+  matched: Boolean!
+}
+
+type RecentOrder {
+  id: ID!
+  tableName: String!
+  startAt: String!
+  endAt: String
+  finalPrice: Int
+  status: OrderStatus!
+}
+
+type SettlementPreview {
+  order: TableOccupancy!
+  totalMinutes: Int!
+  pausedMinutes: Int!
+  billableMinutes: Int!
+  finalPrice: Int!
+  priceBreakdown: PriceBreakdown
+  membership: SettlementMembershipInfo!
+  pauseLogs: [OrderPauseLogView!]!
+  pricingPlans: [PricingPlanMatch!]!
+  recentOrders: [RecentOrder!]!
+}
+
+type SettlementResult {
+  order: TableOccupancy!
+  price: Int!
+  snapshot: String
+  storedValueDeduction: StoredValueDeduction
+}
+
+type BatchOrderResult {
+  id: ID!
+  order: TableOccupancy
+  success: Boolean!
+  price: Int
+  restored: Boolean
+  error: String
+}
+
+type BatchSettlementResult {
+  batchId: ID
+  results: [BatchOrderResult!]!
+}
+
+type OrphanedOrderInfo {
+  id: ID!
+  tableId: ID!
+  status: OrderStatus!
+  userId: ID
+  tempId: ID
+}
+
+type CleanupOrphanedDataResult {
+  dryRun: Boolean!
+  totalOccupancies: Int!
+  orphanedOccupancies: Int!
+  activeOrphans: [OrphanedOrderInfo!]!
+  endedOrphans: Int!
+  orphanedPauseLogs: Int!
+  danglingPauseLogs: Int!
+  actions: [String!]!
+}
+
+input CreateTableInput {
+  name: String!
+  type: TableType!
+  scope: TableScope!
+  capacity: Int
+  description: String
+  storeId: ID
+}
+
+input UpdateTableInput {
+  id: ID!
+  name: String
+  type: TableType
+  scope: TableScope
+  capacity: Int
+  description: String
+}
+
+input OccupyTableInput {
+  code: String!
+}
+
+input LeaveTableInput {
+  occupancyId: ID!
+  code: String!
+}
+
+input AddOccupancyInput {
+  tableId: ID!
+  userId: ID!
+}
+
+input OrderListInput {
+  search: String
+  status: OrderStatusFilter = ALL
+  sortBy: OrderSortBy = START_AT
+  sortOrder: SortOrder = DESC
+  groupBy: OrderGroupBy = NONE
+  pagination: PaginationInput = { offset: 0, limit: 50 }
+  storeId: ID
+}
+
+input SettleOrderInput {
+  id: ID!
+  deductFromStoredValue: Boolean = false
+}
+
+input BatchSettleInput {
+  ids: [ID!]!
+  deductFromStoredValue: Boolean = false
+}
+
+extend type Query {
+  tableByCode(code: String!, storeId: ID): Table!
+  myActiveOccupancies(storeId: ID): [ActiveOccupancySummary!]! # @auth(role: CUSTOMER)
+  managedTables(storeId: ID): [Table!]! # @auth(role: STAFF)
+  managedTable(id: ID!): Table! # @auth(role: STAFF)
+  managedTableByCode(code: String!, storeId: ID): Table! # @auth(role: STAFF)
+  occupanciesByUser(userId: ID!): [TableOccupancy!]! # @auth(role: STAFF)
+  orders(input: OrderListInput = {}): OrderListResult! # @auth(role: STAFF)
+  order(id: ID!): TableOccupancy! # @auth(role: STAFF)
+  settlementPreview(id: ID!): SettlementPreview! # @auth(role: STAFF)
+}
+
+extend type Mutation {
+  occupyTable(input: OccupyTableInput!): OccupyTableResult! # @auth(role: CUSTOMER)
+  leaveTable(input: LeaveTableInput!): TableOccupancy! # @auth(role: CUSTOMER)
+  pauseMyOrder(input: LeaveTableInput!): TableOccupancy! # @auth(role: CUSTOMER)
+  createTable(input: CreateTableInput!): Table! # @auth(role: STAFF)
+  updateTable(input: UpdateTableInput!): Table! # @auth(role: STAFF)
+  toggleTableStatus(id: ID!): Table! # @auth(role: STAFF)
+  removeTable(id: ID!): Table! # @auth(role: STAFF)
+  regenerateTableCode(id: ID!): Table! # @auth(role: STAFF)
+  addTableOccupancy(input: AddOccupancyInput!): TableOccupancy! # @auth(role: STAFF)
+  removeTableOccupancy(id: ID!): TableOccupancy! # @auth(role: STAFF)
+  endOrder(id: ID!): TableOccupancy! # @auth(role: STAFF)
+  pauseOrder(id: ID!): TableOccupancy! # @auth(role: STAFF)
+  resumeOrder(id: ID!): TableOccupancy! # @auth(role: STAFF)
+  settleOrder(input: SettleOrderInput!): SettlementResult! # @auth(role: STAFF)
+  batchPauseOrders(ids: [ID!]!): [BatchOrderResult!]! # @auth(role: STAFF)
+  batchResumeOrders(ids: [ID!]!): [BatchOrderResult!]! # @auth(role: STAFF)
+  batchSettlementPreview(ids: [ID!]!): [SettlementPreview!]! # @auth(role: STAFF)
+  batchSettleOrders(input: BatchSettleInput!): BatchSettlementResult! # @auth(role: STAFF)
+  cancelBatchSettlement(ids: [ID!]!): [BatchOrderResult!]! # @auth(role: STAFF)
+  cleanupOrphanedOrders(dryRun: Boolean = true): CleanupOrphanedDataResult! # @auth(role: STAFF)
+}
+
+# ─── Temp Identity ─────────────────────────────────────────────────────────
+
+type TempIdentity {
+  id: ID!
+  nickname: String!
+  totpSecret: String!
+  expiresAt: String!
+  valid: Boolean!
+}
+
+type TempIdentityTransferResult {
+  transferred: Boolean!
+  occupancy: TableOccupancy
+}
+
+input TempIdentityOccupyInput {
+  tempId: ID!
+  code: String!
+}
+
+input TempIdentityLeaveInput {
+  tempId: ID!
+  occupancyId: ID!
+  code: String!
+}
+
+extend type Query {
+  validateTempIdentity(tempId: ID!): TempIdentity!
+  tempIdentityActiveOccupancies(tempId: ID!): [ActiveOccupancySummary!]!
+}
+
+extend type Mutation {
+  createTempIdentity: TempIdentity!
+  occupyTableWithTempIdentity(input: TempIdentityOccupyInput!): OccupyTableResult!
+  leaveTableWithTempIdentity(input: TempIdentityLeaveInput!): SettlementResult!
+  transferTempIdentity(tempId: ID!, userId: ID!): TempIdentityTransferResult!
+}
+
+# ─── Membership ────────────────────────────────────────────────────────────
+
+enum MembershipPlanType {
+  MONTHLY
+  MONTHLY_CC
+  YEARLY
+  STORED_VALUE
+}
+
+type MembershipPlan {
+  id: ID!
+  userId: ID!
+  planType: MembershipPlanType!
+  amount: Int
+  note: String
+  startDate: String!
+  endDate: String
+  createdAt: String
+  updatedAt: String
+}
+
+type MembershipDeductionResult {
+  plan: MembershipPlan!
+  deducted: Int!
+}
+
+input CreateMembershipPlanInput {
+  userId: ID!
+  planType: MembershipPlanType!
+  amount: Int
+  startDate: String!
+  endDate: String
+}
+
+input UpdateMembershipPlanInput {
+  id: ID!
+  planType: MembershipPlanType
+  amount: Int
+  startDate: String
+  endDate: String
+}
+
+input DeductStoredValueInput {
+  userId: ID!
+  amount: Int!
+  note: String!
+  date: String!
+}
+
+extend type Query {
+  membershipPlansByUser(userId: ID!): [MembershipPlan!]! # @auth(role: STAFF)
+  myMembershipPlans: [MembershipPlan!]! # @auth(role: CUSTOMER)
+}
+
+extend type Mutation {
+  createMembershipPlan(input: CreateMembershipPlanInput!): MembershipPlan! # @auth(role: STAFF)
+  updateMembershipPlan(input: UpdateMembershipPlanInput!): MembershipPlan! # @auth(role: STAFF)
+  deductStoredValue(input: DeductStoredValueInput!): MembershipDeductionResult! # @auth(role: STAFF)
+  removeMembershipPlan(id: ID!): MembershipPlan! # @auth(role: STAFF)
+}
+
+# ─── Business Cards ────────────────────────────────────────────────────────
+
+type BusinessCard {
+  userId: ID!
+  nickname: String
+  uid: String
+  sharePhone: Boolean!
+  phone: String
+  wechat: String
+  qq: String
+  customContent: String
+  isWatching: Boolean
+  registrationId: ID
+  createdAt: String
+  updatedAt: String
+}
+
+input UpsertBusinessCardInput {
+  sharePhone: Boolean = false
+  wechat: String
+  qq: String
+  customContent: String
+}
+
+extend type Query {
+  myBusinessCard: BusinessCard # @auth(role: CUSTOMER)
+  businessCard(userId: ID!, activeId: ID!): BusinessCard # @auth(role: CUSTOMER)
+  participantBusinessCards(activeId: ID!): [BusinessCard!]! # @auth(role: CUSTOMER)
+}
+
+extend type Mutation {
+  upsertBusinessCard(input: UpsertBusinessCardInput!): BusinessCard! # @auth(role: CUSTOMER)
+}
+
+# ─── Users ─────────────────────────────────────────────────────────────────
+
+type UserListResult {
+  items: [UserProfile!]!
+  pageInfo: PageInfo!
+}
+
+input UserSearchInput {
+  searchWords: String
+  pagination: PaginationInput = { offset: 0, limit: 20 }
+}
+
+input UpdateManagedUserInput {
+  id: ID!
+  name: String
+  nickname: String
+  phone: String
+}
+
+input UpdateRoleInput {
+  id: ID!
+  role: UserRole!
+}
+
+input UpdatePreferencesInput {
+  preferredLocale: String
+  preferredStoreId: ID
+}
+
+extend type Query {
+  users(input: UserSearchInput = {}): UserListResult! # @auth(role: STAFF)
+  user(id: ID!): UserProfile # @auth(role: STAFF)
+}
+
+extend type Mutation {
+  updateUser(input: UpdateManagedUserInput!): UserProfile! # @auth(role: STAFF)
+  disableUser(id: ID!): UserProfile! # @auth(role: STAFF)
+  updateUserRole(input: UpdateRoleInput!): UserProfile! # @auth(role: ADMIN)
+  updateMyPreferences(input: UpdatePreferencesInput!): UserProfile! # @auth(role: CUSTOMER)
+}
+
+# ─── Events ────────────────────────────────────────────────────────────────
+
+type Event {
+  id: ID!
+  title: String!
+  description: String
+  coverImageUrl: String
+  content: String
+  storeId: ID
+  isPublished: Boolean!
+  createdAt: String
+  updatedAt: String
+}
+
+input EventInput {
+  title: String!
+  description: String
+  coverImageUrl: String
+  content: String
+  storeId: ID
+}
+
+input UpdateEventInput {
+  id: ID!
+  title: String!
+  description: String
+  coverImageUrl: String
+  content: String
+}
+
+extend type Query {
+  events(storeId: ID): [Event!]!
+  event(id: ID!): Event!
+  managedEvents(storeId: ID): [Event!]! # @auth(role: STAFF)
+  managedEvent(id: ID!): Event! # @auth(role: STAFF)
+}
+
+extend type Mutation {
+  createEvent(input: EventInput!): Event! # @auth(role: STAFF)
+  updateEvent(input: UpdateEventInput!): Event! # @auth(role: STAFF)
+  removeEvent(id: ID!): Event! # @auth(role: STAFF)
+  toggleEventPublish(id: ID!): Event! # @auth(role: STAFF)
+}
+
+# ─── Media ─────────────────────────────────────────────────────────────────
+
+type MediaObject {
+  key: String!
+  name: String!
+  contentType: String!
+  size: Int!
+  uploaded: String!
+  url: String!
+}
+
+type MediaListResult {
+  items: [MediaObject!]!
+  truncated: Boolean!
+  cursor: String
+}
+
+input MediaListInput {
+  search: String
+  contentTypeFilter: String
+  cursor: String
+  limit: Int = 200
+}
+
+extend type Query {
+  mediaObjects(input: MediaListInput = {}): MediaListResult! # @auth(role: STAFF)
+}
+
+extend type Mutation {
+  renameMediaObject(oldKey: String!, newName: String!): MediaObject! # @auth(role: STAFF)
+  removeMediaObject(key: String!): MediaObject! # @auth(role: STAFF)
+}
+
+# ─── Shortlinks ────────────────────────────────────────────────────────────
+
+type Shortlink {
+  slug: String!
+  shortUrl: String
+  url: String!
+  createdAt: String!
+  expiresAt: String
+  active: Boolean!
+}
+
+type ShortlinkListResult {
+  items: [Shortlink!]!
+  cursor: String
+}
+
+input CreateShortlinkInput {
+  url: String!
+  slug: String
+  expiresInSeconds: Int
+}
+
+extend type Query {
+  shortlinks(cursor: String): ShortlinkListResult! # @auth(role: STAFF)
+}
+
+extend type Mutation {
+  createShortlink(input: CreateShortlinkInput!): Shortlink! # @auth(role: STAFF)
+  closeShortlink(slug: String!): Shortlink! # @auth(role: STAFF)
+  updateShortlinkExpiry(slug: String!, expiresInSeconds: Int): Shortlink! # @auth(role: STAFF)
+}
+
+# ─── Settings ──────────────────────────────────────────────────────────────
+
+type CaptchaSettings {
+  enabled: Boolean!
+  disabledUntil: String
+}
+
+type WechatOpenConfig {
+  appId: String
+}
+
+extend type Query {
+  captchaSettings: CaptchaSettings!
+  wechatOpenConfig: WechatOpenConfig!
+}
+
+extend type Mutation {
+  setCaptchaEnabled(enabled: Boolean!): CaptchaSettings! # @auth(role: STAFF)
+}
+
+# ─── Crawler ───────────────────────────────────────────────────────────────
+
+type CrawlerStats {
+  total: Int!
+  crawled: Int!
+  errors: Int!
+  imagesCached: Int!
+  maxId: Int!
+  estimatedMax: Int!
+}
+
+type CrawlerError {
+  gstoneId: Int!
+  error: String
+  retryCount: Int!
+  updatedAt: String
+}
+
+extend type Query {
+  crawlerStats: CrawlerStats! # @auth(role: STAFF)
+  crawlerErrors(limit: Int = 20): [CrawlerError!]! # @auth(role: STAFF)
+}
+
+extend type Mutation {
+  resetCrawlerErrors: CrawlerStats! # @auth(role: STAFF)
+}
+
+# ─── Wechat Templates ──────────────────────────────────────────────────────
+
+enum WechatTemplateSlotKey {
+  ORDER_START
+  TABLE_TRANSFER
+  MAHJONG_START
+  MAHJONG_GSZ_SYNC
+  PHONE_BOUND
+  ORDER_SETTLED
+  MEMBERSHIP_CHANGE
+  PASS_EXPIRING
+}
+
+type WechatTemplate {
+  templateId: String!
+  title: String!
+  primaryIndustry: String
+  deputyIndustry: String
+  content: String
+  example: String
+}
+
+type WechatTemplateListResult {
+  success: Boolean!
+  error: String
+  templates: [WechatTemplate!]!
+}
+
+type WechatTemplateSlot {
+  key: WechatTemplateSlotKey!
+  label: String!
+  templateId: String
+}
+
+type WechatTemplateAssignment {
+  success: Boolean!
+  error: String
+  templateId: String
+  slot: WechatTemplateSlotKey
+  label: String
+}
+
+input AddWechatTemplateFromLibraryInput {
+  templateIdShort: String!
+  keywordNameList: [String!]
+  slot: WechatTemplateSlotKey!
+}
+
+extend type Query {
+  wechatTemplates: WechatTemplateListResult! # @auth(role: STAFF)
+  wechatTemplateSlots: [WechatTemplateSlot!]! # @auth(role: STAFF)
+}
+
+extend type Mutation {
+  addWechatTemplateFromLibrary(input: AddWechatTemplateFromLibraryInput!): WechatTemplateAssignment! # @auth(role: STAFF)
+  assignWechatTemplateSlot(slot: WechatTemplateSlotKey!, templateId: String!): WechatTemplateSlot! # @auth(role: STAFF)
+  removeWechatTemplate(templateId: String!): WechatTemplateAssignment! # @auth(role: STAFF)
+  sendWechatTemplateTest(userId: ID!, slot: WechatTemplateSlotKey!): WechatTemplateAssignment! # @auth(role: STAFF)
+}
+
+# ─── GSZ And Mahjong ───────────────────────────────────────────────────────
+
+enum MahjongMatchType {
+  STORE
+  TOURNAMENT
+}
+
+enum MahjongMode {
+  THREE_PLAYER
+  FOUR_PLAYER
+}
+
+enum MahjongFormat {
+  TONPUU
+  HANCHAN
+}
+
+enum MahjongTerminationReason {
+  SCORE_COMPLETE
+  VOTE
+  ADMIN_ABORT
+  ORDER_INVALID
+}
+
+enum MahjongCompletionFilter {
+  ALL
+  COMPLETED
+  INCOMPLETE
+}
+
+enum GszSyncFilter {
+  ALL
+  SYNCED
+  UNSYNCED
+}
+
+enum UnsyncableReasonCode {
+  NO_PHONE
+  TEMP_USER
+}
+
+type MahjongPlayer {
+  userId: ID!
+  nickname: String!
+  seat: String
+  finalScore: Int!
+  currentPoints: Int
+}
+
+input MahjongPlayerInput {
+  userId: ID!
+  nickname: String!
+  seat: String
+  finalScore: Int!
+}
+
+type MahjongConfig {
+  type: String
+  mode: String!
+  format: String!
+}
+
+input MahjongConfigInput {
+  type: String!
+  mode: String!
+  format: String!
+}
+
+type UnsyncableReason {
+  nickname: String!
+  userId: ID!
+  reason: UnsyncableReasonCode!
+}
+
+type MahjongMatch {
+  id: ID!
+  tableId: ID
+  table: Table
+  matchType: MahjongMatchType
+  gszRecordId: Int
+  gszSynced: Boolean!
+  gszError: String
+  gszSyncedAt: String
+  mode: MahjongMode!
+  format: MahjongFormat!
+  startedAt: String!
+  endedAt: String!
+  terminationReason: MahjongTerminationReason!
+  players: [MahjongPlayer!]!
+  playersJson: String!
+  scores: String
+  config: MahjongConfig
+  createdAt: String
+  unsyncableReasons: [UnsyncableReason!]!
+}
+
+type MahjongMatchListResult {
+  items: [MahjongMatch!]!
+  pageInfo: PageInfo!
+}
+
+type MahjongRegistrationStatus {
+  hasPhone: Boolean!
+  phone: String
+  nickname: String
+  registered: Boolean!
+  gszName: String
+  gszId: Int
+  gszSynced: Boolean!
+  gszError: String
+  alreadyExisted: Boolean
+  nicknameSynced: Boolean
+}
+
+type ActiveMahjongMatch {
+  tableCode: String!
+  tableName: String!
+  tableId: ID!
+  phase: String!
+  matchType: MahjongMatchType!
+  mode: MahjongMode!
+  format: MahjongFormat!
+  players: [MahjongPlayer!]!
+  startedAt: String
+}
+
+type GszCustomer {
+  id: Int!
+  name: String
+  phone: String
+  qq: String
+  wechat: String
+  raw: String
+}
+
+type GszCustomerPage {
+  records: [GszCustomer!]!
+  total: Int
+  pageNo: Int!
+  pageSize: Int!
+}
+
+type GszSyncResult {
+  success: Boolean!
+  error: String
+  successCount: Int
+  failCount: Int
+  total: Int
+  match: MahjongMatch
+}
+
+input SaveMahjongMatchInput {
+  tableId: ID
+  matchType: MahjongMatchType!
+  mode: MahjongMode!
+  format: MahjongFormat!
+  startedAt: String!
+  endedAt: String!
+  terminationReason: MahjongTerminationReason!
+  players: [MahjongPlayerInput!]!
+  config: MahjongConfigInput!
+}
+
+input RegisterMahjongInput {
+  phone: String!
+  smsCode: String!
+  gszName: String!
+  syncNickname: Boolean = false
+}
+
+input MahjongMatchHistoryInput {
+  userId: ID
+  pagination: CursorPaginationInput = { limit: 20 }
+  search: String
+  matchType: MahjongMatchType
+  mode: MahjongMode
+  format: MahjongFormat
+  startDate: String
+  endDate: String
+  storeId: ID
+}
+
+input MahjongManagementListInput {
+  search: String
+  mode: MahjongMode
+  format: MahjongFormat
+  completion: MahjongCompletionFilter = ALL
+  gszSync: GszSyncFilter = ALL
+  tableId: ID
+  startDate: String
+  endDate: String
+  pagination: PaginationInput = { offset: 0, limit: 50 }
+  storeId: ID
+}
+
+input GszRegisterInput {
+  username: String!
+  phone: String!
+  password: String
+  qq: String
+  wechat: String
+}
+
+input GszCustomerPageInput {
+  pageNo: Int!
+  pageSize: Int!
+  nickname: String
+  phone: String
+  qq: String
+  wechat: String
+}
+
+input GszScoreAddInput {
+  phone1: String!
+  phone2: String!
+  phone3: String!
+  phone4: String!
+  point1: String!
+  point2: String!
+  point3: String!
+  point4: String!
+  rateTime: String!
+}
+
+input GszScoreUpdateInput {
+  recordId: Int!
+  phone1: String!
+  phone2: String!
+  phone3: String!
+  phone4: String!
+  point1: String!
+  point2: String!
+  point3: String!
+  point4: String!
+  rateTime: String!
+}
+
+extend type Query {
+  myMahjongMatches(storeId: ID): [MahjongMatch!]! # @auth(role: CUSTOMER)
+  mahjongMatch(id: ID!, storeId: ID): MahjongMatch # @auth(role: CUSTOMER)
+  myMahjongRegistration: MahjongRegistrationStatus! # @auth(role: CUSTOMER)
+  mahjongMatchHistory(input: MahjongMatchHistoryInput = {}): MahjongMatchListResult! # @auth(role: CUSTOMER)
+  mahjongHeatmap(userId: ID, storeId: ID): String! # @auth(role: CUSTOMER)
+  managedMahjongMatches(input: MahjongManagementListInput = {}): MahjongMatchListResult! # @auth(role: STAFF)
+  managedMahjongMatch(id: ID!): MahjongMatch! # @auth(role: STAFF)
+  mahjongTables: [Table!]! # @auth(role: STAFF)
+  activeMahjongMatches: [ActiveMahjongMatch!]! # @auth(role: STAFF)
+  gszCustomers(input: GszCustomerPageInput!): GszCustomerPage! # @auth(role: STAFF)
+}
+
+extend type Mutation {
+  saveMahjongMatch(input: SaveMahjongMatchInput!): MahjongMatch! # @auth(role: CUSTOMER)
+  registerMahjong(input: RegisterMahjongInput!): MahjongRegistrationStatus! # @auth(role: CUSTOMER)
+  terminateMahjongMatch(tableCode: String!, reason: MahjongTerminationReason = ADMIN_ABORT): MahjongMatch! # @auth(role: STAFF)
+  updateMahjongScore(matchId: ID!, players: [MahjongPlayerInput!]!): MahjongMatch! # @auth(role: STAFF)
+  syncMahjongMatchToGsz(matchId: ID!): GszSyncResult! # @auth(role: STAFF)
+  batchSyncMahjongMatchesToGsz(matchIds: [ID!]!): GszSyncResult! # @auth(role: STAFF)
+  gszRegister(input: GszRegisterInput!): GszCustomer! # @auth(role: STAFF)
+  gszScoreAdd(input: GszScoreAddInput!): MahjongMatch! # @auth(role: STAFF)
+  gszScoreUpdate(input: GszScoreUpdateInput!): MahjongMatch! # @auth(role: STAFF)
+}
+
+# ─── Leaderboards And Badges ───────────────────────────────────────────────
+
+enum LeaderboardCategory {
+  TOURNAMENT
+  STORE_4P_HANCHAN
+  STORE_4P_TONPUU
+  STORE_3P_HANCHAN
+  STORE_3P_TONPUU
+}
+
+enum LeaderboardPeriod {
+  DAY
+  WEEK
+  MONTH
+}
+
+type LeaderboardEntry {
+  userId: ID!
+  nickname: String!
+  totalPP: Float!
+  matchCount: Int!
+  rank: Int!
+  prevRank: Int
+}
+
+type Leaderboard {
+  category: LeaderboardCategory!
+  period: LeaderboardPeriod!
+  entries: [LeaderboardEntry!]!
+  computedAt: String
+}
+
+type LeaderboardCategoryInfo {
+  key: LeaderboardCategory!
+  label: String!
+}
+
+type RankingSummary {
+  category: LeaderboardCategory!
+  period: LeaderboardPeriod!
+  rank: Int
+  totalPP: Float!
+  prevRank: Int
+  matchCount: Int!
+}
+
+type UserBadge {
+  id: ID!
+  userId: ID
+  badgeType: String!
+  badgeRank: Int!
+  category: String!
+  periodLabel: String!
+  title: String!
+  awardedAt: String
+  createdAt: String
+}
+
+type PPStats {
+  totalPP: Float!
+  categories: String!
+  raw: String!
+}
+
+extend type Query {
+  leaderboard(category: LeaderboardCategory!, period: LeaderboardPeriod!, storeId: ID): Leaderboard!
+  leaderboardCategories: [LeaderboardCategoryInfo!]!
+  myRankings(storeId: ID): [RankingSummary!]! # @auth(role: CUSTOMER)
+  myBadges(storeId: ID): [UserBadge!]! # @auth(role: CUSTOMER)
+  userBadges(userId: ID!, storeId: ID): [UserBadge!]!
+  myPPStats(storeId: ID): PPStats! # @auth(role: CUSTOMER)
+}
+
+# ─── Pricing Plans ─────────────────────────────────────────────────────────
+
+enum PricingSnapshotStatus {
+  DRAFT
+  PUBLISHED
+}
+
+type PricingConfig {
+  daytimeStart: String!
+  daytimeEnd: String!
+}
+
+type PricingSnapshotData {
+  config: PricingConfig!
+  plans: String!
+}
+
+input PricingSnapshotDataInput {
+  config: String!
+  plans: String!
+}
+
+type PricingSnapshot {
+  id: ID!
+  name: String!
+  storeId: ID
+  data: PricingSnapshotData!
+  status: PricingSnapshotStatus!
+  summary: String
+  createdAt: String
+  publishedAt: String
+}
+
+type PricingDraft {
+  data: PricingSnapshotData!
+  snapshotId: ID
+  snapshotName: String
+  status: PricingSnapshotStatus
+}
+
+input SavePricingSnapshotInput {
+  name: String!
+  data: PricingSnapshotDataInput!
+  storeId: ID
+}
+
+extend type Query {
+  pricingDraft(storeId: ID): PricingDraft! # @auth(role: STAFF)
+  pricingSnapshots(storeId: ID): [PricingSnapshot!]! # @auth(role: STAFF)
+  pricingSnapshot(id: ID!): PricingSnapshot! # @auth(role: STAFF)
+  publishedPricing(storeId: ID): PricingSnapshot
+}
+
+extend type Mutation {
+  savePricingSnapshot(input: SavePricingSnapshotInput!): PricingSnapshot! # @auth(role: STAFF)
+  publishPricingSnapshot(storeId: ID): PricingSnapshot! # @auth(role: STAFF)
+  restorePricingSnapshot(id: ID!): PricingSnapshot! # @auth(role: STAFF)
+}
+
+# ─── Owned Games And Rules ─────────────────────────────────────────────────
+
+type RuleSearchResult {
+  text: String!
+  source: String!
+  score: Float!
+}
+
+type RuleSearchResponse {
+  results: [RuleSearchResult!]!
+  message: String
+}
+
+type BoardGameSyncResult {
+  success: Boolean!
+  message: String
+  processed: Int
+}
+
+extend type Query {
+  ownedBoardGames(input: BoardGameFilterInput = {}): [BoardGameSummary!]!
+  ownedBoardGameCount: BoardGameCounts!
+  ownedBoardGame(id: ID!): BoardGameSummary
+  searchRules(query: String!, limit: Int = 5): RuleSearchResponse!
+}
+
+extend type Mutation {
+  syncOwnedBoardGames(pageFrom: Int!, pageTo: Int!, date: String!): BoardGameSyncResult! # @auth(role: STAFF)
+  wakeOwnedBoardGames(date: String!): BoardGameSyncResult! # @auth(role: STAFF)
+}
+
+# ─── Subscriptions ─────────────────────────────────────────────────────────
+
+type SeatUpdatePayload {
+  tableCode: String!
+  table: Table!
+  occupancies: [TableOccupancy!]!
+  updatedAt: String!
+}
+
+type ActiveParticipantsChangedPayload {
+  active: Active!
+  participants: [ActiveRegistration!]!
+  updatedAt: String!
+}
+
+type NotificationPayload {
+  id: ID!
+  userId: ID!
+  type: String!
+  data: String!
+  createdAt: String!
+}
+
+type LeaderboardUpdatedPayload {
+  leaderboard: Leaderboard!
+  updatedAt: String!
+}
+
+type OrderStatusChangedPayload {
+  order: TableOccupancy!
+  previousStatus: OrderStatus
+  currentStatus: OrderStatus!
+  updatedAt: String!
+}
+
+extend type Subscription {
+  seatUpdated(tableCode: String, storeId: ID): SeatUpdatePayload!
+  activeParticipantsChanged(activeId: ID, storeId: ID): ActiveParticipantsChangedPayload!
+  notificationReceived(userId: ID!): NotificationPayload! # @auth(role: CUSTOMER)
+  leaderboardUpdated(category: LeaderboardCategory, period: LeaderboardPeriod, storeId: ID): LeaderboardUpdatedPayload!
+  orderStatusChanged(orderId: ID, tableId: ID, storeId: ID): OrderStatusChangedPayload! # @auth(role: STAFF)
+}

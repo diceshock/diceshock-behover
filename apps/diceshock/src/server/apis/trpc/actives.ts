@@ -259,10 +259,14 @@ const leave = protectedProcedure
 
     const active = await tdb.query.activesTable.findFirst({
       where: (a, { eq }) => eq(a.id, input.active_id),
-      columns: { creator_id: true },
+      columns: { creator_id: true, is_system_recommended: true },
     });
 
     if (!active) throw new Error("约局不存在");
+
+    if (active.is_system_recommended) {
+      throw new Error("系统推荐的约局无法退出或删除");
+    }
 
     if (active.creator_id === ctx.userId) {
       await tdb
