@@ -41,6 +41,7 @@ async function getUserProfile(ctx: GQLContext, userId: string) {
     role: user.role.toUpperCase(),
     nickname: user.userInfo.nickname,
     phone: user.userInfo.phone,
+    points: user.userInfo.points ?? 0,
     preferredLocale: user.userInfo.preferred_locale,
     preferredStoreId: user.userInfo.preferred_store_id,
     meta: user.userInfo.meta ? JSON.stringify(user.userInfo.meta) : null,

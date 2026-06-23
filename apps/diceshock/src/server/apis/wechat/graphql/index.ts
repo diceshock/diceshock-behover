@@ -13,11 +13,8 @@ import {
   validate,
   visit,
 } from "graphql";
-import {
-  ALL_RESOLVERS,
-  ALL_TYPEDEFS,
-} from "../../../graphql/resolvers/_all";
 import type { HonoCtxEnv } from "@/shared/types";
+import { ALL_RESOLVERS, ALL_TYPEDEFS } from "../../../graphql/resolvers/_all";
 import { mergeSchemas } from "../../../graphql/schema";
 import {
   type AuthContext,
@@ -53,11 +50,21 @@ function getSchema(db: GraphQLContext["db"]): { schema: GraphQLSchema } {
   const cached = schemaCache.get(db);
   if (cached) return cached;
 
-  const built = buildDrizzleSchema(db);
-  const merged = mergeSchemas(built.schema, ALL_TYPEDEFS, ALL_RESOLVERS);
-  const result = { schema: merged };
-  schemaCache.set(db, result);
-  return result;
+  try {
+    console.log("[gql:schema] Building drizzle schema...");
+    const built = buildDrizzleSchema(db);
+    console.log("[gql:schema] Drizzle schema OK, merging SDL...");
+    console.log("[gql:schema] SDL length:", ALL_TYPEDEFS.length);
+    const merged = mergeSchemas(built.schema, ALL_TYPEDEFS, ALL_RESOLVERS);
+    console.log("[gql:schema] Schema ready");
+    const result = { schema: merged };
+    schemaCache.set(db, result);
+    return result;
+  } catch (err) {
+    console.error("[gql:schema] Build failed:", err);
+    console.error("[gql:schema] SDL preview:", ALL_TYPEDEFS.slice(-300));
+    throw err;
+  }
 }
 
 function rootFieldBaseName(fieldName: string): string {

@@ -121,3 +121,7 @@ query GetTotpSecret {
     secret
   }
 }
+
+query GetMyPointsBalance {
+  myPointsBalance
+}
