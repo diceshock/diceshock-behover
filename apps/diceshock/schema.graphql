@@ -1,11 +1,8 @@
 # Diceshock custom GraphQL schema extensions.
 # DateTime values are ISO 8601 strings. JSON fields are JSON-encoded strings.
 
-# Base type definitions (extended by drizzle-graphql and resolvers)
-type Query
-type Mutation
-
-# ─── Shared ────────────────────────────────────────────────────────────────
+# ─── Shared ────────────────────────────────────────────────────────────
+────
 
 input PaginationInput {
   offset: Int = 0
