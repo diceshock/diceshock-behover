@@ -12,7 +12,12 @@ import { BoardGame } from "@lib/utils";
 import { z } from "zod/v4";
 import type { GQLContext } from "../context";
 import { forbidden, notFound, validationError } from "../errors";
-import { requireAdmin, requireAuth, requireStaff } from "../guards";
+import {
+  requireAdmin,
+  requireAuth,
+  requirePhoneBound,
+  requireStaff,
+} from "../guards";
 import { zodToGraphQLError } from "../validate";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -585,6 +590,7 @@ export const usersResolvers = {
       ctx: GQLContext,
     ) {
       requireAuth(ctx);
+      requirePhoneBound(ctx);
       const input = zodToGraphQLError(upsertBusinessCardSchema, args.input);
       const tdb = dbFactory(ctx.env.DB);
       const userId = ctx.userId;

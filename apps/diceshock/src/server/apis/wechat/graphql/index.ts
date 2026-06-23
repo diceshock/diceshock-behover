@@ -34,6 +34,7 @@ export interface GraphQLContext {
   /** For custom resolver compatibility */
   role: Role;
   preferredStoreId: string | null;
+  phone: string | null;
 }
 
 type BuiltSchema = ReturnType<typeof buildSchema>;

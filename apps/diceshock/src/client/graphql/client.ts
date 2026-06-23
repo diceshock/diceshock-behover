@@ -11,6 +11,8 @@ import {
 } from "@apollo/client";
 import { getMainDefinition } from "@apollo/client/utilities";
 import { print } from "graphql";
+import { getDefaultStore } from "jotai";
+import { phoneBindingPromptAtom } from "@/client/atoms/phoneBindingPrompt";
 
 class SSELink extends ApolloLink {
   request(operation: Operation): Observable<FetchResult> | null {
@@ -55,6 +57,11 @@ const errorLink = new ApolloLink((operation, forward) => {
           if (typeof window !== "undefined") {
             window.location.href = "/api/auth/signin";
           }
+        }
+
+        if (err.extensions?.code === "PHONE_REQUIRED") {
+          const store = getDefaultStore();
+          store.set(phoneBindingPromptAtom, { open: true });
         }
       }
     }

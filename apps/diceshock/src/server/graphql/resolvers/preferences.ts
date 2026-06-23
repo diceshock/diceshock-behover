@@ -7,7 +7,7 @@ import {
 import { rruleToHumanReadable } from "@/shared/preferences/rruleDisplay";
 import type { GQLContext } from "../context";
 import { notFound, validationError } from "../errors";
-import { requireAuth } from "../guards";
+import { requireAuth, requirePhoneBound } from "../guards";
 import { zodToGraphQLError } from "../validate";
 
 // ─── TypeDefs ───────────────────────────────────────────────────────
@@ -133,7 +133,8 @@ async function callDeepSeek(
   userMessage: string,
 ): Promise<{ content: string }> {
   const apiKey = env.DEEPSEEK_API_KEY as string | undefined;
-  const accountId = (env.CF_ACCOUNT_ID as string) || "3244c8f91cd34317ce18652158e5853a";
+  const accountId =
+    (env.CF_ACCOUNT_ID as string) || "3244c8f91cd34317ce18652158e5853a";
   const gatewayId = env.CF_AI_GATEWAY_ID as string | undefined;
 
   if (!apiKey) {
@@ -209,7 +210,11 @@ export const preferencesResolvers = {
       return prefs.map(toGqlPref);
     },
 
-    async myPreferencesCount(_source: unknown, _args: unknown, ctx: GQLContext) {
+    async myPreferencesCount(
+      _source: unknown,
+      _args: unknown,
+      ctx: GQLContext,
+    ) {
       requireAuth(ctx);
       const tdb = dbFactory(ctx.env.DB);
       const { count, eq } = drizzle;
@@ -297,6 +302,7 @@ export const preferencesResolvers = {
       ctx: GQLContext,
     ) {
       requireAuth(ctx);
+      requirePhoneBound(ctx);
       const input = zodToGraphQLError(createPrefSchema, args.input);
       const tdb = dbFactory(ctx.env.DB);
 
@@ -320,6 +326,7 @@ export const preferencesResolvers = {
       ctx: GQLContext,
     ) {
       requireAuth(ctx);
+      requirePhoneBound(ctx);
       const { id } = zodToGraphQLError(idSchema, args);
       const tdb = dbFactory(ctx.env.DB);
       const { eq, and } = drizzle;
@@ -351,6 +358,7 @@ export const preferencesResolvers = {
       ctx: GQLContext,
     ) {
       requireAuth(ctx);
+      requirePhoneBound(ctx);
       const { id } = zodToGraphQLError(idSchema, args);
       const tdb = dbFactory(ctx.env.DB);
       const { eq, and } = drizzle;

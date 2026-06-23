@@ -33,13 +33,12 @@ import {
 import TOTPCard from "@/client/components/diceshock/TOTPCard";
 import LanguageSelectorModal from "@/client/components/LanguageSelectorModal";
 import Modal from "@/client/components/modal";
+import PhoneBindingPrompt from "@/client/components/PhoneBindingPrompt";
 import StoreSelectorModal from "@/client/components/StoreSelectorModal";
 import {
-  CaptchaSettingsDocument,
-  type CaptchaSettingsQuery,
   MyMahjongRegistrationDocument,
   type MyMahjongRegistrationQuery,
-  type UpdateMyUserInfoMutation,
+  type UserInfoUpdateResult,
   useGetMyMembershipPlansQuery,
   useUpdateMyPreferencesMutation,
   useUpdateMyUserInfoMutation,
@@ -47,7 +46,6 @@ import {
 import useAuth from "@/client/hooks/useAuth";
 import useCrossData from "@/client/hooks/useCrossData";
 import { useMessages } from "@/client/hooks/useMessages";
-import useSmsCode from "@/client/hooks/useSmsCode";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import { copyToClipboard } from "@/server/utils";
 import {
@@ -204,8 +202,6 @@ function RouteComponent() {
   const [isLoading, setIsLoading] = useState(false);
   const messages = useMessages();
 
-  const [captchaEnabled, setCaptchaEnabled] = useState(true);
-
   const isAutoNickname = (userInfo?.meta as { auto_nickname?: boolean } | null)
     ?.auto_nickname;
 
@@ -254,23 +250,12 @@ function RouteComponent() {
       .catch(() => {});
   }, [isAutoNickname]);
 
-  useEffect(() => {
-    client
-      .query<CaptchaSettingsQuery>({
-        query: CaptchaSettingsDocument,
-      })
-      .then(({ data }) => setCaptchaEnabled(data.captchaSettings.enabled))
-      .catch(() => {});
-  }, [client]);
-
   const [prefCount, setPrefCount] = useState(0);
   useEffect(() => {
     setPrefCount(0);
   }, []);
 
   const [isEditingPhone, setIsEditingPhone] = useState(false);
-  const [phone, setPhone] = useState("");
-  const [isLoadingPhone, setIsLoadingPhone] = useState(false);
   const [isEditingBusinessCard, setIsEditingBusinessCard] = useState(false);
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
   const [gszRegistered, setGszRegistered] = useState<boolean | null>(null);
@@ -309,20 +294,6 @@ function RouteComponent() {
     displayInfo?.preferred_store_id,
     ssrUserInfo,
   ]);
-
-  const {
-    smsForm,
-    dispatchSmsForm,
-    error: smsError,
-    setError: setSmsError,
-    countdown,
-    getSmsCode,
-    reset: resetSms,
-  } = useSmsCode({
-    phone,
-    containerId: "#phone-captcha-container",
-    enabled: isEditingPhone && import.meta.env.PROD && captchaEnabled,
-  });
 
   const handleEditClick = useCallback(() => {
     setNickname(userInfo?.nickname ?? "");
@@ -406,79 +377,24 @@ function RouteComponent() {
   }, [displayInfo?.uid, messages]);
 
   const handleEditPhoneClick = useCallback(() => {
-    setPhone("");
-    setSmsError(null);
-    resetSms();
     setIsEditingPhone(true);
-  }, [setSmsError, resetSms]);
+  }, []);
 
   const handleClosePhone = useCallback(() => {
     setIsEditingPhone(false);
-    setPhone("");
-    setSmsError(null);
-    resetSms();
-  }, [setSmsError, resetSms]);
+  }, []);
 
-  const handlePhoneSubmit = useCallback(
-    async (e: React.FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
-
-      const trimmedPhone = typeof phone === "string" ? phone.trim() : "";
-      if (!trimmedPhone) {
-        messages.error(t("me.phoneRequired"));
-        return;
-      }
-
-      if (!smsForm.code || smsForm.code.length !== 6) {
-        messages.error(t("me.codeRequired"));
-        return;
-      }
-
-      setIsLoadingPhone(true);
-
-      try {
-        const { data } = await updateMyUserInfo({
-          variables: {
-            input: { phone: trimmedPhone, code: smsForm.code },
-          },
-        });
-
-        const result: UpdateMyUserInfoMutation["updateMyUserInfo"] | null =
-          data?.updateMyUserInfo ?? null;
-
-        if (result?.success) {
-          if (result.user) {
-            const updatedPhone = result.user.phone ?? null;
-            setUserInfoIm((draft) => {
-              if (!draft) return undefined;
-              (draft as unknown as { phone: string | null }).phone =
-                updatedPhone;
-              return draft;
-            });
-            messages.success(t("me.phoneSuccess"));
-            handleClosePhone();
-          } else {
-            messages.error(t("me.updateFailed"));
-          }
-        } else {
-          const errorMessage = result?.message ?? t("me.updateFailed");
-          messages.error(errorMessage);
-        }
-      } catch (error) {
-        console.error("更新手机号失败:", error);
-        messages.error(t("me.networkError"));
-      } finally {
-        setIsLoadingPhone(false);
-      }
+  const handlePhoneSuccess = useCallback(
+    (result: UserInfoUpdateResult["user"]) => {
+      if (!result) return;
+      setUserInfoIm((draft) => {
+        if (!draft) return undefined;
+        (draft as unknown as { phone: string | null }).phone =
+          result.phone ?? null;
+        return draft;
+      });
     },
-    [
-      phone,
-      smsForm.code,
-      setUserInfoIm,
-      messages,
-      handleClosePhone,
-      updateMyUserInfo,
-    ],
+    [setUserInfoIm],
   );
 
   const [isStoreSelectorOpen, setIsStoreSelectorOpen] = useState(false);
@@ -883,126 +799,11 @@ function RouteComponent() {
         </div>
       </Modal>
 
-      <Modal
-        isCloseOnClick
+      <PhoneBindingPrompt
         isOpen={isEditingPhone}
-        onToggle={(evt) => {
-          if (!evt.open) handleClosePhone();
-        }}
-      >
-        <div
-          className={clsx(
-            "modal-box max-w-none md:max-w-120 min-h-64 max-h-[80vh] rounded-xl px-0 pb-4 flex flex-col",
-            "absolute not-md:bottom-0 not-md:left-0 not-md:w-full not-md:rounded-none overflow-visible",
-            "border border-base-content/30",
-          )}
-        >
-          <button
-            onClick={handleClosePhone}
-            className="btn btn-sm btn-circle absolute top-4 right-4"
-            disabled={isLoadingPhone}
-          >
-            <XIcon className="size-4" weight="bold" />
-          </button>
-
-          <h3 className="text-base font-bold px-7 pb-4 flex items-center gap-1">
-            {t("me.changePhone")}
-          </h3>
-
-          <form
-            onSubmit={handlePhoneSubmit}
-            className="flex flex-col gap-4 py-4 px-6 sm:px-12"
-          >
-            {smsError && (
-              <div role="alert" className="alert alert-error alert-soft">
-                <WarningIcon className="text-error size-4" />
-                <span>{smsError}</span>
-              </div>
-            )}
-
-            <label className="flex flex-col sm:flex-row gap-2">
-              <span className="label text-sm min-w-20">
-                {t("me.phoneLabel")}
-              </span>
-              <input
-                placeholder={t("me.phonePlaceholder")}
-                type="tel"
-                inputMode="numeric"
-                autoComplete="tel"
-                className="input input-sm flex-1"
-                value={phone}
-                onChange={(e) => {
-                  setPhone(e.target.value);
-                  setSmsError(null);
-                }}
-                disabled={isLoadingPhone || countdown > 0}
-                autoFocus
-              />
-            </label>
-
-            <label className="flex flex-col sm:flex-row gap-2">
-              <span className="label text-sm min-w-20">
-                {t("me.verificationCode")}
-              </span>
-              <div className="flex gap-2 flex-1">
-                <input
-                  type="text"
-                  placeholder={t("me.codePlaceholder")}
-                  className="input input-sm flex-1"
-                  value={smsForm.code}
-                  onChange={(e) => {
-                    dispatchSmsForm({
-                      type: "SET_CODE",
-                      payload: e.target.value,
-                    });
-                    setSmsError(null);
-                  }}
-                  maxLength={6}
-                  disabled={isLoadingPhone}
-                />
-                <button
-                  id="sms-code-btn"
-                  type="button"
-                  className="btn btn-sm shrink-0"
-                  onClick={getSmsCode}
-                  disabled={countdown > 0 || isLoadingPhone}
-                >
-                  {countdown > 0 ? `${countdown}s` : t("me.getCode")}
-                </button>
-              </div>
-            </label>
-
-            {import.meta.env.PROD && captchaEnabled && (
-              <div className="flex justify-center">
-                <div id="phone-captcha-container" />
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                className="btn btn-sm btn-ghost"
-                onClick={handleClosePhone}
-                disabled={isLoadingPhone}
-              >
-                {t("common.cancel")}
-              </button>
-              <button
-                type="submit"
-                className="btn btn-primary btn-sm"
-                disabled={
-                  isLoadingPhone ||
-                  !(typeof phone === "string" && phone.trim()) ||
-                  !smsForm.code ||
-                  smsForm.code.length !== 6
-                }
-              >
-                {isLoadingPhone ? t("common.saving") : t("common.confirm")}
-              </button>
-            </div>
-          </form>
-        </div>
-      </Modal>
+        onClose={handleClosePhone}
+        onSuccess={handlePhoneSuccess}
+      />
 
       <BusinessCardModal
         isOpen={isEditingBusinessCard}

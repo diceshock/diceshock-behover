@@ -164,6 +164,33 @@ export async function dispatchGstoneOcr(env: {
   GSTONE_DB: D1Database;
   GSTONE_OCR_QUEUE: Queue;
 }): Promise<void> {
+  const staleThreshold = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+
+  const staleInflight = await env.GSTONE_DB.prepare(
+    `SELECT document_id, ocr_pages FROM documents
+     WHERE crawled_at IS NOT NULL AND ocr_at IS NULL AND error IS NULL
+       AND ocr_pages IS NOT NULL AND updated_at < ?
+     LIMIT 5`,
+  )
+    .bind(staleThreshold)
+    .all<{ document_id: number; ocr_pages: string }>();
+
+  if ((staleInflight.results?.length ?? 0) > 0) {
+    const msgs = (staleInflight.results ?? []).map((d) => {
+      let nextPage = 0;
+      try {
+        const pages = JSON.parse(d.ocr_pages) as (string | null)[];
+        nextPage = pages.findIndex((p) => !p || p.trim().length === 0);
+        if (nextPage === -1) nextPage = pages.length;
+      } catch {}
+      return { body: { document_id: d.document_id, page_index: nextPage } };
+    });
+    for (let i = 0; i < msgs.length; i += 100) {
+      await env.GSTONE_OCR_QUEUE.sendBatch(msgs.slice(i, i + 100));
+    }
+    return;
+  }
+
   const inflight = await env.GSTONE_DB.prepare(
     `SELECT COUNT(*) as c FROM documents
      WHERE crawled_at IS NOT NULL AND ocr_at IS NULL AND error IS NULL AND ocr_pages IS NOT NULL`,
@@ -172,16 +199,12 @@ export async function dispatchGstoneOcr(env: {
   if ((inflight?.c ?? 0) > 10) return;
 
   const pending = await env.GSTONE_DB.prepare(
-    `SELECT document_id, page_count, ocr_pages FROM documents
+    `SELECT document_id FROM documents
      WHERE crawled_at IS NOT NULL AND ocr_at IS NULL AND error IS NULL AND ocr_pages IS NULL
-     LIMIT ?`,
+     LIMIT 5`,
   )
-    .bind(5)
-    .all<{
-      document_id: number;
-      page_count: number | null;
-      ocr_pages: string | null;
-    }>();
+    .bind()
+    .all<{ document_id: number }>();
 
   const docs = pending.results ?? [];
   if (docs.length === 0) return;

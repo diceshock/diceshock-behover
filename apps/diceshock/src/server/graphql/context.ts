@@ -6,6 +6,7 @@ export interface GQLContext extends AuthContext {
   db: ReturnType<typeof dbFactory>;
   role: Role;
   userId: string | null;
+  phone: string | null;
   preferredStoreId: string | null;
   env: HonoCtxEnv["Bindings"];
 }

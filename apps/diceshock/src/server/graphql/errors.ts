@@ -5,6 +5,7 @@ export type GQLErrorCode =
   | "UNAUTHORIZED"
   | "FORBIDDEN"
   | "VALIDATION_ERROR"
+  | "PHONE_REQUIRED"
   | "INTERNAL";
 
 interface ErrorExtensions extends GraphQLErrorExtensions {
@@ -31,6 +32,12 @@ export function unauthorized(
 
 export function forbidden(message = "Access forbidden"): GraphQLError {
   return graphQLError(message, { code: "FORBIDDEN" });
+}
+
+export function phoneRequired(
+  message = "Phone binding required",
+): GraphQLError {
+  return graphQLError(message, { code: "PHONE_REQUIRED" });
 }
 
 export function validationError(field: string, message: string): GraphQLError {

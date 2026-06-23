@@ -82,21 +82,21 @@ function AccountButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="gap-12 flex-nowrap w-full"
+      className="gap-12 flex-nowrap w-full py-2"
     >
       <div className="avatar avatar-placeholder shrink-0">
-        <div className="bg-primary text-gray-900 size-6 rounded-full overflow-hidden">
-          <span className="text-[10px] font-bold">
+        <div className="bg-primary text-gray-900 size-8 rounded-full overflow-hidden">
+          <span className="text-xs font-bold">
             {/^[\x20-\x7E\u00A0-\u024F\u0400-\u04FF]/.test(name)
               ? name.slice(0, 2)
               : name.slice(0, 1)}
           </span>
         </div>
       </div>
-      <div className="min-w-0 whitespace-nowrap flex items-center gap-1.5">
+      <div className="min-w-0 flex flex-col">
         <span className="text-sm font-medium truncate">{name}</span>
         {roleBadge && (
-          <span className="badge badge-xs badge-primary">{roleBadge}</span>
+          <span className="text-[10px] text-base-content/50">{roleBadge}</span>
         )}
       </div>
     </button>

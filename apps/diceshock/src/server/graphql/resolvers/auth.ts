@@ -3,11 +3,12 @@ import dbFactory, { accounts, drizzle, userInfoTable } from "@lib/db";
 import { customAlphabet } from "nanoid";
 import { z } from "zod";
 import { getSmsTmpCodeKey } from "@/server/utils/auth";
+import { mergeAccounts } from "@/server/utils/mergeAccounts";
 import { LOCALES, STORES } from "@/shared/store-locale";
 import { generateTOTP, generateTotpSecret } from "@/shared/utils/totp";
 import type { GQLContext } from "../context";
 import { internalError, notFound, validationError } from "../errors";
-import { requireAuth } from "../guards";
+import { requireAuth, requirePhoneBound } from "../guards";
 import { zodToGraphQLError } from "../validate";
 
 const smsCodeSchema = z.object({
@@ -234,7 +235,32 @@ export const authResolvers = {
           ),
       });
       if (existingAccount && existingAccount.userId !== ctx.userId) {
-        throw validationError("phone", "Phone number is already in use");
+        await mergeAccounts(tdb, ctx.userId, existingAccount.userId);
+        await ctx.env.KV.delete(kvKey);
+        return {
+          success: true,
+          merged: true,
+          mergedUserId: existingAccount.userId,
+          user: await getUserProfile(ctx, existingAccount.userId),
+        };
+      }
+
+      const existingUserInfo = await tdb.query.userInfoTable.findFirst({
+        where: (userInfo, { and, eq, not }) =>
+          and(
+            eq(userInfo.phone, input.phone),
+            not(eq(userInfo.id, ctx.userId)),
+          ),
+      });
+      if (existingUserInfo) {
+        await mergeAccounts(tdb, ctx.userId, existingUserInfo.id);
+        await ctx.env.KV.delete(kvKey);
+        return {
+          success: true,
+          merged: true,
+          mergedUserId: existingUserInfo.id,
+          user: await getUserProfile(ctx, existingUserInfo.id),
+        };
       }
 
       await tdb
@@ -276,6 +302,7 @@ export const authResolvers = {
       ctx: GQLContext,
     ) {
       requireAuth(ctx);
+      requirePhoneBound(ctx);
       const input = zodToGraphQLError(updateProfileSchema, args.input);
       const tdb = dbFactory(ctx.env.DB);
       const [updated] = await tdb
@@ -297,6 +324,7 @@ export const authResolvers = {
       ctx: GQLContext,
     ) {
       requireAuth(ctx);
+      requirePhoneBound(ctx);
       const input = zodToGraphQLError(updatePreferencesSchema, args.input);
       const tdb = dbFactory(ctx.env.DB);
       const [updated] = await tdb

@@ -57,6 +57,22 @@ function resolvePreferredStoreId(
   return prefs ?? null;
 }
 
+function resolvePhone(
+  authUser: Awaited<ReturnType<typeof getAuthUser>>,
+  c: Context<HonoCtxEnv>,
+): string | null {
+  // Prefer InjectCrossData (set by userInjMiddleware from DB) over JWT token
+  // because phone may be bound after login and JWT won't update until next session
+  const crossData = c.get("InjectCrossData");
+  if (crossData?.UserInfo?.phone) return crossData.UserInfo.phone;
+  return (
+    ((authUser?.token as Record<string, unknown>)?.phone as
+      | string
+      | null
+      | undefined) ?? null
+  );
+}
+
 export async function graphqlHandler(
   c: Context<HonoCtxEnv>,
 ): Promise<Response> {
@@ -96,6 +112,7 @@ export async function graphqlHandler(
         env: c.env,
         role,
         preferredStoreId: resolvePreferredStoreId(authUser),
+        phone: resolvePhone(authUser, c),
       };
 
       const result = await executeGraphQL(body.query, body.variables, context);

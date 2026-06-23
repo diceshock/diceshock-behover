@@ -8,6 +8,7 @@ import db, {
   userInfoTable,
   userPreferencesTable,
 } from "@lib/db";
+import { mergeAccounts } from "@/server/utils/mergeAccounts";
 import { CATEGORY_LABELS } from "@/shared/preferences/constants";
 import { rruleToHumanReadable } from "@/shared/preferences/rruleDisplay";
 import type { PreferenceCategory } from "@/shared/preferences/types";
@@ -16,7 +17,7 @@ import { MUTATE_ACTIONS } from "../graphql/mutateActions";
 import { SITE_LINKS } from "../linkRegistry";
 import type { ToolContext } from "./totp";
 
-const { and, eq } = drizzle;
+const { and, eq, not } = drizzle;
 
 // ─── Extended env for SMS/GSZ ───────────────────────────────────────
 
@@ -106,6 +107,17 @@ function validateParams(
 const DESTRUCTIVE_ACTIONS: Set<MutateAction> = new Set([
   "leave_active",
   "update_active",
+]);
+
+const PHONE_REQUIRED_ACTIONS: Set<MutateAction> = new Set([
+  "create_active",
+  "join_active",
+  "update_profile",
+  "update_preferences",
+  "add_preference",
+  "delete_preference",
+  "toggle_preference",
+  "upsert_business_card",
 ]);
 
 interface PendingAction {
@@ -275,6 +287,21 @@ export async function executeMutateTool(
   }
 
   const env = context.env as MutateEnv;
+
+  // Check phone binding for restricted actions
+  if (PHONE_REQUIRED_ACTIONS.has(typedAction)) {
+    const d = db(env.DB);
+    const userInfo = await d
+      .select({ phone: userInfoTable.phone })
+      .from(userInfoTable)
+      .where(eq(userInfoTable.id, userId))
+      .limit(1);
+
+    if (!userInfo[0]?.phone) {
+      return '该操作需要先绑定手机号哦~\n请发送"绑定手机"或直接告诉我你的手机号开始绑定流程。';
+    }
+  }
+
   try {
     switch (typedAction) {
       case "create_active":
@@ -1150,7 +1177,22 @@ async function handleVerifyPhone(
     .limit(1);
 
   if (existingAccount.length > 0 && existingAccount[0].userId !== userId) {
-    return "该手机号已被其他账号使用";
+    const existingUserId = existingAccount[0].userId;
+    await mergeAccounts(d, userId, existingUserId);
+    return `[通知] 手机号绑定成功！已自动合并账号数据。\n${phone.slice(0, 3)}****${phone.slice(-4)}\n${SITE_LINKS.me()}`;
+  }
+
+  const existingUserByPhone = await d
+    .select({ id: userInfoTable.id })
+    .from(userInfoTable)
+    .where(
+      and(eq(userInfoTable.phone, phone), not(eq(userInfoTable.id, userId))),
+    )
+    .limit(1);
+
+  if (existingUserByPhone.length > 0) {
+    await mergeAccounts(d, userId, existingUserByPhone[0].id);
+    return `[通知] 手机号绑定成功！已自动合并账号数据。\n${phone.slice(0, 3)}****${phone.slice(-4)}\n${SITE_LINKS.me()}`;
   }
 
   await d

@@ -6,7 +6,7 @@ import dbFactory, {
 import { z } from "zod/v4";
 import type { GQLContext } from "../context";
 import { notFound, validationError } from "../errors";
-import { requireAuth, requireStaff } from "../guards";
+import { requireAuth, requirePhoneBound, requireStaff } from "../guards";
 import { zodToGraphQLError } from "../validate";
 
 // ─── Zod Schemas ──────────────────────────────────────────────────────────
@@ -212,6 +212,7 @@ export const activesResolvers = {
       ctx: GQLContext,
     ) {
       requireAuth(ctx);
+      requirePhoneBound(ctx);
       const input = zodToGraphQLError(createActiveSchema, args.input);
 
       const tdb = dbFactory(ctx.env.DB);
@@ -256,6 +257,7 @@ export const activesResolvers = {
       ctx: GQLContext,
     ) {
       requireAuth(ctx);
+      requirePhoneBound(ctx);
       const input = zodToGraphQLError(joinActiveSchema, args.input);
 
       const tdb = dbFactory(ctx.env.DB);

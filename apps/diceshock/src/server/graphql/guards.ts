@@ -1,6 +1,6 @@
 import { hasRole } from "../apis/wechat/graphql/permissions";
 import type { GQLContext } from "./context";
-import { forbidden, unauthorized } from "./errors";
+import { forbidden, phoneRequired, unauthorized } from "./errors";
 
 export function requireAuth(ctx: GQLContext): asserts ctx is GQLContext & {
   userId: string;
@@ -21,6 +21,13 @@ export function requireAdmin(ctx: GQLContext): void {
   requireAuth(ctx);
   if (!hasRole(ctx.role, "admin")) {
     throw forbidden("Admin access required");
+  }
+}
+
+export function requirePhoneBound(ctx: GQLContext): void {
+  requireAuth(ctx);
+  if (!ctx.phone && !hasRole(ctx.role, "staff")) {
+    throw phoneRequired("Phone binding required");
   }
 }
 
