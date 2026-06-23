@@ -448,7 +448,10 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
           phone,
           uid: userInfo.uid,
           nickname: userInfo.nickname,
+          points: userInfo.points ?? 0,
           meta: userInfo.meta ?? null,
+          preferred_store_id: userInfo.preferred_store_id ?? null,
+          preferred_locale: userInfo.preferred_locale ?? null,
         },
       });
 
@@ -487,6 +490,7 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
       phone: userInfoRaw.phone || phone,
       uid: userInfoRaw.uid,
       nickname: userInfoRaw.nickname,
+      points: userInfoRaw.points ?? 0,
       meta: userInfoRaw.meta ?? null,
       preferred_store_id: userInfoRaw.preferred_store_id ?? null,
       preferred_locale: userInfoRaw.preferred_locale ?? null,

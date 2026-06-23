@@ -96,6 +96,12 @@ export type AddOccupancyInput = {
   userId: Scalars['ID']['input'];
 };
 
+export type AddPointsInput = {
+  amount: Scalars['Int']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+  userId: Scalars['ID']['input'];
+};
+
 export type AddWechatTemplateFromLibraryInput = {
   keywordNameList?: InputMaybe<Array<Scalars['String']['input']>>;
   slot: WechatTemplateSlotKey;
@@ -256,6 +262,12 @@ export type CreateTableInput = {
 export type CursorPaginationInput = {
   cursor?: InputMaybe<Scalars['String']['input']>;
   limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type DeductPointsInput = {
+  amount: Scalars['Int']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+  userId: Scalars['ID']['input'];
 };
 
 export type DeductStoredValueInput = {
@@ -593,6 +605,7 @@ export enum MembershipPlanType {
 
 export type Mutation = {
   __typename?: 'Mutation';
+  addPoints: UserPointsLog;
   addTableOccupancy: TableOccupancy;
   addWechatTemplateFromLibrary: WechatTemplateAssignment;
   assignWechatTemplateSlot: WechatTemplateSlot;
@@ -611,6 +624,7 @@ export type Mutation = {
   createShortlink: Shortlink;
   createTable: Table;
   createTempIdentity: TempIdentity;
+  deductPoints: UserPointsLog;
   deductStoredValue: MembershipDeductionResult;
   disableUser: UserProfile;
   endOrder: TableOccupancy;
@@ -665,6 +679,11 @@ export type Mutation = {
   upsertBusinessCard: BusinessCard;
   verifyTotp: TotpVerificationResult;
   wakeOwnedBoardGames: BoardGameSyncResult;
+};
+
+
+export type MutationAddPointsArgs = {
+  input: AddPointsInput;
 };
 
 
@@ -751,6 +770,11 @@ export type MutationCreateShortlinkArgs = {
 
 export type MutationCreateTableArgs = {
   input: CreateTableInput;
+};
+
+
+export type MutationDeductPointsArgs = {
+  input: DeductPointsInput;
 };
 
 
@@ -1244,6 +1268,7 @@ export type Query = {
   myMahjongRegistration: MahjongRegistrationStatus;
   myMembershipPlans: Array<MembershipPlan>;
   myPPStats: PpStats;
+  myPointsBalance: Scalars['Int']['output'];
   myRankings: Array<RankingSummary>;
   occupanciesByUser: Array<TableOccupancy>;
   order: TableOccupancy;
@@ -1252,6 +1277,7 @@ export type Query = {
   ownedBoardGameCount: BoardGameCounts;
   ownedBoardGames: Array<BoardGameSummary>;
   participantBusinessCards: Array<BusinessCard>;
+  pointsLogByUser: Array<UserPointsLog>;
   pricingDraft: PricingDraft;
   pricingSnapshot: PricingSnapshot;
   pricingSnapshots: Array<PricingSnapshot>;
@@ -1448,6 +1474,11 @@ export type QueryOwnedBoardGamesArgs = {
 
 export type QueryParticipantBusinessCardsArgs = {
   activeId: Scalars['ID']['input'];
+};
+
+
+export type QueryPointsLogByUserArgs = {
+  userId: Scalars['ID']['input'];
 };
 
 
@@ -1910,6 +1941,17 @@ export type UserListResult = {
   pageInfo: PageInfo;
 };
 
+export type UserPointsLog = {
+  __typename?: 'UserPointsLog';
+  amount: Scalars['Int']['output'];
+  balanceAfter: Scalars['Int']['output'];
+  createdAt?: Maybe<Scalars['String']['output']>;
+  createdBy?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  note?: Maybe<Scalars['String']['output']>;
+  userId: Scalars['ID']['output'];
+};
+
 export type UserProfile = {
   __typename?: 'UserProfile';
   createdAt?: Maybe<Scalars['String']['output']>;
@@ -1921,6 +1963,7 @@ export type UserProfile = {
   name?: Maybe<Scalars['String']['output']>;
   nickname?: Maybe<Scalars['String']['output']>;
   phone?: Maybe<Scalars['String']['output']>;
+  points?: Maybe<Scalars['Int']['output']>;
   preferredLocale?: Maybe<Scalars['String']['output']>;
   preferredStoreId?: Maybe<Scalars['ID']['output']>;
   role: UserRole;
@@ -5365,7 +5408,7 @@ export type AddTableOccupancyMutationResult = Apollo.MutationResult<AddTableOccu
 export type AddTableOccupancyMutationOptions = Apollo.BaseMutationOptions<AddTableOccupancyMutation, AddTableOccupancyMutationVariables>;
 export const UsersDocument = gql`
     query Users($input: UserSearchInput = {}) {
-  managedUsers(input: $input) {
+  users: managedUsers(input: $input) {
     items {
       id
       uid
@@ -5375,6 +5418,7 @@ export const UsersDocument = gql`
       role
       nickname
       phone
+      points
       preferredLocale
       preferredStoreId
       meta
@@ -5448,6 +5492,7 @@ export const UserDocument = gql`
     role
     nickname
     phone
+    points
     preferredLocale
     preferredStoreId
     meta
@@ -5874,6 +5919,133 @@ export type OccupanciesByUserQueryHookResult = ReturnType<typeof useOccupanciesB
 export type OccupanciesByUserLazyQueryHookResult = ReturnType<typeof useOccupanciesByUserLazyQuery>;
 export type OccupanciesByUserSuspenseQueryHookResult = ReturnType<typeof useOccupanciesByUserSuspenseQuery>;
 export type OccupanciesByUserQueryResult = Apollo.QueryResult<OccupanciesByUserQuery, OccupanciesByUserQueryVariables>;
+export const PointsLogByUserDocument = gql`
+    query PointsLogByUser($userId: ID!) {
+  pointsLogByUser(userId: $userId) {
+    id
+    userId
+    amount
+    balanceAfter
+    note
+    createdBy
+    createdAt
+  }
+}
+    `;
+
+/**
+ * __usePointsLogByUserQuery__
+ *
+ * To run a query within a React component, call `usePointsLogByUserQuery` and pass it any options that fit your needs.
+ * When your component renders, `usePointsLogByUserQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = usePointsLogByUserQuery({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *   },
+ * });
+ */
+export function usePointsLogByUserQuery(baseOptions: Apollo.QueryHookOptions<PointsLogByUserQuery, PointsLogByUserQueryVariables> & ({ variables: PointsLogByUserQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<PointsLogByUserQuery, PointsLogByUserQueryVariables>(PointsLogByUserDocument, options);
+      }
+export function usePointsLogByUserLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<PointsLogByUserQuery, PointsLogByUserQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<PointsLogByUserQuery, PointsLogByUserQueryVariables>(PointsLogByUserDocument, options);
+        }
+// @ts-ignore
+export function usePointsLogByUserSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<PointsLogByUserQuery, PointsLogByUserQueryVariables>): Apollo.UseSuspenseQueryResult<PointsLogByUserQuery, PointsLogByUserQueryVariables>;
+export function usePointsLogByUserSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<PointsLogByUserQuery, PointsLogByUserQueryVariables>): Apollo.UseSuspenseQueryResult<PointsLogByUserQuery | undefined, PointsLogByUserQueryVariables>;
+export function usePointsLogByUserSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<PointsLogByUserQuery, PointsLogByUserQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<PointsLogByUserQuery, PointsLogByUserQueryVariables>(PointsLogByUserDocument, options);
+        }
+export type PointsLogByUserQueryHookResult = ReturnType<typeof usePointsLogByUserQuery>;
+export type PointsLogByUserLazyQueryHookResult = ReturnType<typeof usePointsLogByUserLazyQuery>;
+export type PointsLogByUserSuspenseQueryHookResult = ReturnType<typeof usePointsLogByUserSuspenseQuery>;
+export type PointsLogByUserQueryResult = Apollo.QueryResult<PointsLogByUserQuery, PointsLogByUserQueryVariables>;
+export const AddPointsDocument = gql`
+    mutation AddPoints($input: AddPointsInput!) {
+  addPoints(input: $input) {
+    id
+    userId
+    amount
+    balanceAfter
+    note
+    createdBy
+    createdAt
+  }
+}
+    `;
+export type AddPointsMutationFn = Apollo.MutationFunction<AddPointsMutation, AddPointsMutationVariables>;
+
+/**
+ * __useAddPointsMutation__
+ *
+ * To run a mutation, you first call `useAddPointsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useAddPointsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [addPointsMutation, { data, loading, error }] = useAddPointsMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useAddPointsMutation(baseOptions?: Apollo.MutationHookOptions<AddPointsMutation, AddPointsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<AddPointsMutation, AddPointsMutationVariables>(AddPointsDocument, options);
+      }
+export type AddPointsMutationHookResult = ReturnType<typeof useAddPointsMutation>;
+export type AddPointsMutationResult = Apollo.MutationResult<AddPointsMutation>;
+export type AddPointsMutationOptions = Apollo.BaseMutationOptions<AddPointsMutation, AddPointsMutationVariables>;
+export const DeductPointsDocument = gql`
+    mutation DeductPoints($input: DeductPointsInput!) {
+  deductPoints(input: $input) {
+    id
+    userId
+    amount
+    balanceAfter
+    note
+    createdBy
+    createdAt
+  }
+}
+    `;
+export type DeductPointsMutationFn = Apollo.MutationFunction<DeductPointsMutation, DeductPointsMutationVariables>;
+
+/**
+ * __useDeductPointsMutation__
+ *
+ * To run a mutation, you first call `useDeductPointsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeductPointsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deductPointsMutation, { data, loading, error }] = useDeductPointsMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useDeductPointsMutation(baseOptions?: Apollo.MutationHookOptions<DeductPointsMutation, DeductPointsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeductPointsMutation, DeductPointsMutationVariables>(DeductPointsDocument, options);
+      }
+export type DeductPointsMutationHookResult = ReturnType<typeof useDeductPointsMutation>;
+export type DeductPointsMutationResult = Apollo.MutationResult<DeductPointsMutation>;
+export type DeductPointsMutationOptions = Apollo.BaseMutationOptions<DeductPointsMutation, DeductPointsMutationVariables>;
 export const VerifyTotpDashDocument = gql`
     mutation VerifyTotpDash($input: VerifyTotpInput!) {
   verifyTotp(input: $input) {
@@ -7688,3 +7860,43 @@ export type GetTotpSecretQueryHookResult = ReturnType<typeof useGetTotpSecretQue
 export type GetTotpSecretLazyQueryHookResult = ReturnType<typeof useGetTotpSecretLazyQuery>;
 export type GetTotpSecretSuspenseQueryHookResult = ReturnType<typeof useGetTotpSecretSuspenseQuery>;
 export type GetTotpSecretQueryResult = Apollo.QueryResult<GetTotpSecretQuery, GetTotpSecretQueryVariables>;
+export const GetMyPointsBalanceDocument = gql`
+    query GetMyPointsBalance {
+  myPointsBalance
+}
+    `;
+
+/**
+ * __useGetMyPointsBalanceQuery__
+ *
+ * To run a query within a React component, call `useGetMyPointsBalanceQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetMyPointsBalanceQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetMyPointsBalanceQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGetMyPointsBalanceQuery(baseOptions?: Apollo.QueryHookOptions<GetMyPointsBalanceQuery, GetMyPointsBalanceQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetMyPointsBalanceQuery, GetMyPointsBalanceQueryVariables>(GetMyPointsBalanceDocument, options);
+      }
+export function useGetMyPointsBalanceLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetMyPointsBalanceQuery, GetMyPointsBalanceQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetMyPointsBalanceQuery, GetMyPointsBalanceQueryVariables>(GetMyPointsBalanceDocument, options);
+        }
+// @ts-ignore
+export function useGetMyPointsBalanceSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetMyPointsBalanceQuery, GetMyPointsBalanceQueryVariables>): Apollo.UseSuspenseQueryResult<GetMyPointsBalanceQuery, GetMyPointsBalanceQueryVariables>;
+export function useGetMyPointsBalanceSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetMyPointsBalanceQuery, GetMyPointsBalanceQueryVariables>): Apollo.UseSuspenseQueryResult<GetMyPointsBalanceQuery | undefined, GetMyPointsBalanceQueryVariables>;
+export function useGetMyPointsBalanceSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetMyPointsBalanceQuery, GetMyPointsBalanceQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetMyPointsBalanceQuery, GetMyPointsBalanceQueryVariables>(GetMyPointsBalanceDocument, options);
+        }
+export type GetMyPointsBalanceQueryHookResult = ReturnType<typeof useGetMyPointsBalanceQuery>;
+export type GetMyPointsBalanceLazyQueryHookResult = ReturnType<typeof useGetMyPointsBalanceLazyQuery>;
+export type GetMyPointsBalanceSuspenseQueryHookResult = ReturnType<typeof useGetMyPointsBalanceSuspenseQuery>;
+export type GetMyPointsBalanceQueryResult = Apollo.QueryResult<GetMyPointsBalanceQuery, GetMyPointsBalanceQueryVariables>;

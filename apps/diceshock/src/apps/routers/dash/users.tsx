@@ -12,6 +12,7 @@ import {
   getStoredValueBalance,
   isActivePlan,
   type MembershipPlan,
+  type PlanType,
 } from "@/client/components/diceshock/MembershipBadge";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import {
@@ -168,8 +169,18 @@ function RouteComponent() {
               </tr>
             ) : (
               users.map((user) => {
-                const plans = (user.membershipPlans ??
-                  []) as unknown as MembershipPlan[];
+                const plans = (user.membershipPlans ?? []).map(
+                  (p): MembershipPlan => ({
+                    id: p.id,
+                    user_id: p.userId,
+                    plan_type: p.planType.toLowerCase() as PlanType,
+                    amount: p.amount ?? null,
+                    start_date: p.startDate ?? null,
+                    end_date: p.endDate ?? null,
+                    create_at: p.createdAt ?? null,
+                    update_at: p.updatedAt ?? null,
+                  }),
+                );
                 const storedBalance = getStoredValueBalance(plans);
                 return (
                   <tr key={user.id}>

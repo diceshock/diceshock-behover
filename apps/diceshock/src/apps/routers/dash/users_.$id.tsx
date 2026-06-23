@@ -39,13 +39,16 @@ import {
   ActiveMahjongMatchesDocument,
   SendWechatTemplateTestDocument,
   useActiveMahjongMatchesQuery,
+  useAddPointsMutation,
   useBatchPauseOrdersMutation,
   useBatchResumeOrdersMutation,
   useCreateMembershipPlanMutation,
+  useDeductPointsMutation,
   useDeductStoredValueMutation,
   useMembershipPlansByUserQuery,
   useOccupanciesByUserQuery,
   usePauseOrderMutation,
+  usePointsLogByUserQuery,
   useRemoveMembershipPlanMutation,
   useResumeOrderMutation,
   useUpdateMembershipPlanMutation,
@@ -165,6 +168,259 @@ function detectAllConflicts(plans: MembershipPlan[]): Set<string> {
   return conflictIds;
 }
 
+function PointsTab({
+  userId,
+  currentPoints,
+}: {
+  userId: string;
+  currentPoints: number;
+}) {
+  const msg = useMsg();
+  const addDialogRef = useRef<HTMLDialogElement>(null);
+  const deductDialogRef = useRef<HTMLDialogElement>(null);
+
+  const [addAmount, setAddAmount] = useState("");
+  const [addNote, setAddNote] = useState("");
+  const [addPending, setAddPending] = useState(false);
+
+  const [deductAmount, setDeductAmount] = useState("");
+  const [deductNote, setDeductNote] = useState("");
+  const [deductPending, setDeductPending] = useState(false);
+
+  const { data: logsData } = usePointsLogByUserQuery({
+    variables: { userId },
+    skip: !userId,
+  });
+  const pointsLogs = logsData?.pointsLogByUser ?? [];
+
+  const [addPointsMut] = useAddPointsMutation();
+  const [deductPointsMut] = useDeductPointsMutation();
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amount = Number.parseInt(addAmount, 10);
+    if (!amount || amount <= 0) return;
+    setAddPending(true);
+    try {
+      await addPointsMut({
+        variables: { input: { userId, amount, note: addNote || null } },
+        refetchQueries: ["User", "PointsLogByUser"],
+      });
+      msg.success(`已增加 ${amount} 积分`);
+      addDialogRef.current?.close();
+      setAddAmount("");
+      setAddNote("");
+    } catch (err: any) {
+      msg.error(err?.message ?? "操作失败");
+    } finally {
+      setAddPending(false);
+    }
+  };
+
+  const handleDeduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amount = Number.parseInt(deductAmount, 10);
+    if (!amount || amount <= 0) return;
+    setDeductPending(true);
+    try {
+      await deductPointsMut({
+        variables: { input: { userId, amount, note: deductNote || null } },
+        refetchQueries: ["User", "PointsLogByUser"],
+      });
+      msg.success(`已扣除 ${amount} 积分`);
+      deductDialogRef.current?.close();
+      setDeductAmount("");
+      setDeductNote("");
+    } catch (err: any) {
+      msg.error(err?.message ?? "操作失败");
+    } finally {
+      setDeductPending(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <h3 className="text-lg font-semibold">积分记录</h3>
+          <span className="badge badge-primary badge-lg">
+            当前积分: {currentPoints}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="btn btn-error btn-sm"
+            onClick={() => {
+              setDeductAmount("");
+              setDeductNote("");
+              deductDialogRef.current?.showModal();
+            }}
+          >
+            <CurrencyDollarIcon className="size-4" />
+            扣除积分
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={() => {
+              setAddAmount("");
+              setAddNote("");
+              addDialogRef.current?.showModal();
+            }}
+          >
+            <PlusIcon className="size-4" />
+            增加积分
+          </button>
+        </div>
+      </div>
+
+      {pointsLogs.length === 0 ? (
+        <div className="py-12 text-center text-base-content/60">
+          暂无积分记录
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>变动</th>
+                <th>变动后余额</th>
+                <th>备注</th>
+                <th>时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pointsLogs.map((log: any) => (
+                <tr key={log.id}>
+                  <td>
+                    <span
+                      className={clsx(
+                        "font-mono font-bold",
+                        log.amount > 0 ? "text-success" : "text-error",
+                      )}
+                    >
+                      {log.amount > 0 ? `+${log.amount}` : log.amount}
+                    </span>
+                  </td>
+                  <td className="font-mono">{log.balanceAfter}</td>
+                  <td className="text-sm text-base-content/70">
+                    {log.note || "—"}
+                  </td>
+                  <td className="text-sm text-base-content/50">
+                    {log.createdAt
+                      ? dayjs(log.createdAt).format("YYYY/MM/DD HH:mm")
+                      : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <dialog ref={addDialogRef} className="modal">
+        <form method="dialog" className="modal-box" onSubmit={handleAdd}>
+          <div className="modal-action flex items-center justify-between mb-4">
+            <h3 className="font-bold text-lg">增加积分</h3>
+            <button
+              type="button"
+              className="btn btn-ghost btn-square"
+              onClick={() => addDialogRef.current?.close()}
+            >
+              <XIcon />
+            </button>
+          </div>
+          <div className="flex flex-col gap-4">
+            <label className="flex flex-col gap-2">
+              <span className="label text-sm font-semibold">积分数量</span>
+              <input
+                type="number"
+                className="input input-bordered w-full"
+                value={addAmount}
+                onChange={(e) => setAddAmount(e.target.value)}
+                placeholder="输入积分数量"
+                min="1"
+                step="1"
+                required
+              />
+            </label>
+            <label className="flex flex-col gap-2">
+              <span className="label text-sm font-semibold">备注</span>
+              <input
+                type="text"
+                className="input input-bordered w-full"
+                value={addNote}
+                onChange={(e) => setAddNote(e.target.value)}
+                placeholder="例：充值赠送、活动奖励"
+              />
+            </label>
+          </div>
+          <div className="modal-action mt-6">
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={addPending || !addAmount}
+            >
+              {addPending ? "处理中..." : "确认增加"}
+            </button>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog ref={deductDialogRef} className="modal">
+        <form method="dialog" className="modal-box" onSubmit={handleDeduct}>
+          <div className="modal-action flex items-center justify-between mb-4">
+            <h3 className="font-bold text-lg">扣除积分</h3>
+            <button
+              type="button"
+              className="btn btn-ghost btn-square"
+              onClick={() => deductDialogRef.current?.close()}
+            >
+              <XIcon />
+            </button>
+          </div>
+          <div className="flex flex-col gap-4">
+            <label className="flex flex-col gap-2">
+              <span className="label text-sm font-semibold">扣除数量</span>
+              <input
+                type="number"
+                className="input input-bordered w-full"
+                value={deductAmount}
+                onChange={(e) => setDeductAmount(e.target.value)}
+                placeholder="输入扣除数量"
+                min="1"
+                max={currentPoints}
+                step="1"
+                required
+              />
+            </label>
+            <label className="flex flex-col gap-2">
+              <span className="label text-sm font-semibold">备注</span>
+              <input
+                type="text"
+                className="input input-bordered w-full"
+                value={deductNote}
+                onChange={(e) => setDeductNote(e.target.value)}
+                placeholder="例：兑换商品、消费抵扣"
+              />
+            </label>
+          </div>
+          <div className="modal-action mt-6">
+            <button
+              type="submit"
+              className="btn btn-error"
+              disabled={deductPending || !deductAmount}
+            >
+              {deductPending ? "处理中..." : "确认扣除"}
+            </button>
+          </div>
+        </form>
+      </dialog>
+    </div>
+  );
+}
+
 function UserDetailPage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
@@ -178,7 +434,7 @@ function UserDetailPage() {
   const rawUser = userQlData?.user ?? null;
 
   const [activeTab, setActiveTab] = useState<
-    "basic" | "membership" | "occupancy"
+    "basic" | "membership" | "occupancy" | "points"
   >("basic");
 
   const [editForm, setEditForm] = useState({
@@ -189,12 +445,39 @@ function UserDetailPage() {
   const [editPending, setEditPending] = useState(false);
   const [rolePending, setRolePending] = useState(false);
 
+  const [updateUser] = useUpdateUserMutation();
+  const [updateUserRole] = useUpdateUserRoleMutation();
+  const [createMembershipPlan] = useCreateMembershipPlanMutation();
+  const [deductStoredValue] = useDeductStoredValueMutation();
+  const [updateMembershipPlan] = useUpdateMembershipPlanMutation();
+  const [removeMembershipPlan] = useRemoveMembershipPlanMutation();
+  const [pauseOrder] = usePauseOrderMutation();
+  const [resumeOrder] = useResumeOrderMutation();
+  const [batchPauseOrders] = useBatchPauseOrdersMutation();
+  const [batchResumeOrders] = useBatchResumeOrdersMutation();
+
   const { data: plansQlData } = useMembershipPlansByUserQuery({
     variables: { userId: id },
     skip: !id,
   });
   const membershipPlans = useMemo(
-    () => (plansQlData?.membershipPlansByUser ?? []) as MembershipPlan[],
+    () =>
+      (plansQlData?.membershipPlansByUser ?? []).map(
+        (p: any): MembershipPlan => ({
+          id: p.id,
+          user_id: p.userId,
+          plan_type: (
+            p.planType ??
+            p.plan_type ??
+            ""
+          ).toLowerCase() as PlanType,
+          amount: p.amount ?? null,
+          start_date: p.startDate ?? p.start_date ?? null,
+          end_date: p.endDate ?? p.end_date ?? null,
+          create_at: p.createdAt ?? p.create_at ?? null,
+          update_at: p.updatedAt ?? p.update_at ?? null,
+        }),
+      ),
     [plansQlData],
   );
 
@@ -526,7 +809,7 @@ function UserDetailPage() {
         variables: {
           input: {
             id,
-            role: newRole as any,
+            role: newRole.toUpperCase() as any,
           },
         },
       });
@@ -707,6 +990,16 @@ function UserDetailPage() {
     }
   };
 
+  useEffect(() => {
+    if (rawUser) {
+      setEditForm({
+        name: (rawUser as any).name ?? "",
+        nickname: (rawUser as any).nickname ?? "",
+        phone: (rawUser as any).phone ?? "",
+      });
+    }
+  }, [rawUser]);
+
   if (loading) {
     return (
       <main className="size-full flex items-center justify-center">
@@ -731,16 +1024,6 @@ function UserDetailPage() {
   }
 
   const user = rawUser;
-
-  useEffect(() => {
-    if (user) {
-      setEditForm({
-        name: (user as any).name ?? "",
-        nickname: (user as any).nickname ?? "",
-        phone: (user as any).phone ?? "",
-      });
-    }
-  }, [user]);
 
   return (
     <ClientOnly>
@@ -797,6 +1080,14 @@ function UserDetailPage() {
                 ).length
               }
               )
+            </button>
+            <button
+              type="button"
+              role="tab"
+              className={clsx("tab", activeTab === "points" && "tab-active")}
+              onClick={() => setActiveTab("points")}
+            >
+              积分 ({(user as any).points ?? 0})
             </button>
           </div>
 
@@ -1491,6 +1782,10 @@ function UserDetailPage() {
                 </>
               )}
             </div>
+          )}
+
+          {activeTab === "points" && (
+            <PointsTab userId={id} currentPoints={(user as any).points ?? 0} />
           )}
         </div>
 

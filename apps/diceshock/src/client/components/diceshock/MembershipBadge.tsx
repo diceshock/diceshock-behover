@@ -53,7 +53,7 @@ const PLAN_CONFIG: Record<
 };
 
 export function getPlanConfig(planType: PlanType) {
-  return PLAN_CONFIG[planType];
+  return PLAN_CONFIG[planType] ?? PLAN_CONFIG.monthly;
 }
 
 export function isActivePlan(plan: MembershipPlan): boolean {
