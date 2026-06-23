@@ -9,7 +9,10 @@ import { createId } from "@paralleldrive/cuid2";
 import { z } from "zod/v4";
 import { genNickname } from "@/server/utils/auth";
 import { pauseWithReason } from "@/server/utils/pauseOrder";
-import { fetchTableStateForDO, notifySocketDO } from "@/server/utils/seatTimer";
+import {
+  fetchTableStateForDO,
+  notifyDsSubscription,
+} from "@/server/utils/seatTimer";
 import { generateTotpSecret } from "@/shared/utils/totp";
 import type { GQLContext } from "../context";
 import { notFound, validationError } from "../errors";
@@ -217,9 +220,9 @@ async function publishSeatEvent(
   } catch {}
 }
 
-// ─── SocketDO Helpers ──────────────────────────────────────────────────────
+// ─── DsSubscription Helpers ──────────────────────────────────────────────────────
 
-async function notifySocketDOFromTable(
+async function notifyDsSubscriptionFromTable(
   ctx: GQLContext,
   tdb: Database,
   code: string,
@@ -228,7 +231,7 @@ async function notifySocketDOFromTable(
   try {
     const fresh = await fetchTableStateForDO(tdb, tableId);
     if (fresh) {
-      await notifySocketDO(ctx.env, code, fresh.table, fresh.occupancies);
+      await notifyDsSubscription(ctx.env, code, fresh.table, fresh.occupancies);
     }
   } catch {}
 }
@@ -801,7 +804,7 @@ export const tablesResolvers = {
         start_at: new Date(),
       });
 
-      await notifySocketDOFromTable(ctx, tdb, code, table.id);
+      await notifyDsSubscriptionFromTable(ctx, tdb, code, table.id);
       await publishSeatEvent(ctx, code, {
         type: "SEAT_OCCUPIED",
         payload: {
@@ -870,7 +873,7 @@ export const tablesResolvers = {
         columns: { id: true, code: true },
       });
       if (table) {
-        await notifySocketDOFromTable(ctx, tdb, input.code, table.id);
+        await notifyDsSubscriptionFromTable(ctx, tdb, input.code, table.id);
       }
 
       await publishSeatEvent(ctx, input.code, {
@@ -917,7 +920,7 @@ export const tablesResolvers = {
         columns: { id: true, code: true },
       });
       if (table) {
-        await notifySocketDOFromTable(ctx, tdb, input.code, table.id);
+        await notifyDsSubscriptionFromTable(ctx, tdb, input.code, table.id);
       }
 
       await publishSeatEvent(ctx, input.code, {
@@ -1156,7 +1159,7 @@ export const tablesResolvers = {
         start_at: new Date(),
       });
 
-      await notifySocketDOFromTable(ctx, tdb, table.code, table.id);
+      await notifyDsSubscriptionFromTable(ctx, tdb, table.code, table.id);
 
       const occ = await tdb.query.tableOccupancyTable.findFirst({
         where: (o, { eq }) => eq(o.id, id),
@@ -1202,7 +1205,7 @@ export const tablesResolvers = {
         columns: { id: true, code: true },
       });
       if (table) {
-        await notifySocketDOFromTable(ctx, tdb, table.code, table.id);
+        await notifyDsSubscriptionFromTable(ctx, tdb, table.code, table.id);
       }
 
       const updated = await tdb.query.tableOccupancyTable.findFirst({
@@ -1319,7 +1322,7 @@ export const tablesResolvers = {
         start_at: new Date(),
       });
 
-      await notifySocketDOFromTable(ctx, tdb, input.code, table.id);
+      await notifyDsSubscriptionFromTable(ctx, tdb, input.code, table.id);
 
       await publishSeatEvent(ctx, input.code, {
         type: "SEAT_OCCUPIED",
@@ -1385,7 +1388,7 @@ export const tablesResolvers = {
         columns: { id: true, code: true },
       });
       if (table) {
-        await notifySocketDOFromTable(ctx, tdb, input.code, table.id);
+        await notifyDsSubscriptionFromTable(ctx, tdb, input.code, table.id);
       }
 
       await publishSeatEvent(ctx, input.code, {
@@ -1434,7 +1437,7 @@ export const tablesResolvers = {
         .set({ user_id: input.userId, temp_id: null })
         .where(drizzle.eq(tableOccupancyTable.id, activeOccupancy.id));
 
-      await notifySocketDOFromTable(
+      await notifyDsSubscriptionFromTable(
         ctx,
         tdb,
         activeOccupancy.table.code,

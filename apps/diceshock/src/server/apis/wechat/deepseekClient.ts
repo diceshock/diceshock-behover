@@ -92,6 +92,7 @@ interface ChatWithAgentParams {
 interface AgentResult {
   rawOutput: string;
   tokensUsed: number;
+  collectedReferences: Array<{ text: string; source: string; score: number }>;
 }
 
 type DeepSeekMessage = {
@@ -331,6 +332,7 @@ export async function chatWithAgent(
     return {
       rawOutput: '[{"type":"text","content":"AI 服务未配置，请联系管理员"}]',
       tokensUsed: 0,
+      collectedReferences: [],
     };
   }
 
@@ -400,6 +402,11 @@ export async function chatWithAgent(
   let totalTokens = 0;
   const toolContext = await buildToolContext(c, params.openId, identity);
   const collectedReplies: string[] = [];
+  const collectedReferences: Array<{
+    text: string;
+    source: string;
+    score: number;
+  }> = [];
 
   console.log("[deepseek] start", {
     openId: params.openId,
@@ -547,6 +554,21 @@ export async function chatWithAgent(
           content: result,
           tool_call_id: toolCall.id,
         });
+
+        if (toolCall.function.name === "search_rules") {
+          try {
+            const parsed = JSON.parse(result);
+            if (parsed.results?.length) {
+              for (const chunk of parsed.results) {
+                collectedReferences.push({
+                  text: chunk.text || "",
+                  source: chunk.source || "",
+                  score: chunk.score || 0,
+                });
+              }
+            }
+          } catch {}
+        }
       } catch (toolErr) {
         console.error(`[deepseek] ${toolCall.function.name} error`, {
           error: String(toolErr),
@@ -621,7 +643,11 @@ export async function chatWithAgent(
     totalTokens,
   });
 
-  return { rawOutput: JSON.stringify(output), tokensUsed: totalTokens };
+  return {
+    rawOutput: JSON.stringify(output),
+    tokensUsed: totalTokens,
+    collectedReferences,
+  };
 }
 
 function collectRoundContext(

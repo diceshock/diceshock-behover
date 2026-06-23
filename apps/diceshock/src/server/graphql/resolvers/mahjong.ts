@@ -232,12 +232,12 @@ function envWithPubSub(ctx: GQLContext): EnvWithPubSub {
   return ctx.env as EnvWithPubSub;
 }
 
-type EnvWithSocket = GQLContext["env"] & {
-  SOCKET: DurableObjectNamespace;
+type EnvWithDsSub = GQLContext["env"] & {
+  DS_SUBSCRIPTION: DurableObjectNamespace;
 };
 
-function envWithSocket(ctx: GQLContext): EnvWithSocket {
-  return ctx.env as EnvWithSocket;
+function envWithDsSub(ctx: GQLContext): EnvWithDsSub {
+  return ctx.env as EnvWithDsSub;
 }
 
 async function publishLeaderboardUpdated(
@@ -1071,10 +1071,10 @@ export const mahjongResolvers = {
         mahjongTables.map(async (table) => {
           try {
             const env = ctx.env as unknown as {
-              SOCKET: DurableObjectNamespace;
+              DS_SUBSCRIPTION: DurableObjectNamespace;
             };
-            const doId = env.SOCKET.idFromName(table.code);
-            const stub = env.SOCKET.get(doId);
+            const doId = env.DS_SUBSCRIPTION.idFromName(table.code);
+            const stub = env.DS_SUBSCRIPTION.get(doId);
             const res = await stub.fetch(
               new Request("https://do/mahjong-state", { method: "GET" }),
             );
@@ -1316,9 +1316,9 @@ export const mahjongResolvers = {
         reason: args.reason ?? "admin_abort",
       });
 
-      const env = envWithSocket(ctx);
-      const doId = env.SOCKET.idFromName(input.tableCode);
-      const stub = env.SOCKET.get(doId);
+      const env = envWithDsSub(ctx);
+      const doId = env.DS_SUBSCRIPTION.idFromName(input.tableCode);
+      const stub = env.DS_SUBSCRIPTION.get(doId);
       const res = await stub.fetch(
         new Request("https://do/mahjong-abort", {
           method: "POST",
@@ -1329,7 +1329,7 @@ export const mahjongResolvers = {
       if (!res.ok)
         throw validationError("tableCode", "Failed to terminate match");
 
-      // Return a placeholder match shape; actual match saved by SocketDO
+      // Return a placeholder match shape; actual match saved by DsSubscriptionDO
       return {
         id: "",
         tableId: null,

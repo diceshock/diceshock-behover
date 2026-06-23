@@ -9,6 +9,7 @@ query Users($input: UserSearchInput = {}) {
       role
       nickname
       phone
+      points
       preferredLocale
       preferredStoreId
       meta
@@ -45,6 +46,7 @@ query User($id: ID!) {
     role
     nickname
     phone
+    points
     preferredLocale
     preferredStoreId
     meta
@@ -169,5 +171,41 @@ query OccupanciesByUser($userId: ID!) {
       code
       scope
     }
+  }
+}
+
+query PointsLogByUser($userId: ID!) {
+  pointsLogByUser(userId: $userId) {
+    id
+    userId
+    amount
+    balanceAfter
+    note
+    createdBy
+    createdAt
+  }
+}
+
+mutation AddPoints($input: AddPointsInput!) {
+  addPoints(input: $input) {
+    id
+    userId
+    amount
+    balanceAfter
+    note
+    createdBy
+    createdAt
+  }
+}
+
+mutation DeductPoints($input: DeductPointsInput!) {
+  deductPoints(input: $input) {
+    id
+    userId
+    amount
+    balanceAfter
+    note
+    createdBy
+    createdAt
   }
 }

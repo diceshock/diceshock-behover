@@ -9,6 +9,7 @@ import db, {
 } from "@lib/db";
 import dayjs from "dayjs";
 import type { Context } from "hono";
+import { createReference } from "@/server/apis/referenceCreate";
 import {
   LOCALES,
   type LocaleCode,
@@ -146,17 +147,21 @@ async function processMessage(
       ms: Date.now() - t0,
     });
 
-    const { rawOutput, tokensUsed } = await chatWithAgent(c, {
-      userMessage: content,
-      openId,
-      conversationHistory: history,
-      ragContext,
-      memory,
-    });
+    const { rawOutput, tokensUsed, collectedReferences } = await chatWithAgent(
+      c,
+      {
+        userMessage: content,
+        openId,
+        conversationHistory: history,
+        ragContext,
+        memory,
+      },
+    );
 
     console.log(`[pipeline:${tag}] agent done`, {
       tokensUsed,
       rawOutputLen: rawOutput.length,
+      refsCount: collectedReferences.length,
       ms: Date.now() - t0,
     });
 
@@ -175,6 +180,29 @@ async function processMessage(
         type: "text",
         content: "抱歉，我暂时无法生成回复。请稍后再试或换个方式提问。",
       });
+    }
+
+    if (collectedReferences.length > 0) {
+      const agentReplyText = messages
+        .filter((m) => m.type === "text")
+        .map((m) => m.content)
+        .join("\n");
+
+      try {
+        const { url } = await createReference(env.KV, {
+          userQuery: content,
+          agentReply: agentReplyText,
+          references: collectedReferences,
+        });
+        messages.push({
+          type: "text",
+          content: `📖 查看引用原文: ${url}`,
+        });
+      } catch (refErr) {
+        console.error(`[pipeline:${tag}] reference create failed`, {
+          error: String(refErr),
+        });
+      }
     }
 
     await dispatchMessages(env, openId, messages);

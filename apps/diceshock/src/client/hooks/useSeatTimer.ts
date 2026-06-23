@@ -4,7 +4,7 @@ import {
   type SeatUpdatedSubscription,
   useSeatUpdatedSubscription,
 } from "@/client/graphql/__generated__";
-import type { SocketState } from "@/server/durableObjects/SocketDO";
+import type { SocketState } from "@/server/durableObjects/DsSubscriptionDO";
 
 const stateAtomCache = new Map<
   string,

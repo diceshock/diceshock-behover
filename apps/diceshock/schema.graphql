@@ -1,6 +1,10 @@
 # Diceshock custom GraphQL schema extensions.
 # DateTime values are ISO 8601 strings. JSON fields are JSON-encoded strings.
 
+# Base type definitions (extended by drizzle-graphql and resolvers)
+type Query
+type Mutation
+
 # ─── Shared ────────────────────────────────────────────────────────────────
 
 input PaginationInput {
@@ -68,6 +72,7 @@ type UserProfile {
   role: UserRole!
   nickname: String
   phone: String
+  points: Int
   preferredLocale: String
   preferredStoreId: ID
   meta: String
@@ -636,6 +641,40 @@ extend type Mutation {
   updateMembershipPlan(input: UpdateMembershipPlanInput!): MembershipPlan! # @auth(role: STAFF)
   deductStoredValue(input: DeductStoredValueInput!): MembershipDeductionResult! # @auth(role: STAFF)
   removeMembershipPlan(id: ID!): MembershipPlan! # @auth(role: STAFF)
+}
+
+# ─── Points ────────────────────────────────────────────────────────────────
+
+type UserPointsLog {
+  id: ID!
+  userId: ID!
+  amount: Int!
+  balanceAfter: Int!
+  note: String
+  createdBy: String
+  createdAt: String
+}
+
+input AddPointsInput {
+  userId: ID!
+  amount: Int!
+  note: String
+}
+
+input DeductPointsInput {
+  userId: ID!
+  amount: Int!
+  note: String
+}
+
+extend type Query {
+  pointsLogByUser(userId: ID!): [UserPointsLog!]! # @auth(role: STAFF)
+  myPointsBalance: Int! # @auth(role: CUSTOMER)
+}
+
+extend type Mutation {
+  addPoints(input: AddPointsInput!): UserPointsLog! # @auth(role: STAFF)
+  deductPoints(input: DeductPointsInput!): UserPointsLog! # @auth(role: STAFF)
 }
 
 # ─── Business Cards ────────────────────────────────────────────────────────

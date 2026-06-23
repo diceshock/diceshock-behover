@@ -557,6 +557,99 @@ function RouteComponent() {
             </p>
           </div>
 
+          <section className="mb-5">
+            {(() => {
+              const activePlans = myPlans.filter(isActivePlan);
+              const totalBalance = getStoredValueBalance(myPlans);
+              const hasActivePlans = activePlans.length > 0;
+
+              if (hasActivePlans) {
+                const seen = new Set<string>();
+                const uniquePlans = activePlans
+                  .sort(
+                    (a, b) =>
+                      getPlanConfig(a.plan_type).priority -
+                      getPlanConfig(b.plan_type).priority,
+                  )
+                  .filter((plan) => {
+                    if (seen.has(plan.plan_type)) return false;
+                    seen.add(plan.plan_type);
+                    return true;
+                  });
+
+                return (
+                  <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent rounded-2xl border border-primary/20 p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <TrophyIcon className="size-5 text-primary" />
+                      <h2 className="text-sm font-bold text-primary">
+                        {t("me.membership")}
+                      </h2>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {uniquePlans.map((plan) => {
+                        const config = getPlanConfig(plan.plan_type);
+                        const Icon = config.icon;
+                        return (
+                          <div
+                            key={plan.plan_type}
+                            className="flex items-center gap-2.5 bg-base-100/80 backdrop-blur rounded-xl px-3.5 py-2.5 border border-base-content/5 flex-1 min-w-[130px]"
+                          >
+                            <Icon className="size-7 shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold truncate">
+                                {config.label}
+                              </p>
+                              <p className="text-[10px] text-base-content/50">
+                                {plan.end_date
+                                  ? t("me.expiryDate", {
+                                      date: dayjs(plan.end_date).format(
+                                        "MM/DD",
+                                      ),
+                                    })
+                                  : plan.plan_type === "stored_value"
+                                    ? t("me.balance", {
+                                        amount: (totalBalance / 100).toFixed(0),
+                                      })
+                                    : t("me.permanent")}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {totalBalance > 0 && (
+                      <div className="mt-3 pt-3 border-t border-primary/10 flex items-center justify-between">
+                        <span className="text-xs text-base-content/60">
+                          储值余额
+                        </span>
+                        <span className="text-lg font-bold text-primary">
+                          ¥{(totalBalance / 100).toFixed(0)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <Link
+                  to="/{-$storeLocale}/diceshock-agents"
+                  className="flex items-center gap-3 bg-gradient-to-r from-primary/10 to-transparent hover:from-primary/15 rounded-2xl px-4 py-4 border border-primary/15 transition-colors"
+                >
+                  <div className="shrink-0 p-2.5 bg-primary/15 rounded-xl">
+                    <TrophyIcon className="size-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold">{t("me.joinAgents")}</p>
+                    <p className="text-xs text-base-content/50">
+                      {t("me.learnPlanBenefits")}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })()}
+          </section>
+
           <section className="mb-4">
             <SectionHeader title={t("me.quickActions")} />
             <div className="grid grid-cols-3 gap-1 bg-base-200 rounded-2xl p-2 border border-base-content/5">
@@ -717,79 +810,6 @@ function RouteComponent() {
               </button>
             </div>
           </section>
-
-          {myPlans.filter(isActivePlan).length > 0 && (
-            <section className="mb-4">
-              <SectionHeader title={t("me.membership")} />
-              <div className="flex flex-wrap gap-3">
-                {(() => {
-                  const activePlans = myPlans.filter(isActivePlan);
-                  const seen = new Set<string>();
-                  const uniquePlans = activePlans
-                    .sort(
-                      (a, b) =>
-                        getPlanConfig(a.plan_type).priority -
-                        getPlanConfig(b.plan_type).priority,
-                    )
-                    .filter((plan) => {
-                      if (seen.has(plan.plan_type)) return false;
-                      seen.add(plan.plan_type);
-                      return true;
-                    });
-
-                  return uniquePlans.map((plan) => {
-                    const config = getPlanConfig(plan.plan_type);
-                    const Icon = config.icon;
-                    const totalBalance = getStoredValueBalance(myPlans);
-                    return (
-                      <div
-                        key={plan.plan_type}
-                        className="flex items-center gap-3 bg-base-200 rounded-xl px-4 py-3 border border-base-content/5 flex-1 min-w-[140px]"
-                      >
-                        <Icon className="size-8 shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold truncate">
-                            {config.label}
-                          </p>
-                          <p className="text-[10px] text-base-content/50">
-                            {plan.end_date
-                              ? t("me.expiryDate", {
-                                  date: dayjs(plan.end_date).format("MM/DD"),
-                                })
-                              : plan.plan_type === "stored_value"
-                                ? t("me.balance", {
-                                    amount: (totalBalance / 100).toFixed(0),
-                                  })
-                                : t("me.permanent")}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-            </section>
-          )}
-
-          {myPlans.filter(isActivePlan).length === 0 &&
-            myPlans.length === 0 && (
-              <section className="mb-4">
-                <Link
-                  to="/{-$storeLocale}/diceshock-agents"
-                  className="flex items-center gap-3 bg-base-200 hover:bg-base-300 rounded-2xl px-4 py-4 border border-base-content/5 transition-colors"
-                >
-                  <div className="shrink-0 p-2 bg-primary/10 rounded-lg">
-                    <TrophyIcon className="size-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold">{t("me.joinAgents")}</p>
-                    <p className="text-xs text-base-content/50">
-                      {t("me.learnPlanBenefits")}
-                    </p>
-                  </div>
-                </Link>
-              </section>
-            )}
         </div>
       </main>
 

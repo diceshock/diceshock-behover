@@ -94,6 +94,7 @@ export const userInfoTable = sqlite.sqliteTable("user_info", {
     .$defaultFn(() => new Date(Date.now())),
   nickname: sqlite.text("nickname").notNull(),
   phone: sqlite.text("phone"),
+  points: sqlite.int("points").$default(() => 0),
   meta: sqlite
     .text("meta", { mode: "json" })
     .$type<{ auto_nickname?: boolean } | null>(),
@@ -340,6 +341,35 @@ export const userMembershipPlansRelations = relations(
   ({ one }) => ({
     user: one(users, {
       fields: [userMembershipPlansTable.user_id],
+      references: [users.id],
+    }),
+  }),
+);
+
+export const userPointsLogTable = sqlite.sqliteTable(
+  "user_points_log",
+  {
+    id: sqlite.text().$defaultFn(createId).primaryKey(),
+    user_id: sqlite
+      .text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    amount: sqlite.int("amount").notNull(),
+    balance_after: sqlite.int("balance_after").notNull(),
+    note: sqlite.text("note"),
+    created_by: sqlite.text("created_by"),
+    create_at: sqlite
+      .integer("create_at", { mode: "timestamp_ms" })
+      .$defaultFn(() => new Date(Date.now())),
+  },
+  (table) => [sqlite.index("idx_user_points_log_user_id").on(table.user_id)],
+);
+
+export const userPointsLogRelations = relations(
+  userPointsLogTable,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [userPointsLogTable.user_id],
       references: [users.id],
     }),
   }),

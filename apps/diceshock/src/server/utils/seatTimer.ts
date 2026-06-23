@@ -95,14 +95,14 @@ export async function fetchTableStateForDO(
   };
 }
 
-export async function notifySocketDO(
+export async function notifyDsSubscription(
   env: Cloudflare.Env,
   code: string,
   table: TableInfo,
   occupancies: OccupancyInfo[],
 ): Promise<void> {
-  const doId = env.SOCKET.idFromName(code);
-  const stub = env.SOCKET.get(doId);
+  const doId = env.DS_SUBSCRIPTION.idFromName(code);
+  const stub = env.DS_SUBSCRIPTION.get(doId);
   await stub.fetch(
     new Request("https://do/update-state", {
       method: "POST",

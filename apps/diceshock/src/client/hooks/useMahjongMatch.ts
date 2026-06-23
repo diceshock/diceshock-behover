@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { SocketState } from "@/server/durableObjects/SocketDO";
+import type { SocketState } from "@/server/durableObjects/DsSubscriptionDO";
 import type { Seat } from "@/shared/mahjong/constants";
 import type { MatchConfig, MatchPhase } from "@/shared/mahjong/types";
 

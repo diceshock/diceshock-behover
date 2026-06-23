@@ -8,9 +8,23 @@ import type { HonoCtxEnv } from "@/shared/types";
 const KV_PREFIX = "shortlink:";
 
 interface ShortlinkData {
+  type?: "redirect" | "reference";
   url: string;
   expiresAt?: number;
   createdAt: number;
+}
+
+export interface ReferencePageData {
+  type: "reference";
+  userQuery: string;
+  agentReply: string;
+  references: Array<{
+    text: string;
+    source: string;
+    score: number;
+  }>;
+  createdAt: number;
+  expiresAt: number;
 }
 
 const EXPIRED_MESSAGES: Record<
@@ -153,11 +167,21 @@ export async function shortlinkRedirect(c: Context<HonoCtxEnv>) {
     return c.html(renderNotFoundPage(locale), 404);
   }
 
-  let data: ShortlinkData;
+  let data: ShortlinkData | ReferencePageData;
   try {
     data = JSON.parse(raw);
   } catch {
     return c.html(renderNotFoundPage(locale), 404);
+  }
+
+  if (data.type === "reference") {
+    const refData = data as ReferencePageData;
+    if (Date.now() > refData.expiresAt) {
+      c.executionCtx.waitUntil(c.env.KV.delete(`${KV_PREFIX}${id}`));
+      return c.html(renderExpiredPage(locale), 410);
+    }
+    // Pass through to SPA — return undefined to let fileRoute handle it
+    return undefined;
   }
 
   if (data.expiresAt && Date.now() > data.expiresAt) {
@@ -166,6 +190,37 @@ export async function shortlinkRedirect(c: Context<HonoCtxEnv>) {
   }
 
   return c.redirect(data.url, 302);
+}
+
+export async function shortlinkReferenceData(c: Context<HonoCtxEnv>) {
+  const id = c.req.param("id");
+  if (!id) {
+    return c.json({ error: "not_found" }, 404);
+  }
+
+  const raw = await c.env.KV.get(`${KV_PREFIX}${id}`);
+  if (!raw) {
+    return c.json({ error: "not_found" }, 404);
+  }
+
+  let data: ShortlinkData | ReferencePageData;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    return c.json({ error: "not_found" }, 404);
+  }
+
+  if (data.type !== "reference") {
+    return c.json({ error: "not_reference" }, 400);
+  }
+
+  const refData = data as ReferencePageData;
+  if (Date.now() > refData.expiresAt) {
+    c.executionCtx.waitUntil(c.env.KV.delete(`${KV_PREFIX}${id}`));
+    return c.json({ error: "expired" }, 410);
+  }
+
+  return c.json(refData);
 }
 
 export { KV_PREFIX, type ShortlinkData };

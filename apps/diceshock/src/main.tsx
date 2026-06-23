@@ -19,7 +19,10 @@ import { inventoryCard } from "@/server/apis/ogCards/inventoryCard";
 import { riichiRankingCard } from "@/server/apis/ogCards/riichiRanking";
 import { riichiStatsCard } from "@/server/apis/ogCards/riichiStats";
 import { siteOgCard } from "@/server/apis/ogCards/siteOgCard";
-import { shortlinkRedirect } from "@/server/apis/shortlink";
+import {
+  shortlinkRedirect,
+  shortlinkReferenceData,
+} from "@/server/apis/shortlink";
 import { shortlinkCreate } from "@/server/apis/shortlinkApi";
 import sitemap from "@/server/apis/sitemap";
 import {
@@ -42,8 +45,8 @@ import serverMetaInj from "./server/middlewares/serverMetaInj";
 import storeLocaleMiddleware from "./server/middlewares/storeLocale";
 import { wechatSilentAuth } from "./server/middlewares/wechatSilentAuth";
 
+export { DsSubscriptionDO } from "./server/durableObjects/DsSubscriptionDO";
 export { PubSubDO } from "./server/durableObjects/PubSubDO";
-export { SocketDO } from "./server/durableObjects/SocketDO";
 
 export const app = new Hono<HonoCtxEnv>();
 
@@ -82,14 +85,20 @@ app.use("*", wechatSilentAuth);
 app.get("/sitemap.xml", sitemap);
 app.get("/fonts/css/:locale.css", fontCss);
 
-app.get("/x/:id", shortlinkRedirect);
+app.get("/edge/shortlink/:id/data", shortlinkReferenceData);
+
+app.get("/x/:id", async (c, next) => {
+  const result = await shortlinkRedirect(c);
+  if (result) return result;
+  return next();
+});
 
 app.get("/MP_verify_yvnJDKhKIBUZ0DgN.txt", (c) => c.text("yvnJDKhKIBUZ0DgN"));
 
 app.post("/action/seat/:code", async (c) => {
   const code = c.req.param("code");
-  const id = c.env.SOCKET.idFromName(code);
-  const stub = c.env.SOCKET.get(id);
+  const id = c.env.DS_SUBSCRIPTION.idFromName(code);
+  const stub = c.env.DS_SUBSCRIPTION.get(id);
   const url = new URL(c.req.url);
   url.searchParams.set("code", code);
   return stub.fetch(

@@ -1,5 +1,6 @@
-import db, { drizzle, orderPauseLogsTable, tableOccupancyTable } from "@lib/db";
-import { fetchTableStateForDO, notifySocketDO } from "./seatTimer";
+import type db from "@lib/db";
+import { drizzle, orderPauseLogsTable, tableOccupancyTable } from "@lib/db";
+import { fetchTableStateForDO, notifyDsSubscription } from "./seatTimer";
 
 type PauseReason = "manual" | "settlement" | "auto_transfer";
 
@@ -7,7 +8,7 @@ export async function pauseWithReason(
   tdb: ReturnType<typeof db>,
   occupancyId: string,
   reason: PauseReason,
-  env?: Parameters<typeof notifySocketDO>[0],
+  env?: Parameters<typeof notifyDsSubscription>[0],
 ): Promise<void> {
   const now = new Date();
 
@@ -35,7 +36,12 @@ export async function pauseWithReason(
       if (table) {
         const fresh = await fetchTableStateForDO(tdb, table.id);
         if (fresh) {
-          await notifySocketDO(env, table.code, fresh.table, fresh.occupancies);
+          await notifyDsSubscription(
+            env,
+            table.code,
+            fresh.table,
+            fresh.occupancies,
+          );
         }
       }
     }

@@ -92,7 +92,7 @@ interface SSEClient {
 const HEARTBEAT_INTERVAL = 15_000;
 const encoder = new TextEncoder();
 
-export class SocketDO extends DurableObject<Cloudflare.Env> {
+export class DsSubscriptionDO extends DurableObject<Cloudflare.Env> {
   private tableInfo: TableInfo | null = null;
   private occupancies: OccupancyInfo[] = [];
   private mahjongState: MatchState | null = null;

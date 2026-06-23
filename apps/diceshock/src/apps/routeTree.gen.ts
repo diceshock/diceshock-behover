@@ -10,12 +10,14 @@
 
 import { Route as rootRouteImport } from './routers/__root'
 import { Route as Char123StoreLocaleChar125RouteImport } from './routers/{-$storeLocale}'
+import { Route as XRouteImport } from './routers/x'
 import { Route as DashRouteImport } from './routers/dash'
 import { Route as DashIndexRouteImport } from './routers/dash/index'
 import { Route as Char123StoreLocaleChar125TRouteImport } from './routers/{-$storeLocale}/t'
 import { Route as Char123StoreLocaleChar125ReadyRouteImport } from './routers/{-$storeLocale}/ready'
 import { Route as Char123StoreLocaleChar125MyRiichiRouteImport } from './routers/{-$storeLocale}/my-riichi'
 import { Route as Char123StoreLocaleChar125WithHomeLoRouteImport } from './routers/{-$storeLocale}/_with-home-lo'
+import { Route as XIdRouteImport } from './routers/x/$id'
 import { Route as DashUsersRouteImport } from './routers/dash/users'
 import { Route as DashTablesRouteImport } from './routers/dash/tables'
 import { Route as DashPricingRouteImport } from './routers/dash/pricing'
@@ -56,6 +58,11 @@ const Char123StoreLocaleChar125Route =
     path: '/{-$storeLocale}',
     getParentRoute: () => rootRouteImport,
   } as any)
+const XRoute = XRouteImport.update({
+  id: '/x',
+  path: '/x',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashRoute = DashRouteImport.update({
   id: '/dash',
   path: '/dash',
@@ -89,6 +96,11 @@ const Char123StoreLocaleChar125WithHomeLoRoute =
     id: '/_with-home-lo',
     getParentRoute: () => Char123StoreLocaleChar125Route,
   } as any)
+const XIdRoute = XIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => XRoute,
+} as any)
 const DashUsersRoute = DashUsersRouteImport.update({
   id: '/users',
   path: '/users',
@@ -273,6 +285,7 @@ const DashOrdersIdSettleRoute = DashOrdersIdSettleRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/dash': typeof DashRouteWithChildren
+  '/x': typeof XRouteWithChildren
   '/{-$storeLocale}': typeof Char123StoreLocaleChar125RouteWithChildren
   '/dash/actives': typeof DashActivesRoute
   '/dash/crawler': typeof DashCrawlerRoute
@@ -283,6 +296,7 @@ export interface FileRoutesByFullPath {
   '/dash/pricing': typeof DashPricingRoute
   '/dash/tables': typeof DashTablesRoute
   '/dash/users': typeof DashUsersRoute
+  '/x/$id': typeof XIdRoute
   '/{-$storeLocale}/my-riichi': typeof Char123StoreLocaleChar125MyRiichiRouteWithChildren
   '/{-$storeLocale}/ready': typeof Char123StoreLocaleChar125ReadyRouteWithChildren
   '/{-$storeLocale}/t': typeof Char123StoreLocaleChar125TRouteWithChildren
@@ -313,6 +327,7 @@ export interface FileRoutesByFullPath {
   '/{-$storeLocale}/inventory/$id': typeof Char123StoreLocaleChar125WithHomeLoInventoryIdRoute
 }
 export interface FileRoutesByTo {
+  '/x': typeof XRouteWithChildren
   '/{-$storeLocale}': typeof Char123StoreLocaleChar125WithHomeLoIndexRoute
   '/dash/actives': typeof DashActivesRoute
   '/dash/crawler': typeof DashCrawlerRoute
@@ -323,6 +338,7 @@ export interface FileRoutesByTo {
   '/dash/pricing': typeof DashPricingRoute
   '/dash/tables': typeof DashTablesRoute
   '/dash/users': typeof DashUsersRoute
+  '/x/$id': typeof XIdRoute
   '/{-$storeLocale}/my-riichi': typeof Char123StoreLocaleChar125MyRiichiRouteWithChildren
   '/{-$storeLocale}/ready': typeof Char123StoreLocaleChar125ReadyRouteWithChildren
   '/{-$storeLocale}/t': typeof Char123StoreLocaleChar125TRouteWithChildren
@@ -354,6 +370,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/dash': typeof DashRouteWithChildren
+  '/x': typeof XRouteWithChildren
   '/{-$storeLocale}': typeof Char123StoreLocaleChar125RouteWithChildren
   '/dash/actives': typeof DashActivesRoute
   '/dash/crawler': typeof DashCrawlerRoute
@@ -364,6 +381,7 @@ export interface FileRoutesById {
   '/dash/pricing': typeof DashPricingRoute
   '/dash/tables': typeof DashTablesRoute
   '/dash/users': typeof DashUsersRoute
+  '/x/$id': typeof XIdRoute
   '/{-$storeLocale}/_with-home-lo': typeof Char123StoreLocaleChar125WithHomeLoRouteWithChildren
   '/{-$storeLocale}/my-riichi': typeof Char123StoreLocaleChar125MyRiichiRouteWithChildren
   '/{-$storeLocale}/ready': typeof Char123StoreLocaleChar125ReadyRouteWithChildren
@@ -398,6 +416,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/dash'
+    | '/x'
     | '/{-$storeLocale}'
     | '/dash/actives'
     | '/dash/crawler'
@@ -408,6 +427,7 @@ export interface FileRouteTypes {
     | '/dash/pricing'
     | '/dash/tables'
     | '/dash/users'
+    | '/x/$id'
     | '/{-$storeLocale}/my-riichi'
     | '/{-$storeLocale}/ready'
     | '/{-$storeLocale}/t'
@@ -438,6 +458,7 @@ export interface FileRouteTypes {
     | '/{-$storeLocale}/inventory/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/x'
     | '/{-$storeLocale}'
     | '/dash/actives'
     | '/dash/crawler'
@@ -448,6 +469,7 @@ export interface FileRouteTypes {
     | '/dash/pricing'
     | '/dash/tables'
     | '/dash/users'
+    | '/x/$id'
     | '/{-$storeLocale}/my-riichi'
     | '/{-$storeLocale}/ready'
     | '/{-$storeLocale}/t'
@@ -478,6 +500,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/dash'
+    | '/x'
     | '/{-$storeLocale}'
     | '/dash/actives'
     | '/dash/crawler'
@@ -488,6 +511,7 @@ export interface FileRouteTypes {
     | '/dash/pricing'
     | '/dash/tables'
     | '/dash/users'
+    | '/x/$id'
     | '/{-$storeLocale}/_with-home-lo'
     | '/{-$storeLocale}/my-riichi'
     | '/{-$storeLocale}/ready'
@@ -521,6 +545,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   DashRoute: typeof DashRouteWithChildren
+  XRoute: typeof XRouteWithChildren
   Char123StoreLocaleChar125Route: typeof Char123StoreLocaleChar125RouteWithChildren
 }
 
@@ -531,6 +556,13 @@ declare module '@tanstack/react-router' {
       path: '/{-$storeLocale}'
       fullPath: '/{-$storeLocale}'
       preLoaderRoute: typeof Char123StoreLocaleChar125RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/x': {
+      id: '/x'
+      path: '/x'
+      fullPath: '/x'
+      preLoaderRoute: typeof XRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dash': {
@@ -574,6 +606,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/{-$storeLocale}'
       preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoRouteImport
       parentRoute: typeof Char123StoreLocaleChar125Route
+    }
+    '/x/$id': {
+      id: '/x/$id'
+      path: '/$id'
+      fullPath: '/x/$id'
+      preLoaderRoute: typeof XIdRouteImport
+      parentRoute: typeof XRoute
     }
     '/dash/users': {
       id: '/dash/users'
@@ -853,6 +892,16 @@ const DashRouteChildren: DashRouteChildren = {
 
 const DashRouteWithChildren = DashRoute._addFileChildren(DashRouteChildren)
 
+interface XRouteChildren {
+  XIdRoute: typeof XIdRoute
+}
+
+const XRouteChildren: XRouteChildren = {
+  XIdRoute: XIdRoute,
+}
+
+const XRouteWithChildren = XRoute._addFileChildren(XRouteChildren)
+
 interface Char123StoreLocaleChar125WithHomeLoRouteChildren {
   Char123StoreLocaleChar125WithHomeLoActivesRoute: typeof Char123StoreLocaleChar125WithHomeLoActivesRoute
   Char123StoreLocaleChar125WithHomeLoContactUsRoute: typeof Char123StoreLocaleChar125WithHomeLoContactUsRoute
@@ -974,6 +1023,7 @@ const Char123StoreLocaleChar125RouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   DashRoute: DashRouteWithChildren,
+  XRoute: XRouteWithChildren,
   Char123StoreLocaleChar125Route: Char123StoreLocaleChar125RouteWithChildren,
 }
 export const routeTree = rootRouteImport

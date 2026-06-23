@@ -50,8 +50,8 @@ binding = "RAW_FEED"
 bucket_name = "ds-raw-feed"
 
 [[durable_objects.bindings]]
-name = "SOCKET"
-class_name = "SocketDO"
+name = "DS_SUBSCRIPTION"
+class_name = "DsSubscriptionDO"
 
 [[durable_objects.bindings]]
 name = "PUBSUB"
@@ -69,6 +69,10 @@ deleted_classes = ["SeatTimerDO"]
 [[migrations]]
 tag = "v3"
 new_classes = ["PubSubDO"]
+
+[[migrations]]
+tag = "v4"
+renamed_classes = [{ from = "SocketDO", to = "DsSubscriptionDO" }]
 
 [browser]
 binding = "BROWSER"
