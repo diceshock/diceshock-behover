@@ -11,7 +11,10 @@
     "drizzle": "./target/release/ty-jk --run drizzle drizzle-kit",
     "lint": "./target/release/ty-jk --run lint biome check",
     "build": "./target/release/ty-jk --run build nx run-many --target=build",
-    "backfill": "npx tsx scripts/backfill-store-id.ts"
+    "backfill": "npx tsx scripts/backfill-store-id.ts",
+    "test:e2e:diceshock": "pnpm --filter diceshock run test:e2e",
+    "test:e2e:diceshock:ui": "pnpm --filter diceshock run test:e2e:ui",
+    "test:e2e:diceshock:report": "pnpm --filter diceshock run test:e2e:report"
   },
   "workspaces": [
     "apps/*",
@@ -45,6 +48,7 @@
     "@cloudflare/workers-types": "^4.20260317.1",
     "@nx/vite": "^22.6.0",
     "@nx/web": "^22.6.0",
+    "@playwright/test": "^1.61.0",
     "@types/lodash": "^4.17.24",
     "@types/node": "^25.5.0",
     "@vitest/ui": "^4.1.0",

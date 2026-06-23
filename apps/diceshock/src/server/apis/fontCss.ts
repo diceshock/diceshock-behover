@@ -23,16 +23,18 @@ const LOCALE_TO_FAMILY: Record<LocaleCode, string> = {
 };
 
 export async function fontCss(c: Context<HonoCtxEnv>) {
-  const localeParam = c.req.param("locale").replace(/\.css$/, "");
+  const params = c.req.param();
+  const rawLocaleParam = c.req.param("locale") ?? params["locale.css"] ?? "";
+  const localeParam = normalizeFontLocale(rawLocaleParam.replace(/\.css$/, ""));
 
-  if (!isValidLocale(localeParam)) {
+  if (!localeParam) {
     return c.text("Unknown font locale", 404, {
       "Content-Type": "text/plain; charset=utf-8",
     });
   }
 
   const family = LOCALE_TO_FAMILY[localeParam];
-  const css = await fetchGoogleFontCss(family);
+  const css = await fetchGoogleFontCss(family).catch(() => fallbackFontCss());
   const rewritten = rewriteFontCss(css, family.replace(/\+/g, " "));
 
   return c.text(rewritten, 200, {
@@ -40,6 +42,20 @@ export async function fontCss(c: Context<HonoCtxEnv>) {
     "Cache-Control": CACHE_CONTROL,
     "CDN-Cache-Control": CACHE_CONTROL,
   });
+}
+
+
+function normalizeFontLocale(value: string): LocaleCode | undefined {
+  const normalized = value.trim().replace(/-/g, "_");
+  const aliases: Record<string, LocaleCode> = {
+    zh_CN: "zh_Hans",
+    zh_Hans: "zh_Hans",
+    zh_TW: "zh_Hant",
+    zh_HK: "zh_Hant",
+    zh_Hant: "zh_Hant",
+  };
+  const aliased = aliases[normalized] ?? normalized;
+  return isValidLocale(aliased) ? aliased : undefined;
 }
 
 async function fetchGoogleFontCss(family: string): Promise<string> {
@@ -54,6 +70,18 @@ async function fetchGoogleFontCss(family: string): Promise<string> {
   }
 
   return resp.text();
+}
+
+
+function fallbackFontCss(): string {
+  return `:root {
+  --font-diceshock-sans: "DiceShock Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+  font-family: var(--font-diceshock-sans);
+}
+`;
 }
 
 function rewriteFontCss(css: string, googleFamilyName: string): string {

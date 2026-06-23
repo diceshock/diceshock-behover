@@ -56,3 +56,5 @@ agents.md
 .github/instructions/nx.instructions.md
 vite.config.*.timestamp*
 vitest.config.*.timestamp*
+# e2e artifacts
+apps/*/e2e/artifacts/
