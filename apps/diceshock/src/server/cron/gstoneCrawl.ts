@@ -118,6 +118,7 @@ export async function dispatchGstoneDocCrawl(env: {
      FROM games g
      WHERE g.crawled_at IS NOT NULL
        AND g.full_data IS NOT NULL
+       AND json_extract(g.full_data, '$.game_info.document_info.num') > 0
        AND NOT EXISTS (
          SELECT 1 FROM documents d WHERE d.game_id = g.gstone_id
        )
