@@ -67,7 +67,7 @@ const DashRoute = DashRouteImport.update({
   id: '/dash',
   path: '/dash',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() => import('./routers/dash.lazy').then((d) => d.Route))
 const DashIndexRoute = DashIndexRouteImport.update({
   id: '/',
   path: '/',
