@@ -4,6 +4,7 @@ import QQ from "@/client/assets/svg/tencent-qq.svg?react";
 import Wechat from "@/client/assets/svg/wechat.svg?react";
 import CopyItem from "@/client/components/diceshock/CopyItem";
 import Swing from "@/client/components/diceshock/Swing";
+import { useStoreContext } from "@/client/hooks/useStoreContext";
 import { useTranslation } from "@/client/hooks/useTranslation";
 
 export const Route = createFileRoute(
@@ -12,8 +13,17 @@ export const Route = createFileRoute(
   component: RouteComponent,
 });
 
+const STORE_CONTACTS = {
+  gg: { wechat: "DiceShock", label: "光谷天地店客服:" },
+  jdk: { wechat: "DiceShockJDK", label: "街道口店客服:" },
+} as const;
+
 function RouteComponent() {
   const { t } = useTranslation();
+  const { storeCode } = useStoreContext();
+  const current = STORE_CONTACTS[storeCode] ?? STORE_CONTACTS.gg;
+  const other = storeCode === "jdk" ? STORE_CONTACTS.gg : STORE_CONTACTS.jdk;
+
   return (
     <>
       <h1 className="w-full text-6xl font-black text-center my-20">
@@ -62,17 +72,17 @@ function RouteComponent() {
               <div>
                 <br />
                 <p>
-                  <b>{t("contact.customerService")}</b>
+                  <b>{current.label}</b>
                 </p>
 
-                {<CopyItem tx="DiceShock" />}
+                {<CopyItem tx={current.wechat} />}
 
                 <br />
                 <p>
-                  <b>街道口店客服:</b>
+                  <b>{other.label}</b>
                 </p>
 
-                {<CopyItem tx="DiceShockJDK" />}
+                {<CopyItem tx={other.wechat} />}
 
                 <br />
                 <p>
