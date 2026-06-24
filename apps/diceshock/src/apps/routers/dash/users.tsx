@@ -169,9 +169,21 @@ function RouteComponent() {
                 </td>
               </tr>
             ) : (
-              users.map((user) => {
-                const plans = (user.membershipPlans ??
-                  []) as unknown as MembershipPlan[];
+              users.map((user: any) => {
+                const plans: MembershipPlan[] = (
+                  user.membershipPlans ?? []
+                ).map(
+                  (p: any): MembershipPlan => ({
+                    id: p.id,
+                    user_id: p.userId,
+                    plan_type: (p.planType ?? "").toLowerCase() as any,
+                    amount: p.amount,
+                    start_date: p.startDate ?? null,
+                    end_date: p.endDate ?? null,
+                    create_at: p.createdAt ?? null,
+                    update_at: p.updatedAt ?? null,
+                  }),
+                );
                 const storedBalance = getStoredValueBalance(plans);
                 return (
                   <tr key={user.id}>
