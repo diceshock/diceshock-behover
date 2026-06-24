@@ -32,6 +32,7 @@ import {
   STORES,
   type StoreCode,
 } from "@/shared/store-locale";
+import { cfAvatarUrl } from "@/shared/utils/cfImage";
 import Modal from "../modal";
 import { themeA } from "../ThemeSwap";
 import DashQRScannerDialog from "./DashQRScannerDialog";
@@ -74,6 +75,7 @@ function AccountButton({ onClick }: { onClick: () => void }) {
   const { userInfo, session } = useAuth();
   const name = userInfo?.nickname ?? "Anonymous";
   const role = (session?.user as any)?.role as string | undefined;
+  const avatarRawUrl = (userInfo as any)?.avatar_url as string | undefined;
 
   const roleBadge =
     role === "admin" ? "管理员" : role === "staff" ? "店员" : "";
@@ -86,11 +88,19 @@ function AccountButton({ onClick }: { onClick: () => void }) {
     >
       <div className="avatar avatar-placeholder shrink-0">
         <div className="bg-primary text-gray-900 size-6 rounded-full overflow-hidden">
-          <span className="text-[10px] font-bold">
-            {/^[\x20-\x7E\u00A0-\u024F\u0400-\u04FF]/.test(name)
-              ? name.slice(0, 2)
-              : name.slice(0, 1)}
-          </span>
+          {avatarRawUrl ? (
+            <img
+              src={cfAvatarUrl(avatarRawUrl, 48)}
+              alt=""
+              className="size-full object-cover"
+            />
+          ) : (
+            <span className="text-[10px] font-bold">
+              {/^[\x20-\x7E\u00A0-\u024F\u0400-\u04FF]/.test(name)
+                ? name.slice(0, 2)
+                : name.slice(0, 1)}
+            </span>
+          )}
         </div>
       </div>
       <div className="min-w-0 whitespace-nowrap flex items-center gap-1.5">

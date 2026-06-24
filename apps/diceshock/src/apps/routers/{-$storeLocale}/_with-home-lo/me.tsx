@@ -283,7 +283,7 @@ function RouteComponent() {
   const [isLangModalOpen, setIsLangModalOpen] = useState(false);
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
-    const raw = (displayInfo as any)?.avatarUrl;
+    const raw = (displayInfo as any)?.avatar_url;
     return raw ? cfAvatarUrl(raw) : null;
   });
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);

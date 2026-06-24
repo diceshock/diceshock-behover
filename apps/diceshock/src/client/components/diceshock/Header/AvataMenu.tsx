@@ -107,9 +107,9 @@ function AvatarMenuContent() {
           ) : (
             <div className="avatar size-8 avatar-placeholder">
               <div className="bg-primary text-gray-900 w-16 rounded-full overflow-hidden">
-                {(userInfo as any)?.avatarUrl ? (
+                {(userInfo as any)?.avatar_url ? (
                   <img
-                    src={cfAvatarUrl((userInfo as any).avatarUrl, 64)}
+                    src={cfAvatarUrl((userInfo as any).avatar_url, 64)}
                     alt=""
                     className="size-full object-cover"
                   />
@@ -206,9 +206,9 @@ function AvatarMenuContent() {
         ) : (
           <div className="avatar size-8 avatar-placeholder">
             <div className="bg-primary text-gray-900 w-16 rounded-full overflow-hidden">
-              {(userInfo as any)?.avatarUrl ? (
+              {(userInfo as any)?.avatar_url ? (
                 <img
-                  src={cfAvatarUrl((userInfo as any).avatarUrl, 64)}
+                  src={cfAvatarUrl((userInfo as any).avatar_url, 64)}
                   alt=""
                   className="size-full object-cover"
                 />
