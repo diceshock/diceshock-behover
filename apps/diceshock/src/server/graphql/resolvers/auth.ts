@@ -82,6 +82,7 @@ async function getUserProfile(ctx: GQLContext, userId: string) {
     name: user.name,
     email: user.email,
     image: user.image,
+    avatarUrl: user.userInfo.avatar_url,
     role: user.role.toUpperCase(),
     nickname: user.userInfo.nickname,
     phone: user.userInfo.phone,

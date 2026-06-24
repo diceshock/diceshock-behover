@@ -63,6 +63,7 @@ type UserProfile {
   name: String
   email: String
   image: String
+  avatarUrl: String
   role: UserRole!
   nickname: String
   phone: String

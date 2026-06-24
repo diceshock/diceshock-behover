@@ -2,6 +2,8 @@ import type { D1Database } from "@cloudflare/workers-types";
 import { authHandler } from "@hono/auth-js";
 import { Hono } from "hono";
 import apisRoot from "@/server/apis/apisRoot";
+import { avatarCard } from "@/server/apis/avatarCard";
+import avatarUpload from "@/server/apis/avatarUpload";
 import { boardGameCard } from "@/server/apis/boardGameCard";
 import fileRoute from "@/server/apis/fileRoute";
 import { fontCss } from "@/server/apis/fontCss";
@@ -66,6 +68,7 @@ app.post("/graphql", graphqlHandler);
 app.get("/graphql/stream", graphqlStreamHandler);
 
 app.post("/edge/media/upload", mediaUpload);
+app.post("/edge/media/avatar", avatarUpload);
 app.post("/edge/media/process", imageProcessSubmit);
 app.get("/edge/media/process/:taskId", imageProcessStatus);
 app.post("/edge/shortlink", shortlinkCreate);
@@ -77,6 +80,7 @@ app.get("/edge/media/card/actives", activesListCard);
 app.get("/edge/media/card/event/:id", eventCard);
 app.get("/edge/media/card/inventory", inventoryCard);
 app.get("/edge/media/card/site-og", siteOgCard);
+app.get("/edge/media/card/avatar/:userId", avatarCard);
 
 app.use("/api/auth/*", authHandler());
 

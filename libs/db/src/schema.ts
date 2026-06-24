@@ -95,6 +95,7 @@ export const userInfoTable = sqlite.sqliteTable("user_info", {
   nickname: sqlite.text("nickname").notNull(),
   phone: sqlite.text("phone"),
   points: sqlite.int("points").$default(() => 0),
+  avatar_url: sqlite.text("avatar_url"),
   meta: sqlite
     .text("meta", { mode: "json" })
     .$type<{ auto_nickname?: boolean } | null>(),

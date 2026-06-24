@@ -1,3 +1,4 @@
+import { useApolloClient } from "@apollo/client";
 import {
   ArrowUUpLeftIcon,
   HourglassIcon,
@@ -8,13 +9,13 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { ClientOnly, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import useAuth from "@/client/hooks/useAuth";
-import useTempIdentity from "@/client/hooks/useTempIdentity";
-import { useApolloClient } from "@apollo/client";
 import {
   MyActiveOccupanciesDocument,
   TempIdentityActiveOccupanciesDocument,
 } from "@/client/graphql/__generated__";
+import useAuth from "@/client/hooks/useAuth";
+import useTempIdentity from "@/client/hooks/useTempIdentity";
+import { cfAvatarUrl } from "@/shared/utils/cfImage";
 import ThemeSwap from "../../ThemeSwap";
 import LoginDialog from "./LoginDialog";
 import QRScannerDialog from "./QRScannerDialog";
@@ -52,9 +53,7 @@ function useActiveOccupancy(): ActiveOccupancy | null {
 
         if (!cancelled) {
           const first = occs[0] ?? null;
-          setOccupancy(
-            first ? { code: first.code, name: first.name } : null,
-          );
+          setOccupancy(first ? { code: first.code, name: first.name } : null);
         }
       } catch {
         if (!cancelled) setOccupancy(null);
@@ -108,11 +107,19 @@ function AvatarMenuContent() {
           ) : (
             <div className="avatar size-8 avatar-placeholder">
               <div className="bg-primary text-gray-900 w-16 rounded-full overflow-hidden">
-                <span className="text-lg">
-                  {/^[\x20-\x7E\u00A0-\u024F\u0400-\u04FF]/.test(name)
-                    ? name.slice(0, 2)
-                    : name.slice(0, 1)}
-                </span>
+                {(userInfo as any)?.avatarUrl ? (
+                  <img
+                    src={cfAvatarUrl((userInfo as any).avatarUrl, 64)}
+                    alt=""
+                    className="size-full object-cover"
+                  />
+                ) : (
+                  <span className="text-lg">
+                    {/^[\x20-\x7E\u00A0-\u024F\u0400-\u04FF]/.test(name)
+                      ? name.slice(0, 2)
+                      : name.slice(0, 1)}
+                  </span>
+                )}
               </div>
             </div>
           )}
@@ -199,11 +206,19 @@ function AvatarMenuContent() {
         ) : (
           <div className="avatar size-8 avatar-placeholder">
             <div className="bg-primary text-gray-900 w-16 rounded-full overflow-hidden">
-              <span className="text-lg">
-                {/^[\x20-\x7E\u00A0-\u024F\u0400-\u04FF]/.test(name)
-                  ? name.slice(0, 2)
-                  : name.slice(0, 1)}
-              </span>
+              {(userInfo as any)?.avatarUrl ? (
+                <img
+                  src={cfAvatarUrl((userInfo as any).avatarUrl, 64)}
+                  alt=""
+                  className="size-full object-cover"
+                />
+              ) : (
+                <span className="text-lg">
+                  {/^[\x20-\x7E\u00A0-\u024F\u0400-\u04FF]/.test(name)
+                    ? name.slice(0, 2)
+                    : name.slice(0, 1)}
+                </span>
+              )}
             </div>
           </div>
         )}

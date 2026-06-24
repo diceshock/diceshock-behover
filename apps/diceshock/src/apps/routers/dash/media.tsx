@@ -23,6 +23,7 @@ import {
 } from "@/client/graphql/__generated__";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import { formatMessage } from "@/shared/i18n";
+import { cfImageUrl, cfThumbUrl } from "@/shared/utils/cfImage";
 import dayjs from "@/shared/utils/dayjs-config";
 
 type MediaItem = {
@@ -254,9 +255,12 @@ function RouteComponent() {
   );
 
   const handleCopy = useCallback(
-    (url: string) => {
+    (url: string, contentType: string) => {
+      const copyUrl = contentType.startsWith("image/")
+        ? cfImageUrl(url, { width: 1200, fit: "scale-down" })
+        : url;
       try {
-        navigator.clipboard.writeText(url);
+        navigator.clipboard.writeText(copyUrl);
         msg.success(t("dashMedia.linkCopied"));
       } catch {
         msg.error(t("dashMedia.clipboardDenied"));
@@ -439,7 +443,7 @@ function RouteComponent() {
                 <figure className="h-32 bg-base-200 flex items-center justify-center overflow-hidden">
                   {item.contentType.startsWith("image/") ? (
                     <img
-                      src={item.url}
+                      src={cfThumbUrl(item.url, 300)}
                       alt={item.name}
                       className="w-full h-full object-cover"
                       loading="lazy"
@@ -468,7 +472,7 @@ function RouteComponent() {
                       type="button"
                       className="btn btn-xs btn-ghost btn-square"
                       title={t("dashMedia.copyLink")}
-                      onClick={() => handleCopy(item.url)}
+                      onClick={() => handleCopy(item.url, item.contentType)}
                     >
                       <CopyIcon className="size-3.5" />
                     </button>

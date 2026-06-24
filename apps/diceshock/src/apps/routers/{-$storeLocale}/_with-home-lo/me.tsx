@@ -1,6 +1,7 @@
 import { useApolloClient } from "@apollo/client";
 import {
   BellIcon,
+  CameraIcon,
   ChatsTeardropIcon,
   CopyIcon,
   GameControllerIcon,
@@ -19,7 +20,7 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import clsx from "clsx";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import BusinessCardModal from "@/client/components/diceshock/BusinessCardModal";
 import QRScannerDialog from "@/client/components/diceshock/Header/QRScannerDialog";
 import GszRegistrationModal from "@/client/components/diceshock/MahjongMatch/GszRegistrationModal";
@@ -56,6 +57,7 @@ import {
   STORES,
   type StoreCode,
 } from "@/shared/store-locale";
+import { cfAvatarUrl } from "@/shared/utils/cfImage";
 import dayjs from "@/shared/utils/dayjs-config";
 
 type GqlMembershipPlan = NonNullable<
@@ -279,6 +281,50 @@ function RouteComponent() {
   const [preferredStore, setPreferredStore] = useState("");
   const [isSavingPrefs, setIsSavingPrefs] = useState(false);
   const [isLangModalOpen, setIsLangModalOpen] = useState(false);
+
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
+    const raw = (displayInfo as any)?.avatarUrl;
+    return raw ? cfAvatarUrl(raw) : null;
+  });
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      if (file.size > 2 * 1024 * 1024) {
+        messages.error("头像大小不能超过 2MB");
+        return;
+      }
+
+      setIsUploadingAvatar(true);
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const resp = await fetch("/edge/media/avatar", {
+          method: "POST",
+          body: formData,
+        });
+        const data = (await resp.json()) as { url?: string; error?: string };
+        if (!resp.ok || data.error) {
+          messages.error(data.error ?? "上传失败");
+          return;
+        }
+        if (data.url) {
+          setAvatarUrl(data.url);
+          messages.success("头像已更新");
+        }
+      } catch {
+        messages.error("网络错误");
+      } finally {
+        setIsUploadingAvatar(false);
+        if (avatarInputRef.current) avatarInputRef.current.value = "";
+      }
+    },
+    [messages],
+  );
 
   useEffect(() => {
     client
@@ -533,6 +579,46 @@ function RouteComponent() {
       <main className="min-h-[calc(100vh-8rem)] w-full px-4 pt-6 pb-12">
         <div className="mx-auto w-full max-w-md">
           <div className="flex flex-col items-center gap-1 mb-6">
+            <div className="relative mb-2">
+              <button
+                type="button"
+                className="relative group"
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={isUploadingAvatar}
+                aria-label="上传头像"
+              >
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt="头像"
+                    className="size-20 rounded-full object-cover border-2 border-primary/30"
+                  />
+                ) : (
+                  <div className="size-20 rounded-full bg-primary text-primary-content flex items-center justify-center text-2xl font-bold">
+                    {(() => {
+                      const name = displayInfo?.nickname ?? "A";
+                      return /^[\x20-\x7E\u00A0-\u024F\u0400-\u04FF]/.test(name)
+                        ? name.slice(0, 2).toUpperCase()
+                        : name.slice(0, 1);
+                    })()}
+                  </div>
+                )}
+                <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  {isUploadingAvatar ? (
+                    <span className="loading loading-spinner loading-sm text-white" />
+                  ) : (
+                    <CameraIcon className="size-5 text-white" />
+                  )}
+                </div>
+              </button>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleAvatarUpload}
+              />
+            </div>
             <h1 className="text-xl sm:text-2xl font-bold text-center flex items-center gap-1.5">
               <span className="break-words">
                 {displayInfo?.nickname ?? "Anonymous Shock"}
