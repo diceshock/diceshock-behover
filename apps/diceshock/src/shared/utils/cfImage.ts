@@ -33,3 +33,7 @@ export function cfAvatarUrl(rawUrl: string, size = 256): string {
 export function cfThumbUrl(rawUrl: string, width = 400): string {
   return cfImageUrl(rawUrl, { width, fit: "scale-down" });
 }
+
+export function avatarCardUrl(userId: string): string {
+  return `/edge/media/card/avatar/${userId}`;
+}

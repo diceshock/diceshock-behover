@@ -15,7 +15,7 @@ import {
 } from "@/client/graphql/__generated__";
 import useAuth from "@/client/hooks/useAuth";
 import useTempIdentity from "@/client/hooks/useTempIdentity";
-import { cfAvatarUrl } from "@/shared/utils/cfImage";
+import { avatarCardUrl } from "@/shared/utils/cfImage";
 import ThemeSwap from "../../ThemeSwap";
 import LoginDialog from "./LoginDialog";
 import QRScannerDialog from "./QRScannerDialog";
@@ -72,7 +72,7 @@ function useActiveOccupancy(): ActiveOccupancy | null {
 }
 
 function AvatarMenuContent() {
-  const { userInfo, signOut } = useAuth();
+  const { userInfo, signOut, session } = useAuth();
   const navigate = useNavigate();
   const activeOccupancy = useActiveOccupancy();
 
@@ -84,6 +84,7 @@ function AvatarMenuContent() {
     /MicroMessenger/i.test(navigator.userAgent);
 
   const name = userInfo?.nickname ?? "Anonymous Shock";
+  const userId = (session?.user as any)?.id as string | undefined;
   const isTiming = !!activeOccupancy;
 
   if (isInWechat) {
@@ -105,20 +106,22 @@ function AvatarMenuContent() {
               />
             </div>
           ) : (
-            <div className="avatar size-8 avatar-placeholder">
-              <div className="bg-primary text-gray-900 w-16 rounded-full overflow-hidden">
-                {(userInfo as any)?.avatar_url ? (
+            <div className="avatar size-8 shrink-0">
+              <div className="size-8 rounded-full overflow-hidden">
+                {userId ? (
                   <img
-                    src={cfAvatarUrl((userInfo as any).avatar_url, 64)}
+                    src={avatarCardUrl(userId)}
                     alt=""
                     className="size-full object-cover"
                   />
                 ) : (
-                  <span className="text-lg">
-                    {/^[\x20-\x7E\u00A0-\u024F\u0400-\u04FF]/.test(name)
-                      ? name.slice(0, 2)
-                      : name.slice(0, 1)}
-                  </span>
+                  <div className="bg-primary text-gray-900 size-full flex items-center justify-center">
+                    <span className="text-lg">
+                      {/^[\x20-\x7E\u00A0-\u024F\u0400-\u04FF]/.test(name)
+                        ? name.slice(0, 2)
+                        : name.slice(0, 1)}
+                    </span>
+                  </div>
                 )}
               </div>
             </div>
@@ -204,20 +207,22 @@ function AvatarMenuContent() {
             />
           </div>
         ) : (
-          <div className="avatar size-8 avatar-placeholder">
-            <div className="bg-primary text-gray-900 w-16 rounded-full overflow-hidden">
-              {(userInfo as any)?.avatar_url ? (
+          <div className="avatar size-8 shrink-0">
+            <div className="size-8 rounded-full overflow-hidden">
+              {userId ? (
                 <img
-                  src={cfAvatarUrl((userInfo as any).avatar_url, 64)}
+                  src={avatarCardUrl(userId)}
                   alt=""
                   className="size-full object-cover"
                 />
               ) : (
-                <span className="text-lg">
-                  {/^[\x20-\x7E\u00A0-\u024F\u0400-\u04FF]/.test(name)
-                    ? name.slice(0, 2)
-                    : name.slice(0, 1)}
-                </span>
+                <div className="bg-primary text-gray-900 size-full flex items-center justify-center">
+                  <span className="text-lg">
+                    {/^[\x20-\x7E\u00A0-\u024F\u0400-\u04FF]/.test(name)
+                      ? name.slice(0, 2)
+                      : name.slice(0, 1)}
+                  </span>
+                </div>
               )}
             </div>
           </div>

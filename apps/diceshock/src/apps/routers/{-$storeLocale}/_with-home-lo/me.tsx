@@ -57,7 +57,7 @@ import {
   STORES,
   type StoreCode,
 } from "@/shared/store-locale";
-import { cfAvatarUrl } from "@/shared/utils/cfImage";
+import { avatarCardUrl } from "@/shared/utils/cfImage";
 import dayjs from "@/shared/utils/dayjs-config";
 
 type GqlMembershipPlan = NonNullable<
@@ -282,10 +282,7 @@ function RouteComponent() {
   const [isSavingPrefs, setIsSavingPrefs] = useState(false);
   const [isLangModalOpen, setIsLangModalOpen] = useState(false);
 
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
-    const raw = (displayInfo as any)?.avatar_url;
-    return raw ? cfAvatarUrl(raw) : null;
-  });
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
@@ -312,10 +309,11 @@ function RouteComponent() {
           messages.error(data.error ?? "上传失败");
           return;
         }
-        if (data.url) {
-          setAvatarUrl(data.url);
-          messages.success("头像已更新");
+        const uid = session?.user?.id;
+        if (uid) {
+          setAvatarUrl(`${avatarCardUrl(uid)}?t=${Date.now()}`);
         }
+        messages.success("头像已更新");
       } catch {
         messages.error("网络错误");
       } finally {
@@ -323,7 +321,7 @@ function RouteComponent() {
         if (avatarInputRef.current) avatarInputRef.current.value = "";
       }
     },
-    [messages],
+    [messages, session],
   );
 
   useEffect(() => {
@@ -587,22 +585,11 @@ function RouteComponent() {
                 disabled={isUploadingAvatar}
                 aria-label="上传头像"
               >
-                {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt="头像"
-                    className="size-20 rounded-full object-cover border-2 border-primary/30"
-                  />
-                ) : (
-                  <div className="size-20 rounded-full bg-primary text-primary-content flex items-center justify-center text-2xl font-bold">
-                    {(() => {
-                      const name = displayInfo?.nickname ?? "A";
-                      return /^[\x20-\x7E\u00A0-\u024F\u0400-\u04FF]/.test(name)
-                        ? name.slice(0, 2).toUpperCase()
-                        : name.slice(0, 1);
-                    })()}
-                  </div>
-                )}
+                <img
+                  src={avatarUrl ?? avatarCardUrl(session?.user?.id ?? "")}
+                  alt="头像"
+                  className="size-20 rounded-full object-cover border-2 border-primary/30"
+                />
                 <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                   {isUploadingAvatar ? (
                     <span className="loading loading-spinner loading-sm text-white" />
