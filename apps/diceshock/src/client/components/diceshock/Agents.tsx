@@ -5,7 +5,6 @@ import type React from "react";
 import { useEffect } from "react";
 import AgentLogo from "@/client/assets/svg/agent-logo.svg?react";
 import TableAgent from "@/client/assets/svg/agents/DiceshockItems_table-agent-icon.svg?react";
-import TablePassCC from "@/client/assets/svg/agents/DiceshockItems_table-pass-cc-icon.svg?react";
 import TablePass from "@/client/assets/svg/agents/DiceshockItems_table-pass-icon.svg?react";
 import TablePassLTS from "@/client/assets/svg/agents/DiceshockItems_table-pass-lts-icon.svg?react";
 import AgentsChannel from "@/client/assets/svg/agents_channel.svg?react";
@@ -23,25 +22,20 @@ const Agents: React.FC<{ className?: string }> = ({ className }) => {
   const opacity3 = useSpringValue(0.1, {
     config: { damping: 25, friction: 60 },
   });
-  const opacity4 = useSpringValue(0.1, {
-    config: { damping: 35, friction: 80 },
-  });
 
   useEffect(() => {
     if (inView) {
       opacity1.start(1);
       opacity2.start(1);
       opacity3.start(1);
-      opacity4.start(1);
       return;
     } else {
       opacity1.start(0);
       opacity2.start(0);
       opacity3.start(0);
-      opacity4.start(0);
       return;
     }
-  }, [inView, opacity1, opacity2, opacity3, opacity4]);
+  }, [inView, opacity1, opacity2, opacity3]);
 
   return (
     <>
@@ -66,141 +60,104 @@ const Agents: React.FC<{ className?: string }> = ({ className }) => {
           ref={ref}
           className="w-full flex flex-wrap justify-center items-stretch"
         >
-          <div className="flex flex-wrap items-center justify-center">
-            <animated.div
-              style={{
-                opacity: opacity1,
-                scale: opacity1.to((p) => 0.8 + 0.2 * p),
-                transform: opacity1.to((p) => `rotateY(${(1 - p) * 120}deg)`),
+          <animated.div
+            style={{
+              opacity: opacity1,
+              scale: opacity1.to((p) => 0.8 + 0.2 * p),
+              transform: opacity1.to((p) => `rotateY(${(1 - p) * 120}deg)`),
+            }}
+          >
+            <Swing
+              className={{
+                inner:
+                  "card bg-base-200 w-96 h-[35rem] shadow-xl mb-10 mx-5 [transform-style:preserve-3d]",
               }}
             >
-              <Swing
-                className={{
-                  inner:
-                    "card bg-base-200 w-96 h-[35rem] shadow-xl mb-10 mx-5 [transform-style:preserve-3d]",
-                }}
-              >
-                <figure className="[transform:translateZ(3rem)]">
-                  <TableAgent className="w-[20rem] scale-150 py-[5.5rem]" />
-                </figure>
+              <figure className="[transform:translateZ(3rem)]">
+                <TableAgent className="w-[20rem] scale-150 py-[5.5rem]" />
+              </figure>
 
-                <div className="card-body">
-                  <h2 className="card-title">Table AGENT 储值卡</h2>
-                  <p>充值福利, 付费折扣.</p>
-                  <div className="card-actions justify-end">
-                    <Link
-                      to="/$storeLocale/contact-us"
-                      params={(prev: any) => prev}
-                      className="btn bg-black text-primary"
-                    >
-                      联系我们
-                    </Link>
-                  </div>
+              <div className="card-body">
+                <h2 className="card-title">储值卡</h2>
+                <p>充值福利, 付费折扣.</p>
+                <div className="card-actions justify-end">
+                  <Link
+                    to="/$storeLocale/contact-us"
+                    params={(prev: any) => prev}
+                    className="btn bg-black text-primary"
+                  >
+                    联系我们
+                  </Link>
                 </div>
-              </Swing>
-            </animated.div>
+              </div>
+            </Swing>
+          </animated.div>
 
-            <animated.div
-              style={{
-                opacity: opacity2,
-                scale: opacity2.to((p) => 0.8 + 0.2 * p),
-                transform: opacity2.to((p) => `rotateY(${(1 - p) * 120}deg)`),
+          <animated.div
+            style={{
+              opacity: opacity2,
+              scale: opacity2.to((p) => 0.8 + 0.2 * p),
+              transform: opacity2.to((p) => `rotateY(${(1 - p) * 120}deg)`),
+            }}
+          >
+            <Swing
+              className={{
+                inner:
+                  "card bg-base-200 w-96 h-[35rem] shadow-xl mb-10 mx-5 [transform-style:preserve-3d]",
               }}
             >
-              <Swing
-                className={{
-                  inner:
-                    "card bg-base-200 w-96 h-[35rem] shadow-xl mb-10 mx-5 [transform-style:preserve-3d]",
-                }}
-              >
-                <figure className="[transform:translateZ(3rem)]">
-                  <TablePassCC className="w-[20rem] scale-150 py-[5.5rem]" />
-                </figure>
+              <figure className="[transform:translateZ(3rem)]">
+                <TablePass className="w-[20rem] scale-150 py-[5.5rem]" />
+              </figure>
 
-                <div className="card-body">
-                  <h2 className="card-title">CC桌面通行证</h2>
-                  <p>超低廉价格, 办理20个工作日畅玩.</p>
-                  <div className="card-actions justify-end">
-                    <Link
-                      to="/$storeLocale/contact-us"
-                      params={(prev: any) => prev}
-                      className="btn bg-black text-primary"
-                    >
-                      联系我们
-                    </Link>
-                  </div>
+              <div className="card-body">
+                <h2 className="card-title">月卡</h2>
+                <p>办理30天畅玩无限!</p>
+                <div className="card-actions justify-end">
+                  <Link
+                    to="/$storeLocale/contact-us"
+                    params={(prev: any) => prev}
+                    className="btn bg-black text-primary"
+                  >
+                    联系我们
+                  </Link>
                 </div>
-              </Swing>
-            </animated.div>
-          </div>
+              </div>
+            </Swing>
+          </animated.div>
 
-          <div className="flex flex-wrap items-center justify-center">
-            <animated.div
-              style={{
-                opacity: opacity3,
-                scale: opacity3.to((p) => 0.8 + 0.2 * p),
-                transform: opacity3.to((p) => `rotateY(${(1 - p) * 120}deg)`),
+          <animated.div
+            style={{
+              opacity: opacity3,
+              scale: opacity3.to((p) => 0.8 + 0.2 * p),
+              transform: opacity3.to((p) => `rotateY(${(1 - p) * 120}deg)`),
+            }}
+          >
+            <Swing
+              className={{
+                inner:
+                  "card bg-base-200 w-96 h-[35rem] shadow-xl mb-10 mx-5 [transform-style:preserve-3d]",
               }}
             >
-              <Swing
-                className={{
-                  inner:
-                    "card bg-base-200 w-96 h-[35rem] shadow-xl mb-10 mx-5 [transform-style:preserve-3d]",
-                }}
-              >
-                <figure className="[transform:translateZ(3rem)]">
-                  <TablePass className="w-[20rem] scale-150 py-[5.5rem]" />
-                </figure>
+              <figure className="[transform:translateZ(3rem)]">
+                <TablePassLTS className="h-[25rem] [transform:translateZ(3rem)]" />
+              </figure>
 
-                <div className="card-body">
-                  <h2 className="card-title">桌面通行证</h2>
-                  <p>办理30天畅玩无限!</p>
-                  <div className="card-actions justify-end">
-                    <Link
-                      to="/$storeLocale/contact-us"
-                      params={(prev: any) => prev}
-                      className="btn bg-black text-primary"
-                    >
-                      联系我们
-                    </Link>
-                  </div>
+              <div className="card-body">
+                <h2 className="card-title">年卡</h2>
+                <p>办理365天畅玩无限</p>
+                <div className="card-actions justify-end">
+                  <Link
+                    to="/$storeLocale/contact-us"
+                    params={(prev: any) => prev}
+                    className="btn bg-black text-primary"
+                  >
+                    联系我们
+                  </Link>
                 </div>
-              </Swing>
-            </animated.div>
-
-            <animated.div
-              style={{
-                opacity: opacity4,
-                scale: opacity4.to((p) => 0.8 + 0.2 * p),
-                transform: opacity4.to((p) => `rotateY(${(1 - p) * 120}deg)`),
-              }}
-            >
-              <Swing
-                className={{
-                  inner:
-                    "card bg-base-200 w-96 h-[35rem] shadow-xl mb-10 mx-5 [transform-style:preserve-3d]",
-                }}
-              >
-                <figure className="[transform:translateZ(3rem)]">
-                  <TablePassLTS className="h-[25rem] [transform:translateZ(3rem)]" />
-                </figure>
-
-                <div className="card-body">
-                  <h2 className="card-title">桌面通行证 LTS</h2>
-                  <p>办理365天畅玩无限</p>
-                  <div className="card-actions justify-end">
-                    <Link
-                      to="/$storeLocale/contact-us"
-                      params={(prev: any) => prev}
-                      className="btn bg-black text-primary"
-                    >
-                      联系我们
-                    </Link>
-                  </div>
-                </div>
-              </Swing>
-            </animated.div>
-          </div>
+              </div>
+            </Swing>
+          </animated.div>
         </div>
       </animated.div>
 
