@@ -305,7 +305,8 @@
     "contactUsWechat": "Fale conosco pelo WeChat",
     "qqGroupLabel": "Grupo QQ (DiceShock Jogos de Tabuleiro · Mahjong · Console):",
     "hostGahon": "Fale com o anfitrião Latiao (ID: Gahon):",
-    "hostHygge": "Fale com o anfitrião Latiao (ID: Hygge):"
+    "hostHygge": "Fale com o anfitrião Latiao (ID: Hygge):",
+    "customerService": "Atendimento WeChat:"
   },
   "errors": {
     "notFound": "Página Não Encontrada",

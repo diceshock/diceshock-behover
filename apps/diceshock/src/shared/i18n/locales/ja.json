@@ -305,7 +305,8 @@
     "contactUsWechat": "WeChatでお問い合わせ",
     "qqGroupLabel": "QQグループ（DiceShock ボードゲーム·麻雀·ゲーム機）:",
     "hostGahon": "ホスト辣条(ID: Gahon)への連絡:",
-    "hostHygge": "ホスト辣条(ID: Hygge)への連絡:"
+    "hostHygge": "ホスト辣条(ID: Hygge)への連絡:",
+    "customerService": "カスタマーサービスWeChat:"
   },
   "errors": {
     "notFound": "ページが見つかりません",

@@ -305,7 +305,8 @@
     "contactUsWechat": "Kontaktiere uns via WeChat",
     "qqGroupLabel": "QQ-Gruppe (DiceShock Brettspiele · Mahjong · Konsole):",
     "hostGahon": "Kontaktiere Host Latiao (ID: Gahon):",
-    "hostHygge": "Kontaktiere Host Latiao (ID: Hygge):"
+    "hostHygge": "Kontaktiere Host Latiao (ID: Hygge):",
+    "customerService": "Kundendienst WeChat:"
   },
   "errors": {
     "notFound": "Seite nicht gefunden",

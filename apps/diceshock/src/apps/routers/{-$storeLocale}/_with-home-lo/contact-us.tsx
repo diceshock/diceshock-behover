@@ -51,7 +51,7 @@ function RouteComponent() {
         </Swing>
 
         <Swing>
-          <div className="card bg-base-200 h-[24rem] w-[20rem] shadow-xl border-b-2 border-base-300 mb-10 mx-10">
+          <div className="card bg-base-200 h-[30rem] w-[20rem] shadow-xl border-b-2 border-base-300 mb-10 mx-10">
             <figure className="relative h-[15rem] bg-primary text-black">
               <HookHole className="absolute text-base-100 left-1/2 top-[0.90rem] -translate-x-1/2 w-14" />
 
@@ -60,6 +60,13 @@ function RouteComponent() {
             <div className="card-body justify-start">
               <h2 className="card-title">{t("contact.contactUsWechat")}</h2>
               <div>
+                <br />
+                <p>
+                  <b>{t("contact.customerService")}</b>
+                </p>
+
+                {<CopyItem tx="DiceShock" />}
+
                 <br />
                 <p>
                   <b>{t("contact.hostHygge")}</b>
