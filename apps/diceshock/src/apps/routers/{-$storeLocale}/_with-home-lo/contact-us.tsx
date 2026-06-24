@@ -69,6 +69,13 @@ function RouteComponent() {
 
                 <br />
                 <p>
+                  <b>街道口店客服:</b>
+                </p>
+
+                {<CopyItem tx="DiceShockJDK" />}
+
+                <br />
+                <p>
                   <b>{t("contact.hostHygge")}</b>
                 </p>
 
