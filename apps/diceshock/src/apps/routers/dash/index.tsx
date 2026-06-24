@@ -24,8 +24,10 @@ import {
   OrdersDocument,
   SetCaptchaEnabledDocument,
 } from "@/client/graphql/__generated__";
+import { useStoreContext } from "@/client/hooks/useStoreContext";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import { formatMessage } from "@/shared/i18n";
+import { STORES, type StoreCode } from "@/shared/store-locale";
 import dayjs from "@/shared/utils/dayjs-config";
 
 export const Route = createFileRoute("/dash/")({
@@ -54,6 +56,7 @@ function formatTime(val: number | null | undefined): string {
 function RouteComponent() {
   const { t } = useTranslation();
   const client = useApolloClient();
+  const { storeCode, setStore } = useStoreContext();
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -148,6 +151,17 @@ function RouteComponent() {
             <ScanIcon className="size-5" />
             <span className="hidden sm:inline">{t("dashIndex.scan")}</span>
           </button>
+          <select
+            className="select select-sm select-bordered"
+            value={storeCode}
+            onChange={(e) => setStore(e.target.value as StoreCode)}
+          >
+            {Object.values(STORES).map((store) => (
+              <option key={store.code} value={store.code}>
+                {store.shortName}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="flex flex-wrap gap-2">
