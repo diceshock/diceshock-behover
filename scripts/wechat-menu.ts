@@ -33,7 +33,7 @@ const MENU = {
   button: [
     {
       type: "click",
-      name: "账户管理",
+      name: "会员中心",
       key: "MEMBERSHIP_PLAN",
     },
     {
