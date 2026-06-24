@@ -54,7 +54,10 @@ const Agents: React.FC<{ className?: string }> = ({ className }) => {
           现在加入成为{" "}
           <span className="text-primary font-bold">DiceShock Agents©</span> 会员
         </h2>
-        <p className="text-sm sm:text-xl mb-20">选择你的会员计划</p>
+        <p className="text-sm sm:text-xl mb-4">选择你的会员计划</p>
+        <p className="text-xs sm:text-sm text-base-content/60 mb-20">
+          覆盖范围: 桌游 · 日麻 · 电玩 | 不包含跑团
+        </p>
 
         <div
           ref={ref}
