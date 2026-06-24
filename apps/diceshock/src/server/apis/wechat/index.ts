@@ -328,7 +328,7 @@ const WECHAT_MENU = {
   button: [
     {
       type: "view",
-      name: "账户管理",
+      name: "会员中心",
       url: "https://diceshock.com/me",
     },
     {
