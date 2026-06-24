@@ -3,7 +3,6 @@ import dbFactory from "@lib/db";
 import type { Context } from "hono";
 import { renderToString } from "react-dom/server";
 import type { HonoCtxEnv } from "@/shared/types";
-import { fetchAsDataUrl, LOGO_URL } from "./ogCards/shared";
 
 const AVATAR_SIZE = 512;
 const CACHE_TTL_MS = 2 * 60 * 60 * 1000;
@@ -35,15 +34,12 @@ export async function avatarCard(c: Context<HonoCtxEnv>) {
     with: { userInfo: true },
   });
 
-  const nickname = user?.userInfo?.nickname ?? "Anonymous";
-  const avatarUrl = user?.userInfo?.avatar_url;
-
-  const avatarDataUrl = avatarUrl ? await fetchAsDataUrl(avatarUrl) : "";
-  const logoDataUrl = await fetchAsDataUrl(LOGO_URL);
-
-  const initials = /^[\x20-\x7E\u00A0-\u024F\u0400-\u04FF]/.test(nickname)
+  const nickname = user?.userInfo?.nickname ?? "A";
+  const initial = /^[\x20-\x7E\u00A0-\u024F\u0400-\u04FF]/.test(nickname)
     ? nickname.slice(0, 2).toUpperCase()
     : nickname.slice(0, 1);
+
+  const hue = hashToHue(userId);
 
   const html = `<!DOCTYPE html>${renderToString(
     <html>
@@ -58,77 +54,22 @@ body {
   height: ${AVATAR_SIZE}px;
   font-family: -apple-system, "Noto Sans SC", "Helvetica Neue", sans-serif;
   overflow: hidden;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  background: hsl(${hue}, 55%, 45%);
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.wrap {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  position: relative;
-}
-.avatar-img {
-  width: 280px;
-  height: 280px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 4px solid rgba(54, 255, 161, 0.6);
-}
-.avatar-initials {
-  width: 280px;
-  height: 280px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #36ffa1, #00d4aa);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 96px;
-  font-weight: 800;
-  color: #1a1a2e;
-}
-.nickname {
-  font-size: 28px;
+.initial {
+  font-size: 220px;
   font-weight: 700;
   color: #fff;
-  text-align: center;
-  max-width: 420px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.logo {
-  position: absolute;
-  bottom: 16px;
-  right: 20px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.logo img { width: 18px; height: 18px; }
-.logo span { font-size: 11px; color: rgba(255,255,255,0.35); }
-`,
+  line-height: 1;
+}`,
           }}
         />
       </head>
       <body>
-        <div className="wrap">
-          {avatarDataUrl ? (
-            <img src={avatarDataUrl} className="avatar-img" />
-          ) : (
-            <div className="avatar-initials">{initials}</div>
-          )}
-          <div className="nickname">{nickname}</div>
-          <div className="logo">
-            {logoDataUrl && <img src={logoDataUrl} />}
-            <span>diceshock.com</span>
-          </div>
-        </div>
+        <div className="initial">{initial}</div>
         <script
           dangerouslySetInnerHTML={{ __html: "window.__ready = true;" }}
         />
@@ -161,4 +102,12 @@ body {
   } finally {
     await browser.close();
   }
+}
+
+function hashToHue(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return Math.abs(hash) % 360;
 }
