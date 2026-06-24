@@ -563,29 +563,30 @@ function RouteComponent() {
               const totalBalance = getStoredValueBalance(myPlans);
               const hasActivePlans = activePlans.length > 0;
 
-              if (hasActivePlans) {
-                const seen = new Set<string>();
-                const uniquePlans = activePlans
-                  .sort(
-                    (a, b) =>
-                      getPlanConfig(a.plan_type).priority -
-                      getPlanConfig(b.plan_type).priority,
-                  )
-                  .filter((plan) => {
-                    if (seen.has(plan.plan_type)) return false;
-                    seen.add(plan.plan_type);
-                    return true;
-                  });
+              const seen = new Set<string>();
+              const uniquePlans = activePlans
+                .sort(
+                  (a, b) =>
+                    getPlanConfig(a.plan_type).priority -
+                    getPlanConfig(b.plan_type).priority,
+                )
+                .filter((plan) => {
+                  if (seen.has(plan.plan_type)) return false;
+                  seen.add(plan.plan_type);
+                  return true;
+                });
 
-                return (
-                  <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent rounded-2xl border border-primary/20 p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <TrophyIcon className="size-5 text-primary" />
-                      <h2 className="text-sm font-bold text-primary">
-                        {t("me.membership")}
-                      </h2>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
+              return (
+                <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent rounded-2xl border border-primary/20 p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <TrophyIcon className="size-5 text-primary" />
+                    <h2 className="text-sm font-bold text-primary">
+                      {t("me.membership")}
+                    </h2>
+                  </div>
+
+                  {hasActivePlans && (
+                    <div className="flex flex-wrap gap-2 mb-3">
                       {uniquePlans.map((plan) => {
                         const config = getPlanConfig(plan.plan_type);
                         const Icon = config.icon;
@@ -617,35 +618,25 @@ function RouteComponent() {
                         );
                       })}
                     </div>
-                    {totalBalance > 0 && (
-                      <div className="mt-3 pt-3 border-t border-primary/10 flex items-center justify-between">
-                        <span className="text-xs text-base-content/60">
-                          储值余额
-                        </span>
-                        <span className="text-lg font-bold text-primary">
-                          ¥{(totalBalance / 100).toFixed(0)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                );
-              }
+                  )}
 
-              return (
-                <Link
-                  to="/{-$storeLocale}/diceshock-agents"
-                  className="flex items-center gap-3 bg-gradient-to-r from-primary/10 to-transparent hover:from-primary/15 rounded-2xl px-4 py-4 border border-primary/15 transition-colors"
-                >
-                  <div className="shrink-0 p-2.5 bg-primary/15 rounded-xl">
-                    <TrophyIcon className="size-5 text-primary" />
+                  <div className="flex items-center justify-between pt-3 border-t border-primary/10">
+                    <div>
+                      <span className="text-xs text-base-content/60">
+                        储值余额
+                      </span>
+                      <span className="text-lg font-bold text-primary ml-2">
+                        ¥{(totalBalance / 100).toFixed(0)}
+                      </span>
+                    </div>
+                    <Link
+                      to="/{-$storeLocale}/diceshock-agents"
+                      className="btn btn-primary btn-sm"
+                    >
+                      查看会员计划
+                    </Link>
                   </div>
-                  <div>
-                    <p className="text-sm font-bold">{t("me.joinAgents")}</p>
-                    <p className="text-xs text-base-content/50">
-                      {t("me.learnPlanBenefits")}
-                    </p>
-                  </div>
-                </Link>
+                </div>
               );
             })()}
           </section>
