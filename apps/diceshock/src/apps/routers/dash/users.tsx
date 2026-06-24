@@ -22,7 +22,9 @@ import { useIsMobile } from "@/client/hooks/useIsMobile";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import dayjs from "@/shared/utils/dayjs-config";
 
-type UserList = NonNullable<ReturnType<typeof useUsersQuery>["data"]>["users"];
+type UserList = NonNullable<
+  ReturnType<typeof useUsersQuery>["data"]
+>["managedUsers"];
 type UserItem = UserList["items"][number];
 
 const PAGE_SIZE = 30;
@@ -104,7 +106,7 @@ function RouteComponent() {
     }
   };
 
-  const users = data?.users?.items ?? [];
+  const users = data?.managedUsers?.items ?? [];
 
   return (
     <main className="size-full flex flex-col">
