@@ -18,7 +18,12 @@ async function fulfillGraphQL(route: Route, data: unknown) {
 }
 
 export async function mockGraphQL(page: Page, mocks: GraphQLMocks) {
-  await page.route("**/graphql**", async (route) => {
+  await page.route((url) => url.pathname === "/graphql", async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.continue();
+      return;
+    }
+
     const body = route.request().postDataJSON() as Record<string, unknown> | null;
     const operationName = String(
       body?.operationName ?? operationNameFromQuery(body?.query) ?? "",

@@ -1,3 +1,4 @@
+import { ChatCircleIcon } from "@phosphor-icons/react";
 import {
   CalendarDotsIcon,
   CheckIcon,
@@ -396,6 +397,20 @@ function AccountSettingsModal({
   );
 }
 
+function ChatTriggerButton() {
+  const [isOpen, setIsOpen] = useAtom(chatPanelOpenAtom);
+  return (
+    <button
+      type="button"
+      className={clsx("gap-12 flex-nowrap", isOpen && "active")}
+      onClick={() => setIsOpen(!isOpen)}
+    >
+      <ChatCircleIcon className="size-6 shrink-0" />
+      <span className="whitespace-nowrap">AI 助手</span>
+    </button>
+  );
+}
+
 function SidebarContent({
   currentPath,
   close,
@@ -445,6 +460,10 @@ function SidebarContent({
           <ScanIcon className="size-6 shrink-0" />
           <span className="whitespace-nowrap">{t("dashNav.scan")}</span>
         </button>
+      </li>
+
+      <li>
+        <ChatTriggerButton />
       </li>
 
       <li>
