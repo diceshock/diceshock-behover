@@ -650,6 +650,8 @@
     "role": "Rolle",
     "membershipPlan": "Mitgliedschaftsplan",
     "storedBalance": "Guthaben",
+    "points": "Punkte",
+    "store": "Filiale",
     "phone": "Telefon",
     "createdAt": "Erstellt am",
     "actions": "Aktionen",

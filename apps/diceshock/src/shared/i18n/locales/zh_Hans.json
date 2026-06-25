@@ -650,6 +650,8 @@
     "role": "角色",
     "membershipPlan": "会员计划",
     "storedBalance": "储值余额",
+    "points": "积分",
+    "store": "门店",
     "phone": "手机号",
     "createdAt": "创建时间",
     "actions": "操作",

@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashTable } from "@/client/components/dash/DashTable";
 import { usePendingSearch } from "@/client/components/dash/SearchBridge";
 import { TableToolbar } from "@/client/components/dash/TableToolbar";
+import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
@@ -416,6 +417,14 @@ export function RouteComponent() {
   };
 
   const selectedItems = items.filter((order) => selectedIds.has(order.id));
+  const clearSelectedIds = useCallback(() => setSelectedIds(new Set()), []);
+  useSelectedTableData({
+    entityType: "订单",
+    rows: items,
+    selectedIds,
+    getRowId: (order) => order.id,
+    onClear: clearSelectedIds,
+  });
   const hasActiveSelected = selectedItems.some(
     (order) => order.status === "ACTIVE",
   );
@@ -1006,7 +1015,7 @@ export function RouteComponent() {
         <BatchActionBar
           count={selectedIds.size}
           unit={t("dashOrders.orderUnit")}
-          onClear={() => setSelectedIds(new Set())}
+          onClear={clearSelectedIds}
           actions={selectedActions}
         />
       )}

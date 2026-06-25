@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DashTable } from "@/client/components/dash/DashTable";
 import { usePendingSearch } from "@/client/components/dash/SearchBridge";
 import { TableToolbar } from "@/client/components/dash/TableToolbar";
+import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
@@ -106,6 +107,14 @@ export function RouteComponent() {
   });
 
   const actives = (data?.managedActives ?? []) as ActiveItem[];
+  const clearSelectedIds = useCallback(() => setSelectedIds(new Set()), []);
+  useSelectedTableData({
+    entityType: "约局",
+    rows: actives,
+    selectedIds,
+    getRowId: (active) => active.id,
+    onClear: clearSelectedIds,
+  });
   const lastCursor = actives.length > 0 ? actives[actives.length - 1].id : null;
   const hasMore = actives.length > 0 && actives.length % PAGE_SIZE === 0;
   const isLoadingMore = networkStatus === NetworkStatus.fetchMore;
@@ -214,7 +223,7 @@ export function RouteComponent() {
         }),
       );
       batchDeleteDialogRef.current?.close();
-      setSelectedIds(new Set());
+      clearSelectedIds();
     } catch (err) {
       msg.error(
         err instanceof Error ? err.message : t("dashActives.batchDeleteFailed"),
@@ -452,7 +461,7 @@ export function RouteComponent() {
       {selectedIds.size > 0 && (
         <BatchActionBar
           count={selectedIds.size}
-          onClear={() => setSelectedIds(new Set())}
+          onClear={clearSelectedIds}
           actions={[
             {
               key: "delete",

@@ -11,6 +11,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DashTable } from "@/client/components/dash/DashTable";
 import { usePendingSearch } from "@/client/components/dash/SearchBridge";
 import { TableToolbar } from "@/client/components/dash/TableToolbar";
+import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
+import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
+import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import {
@@ -108,6 +111,7 @@ export function RouteComponent() {
   const navigate = useNavigate({ from: Route.fullPath });
   const [sorting, setSorting] = useState<SortingState>([]);
   const [searchInput, setSearchInput] = useState(q);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { pendingSearch, clearPendingSearch } = usePendingSearch();
 
@@ -153,6 +157,7 @@ export function RouteComponent() {
   const deleteDialogRef = useRef<HTMLDialogElement>(null);
   const [pendingDelete, setPendingDelete] = useState<EventItem | null>(null);
   const [deletePending, setDeletePending] = useState(false);
+  const [batchDeletePending, setBatchDeletePending] = useState(false);
 
   const handleCopy = useCallback(
     (text: string) => {
@@ -223,6 +228,44 @@ export function RouteComponent() {
       setDeletePending(false);
     }
   };
+
+  const clearSelectedIds = useCallback(() => setSelectedIds(new Set()), []);
+  useSelectedTableData({
+    entityType: "活动",
+    rows: events,
+    selectedIds,
+    getRowId: (event) => event.id,
+    onClear: clearSelectedIds,
+  });
+
+  const handleBatchDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setBatchDeletePending(true);
+    try {
+      for (const id of selectedIds) {
+        await removeEventMutation({ variables: { id } });
+      }
+      msg.success("删除成功");
+      clearSelectedIds();
+    } catch (err) {
+      msg.error(
+        err instanceof Error ? err.message : t("dashEvents.deleteFailed"),
+      );
+    } finally {
+      setBatchDeletePending(false);
+    }
+  };
+
+  const selectedActions: BatchAction[] = [
+    {
+      key: "delete",
+      label: "删除",
+      icon: <TrashIcon className="size-4" />,
+      className: "btn-error",
+      disabled: batchDeletePending,
+      onClick: () => void handleBatchDelete(),
+    },
+  ];
 
   const columns = useMemo<ColumnDef<EventItem, unknown>[]>(
     () => [
@@ -355,6 +398,9 @@ export function RouteComponent() {
           sorting={sorting}
           onSortingChange={setSorting}
           sortableColumns={["createdAt"]}
+          enableRowSelection
+          selectedRows={selectedIds}
+          onSelectedRowsChange={setSelectedIds}
           getRowId={(row) => row.id}
           renderActions={(row) =>
             isMobile ? (
@@ -430,6 +476,13 @@ export function RouteComponent() {
           }
         />
       </div>
+
+      <BatchActionBar
+        count={selectedIds.size}
+        actions={selectedActions}
+        onClear={clearSelectedIds}
+        unit="活动"
+      />
 
       <dialog ref={deleteDialogRef} className="modal">
         {pendingDelete && (

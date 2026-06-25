@@ -21,8 +21,33 @@ function isToolResult(
   return invocation.state === "result";
 }
 
-function GqlQueryCard({ result }: { result: unknown }) {
-  const [expanded, setExpanded] = useState(false);
+function GqlQueryCard({
+  result,
+  args,
+}: {
+  result: unknown;
+  args?: { query?: string; variables?: Record<string, unknown> };
+}) {
+  const [queryExpanded, setQueryExpanded] = useState(false);
+  const [resultExpanded, setResultExpanded] = useState(true);
+  const [currentResult, setCurrentResult] = useState(result);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const refresh = useCallback(async () => {
+    if (!args?.query) return;
+    setRefreshing(true);
+    try {
+      const response = await fetch("/graphql", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: args.query, variables: args.variables }),
+      });
+      setCurrentResult(await response.json());
+    } finally {
+      setRefreshing(false);
+    }
+  }, [args?.query, args?.variables]);
 
   return (
     <div className="rounded-lg border border-base-content/10 bg-base-100 p-3">
@@ -30,17 +55,46 @@ function GqlQueryCard({ result }: { result: unknown }) {
         <span className="text-xs font-medium text-base-content/70">
           查询结果
         </span>
-        <button
-          type="button"
-          className="btn btn-ghost btn-xs"
-          onClick={() => setExpanded(!expanded)}
-        >
-          {expanded ? "收起" : "展开"}
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            className="btn btn-ghost btn-xs"
+            disabled={!args?.query || refreshing}
+            onClick={refresh}
+          >
+            {refreshing ? (
+              <span className="loading loading-spinner loading-xs" />
+            ) : null}
+            刷新
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost btn-xs"
+            onClick={() => setResultExpanded(!resultExpanded)}
+          >
+            {resultExpanded ? "收起" : "展开"}
+          </button>
+        </div>
       </div>
-      {expanded && (
+      {args?.query && (
+        <div className="mt-2">
+          <button
+            type="button"
+            className="btn btn-ghost btn-xs px-0"
+            onClick={() => setQueryExpanded(!queryExpanded)}
+          >
+            {queryExpanded ? "隐藏 GraphQL" : "查看 GraphQL"}
+          </button>
+          {queryExpanded && (
+            <pre className="mt-1 text-xs bg-base-200 p-2 rounded overflow-x-auto max-h-32 overflow-y-auto">
+              {args.query}
+            </pre>
+          )}
+        </div>
+      )}
+      {resultExpanded && (
         <pre className="mt-2 text-xs bg-base-200 p-2 rounded overflow-x-auto max-h-48 overflow-y-auto">
-          {JSON.stringify(result, null, 2)}
+          {JSON.stringify(currentResult, null, 2)}
         </pre>
       )}
     </div>
@@ -60,7 +114,7 @@ function MutationConfirmCard({
   const [status, setStatus] = useState<
     "pending" | "confirming" | "confirmed" | "rejected" | "expired" | "error"
   >("pending");
-  const [expanded, setExpanded] = useState(false);
+  const [executionResult, setExecutionResult] = useState<unknown>(null);
   const { refreshAfterConfirm } = useChatMutation();
 
   const handleConfirm = useCallback(async () => {
@@ -68,6 +122,7 @@ function MutationConfirmCard({
     try {
       const outcome = await refreshAfterConfirm(result.mutationId);
       if (outcome.success) {
+        setExecutionResult(outcome.body);
         setStatus("confirmed");
       } else if (outcome.reason === "expired") {
         setStatus("expired");
@@ -86,20 +141,9 @@ function MutationConfirmCard({
   return (
     <div className="rounded-lg border border-warning/30 bg-base-100 p-3">
       <p className="text-sm font-medium">{result.description}</p>
-
-      <button
-        type="button"
-        className="btn btn-ghost btn-xs mt-1"
-        onClick={() => setExpanded(!expanded)}
-      >
-        {expanded ? "隐藏 GraphQL" : "查看 GraphQL"}
-      </button>
-
-      {expanded && (
-        <pre className="mt-2 text-xs bg-base-200 p-2 rounded overflow-x-auto max-h-32 overflow-y-auto">
-          {result.query}
-        </pre>
-      )}
+      <pre className="mt-2 text-xs bg-base-200 p-2 rounded overflow-x-auto max-h-40 overflow-y-auto">
+        {result.query}
+      </pre>
 
       {status === "pending" && (
         <div className="flex gap-2 mt-3">
@@ -109,7 +153,7 @@ function MutationConfirmCard({
             onClick={handleConfirm}
           >
             <CheckIcon className="size-4" />
-            确认执行
+            执行
           </button>
           <button
             type="button"
@@ -131,6 +175,21 @@ function MutationConfirmCard({
         <div className="badge badge-success mt-3 gap-1">
           <CheckIcon className="size-3" weight="bold" />
           已执行
+        </div>
+      )}
+
+      {status === "confirmed" && (
+        <div className="mt-3 space-y-2">
+          <pre className="text-xs bg-base-200 p-2 rounded overflow-x-auto max-h-40 overflow-y-auto">
+            {JSON.stringify(executionResult, null, 2)}
+          </pre>
+          <button
+            type="button"
+            className="btn btn-ghost btn-xs"
+            onClick={handleConfirm}
+          >
+            刷新
+          </button>
         </div>
       )}
 
@@ -256,10 +315,16 @@ export default function ToolResultRenderer({
   }
 
   const { toolName, result } = toolInvocation;
+  const args = (toolInvocation as { args?: unknown }).args;
 
   switch (toolName) {
     case "query_gql":
-      return <GqlQueryCard result={result} />;
+      return (
+        <GqlQueryCard
+          result={result}
+          args={args as { query?: string; variables?: Record<string, unknown> }}
+        />
+      );
 
     case "mutate_gql":
       return (

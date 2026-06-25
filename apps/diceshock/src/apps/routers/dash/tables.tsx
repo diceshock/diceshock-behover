@@ -13,6 +13,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DashTable } from "@/client/components/dash/DashTable";
 import { usePendingSearch } from "@/client/components/dash/SearchBridge";
 import { TableToolbar } from "@/client/components/dash/TableToolbar";
+import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
+import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
+import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import {
@@ -128,6 +131,7 @@ export function RouteComponent() {
   const navigate = useNavigate({ from: Route.fullPath });
   const [sorting, setSorting] = useState<SortingState>([]);
   const [searchInput, setSearchInput] = useState(q);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { pendingSearch, clearPendingSearch } = usePendingSearch();
 
@@ -178,6 +182,7 @@ export function RouteComponent() {
     capacity: 4,
   });
   const [createPending, setCreatePending] = useState(false);
+  const [batchPending, setBatchPending] = useState(false);
 
   const deleteDialogRef = useRef<HTMLDialogElement>(null);
   const [pendingDelete, setPendingDelete] = useState<TableItem | null>(null);
@@ -346,6 +351,53 @@ export function RouteComponent() {
 
   const total = tables.length;
   const hasMore = tables.length === PAGE_SIZE;
+  const selectedTables = tables.filter((table) => selectedIds.has(table.id));
+  const clearSelectedIds = useCallback(() => setSelectedIds(new Set()), []);
+  useSelectedTableData({
+    entityType: "桌台",
+    rows: tables,
+    selectedIds,
+    getRowId: (table) => table.id,
+    onClear: clearSelectedIds,
+  });
+
+  const handleBatchStatus = async (targetStatus: TableStatus) => {
+    const targets = selectedTables.filter(
+      (table) => table.status !== targetStatus,
+    );
+    if (targets.length === 0) return;
+    setBatchPending(true);
+    try {
+      for (const table of targets) {
+        await toggleTableStatusMutation({ variables: { id: table.id } });
+      }
+      msg.success(t("dashTables.operationSuccess") ?? "操作成功");
+      clearSelectedIds();
+    } catch (err) {
+      msg.error(
+        err instanceof Error ? err.message : t("dashTables.operationFailed"),
+      );
+    } finally {
+      setBatchPending(false);
+    }
+  };
+
+  const selectedActions: BatchAction[] = [
+    {
+      key: "enable",
+      label: "启用",
+      className: "btn-success",
+      disabled: batchPending,
+      onClick: () => void handleBatchStatus(TableStatus.Active),
+    },
+    {
+      key: "disable",
+      label: "禁用",
+      className: "btn-neutral",
+      disabled: batchPending,
+      onClick: () => void handleBatchStatus(TableStatus.Inactive),
+    },
+  ];
 
   const quickFilters = useMemo(
     () => [
@@ -440,6 +492,9 @@ export function RouteComponent() {
           sorting={sorting}
           onSortingChange={setSorting}
           sortableColumns={["name", "type", "status", "capacity", "createdAt"]}
+          enableRowSelection
+          selectedRows={selectedIds}
+          onSelectedRowsChange={setSelectedIds}
           getRowId={(row) => row.id}
           renderActions={(row) =>
             isMobile ? (
@@ -531,6 +586,13 @@ export function RouteComponent() {
           }
         />
       </div>
+
+      <BatchActionBar
+        count={selectedIds.size}
+        actions={selectedActions}
+        onClear={clearSelectedIds}
+        unit="桌台"
+      />
 
       <dialog ref={createDialogRef} className="modal">
         <form method="dialog" className="modal-box" onSubmit={handleCreate}>

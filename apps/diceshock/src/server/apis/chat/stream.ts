@@ -1,8 +1,13 @@
-import { createOpenAI } from "@ai-sdk/openai";
+import { createDeepSeek } from "@ai-sdk/deepseek";
 import { getAuthUser } from "@hono/auth-js";
-import db, { storesTable, userInfoTable } from "@lib/db";
-import { type CoreMessage, streamText } from "ai";
-import { eq } from "drizzle-orm";
+import db, {
+  chatMessagesTable,
+  chatSessionsTable,
+  storesTable,
+  userInfoTable,
+} from "@lib/db";
+import { type CoreMessage, streamText, type ToolInvocation } from "ai";
+import { and, eq } from "drizzle-orm";
 import { type Context, Hono } from "hono";
 import type { HonoCtxEnv } from "@/shared/types";
 import { createChatTools } from "./tools";
@@ -20,11 +25,13 @@ type ChatMessage = {
 type PageContext = {
   page: string;
   filters?: Record<string, unknown>;
+  selectedRows?: unknown[];
 };
 
 type ChatStreamBody = {
   messages?: ChatMessage[];
   context?: PageContext;
+  sessionId?: string;
 };
 
 type AuthIdentity = {
@@ -66,7 +73,7 @@ export function validateChatStreamBody(body: unknown):
   | {
       ok: true;
       value: Required<Pick<ChatStreamBody, "messages">> &
-        Pick<ChatStreamBody, "context">;
+        Pick<ChatStreamBody, "context" | "sessionId">;
     }
   | { ok: false; error: string } {
   const record = asRecord(body);
@@ -105,15 +112,33 @@ export function validateChatStreamBody(body: unknown):
       return { ok: false, error: "Invalid 'context.filters' field" };
     }
 
+    const selectedRows = contextRecord.selectedRows;
+    if (selectedRows !== undefined && !Array.isArray(selectedRows)) {
+      return { ok: false, error: "Invalid 'context.selectedRows' field" };
+    }
+
     context = {
       page,
       filters: filters as Record<string, unknown> | undefined,
+      selectedRows: selectedRows as unknown[] | undefined,
     };
+  }
+
+  const sessionId =
+    record.sessionId === undefined
+      ? undefined
+      : resolveString(record.sessionId);
+  if (record.sessionId !== undefined && !sessionId) {
+    return { ok: false, error: "Invalid 'sessionId' field" };
   }
 
   return {
     ok: true,
-    value: { messages: record.messages as ChatMessage[], context },
+    value: {
+      messages: record.messages as ChatMessage[],
+      context,
+      sessionId: sessionId ?? undefined,
+    },
   };
 }
 
@@ -156,6 +181,9 @@ export function buildSystemPrompt(params: {
   const filters = params.pageContext?.filters
     ? JSON.stringify(params.pageContext.filters, null, 2)
     : "无";
+  const selectedRows = params.pageContext?.selectedRows?.length
+    ? JSON.stringify(params.pageContext.selectedRows, null, 2)
+    : "无";
 
   return `你是骰子奇兵后台助手（Diceshock Backend Assistant），服务于骰子奇兵桌游吧后台管理系统。
 
@@ -173,6 +201,7 @@ export function buildSystemPrompt(params: {
 [当前页面]
 - 页面: ${params.pageContext?.page ?? "未知页面"}
 - 当前筛选: ${filters}
+- 已选行数据: ${selectedRows}
 
 [可用工具]
 - query_gql: 执行只读 GraphQL 查询，受当前用户权限控制。
@@ -312,7 +341,62 @@ function getDeepSeekBaseURL(
 
   return gatewayId
     ? `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/deepseek`
-    : "https://api.deepseek.com/v1";
+    : "https://api.deepseek.com";
+}
+
+async function saveSessionExchange(params: {
+  env: Cloudflare.Env;
+  userId: string;
+  sessionId: string;
+  messages: ChatMessage[];
+  assistantText: string;
+  toolInvocations?: ToolInvocation[];
+}) {
+  const database = db(params.env.DB);
+  const session = await database.query.chatSessionsTable.findFirst({
+    where: and(
+      eq(chatSessionsTable.id, params.sessionId),
+      eq(chatSessionsTable.user_id, params.userId),
+    ),
+  });
+  if (!session) return;
+
+  const lastUserMessage = [...params.messages]
+    .reverse()
+    .find((message) => message.role === "user");
+  const userContent =
+    typeof lastUserMessage?.content === "string"
+      ? lastUserMessage.content
+      : JSON.stringify(lastUserMessage?.content ?? "");
+  const now = Date.now();
+  const title =
+    session.title === "新对话" && userContent.trim()
+      ? userContent.trim().slice(0, 20)
+      : session.title;
+
+  if (userContent.trim()) {
+    await database.insert(chatMessagesTable).values({
+      session_id: params.sessionId,
+      role: "user",
+      content: userContent,
+      created_at: now,
+    });
+  }
+
+  await database.insert(chatMessagesTable).values({
+    session_id: params.sessionId,
+    role: "assistant",
+    content: params.assistantText,
+    tool_invocations: params.toolInvocations?.length
+      ? JSON.stringify(params.toolInvocations)
+      : null,
+    created_at: now + 1,
+  });
+
+  await database
+    .update(chatSessionsTable)
+    .set({ title, updated_at: now + 1 })
+    .where(eq(chatSessionsTable.id, params.sessionId));
 }
 
 chatStream.post("/", async (c) => {
@@ -361,18 +445,54 @@ chatStream.post("/", async (c) => {
       pageContext: parsed.value.context,
     });
 
-    const deepseek = createOpenAI({
+    const deepseek = createDeepSeek({
       apiKey,
       baseURL: getDeepSeekBaseURL(c.env),
-      compatibility: "compatible",
     });
 
     const result = streamText({
       model: deepseek("deepseek-v4-pro"),
+      providerOptions: {
+        deepseek: { reasoningEffort: "low" },
+      },
       system,
       messages: parsed.value.messages as CoreMessage[],
       tools,
       maxSteps: 5,
+      onFinish: async (event) => {
+        if (!parsed.value.sessionId) return;
+        const steps = event.steps as Array<{
+          toolCalls: Array<{ toolCallId: string; args: unknown }>;
+          toolResults: Array<{
+            toolCallId: string;
+            toolName: string;
+            result: unknown;
+          }>;
+        }>;
+        const toolCalls = steps.flatMap((step) => step.toolCalls);
+        const toolInvocations = steps.flatMap((step) =>
+          step.toolResults.map(
+            (toolResult) =>
+              ({
+                state: "result",
+                toolCallId: toolResult.toolCallId,
+                toolName: toolResult.toolName,
+                args: toolCalls.find(
+                  (toolCall) => toolCall.toolCallId === toolResult.toolCallId,
+                )?.args,
+                result: toolResult.result,
+              }) as ToolInvocation,
+          ),
+        );
+        await saveSessionExchange({
+          env: c.env,
+          userId: identity.userId,
+          sessionId: parsed.value.sessionId,
+          messages: parsed.value.messages,
+          assistantText: event.text,
+          toolInvocations,
+        });
+      },
       onError: ({ error }) => {
         console.error("[chat/stream] streamText error:", error);
       },

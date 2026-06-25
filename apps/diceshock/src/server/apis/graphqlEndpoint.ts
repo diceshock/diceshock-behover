@@ -64,7 +64,10 @@ export async function graphqlHandler(
     if (c.req.method === "GET") {
       const authUser = await getAuthUser(c).catch(() => null);
       const role = resolveRole(authUser);
-      if (!hasRole(role, "staff")) {
+      const devRole = import.meta.env.DEV
+        ? (c.req.header("X-Test-Role") as Role | undefined)
+        : undefined;
+      if (!hasRole(devRole ?? role, "staff")) {
         return c.text("Unauthorized", 401);
       }
       return c.html(GRAPHIQL_HTML);
@@ -72,9 +75,18 @@ export async function graphqlHandler(
 
     if (c.req.method === "POST") {
       const authUser = await getAuthUser(c).catch(() => null);
-      const role = resolveRole(authUser);
-      const userId = resolveUserId(authUser);
+      let role = resolveRole(authUser);
+      let userId = resolveUserId(authUser);
+      let preferredStoreId = resolvePreferredStoreId(authUser);
 
+      if (import.meta.env.DEV) {
+        const testRole = c.req.header("X-Test-Role") as Role | undefined;
+        if (testRole === "staff" || testRole === "admin") {
+          role = testRole;
+          userId = userId ?? "e2e-test-staff-001";
+          preferredStoreId = preferredStoreId ?? "store-e2e-gg";
+        }
+      }
       let body: { query?: string; variables?: Record<string, unknown> };
       try {
         body = await c.req.json();
@@ -95,7 +107,7 @@ export async function graphqlHandler(
         auth: { role, userId },
         env: c.env,
         role,
-        preferredStoreId: resolvePreferredStoreId(authUser),
+        preferredStoreId,
       };
 
       const result = await executeGraphQL(body.query, body.variables, context);

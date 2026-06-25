@@ -1,5 +1,5 @@
-import { createOpenAI } from "@ai-sdk/openai";
-import { streamText } from "ai";
+import { createDeepSeek } from "@ai-sdk/deepseek";
+import { jsonSchema, streamText } from "ai";
 import { Hono } from "hono";
 import type { HonoCtxEnv } from "@/shared/types";
 
@@ -17,12 +17,11 @@ spikeRoute.post("/", async (c) => {
 
   const baseURL = gatewayId
     ? `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/deepseek`
-    : "https://api.deepseek.com/v1";
+    : "https://api.deepseek.com";
 
-  const deepseek = createOpenAI({
+  const deepseek = createDeepSeek({
     apiKey,
     baseURL,
-    compatibility: "compatible",
   });
 
   const body = await c.req.json<{
@@ -32,11 +31,14 @@ spikeRoute.post("/", async (c) => {
 
   const result = streamText({
     model: deepseek("deepseek-v4-pro"),
+    providerOptions: {
+      deepseek: { reasoningEffort: "low" },
+    },
     messages,
     tools: {
       echo: {
         description: "Echo back the input message. A simple test tool.",
-        parameters: {
+        parameters: jsonSchema({
           type: "object",
           properties: {
             message: {
@@ -45,7 +47,7 @@ spikeRoute.post("/", async (c) => {
             },
           },
           required: ["message"],
-        },
+        }),
         execute: async ({ message }: { message: string }) => {
           return `Echo: ${message}`;
         },

@@ -650,6 +650,8 @@
     "role": "Role",
     "membershipPlan": "Membership Plan",
     "storedBalance": "Stored Balance",
+    "points": "Points",
+    "store": "Store",
     "phone": "Phone",
     "createdAt": "Created At",
     "actions": "Actions",

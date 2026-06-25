@@ -600,6 +600,51 @@ export const wechatConversationsTable = sqlite.sqliteTable(
   ],
 );
 
+export const chatSessionRoles = ["user", "assistant", "tool"] as const;
+export type ChatSessionRole = (typeof chatSessionRoles)[number];
+
+export const chatSessionsTable = sqlite.sqliteTable(
+  "chat_sessions",
+  {
+    id: sqlite.text().$defaultFn(createId).primaryKey(),
+    user_id: sqlite.text("user_id").notNull(),
+    title: sqlite.text("title").notNull().default("新对话"),
+    created_at: sqlite
+      .integer("created_at")
+      .notNull()
+      .$defaultFn(() => Date.now()),
+    updated_at: sqlite
+      .integer("updated_at")
+      .notNull()
+      .$defaultFn(() => Date.now()),
+  },
+  (table) => [
+    sqlite.index("idx_chat_sessions_user_id").on(table.user_id),
+    sqlite.index("idx_chat_sessions_updated_at").on(table.updated_at),
+  ],
+);
+
+export const chatMessagesTable = sqlite.sqliteTable(
+  "chat_messages",
+  {
+    id: sqlite.text().$defaultFn(createId).primaryKey(),
+    session_id: sqlite.text("session_id").notNull(),
+    role: sqlite
+      .text("role", { enum: chatSessionRoles })
+      .$type<ChatSessionRole>()
+      .notNull(),
+    content: sqlite.text("content").notNull(),
+    tool_invocations: sqlite.text("tool_invocations"),
+    created_at: sqlite
+      .integer("created_at")
+      .notNull()
+      .$defaultFn(() => Date.now()),
+  },
+  (table) => [
+    sqlite.index("idx_chat_messages_session_id").on(table.session_id),
+  ],
+);
+
 // ─── Pricing Plans ──────────────────────────────────────────────
 
 export const pricingSnapshotsTable = sqlite.sqliteTable(

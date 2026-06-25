@@ -650,6 +650,8 @@
     "role": "ロール",
     "membershipPlan": "メンバーシッププラン",
     "storedBalance": "プリペイド残高",
+    "points": "ポイント",
+    "store": "店舗",
     "phone": "電話番号",
     "createdAt": "作成日時",
     "actions": "操作",

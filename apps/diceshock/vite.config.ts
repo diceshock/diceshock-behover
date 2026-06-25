@@ -35,17 +35,6 @@ const config = defineConfig({
     react(),
   ],
   resolve: { alias: { "@": path.resolve(__dirname, "./src") } },
-  optimizeDeps: {
-    exclude: [
-      "dayjs/locale/zh-cn",
-      "dayjs/locale/ja",
-      "dayjs/locale/de",
-      "dayjs/locale/fr",
-      "dayjs/locale/es",
-      "dayjs/locale/pt",
-      "dayjs/locale/ru",
-    ],
-  },
 });
 
 export default mergeConfig(config, baseConfig);

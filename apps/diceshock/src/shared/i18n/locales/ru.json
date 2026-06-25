@@ -650,6 +650,8 @@
     "role": "Роль",
     "membershipPlan": "План членства",
     "storedBalance": "Предоплаченный баланс",
+    "points": "Баллы",
+    "store": "Филиал",
     "phone": "Телефон",
     "createdAt": "Создано",
     "actions": "Действия",

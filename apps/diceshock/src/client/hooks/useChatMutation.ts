@@ -10,9 +10,11 @@ export function useChatMutation() {
       body: JSON.stringify({ mutationId }),
     });
 
+    const body = await res.json().catch(() => null);
+
     if (res.ok) {
       await apolloClient.refetchQueries({ include: "active" });
-      return { success: true as const };
+      return { success: true as const, body };
     }
 
     if (res.status === 404)

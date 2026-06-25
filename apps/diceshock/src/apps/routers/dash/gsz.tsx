@@ -12,6 +12,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DashTable } from "@/client/components/dash/DashTable";
 import { usePendingSearch } from "@/client/components/dash/SearchBridge";
 import { TableToolbar } from "@/client/components/dash/TableToolbar";
+import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
+import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
+import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import type { Table } from "@/client/graphql/__generated__";
@@ -219,6 +222,14 @@ export function RouteComponent() {
   const matchesList = data?.managedMahjongMatches ?? null;
   const total = matchesList?.pageInfo?.total ?? 0;
   const hasMore = matchesList?.pageInfo?.hasMore ?? false;
+  const clearSelectedIds = useCallback(() => setSelectedIds(new Set()), []);
+  useSelectedTableData({
+    entityType: "日麻",
+    rows: matches,
+    selectedIds,
+    getRowId: (match) => match.id,
+    onClear: clearSelectedIds,
+  });
 
   const { data: activeData, loading: activeLoading } =
     useActiveMahjongMatchesQuery({ pollInterval: 10000 });
@@ -288,7 +299,7 @@ export function RouteComponent() {
           failCount: result?.failCount ?? 0,
         }),
       );
-      setSelectedIds(new Set());
+      clearSelectedIds();
     } catch (err) {
       msg.error(
         err instanceof Error
@@ -299,6 +310,21 @@ export function RouteComponent() {
       setBatchSyncing(false);
     }
   };
+
+  const selectedActions: BatchAction[] = [
+    {
+      key: "sync-gsz",
+      label: "同步到 GSZ",
+      icon: batchSyncing ? (
+        <span className="loading loading-spinner loading-xs" />
+      ) : (
+        <ArrowsClockwiseIcon className="size-4" />
+      ),
+      className: "btn-warning",
+      disabled: batchSyncing,
+      onClick: () => void handleBatchSync(),
+    },
+  ];
 
   const quickFilters = useMemo(() => {
     const modeVal = parsed.filters.mode?.value;
@@ -573,31 +599,6 @@ export function RouteComponent() {
         />
       )}
 
-      {selectedIds.size > 0 && (
-        <div className="px-4 py-2 bg-base-200 border-b border-base-300 flex items-center gap-3">
-          <span className="text-sm">
-            {formatMessage(t("dashGsz.selectedCount"), {
-              count: selectedIds.size,
-            })}
-          </span>
-          <button
-            type="button"
-            className="btn btn-sm btn-warning"
-            disabled={batchSyncing}
-            onClick={handleBatchSync}
-          >
-            {batchSyncing ? (
-              <span className="loading loading-spinner loading-xs" />
-            ) : (
-              <ArrowsClockwiseIcon className="size-4" />
-            )}
-            {formatMessage(t("dashGsz.batchSyncWithCount"), {
-              count: selectedIds.size,
-            })}
-          </button>
-        </div>
-      )}
-
       <div className="flex-1 min-h-0">
         <DashTable
           columns={columns}
@@ -661,6 +662,13 @@ export function RouteComponent() {
           }
         />
       </div>
+
+      <BatchActionBar
+        count={selectedIds.size}
+        actions={selectedActions}
+        onClear={clearSelectedIds}
+        unit="日麻记录"
+      />
 
       <dialog ref={unsyncableDialogRef} className="modal">
         <div className="modal-box max-w-sm">

@@ -23,7 +23,10 @@ import { Link, useMatches } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useAtom } from "jotai";
 import { useCallback, useRef, useState } from "react";
-import { chatPanelOpenAtom } from "@/client/components/dash/chatAtoms";
+import {
+  chatPanelOpenAtom,
+  chatPanelWidthAtom,
+} from "@/client/components/dash/chatAtoms";
 import { useUpdateMyPreferencesMutation } from "@/client/graphql/__generated__";
 import useAuth from "@/client/hooks/useAuth";
 import { useTranslation } from "@/client/hooks/useTranslation";
@@ -485,6 +488,7 @@ export default function DashNavDrawer({
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [isChatOpen] = useAtom(chatPanelOpenAtom);
+  const [chatPanelWidth] = useAtom(chatPanelWidthAtom);
 
   const close = useCallback(() => {
     if (checkboxRef.current) checkboxRef.current.checked = false;
@@ -549,10 +553,8 @@ export default function DashNavDrawer({
       </div>
 
       <div
-        className={clsx(
-          "lg:pl-16 h-screen overflow-hidden",
-          isChatOpen && "lg:pr-80",
-        )}
+        className="lg:pl-16 h-screen overflow-hidden transition-[padding-right] duration-200"
+        style={{ paddingRight: isChatOpen ? chatPanelWidth : 0 }}
       >
         {children}
       </div>

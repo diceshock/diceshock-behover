@@ -406,6 +406,33 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
   // 排除认证路由，这些路由由 authHandler 处理
   if (c.req.path.startsWith("/api/auth/")) return next();
 
+  if (import.meta.env.DEV) {
+    const testRole = c.req.header("X-Test-Role");
+    if (testRole === "staff" || testRole === "admin") {
+      const TEST_USER_ID = "e2e-test-staff-001";
+      const tdb = db(c.env.DB);
+      const userInfo = await tdb.query.userInfoTable.findFirst({
+        where: (u, { eq }) => eq(u.id, TEST_USER_ID),
+      });
+
+      if (userInfo) {
+        injectCrossDataToCtx(c, {
+          UserInfo: {
+            phone: userInfo.phone,
+            uid: userInfo.uid,
+            nickname: userInfo.nickname,
+            meta: userInfo.meta ?? null,
+            preferred_store_id: userInfo.preferred_store_id ?? null,
+            preferred_locale: userInfo.preferred_locale ?? null,
+            avatar_url: userInfo.avatar_url ?? null,
+          },
+        });
+      }
+
+      return next();
+    }
+  }
+
   const authUser = await getAuthUser(c);
 
   console.log("authUser", authUser);

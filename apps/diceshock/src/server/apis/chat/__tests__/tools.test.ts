@@ -122,7 +122,7 @@ describe("chat tools", () => {
     });
   });
 
-  it("defines exactly six tools with raw JSON Schema parameters", () => {
+  it("defines exactly six tools with JSON Schema parameters", () => {
     const tools = createChatTools(createContext());
     expect(Object.keys(tools).sort()).toEqual([
       "format_search_query",
@@ -133,9 +133,14 @@ describe("chat tools", () => {
       "search_rules",
     ]);
     expect(tools.query_gql.parameters).toMatchObject({
-      type: "object",
-      properties: { query: { type: "string" }, variables: { type: "object" } },
-      required: ["query"],
+      jsonSchema: {
+        type: "object",
+        properties: {
+          query: { type: "string" },
+          variables: { type: "object" },
+        },
+        required: ["query"],
+      },
     });
   });
 
@@ -436,5 +441,18 @@ describe("chat tools", () => {
     );
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ data: { ok: true } });
+  });
+
+  it("tool parameters are valid AI SDK Schema objects (not raw JSON)", () => {
+    const tools = createChatTools(createContext());
+    for (const [name, tool] of Object.entries(tools)) {
+      const params = tool.parameters as { jsonSchema?: unknown };
+      expect(params).toHaveProperty("jsonSchema");
+      expect(
+        (params as Record<string | symbol, unknown>)[
+          Symbol.for("vercel.ai.schema")
+        ],
+      ).toBe(true);
+    }
   });
 });

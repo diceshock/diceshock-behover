@@ -6,6 +6,7 @@ import { avatarCard } from "@/server/apis/avatarCard";
 import avatarUpload from "@/server/apis/avatarUpload";
 import { boardGameCard } from "@/server/apis/boardGameCard";
 import confirmMutation from "@/server/apis/chat/confirmMutation";
+import chatSessions from "@/server/apis/chat/sessions";
 import chatSpike from "@/server/apis/chat/spike";
 import chatStream from "@/server/apis/chat/stream";
 import fileRoute from "@/server/apis/fileRoute";
@@ -75,10 +76,30 @@ app.post("/wechat/menu", wechatCreateMenu);
 // Spike: AI SDK + DeepSeek V4 Pro streaming test endpoint
 app.route("/api/chat/spike", chatSpike);
 
+if (import.meta.env.DEV) {
+  app.use("/api/auth/session", async (c, next) => {
+    const testRole = c.req.header("X-Test-Role");
+    if (testRole === "staff" || testRole === "admin") {
+      return c.json({
+        user: {
+          id: "e2e-test-staff-001",
+          name: "测试店员",
+          email: "e2e@test.local",
+          role: testRole,
+          preferredStoreId: "store-e2e-gg",
+        },
+        expires: new Date(Date.now() + 86400000).toISOString(),
+      });
+    }
+    return next();
+  });
+}
+
 app.use(authInit);
 
 app.route("/api/chat/stream", chatStream);
 app.route("/api/chat/confirm", confirmMutation);
+app.route("/api/chat/sessions", chatSessions);
 
 app.use(serverMetaInj);
 

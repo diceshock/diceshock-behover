@@ -650,6 +650,8 @@
     "role": "Rol",
     "membershipPlan": "Plan de membresía",
     "storedBalance": "Saldo almacenado",
+    "points": "Puntos",
+    "store": "Tienda",
     "phone": "Teléfono",
     "createdAt": "Creado",
     "actions": "Acciones",

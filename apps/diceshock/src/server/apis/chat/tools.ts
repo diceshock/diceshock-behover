@@ -5,7 +5,7 @@ import db, {
   userBusinessCardTable,
   userInfoTable,
 } from "@lib/db";
-import type { ToolSet } from "ai";
+import { jsonSchema, type ToolSet } from "ai";
 import { parse } from "graphql";
 import {
   ACTIVE_SEARCH_GRAMMAR,
@@ -188,8 +188,6 @@ export async function executeConfirmedMutation(params: {
     pending.variables,
     gqlContext,
   );
-  pendingMutations.delete(params.mutationId);
-
   if (result.errors?.length) {
     return { status: 400, body: result };
   }
@@ -488,7 +486,7 @@ export const createChatTools: ToolFactory = (context) => ({
   query_gql: {
     description:
       "Execute a read-only GraphQL query against dashboard data with the current user's permissions.",
-    parameters: {
+    parameters: jsonSchema({
       type: "object",
       properties: {
         query: { type: "string", description: "GraphQL query operation." },
@@ -498,8 +496,14 @@ export const createChatTools: ToolFactory = (context) => ({
         },
       },
       required: ["query"],
-    },
-    execute: async ({ query, variables }) =>
+    }),
+    execute: async ({
+      query,
+      variables,
+    }: {
+      query: string;
+      variables?: Record<string, unknown>;
+    }) =>
       executeQueryGql(
         { query: String(query), variables: variablesOrUndefined(variables) },
         context,
@@ -508,7 +512,7 @@ export const createChatTools: ToolFactory = (context) => ({
   mutate_gql: {
     description:
       "Preview a GraphQL mutation. This never executes; call /api/chat/confirm after explicit user confirmation.",
-    parameters: {
+    parameters: jsonSchema({
       type: "object",
       properties: {
         query: { type: "string", description: "GraphQL mutation operation." },
@@ -522,8 +526,16 @@ export const createChatTools: ToolFactory = (context) => ({
         },
       },
       required: ["query"],
-    },
-    execute: async ({ query, variables, description }) =>
+    }),
+    execute: async ({
+      query,
+      variables,
+      description,
+    }: {
+      query: string;
+      variables?: Record<string, unknown>;
+      description?: string;
+    }) =>
       executeMutateGqlPreview(
         {
           query: String(query),
@@ -537,39 +549,39 @@ export const createChatTools: ToolFactory = (context) => ({
   generate_totp: {
     description:
       "Generate a TOTP check-in code for the authenticated dashboard user.",
-    parameters: { type: "object", properties: {}, required: [] },
+    parameters: jsonSchema({ type: "object", properties: {}, required: [] }),
     execute: async () => executeGenerateTotp({}, context),
   },
   search_rules: {
     description:
       "Search TRPG/DND5E and Mahjong rules through Cloudflare AI Search.",
-    parameters: {
+    parameters: jsonSchema({
       type: "object",
       properties: {
         query: { type: "string", description: "Rules search query." },
       },
       required: ["query"],
-    },
-    execute: async ({ query }) =>
+    }),
+    execute: async ({ query }: { query: string }) =>
       executeSearchRules({ query: String(query) }, context),
   },
   query_active_participants: {
     description:
       "Query active participant business cards. Only the active creator can view them.",
-    parameters: {
+    parameters: jsonSchema({
       type: "object",
       properties: {
         active_id: { type: "string", description: "Active ID." },
       },
       required: ["active_id"],
-    },
-    execute: async ({ active_id }) =>
+    }),
+    execute: async ({ active_id }: { active_id: string }) =>
       executeQueryActiveParticipants({ active_id: String(active_id) }, context),
   },
   format_search_query: {
     description:
       "Convert a natural-language dashboard filter description into valid search syntax.",
-    parameters: {
+    parameters: jsonSchema({
       type: "object",
       properties: {
         entityType: {
@@ -584,8 +596,14 @@ export const createChatTools: ToolFactory = (context) => ({
         },
       },
       required: ["entityType", "description"],
-    },
-    execute: async ({ entityType, description }) =>
+    }),
+    execute: async ({
+      entityType,
+      description,
+    }: {
+      entityType: string;
+      description: string;
+    }) =>
       executeFormatSearchQuery({
         entityType: String(entityType),
         description: String(description),

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getAuthUser: vi.fn(),
-  createOpenAI: vi.fn(),
+  createDeepSeek: vi.fn(),
   streamText: vi.fn(),
   createChatTools: vi.fn(),
   storeFindFirst: vi.fn(),
@@ -14,8 +14,8 @@ vi.mock("@hono/auth-js", () => ({
   getAuthUser: mocks.getAuthUser,
 }));
 
-vi.mock("@ai-sdk/openai", () => ({
-  createOpenAI: mocks.createOpenAI,
+vi.mock("@ai-sdk/deepseek", () => ({
+  createDeepSeek: mocks.createDeepSeek,
 }));
 
 vi.mock("ai", () => ({
@@ -79,7 +79,7 @@ describe("Chat Stream - production AI SDK endpoint", () => {
     vi.clearAllMocks();
     resetChatRateLimits();
     mocks.getAuthUser.mockResolvedValue(staffAuth());
-    mocks.createOpenAI.mockReturnValue((modelId: string) => ({ modelId }));
+    mocks.createDeepSeek.mockReturnValue((modelId: string) => ({ modelId }));
     mocks.createChatTools.mockReturnValue({
       query_gql: {
         description: "query",
@@ -231,7 +231,7 @@ describe("Chat Stream - production AI SDK endpoint", () => {
     expect(res.headers.get("X-RateLimit-Remaining")).toBe("9");
   });
 
-  it("configures DeepSeek reasoner through OpenAI-compatible provider", async () => {
+  it("configures DeepSeek provider with AI Gateway baseURL", async () => {
     await createApp().request(
       "/",
       postBody({ messages: [{ role: "user", content: "查订单" }] }),
@@ -242,11 +242,10 @@ describe("Chat Stream - production AI SDK endpoint", () => {
         DB: {},
       },
     );
-    expect(mocks.createOpenAI).toHaveBeenCalledWith({
+    expect(mocks.createDeepSeek).toHaveBeenCalledWith({
       apiKey: "test-key",
       baseURL:
         "https://gateway.ai.cloudflare.com/v1/account-1/gateway-1/deepseek",
-      compatibility: "compatible",
     });
     expect(mocks.streamText.mock.calls[0][0].model).toEqual({
       modelId: "deepseek-v4-pro",

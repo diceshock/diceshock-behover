@@ -11,6 +11,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DashTable } from "@/client/components/dash/DashTable";
 import { usePendingSearch } from "@/client/components/dash/SearchBridge";
 import { TableToolbar } from "@/client/components/dash/TableToolbar";
+import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
+import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
+import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import {
   getPlanConfig,
@@ -92,6 +95,7 @@ export function RouteComponent() {
   const navigate = useNavigate({ from: Route.fullPath });
   const [sorting, setSorting] = useState<SortingState>([]);
   const [searchInput, setSearchInput] = useState(q);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { data: session } = useSession();
   const isAdmin = (session?.user as { role?: string })?.role === "admin";
 
@@ -111,7 +115,7 @@ export function RouteComponent() {
     updatedAt: string | null;
   }
 
-  function mapRawPlan(p: RawMembershipPlan): MembershipPlan {
+  const mapRawPlan = useCallback((p: RawMembershipPlan): MembershipPlan => {
     return {
       id: p.id,
       user_id: p.userId,
@@ -122,7 +126,7 @@ export function RouteComponent() {
       create_at: p.createdAt ?? null,
       update_at: p.updatedAt ?? null,
     };
-  }
+  }, []);
   const filter = useMemo(
     () => buildFilter(parsed, page, sorting),
     [parsed, page, sorting],
@@ -377,10 +381,42 @@ export function RouteComponent() {
             : "—",
       },
     ],
-    [t, handleCopy, isAdmin],
+    [t, handleCopy, isAdmin, mapRawPlan],
   );
 
-  const users = data?.managedUsers?.items ?? [];
+  const users = (data?.managedUsers?.items ?? []) as UserItem[];
+  const clearSelectedIds = useCallback(() => setSelectedIds(new Set()), []);
+  useSelectedTableData({
+    entityType: "用户",
+    rows: users,
+    selectedIds,
+    getRowId: (user) => user.id,
+    onClear: clearSelectedIds,
+  });
+  const selectedActions: BatchAction[] = [
+    {
+      key: "export-csv",
+      label: "导出 CSV",
+      className: "btn-primary",
+      onClick: () => {
+        const selectedUsers = users.filter((user) => selectedIds.has(user.id));
+        const csv = [
+          ["id", "nickname", "name", "role", "phone", "uid"].join(","),
+          ...selectedUsers.map((user) =>
+            [user.id, user.nickname, user.name, user.role, user.phone, user.uid]
+              .map((value) => `"${String(value ?? "").replaceAll('"', '""')}"`)
+              .join(","),
+          ),
+        ].join("\n");
+        const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "users.csv";
+        link.click();
+        URL.revokeObjectURL(url);
+      },
+    },
+  ];
   const pageInfo = data?.managedUsers?.pageInfo;
   const total = pageInfo?.total ?? users.length;
   const hasMore = pageInfo?.hasMore ?? false;
@@ -443,6 +479,9 @@ export function RouteComponent() {
           sorting={sorting}
           onSortingChange={setSorting}
           sortableColumns={["name"]}
+          enableRowSelection
+          selectedRows={selectedIds}
+          onSelectedRowsChange={setSelectedIds}
           getRowId={(row) => row.id}
           renderActions={(row) =>
             isMobile ? (
@@ -499,6 +538,13 @@ export function RouteComponent() {
           }
         />
       </div>
+
+      <BatchActionBar
+        count={selectedIds.size}
+        actions={selectedActions}
+        onClear={clearSelectedIds}
+        unit="用户"
+      />
 
       <dialog ref={disableDialogRef} className="modal">
         {pendingDisable && (
