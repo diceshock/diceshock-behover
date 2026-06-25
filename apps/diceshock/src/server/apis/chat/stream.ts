@@ -368,7 +368,7 @@ chatStream.post("/", async (c) => {
     });
 
     const result = streamText({
-      model: deepseek("deepseek-reasoner"),
+      model: deepseek("deepseek-v4-pro"),
       system,
       messages: parsed.value.messages as CoreMessage[],
       tools,

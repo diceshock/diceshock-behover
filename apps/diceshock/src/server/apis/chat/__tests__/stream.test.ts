@@ -249,7 +249,7 @@ describe("Chat Stream - production AI SDK endpoint", () => {
       compatibility: "compatible",
     });
     expect(mocks.streamText.mock.calls[0][0].model).toEqual({
-      modelId: "deepseek-reasoner",
+      modelId: "deepseek-v4-pro",
     });
   });
 

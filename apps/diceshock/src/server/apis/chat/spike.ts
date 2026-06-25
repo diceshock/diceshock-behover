@@ -31,7 +31,7 @@ spikeRoute.post("/", async (c) => {
   const { messages = [] } = body;
 
   const result = streamText({
-    model: deepseek("deepseek-reasoner"),
+    model: deepseek("deepseek-v4-pro"),
     messages,
     tools: {
       echo: {
