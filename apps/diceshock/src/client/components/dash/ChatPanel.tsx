@@ -47,41 +47,51 @@ export default function ChatPanel() {
     }
   }, [messages, setPersistedMessages]);
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      className={clsx(
-        "hidden lg:flex flex-col",
-        "border-t border-base-content/10",
-        "h-[50vh] min-h-[300px]",
-      )}
-    >
-      <div className="flex items-center justify-between px-3 py-2 border-b border-base-content/10 shrink-0">
-        <span className="text-sm font-medium">AI 助手</span>
+    <>
+      {!isOpen && (
         <button
           type="button"
-          className="btn btn-ghost btn-xs btn-square"
-          onClick={() => setIsOpen(false)}
+          onClick={() => setIsOpen(true)}
+          className="hidden lg:flex fixed top-1/2 -translate-y-1/2 right-0 z-40 items-center justify-center w-8 h-16 rounded-l-lg bg-base-200 border border-r-0 border-base-content/10 hover:bg-base-300 transition-colors cursor-pointer"
         >
-          <XIcon className="size-4" />
+          <ChatCircleIcon className="size-5 text-base-content/60" />
         </button>
-      </div>
+      )}
+      <aside
+        className={clsx(
+          "hidden lg:flex fixed top-0 right-0 h-full z-40",
+          "flex-col bg-base-200 border-l border-base-content/10",
+          "transition-[width] duration-200 overflow-hidden",
+          isOpen ? "w-80" : "w-0",
+        )}
+      >
+        <div className="flex items-center justify-between px-3 py-2.5 border-b border-base-content/10 shrink-0">
+          <span className="text-sm font-medium">AI 助手</span>
+          <button
+            type="button"
+            className="btn btn-ghost btn-xs btn-square"
+            onClick={() => setIsOpen(false)}
+          >
+            <XIcon className="size-4" />
+          </button>
+        </div>
 
-      <ChatMessages
-        messages={messages}
-        isLoading={isLoading}
-        error={error ?? undefined}
-        onRetry={reload}
-      />
+        <ChatMessages
+          messages={messages}
+          isLoading={isLoading}
+          error={error ?? undefined}
+          onRetry={reload}
+        />
 
-      <ChatInput
-        input={input}
-        onInputChange={handleInputChange}
-        onSubmit={handleSubmit}
-        isLoading={isLoading}
-      />
-    </div>
+        <ChatInput
+          input={input}
+          onInputChange={handleInputChange}
+          onSubmit={handleSubmit}
+          isLoading={isLoading}
+        />
+      </aside>
+    </>
   );
 }
 

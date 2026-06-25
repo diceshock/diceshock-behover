@@ -1,25 +1,16 @@
 import { test as base, expect, type Page } from "@playwright/test";
 
-/**
- * Auth fixture that mocks /api/auth/session to return a staff role,
- * allowing dash page tests to bypass the real auth.guard.
- *
- * Usage:
- *   import { test, expect } from "../fixtures/auth.fixture";
- *
- *   test("dash page renders", async ({ page, mockStaffSession }) => {
- *     await page.goto("/dash/orders");
- *   });
- */
-
 export interface AuthFixtures {
   mockStaffSession: void;
   mockAdminSession: void;
   mockAnonymousSession: void;
 }
 
-async function mockSession(page: Page, role: "admin" | "staff" | null) {
-  await page.route("/api/auth/session", async (route) => {
+function setupAuthBypass(page: Page, role: "admin" | "staff" | null) {
+  if (role) {
+    page.setExtraHTTPHeaders({ "X-Test-Role": role });
+  }
+  page.route("/api/auth/session", async (route) => {
     if (role) {
       await route.fulfill({
         status: 200,
@@ -48,7 +39,7 @@ async function mockSession(page: Page, role: "admin" | "staff" | null) {
 export const test = base.extend<AuthFixtures>({
   mockStaffSession: [
     async ({ page }, use) => {
-      await mockSession(page, "staff");
+      setupAuthBypass(page, "staff");
       await use();
     },
     { auto: false },
@@ -56,7 +47,7 @@ export const test = base.extend<AuthFixtures>({
 
   mockAdminSession: [
     async ({ page }, use) => {
-      await mockSession(page, "admin");
+      setupAuthBypass(page, "admin");
       await use();
     },
     { auto: false },
@@ -64,7 +55,7 @@ export const test = base.extend<AuthFixtures>({
 
   mockAnonymousSession: [
     async ({ page }, use) => {
-      await mockSession(page, null);
+      setupAuthBypass(page, null);
       await use();
     },
     { auto: false },

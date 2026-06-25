@@ -545,6 +545,14 @@ export const authGuard = FACTORY.createMiddleware(async (c, next) => {
 });
 
 export const dashGuard = FACTORY.createMiddleware(async (c, next) => {
+  // E2E test bypass: only in local dev, allow X-Test-Role header to skip auth
+  if (import.meta.env.DEV) {
+    const testRole = c.req.header("X-Test-Role");
+    if (testRole === "staff" || testRole === "admin") {
+      return next();
+    }
+  }
+
   const authUser = await getAuthUser(c);
   const role = (authUser?.token?.role as UserRole) ?? "customer";
 
