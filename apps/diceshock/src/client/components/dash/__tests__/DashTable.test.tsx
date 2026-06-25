@@ -109,7 +109,7 @@ describe("SearchBar", () => {
       }),
     );
 
-    expect(html).toContain("input input-bordered w-full");
+    expect(html).toContain("input input-bordered input-sm w-full");
     expect(html).toContain("Invalid value for status: cancelled");
     expect(html).toContain("Unsupported search key: unknown");
   });

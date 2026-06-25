@@ -36,7 +36,7 @@ export function SearchBar({
 
   return (
     <div className="w-full">
-      <label className="input input-bordered w-full flex items-center gap-2">
+      <label className="input input-bordered input-sm w-full flex items-center gap-2">
         <MagnifyingGlassIcon className="size-4 text-base-content/50" />
         <input
           type="search"

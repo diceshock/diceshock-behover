@@ -40,30 +40,25 @@ export function TableToolbar({
   };
 
   return (
-    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-      <div className="min-w-0 flex-1 lg:max-w-xl">
+    <div className="flex flex-1 min-w-0 flex-wrap items-center gap-2">
+      <div className="min-w-0 w-full sm:w-auto sm:flex-1 sm:max-w-xs">
         <SearchBar {...searchBar} />
       </div>
-      {quickFilters.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 lg:justify-center">
-          {quickFilters.map((filter) => (
-            <button
-              key={`${filter.key}:${filter.value}`}
-              type="button"
-              className={`btn btn-xs ${filter.active ? "btn-primary" : "btn-ghost"}`}
-              onClick={() => toggleQuickFilter(filter)}
-            >
-              {filter.label}
-            </button>
-          ))}
-        </div>
-      )}
-      {(storeFilter || extra) && (
-        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-          {storeFilter && <AdminStoreFilter />}
-          {extra}
-        </div>
-      )}
+      {quickFilters.length > 0 &&
+        quickFilters.map((filter) => (
+          <button
+            key={`${filter.key}:${filter.value}`}
+            type="button"
+            className={`btn btn-xs ${filter.active ? "btn-primary" : "btn-ghost"}`}
+            onClick={() => toggleQuickFilter(filter)}
+          >
+            {filter.label}
+          </button>
+        ))}
+      <div className="flex items-center gap-2 ml-auto">
+        {storeFilter && <AdminStoreFilter />}
+        {extra}
+      </div>
     </div>
   );
 }
