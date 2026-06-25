@@ -142,7 +142,7 @@ export function DashTable<TData>({
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 min-h-0 overflow-auto">
-        <table className="table table-lg table-pin-rows table-pin-cols min-w-full">
+        <table className="table table-lg table-pin-rows min-w-full">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} className="z-20">
