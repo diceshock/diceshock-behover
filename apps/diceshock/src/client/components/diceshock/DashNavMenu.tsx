@@ -22,6 +22,10 @@ import { Link, useMatches } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useAtom } from "jotai";
 import { useCallback, useRef, useState } from "react";
+import ChatPanel, {
+  ChatPanelTrigger,
+} from "@/client/components/dash/ChatPanel";
+import { chatPanelOpenAtom } from "@/client/components/dash/chatAtoms";
 import { useUpdateMyPreferencesMutation } from "@/client/graphql/__generated__";
 import useAuth from "@/client/hooks/useAuth";
 import { useTranslation } from "@/client/hooks/useTranslation";
@@ -445,6 +449,10 @@ function SidebarContent({
       </li>
 
       <li>
+        <ChatPanelTrigger />
+      </li>
+
+      <li>
         <AccountButton onClick={onAccountClick} />
       </li>
     </ul>
@@ -462,6 +470,7 @@ export default function DashNavDrawer({
   const currentPath = matches[matches.length - 1]?.pathname ?? "";
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
+  const [isChatOpen] = useAtom(chatPanelOpenAtom);
 
   const close = useCallback(() => {
     if (checkboxRef.current) checkboxRef.current.checked = false;
@@ -475,8 +484,9 @@ export default function DashNavDrawer({
       <div
         className={clsx(
           "hidden lg:flex fixed top-0 left-0 h-full z-40",
-          "w-16 hover:w-56 transition-[width] duration-200 overflow-hidden",
+          "transition-[width] duration-200 overflow-hidden",
           "bg-base-200 flex-col",
+          isChatOpen ? "w-80" : "w-16 hover:w-56",
         )}
       >
         <SidebarContent
@@ -484,8 +494,9 @@ export default function DashNavDrawer({
           close={close}
           onScanClick={onScanClick}
           onAccountClick={onAccountClick}
-          className="p-0"
+          className="p-0 shrink-0"
         />
+        <ChatPanel />
       </div>
 
       <div className="drawer drawer-end lg:hidden fixed inset-0 z-50 pointer-events-none">
@@ -525,7 +536,14 @@ export default function DashNavDrawer({
         </div>
       </div>
 
-      <div className="lg:pl-16 h-screen overflow-hidden">{children}</div>
+      <div
+        className={clsx(
+          "h-screen overflow-hidden",
+          isChatOpen ? "lg:pl-80" : "lg:pl-16",
+        )}
+      >
+        {children}
+      </div>
 
       <DashQRScannerDialog
         isOpen={isScannerOpen}

@@ -140,8 +140,8 @@ export function DashTable<TData>({
     : 1;
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="w-full flex-1 min-h-0 overflow-auto relative">
+    <div className="flex flex-col h-full">
+      <div className="flex-1 min-h-0 overflow-auto">
         <table className="table table-lg table-pin-rows table-pin-cols min-w-full">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -208,7 +208,7 @@ export function DashTable<TData>({
               <tr>
                 <td
                   colSpan={colSpan}
-                  className="py-12 text-center text-base-content/60"
+                  className="h-full py-12 text-center text-base-content/60 align-middle"
                 >
                   {emptyMessage}
                 </td>
@@ -249,7 +249,7 @@ export function DashTable<TData>({
       </div>
 
       {pagination && paginationMode !== "none" && (
-        <div className="flex flex-wrap items-center justify-end gap-3">
+        <div className="shrink-0 flex flex-wrap items-center justify-end gap-3 px-2 py-3 border-t border-base-content/10">
           <span className="text-sm text-base-content/70">
             {paginationMode === "cursor"
               ? `Page ${currentPage}`

@@ -4,7 +4,6 @@ import {
   Link,
   Outlet,
 } from "@tanstack/react-router";
-import ChatPanel from "@/client/components/dash/ChatPanel";
 import MobileChatSheet from "@/client/components/dash/MobileChatSheet";
 import DashNavDrawer from "@/client/components/diceshock/DashNavMenu";
 import { useTranslation } from "@/client/hooks/useTranslation";
@@ -37,7 +36,6 @@ function RouteComponent() {
       <DashNavDrawer>
         <Outlet />
       </DashNavDrawer>
-      <ChatPanel />
       <MobileChatSheet />
     </ClientOnly>
   );

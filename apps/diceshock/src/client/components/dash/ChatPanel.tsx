@@ -1,9 +1,8 @@
 import { useChat } from "@ai-sdk/react";
-import { ChatCircleIcon, MinusIcon } from "@phosphor-icons/react";
+import { ChatCircleIcon, XIcon } from "@phosphor-icons/react";
 import { useMatches } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useAtom, useSetAtom } from "jotai";
-import { AnimatePresence, motion } from "motion/react";
 import { useEffect } from "react";
 import ChatInput from "./ChatInput";
 import ChatMessages from "./ChatMessages";
@@ -48,65 +47,55 @@ export default function ChatPanel() {
     }
   }, [messages, setPersistedMessages]);
 
+  if (!isOpen) return null;
+
   return (
-    <div className="hidden lg:block fixed top-0 right-0 h-full z-40">
-      <AnimatePresence mode="wait">
-        {!isOpen ? (
-          <motion.button
-            key="collapsed"
-            type="button"
-            onClick={() => setIsOpen(true)}
-            className={clsx(
-              "h-full w-12 flex flex-col items-center justify-center",
-              "bg-base-200 border-l border-base-content/10",
-              "hover:bg-base-300 transition-colors cursor-pointer",
-            )}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-          >
-            <ChatCircleIcon className="size-5 text-base-content/60" />
-          </motion.button>
-        ) : (
-          <motion.div
-            key="expanded"
-            className={clsx(
-              "h-full w-80 flex flex-col",
-              "bg-base-200 border-l border-base-content/10",
-            )}
-            initial={{ width: 48, opacity: 0.8 }}
-            animate={{ width: 320, opacity: 1 }}
-            exit={{ width: 48, opacity: 0.8 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-          >
-            <div className="flex items-center justify-between px-3 py-2.5 border-b border-base-content/10">
-              <span className="text-sm font-medium">AI 助手</span>
-              <button
-                type="button"
-                className="btn btn-ghost btn-xs btn-square"
-                onClick={() => setIsOpen(false)}
-              >
-                <MinusIcon className="size-4" />
-              </button>
-            </div>
+    <div
+      className={clsx(
+        "hidden lg:flex flex-col",
+        "border-t border-base-content/10",
+        "h-[50vh] min-h-[300px]",
+      )}
+    >
+      <div className="flex items-center justify-between px-3 py-2 border-b border-base-content/10 shrink-0">
+        <span className="text-sm font-medium">AI 助手</span>
+        <button
+          type="button"
+          className="btn btn-ghost btn-xs btn-square"
+          onClick={() => setIsOpen(false)}
+        >
+          <XIcon className="size-4" />
+        </button>
+      </div>
 
-            <ChatMessages
-              messages={messages}
-              isLoading={isLoading}
-              error={error ?? undefined}
-              onRetry={reload}
-            />
+      <ChatMessages
+        messages={messages}
+        isLoading={isLoading}
+        error={error ?? undefined}
+        onRetry={reload}
+      />
 
-            <ChatInput
-              input={input}
-              onInputChange={handleInputChange}
-              onSubmit={handleSubmit}
-              isLoading={isLoading}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <ChatInput
+        input={input}
+        onInputChange={handleInputChange}
+        onSubmit={handleSubmit}
+        isLoading={isLoading}
+      />
     </div>
+  );
+}
+
+export function ChatPanelTrigger() {
+  const [isOpen, setIsOpen] = useAtom(chatPanelOpenAtom);
+
+  return (
+    <button
+      type="button"
+      className={clsx("gap-12 flex-nowrap", isOpen && "active")}
+      onClick={() => setIsOpen(!isOpen)}
+    >
+      <ChatCircleIcon className="size-6 shrink-0" />
+      <span className="whitespace-nowrap">AI 助手</span>
+    </button>
   );
 }
