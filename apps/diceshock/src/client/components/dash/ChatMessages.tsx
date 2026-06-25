@@ -13,6 +13,37 @@ type ChatMessagesProps = {
   onRetry?: () => void;
 };
 
+type ReplyState =
+  | "idle"
+  | "waiting"
+  | "querying"
+  | "thinking"
+  | "replying"
+  | "done";
+
+const STATUS_LABELS: Record<Exclude<ReplyState, "idle" | "done">, string> = {
+  waiting: "等待中",
+  querying: "正在查询",
+  thinking: "正在思考",
+  replying: "正在回复",
+};
+
+function deriveReplyState(messages: Message[], isLoading: boolean): ReplyState {
+  if (!isLoading) return "idle";
+  const lastMsg = messages[messages.length - 1];
+  if (!lastMsg) return "waiting";
+  if (lastMsg.role === "user") return "waiting";
+  if (lastMsg.role === "assistant") {
+    const pending = lastMsg.toolInvocations?.filter(
+      (t) => t.state === "call" || t.state === "partial-call",
+    );
+    if (pending?.length) return "querying";
+    if (lastMsg.toolInvocations?.length && !lastMsg.content) return "thinking";
+    return "replying";
+  }
+  return "waiting";
+}
+
 export default function ChatMessages({
   messages,
   isLoading,
@@ -20,6 +51,7 @@ export default function ChatMessages({
   onRetry,
 }: ChatMessagesProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const replyState = deriveReplyState(messages, isLoading);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -51,48 +83,29 @@ export default function ChatMessages({
 
         if (message.role === "assistant") {
           return (
-            <div key={message.id} className="chat chat-start">
-              <div className="chat-image avatar">
-                <div className="size-7 rounded-full bg-base-300 flex items-center justify-center">
-                  <RobotIcon className="size-4 text-base-content/70" />
+            <div key={message.id} className="space-y-2">
+              {message.content && (
+                <div className="prose prose-sm max-w-none text-base-content [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                  <Markdown
+                    remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeRaw]}
+                  >
+                    {message.content}
+                  </Markdown>
                 </div>
-              </div>
-              <div className="chat-bubble bg-base-300 text-base-content text-sm">
-                {message.content && (
-                  <div className="prose prose-sm max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-                    <Markdown
-                      remarkPlugins={[remarkGfm]}
-                      rehypePlugins={[rehypeRaw]}
-                    >
-                      {message.content}
-                    </Markdown>
-                  </div>
-                )}
-                {message.toolInvocations?.map((invocation) => (
-                  <div key={invocation.toolCallId} className="mt-2">
-                    <ToolResultRenderer toolInvocation={invocation} />
-                  </div>
-                ))}
-              </div>
+              )}
+              {message.toolInvocations?.map((invocation) => (
+                <ToolResultRenderer
+                  key={invocation.toolCallId}
+                  toolInvocation={invocation}
+                />
+              ))}
             </div>
           );
         }
 
         return null;
       })}
-
-      {isLoading && messages[messages.length - 1]?.role === "user" && (
-        <div className="chat chat-start">
-          <div className="chat-image avatar">
-            <div className="size-7 rounded-full bg-base-300 flex items-center justify-center">
-              <RobotIcon className="size-4 text-base-content/70" />
-            </div>
-          </div>
-          <div className="chat-bubble bg-base-300 text-base-content">
-            <span className="loading loading-dots loading-sm" />
-          </div>
-        </div>
-      )}
 
       {error && (
         <div className="flex flex-col items-center gap-2 py-3">
@@ -106,6 +119,13 @@ export default function ChatMessages({
               重试
             </button>
           )}
+        </div>
+      )}
+
+      {replyState !== "idle" && replyState !== "done" && (
+        <div className="flex items-center gap-2 text-xs text-base-content/50 py-1">
+          <span className="loading loading-spinner loading-xs" />
+          <span>{STATUS_LABELS[replyState]}</span>
         </div>
       )}
 

@@ -211,27 +211,67 @@ export function buildSystemPrompt(params: {
 - query_active_participants: 查询约局参与者名片，仅约局发起者可用。
 - format_search_query: 将自然语言筛选描述转换为后台搜索语法。
 
-[GraphQL Schema 参考 — 订单操作]
-- 查询订单: query { orders(filter: { status: ["ACTIVE"|"PAUSED"|"ENDED"], dateFrom: "YYYY-MM-DD", dateTo: "YYYY-MM-DD", tableCode: "A1", store: "storeId" }) { items { id tableCode userName startedAt endedAt status amount } pageInfo { total } } }
-- 暂停订单: mutation { pauseOrder(id: "order-id") { id status } }
-- 恢复订单: mutation { resumeOrder(id: "order-id") { id status } }
-- 结算订单: mutation { settleOrders(ids: ["id1", "id2"]) { id status } }
-- 创建订单: mutation { createTableOccupancy(input: { tableId: "table-id", userId: "user-id" }) { id status } }
+[字段命名规则 — 重要]
+- 所有 GraphQL 字段使用驼峰式: createdAt, updatedAt, schName, engName, startAt, endAt, finalPrice, storeId, boardGameId
+- 禁止使用下划线式: 不存在 create_at, sch_name, eng_name, start_at, end_at, final_price, store_id, board_game_id
+- 所有 managedXxx 查询使用 filter: 参数（不是 where:）
+- filter 通用字段: search(文本搜索), status(数组), store(门店ID), pagination({offset, limit}), sortBy, sortOrder(ASC|DESC)
+- 分页: pagination: { offset: 0, limit: 20 }
+- 日期范围: dateFrom/dateTo 格式 "YYYY-MM-DD"
 
-[GraphQL Schema 参考 — 价格管理]
-- 查询当前价格: query { publishedPricing(storeId: "store-id") { id name data { config { daytimeStart daytimeEnd } plans } status publishedAt } }
-- 保存价格方案: mutation { savePricingSnapshot(input: { name: "方案名", data: { config: "{\\"daytimeStart\\":\\"10:00\\",\\"daytimeEnd\\":\\"18:00\\"}", plans: "[{\\"name\\":\\"标准桌\\",\\"price\\":35,\\"unit\\":\\"hour\\"}]" }, storeId: "store-id" }) { id name status } }
-- 发布价格: mutation { publishPricingSnapshot(storeId: "store-id") { id name status publishedAt } }
-- 恢复历史快照: mutation { restorePricingSnapshot(id: "snapshot-id") { id name status } }
+[Schema — 用户 UserProfile]
+字段: id uid name email image role nickname phone points preferredLocale preferredStoreId meta createdAt membershipPlans{id userId planType amount note startDate endDate createdAt updatedAt}
+查询: query { managedUsers(filter: { search: "关键词", role: ["CUSTOMER","STAFF","ADMIN"], store: "storeId", sortBy: "name", sortOrder: DESC, pagination: { offset: 0, limit: 30 } }) { items { ...字段 } pageInfo { offset limit total hasMore } } }
+单个: query { user(id: "userId") { ...字段 } }
+关联: membershipPlansByUser(userId) / pointsLogByUser(userId) / occupanciesByUser(userId)
+变更: mutation { updateUser(input: { id, name, nickname, phone, email }) { id } }
+     mutation { disableUser(id: "userId") { id role } }
 
-[GraphQL Schema 参考 — 活动/约局]
-- 查询活动: query { managedActives(filter: { status: ["active"|"expired"], store: "storeId" }) { ... } }
-- 创建约局: mutation { createActive(input: { title: "标题", date: "YYYY-MM-DD", time: "HH:mm", maxPlayers: N, isGame: true, storeId: "store-id" }) { id title } }
-- 删除约局: mutation { removeActive(input: { id: "active-id" }) }
-- 批量删除: mutation { batchRemoveActives(input: { ids: ["id1", "id2"] }) }
+[Schema — 订单 TableOccupancy]
+字段: id tableId userId tempId nickname uid phone seats status startAt endAt finalPrice pricingSnapshotId priceBreakdown table{id name code scope}
+状态: ACTIVE | PAUSED | SETTLED | CANCELLED
+查询: query { orders(filter: { status: ["ACTIVE","PAUSED"], tableCode: "A1", store: "storeId", dateFrom: "2025-01-01", dateTo: "2025-01-31" }) { items { ...字段 } pageInfo { offset limit total hasMore } } }
+变更: pauseOrder(id) / resumeOrder(id) / endOrder(id) / settleOrder(input: { id, useStoredValue }) / batchSettleOrders(input: { ids, useStoredValue })
+     batchPauseOrders(ids) / batchResumeOrders(ids) / cancelBatchSettlement(ids)
+创建: mutation { addTableOccupancy(input: { tableId, userId }) { id status } }
+预览: query { settlementPreview(id) { totalMinutes pausedMinutes billableMinutes finalPrice priceBreakdown{...} membership{...} } }
 
-[GraphQL Schema 参考 — 用户]
-- 查询用户: query { managedUsers(filter: { search: "关键词", role: ["STAFF"], store: "storeId", pagination: { offset: 0, limit: 30 } }) { items { id name phone role } pageInfo { total } } }
+[Schema — 桌台 Table]
+字段: id name type scope status capacity code description storeId occupancies{id tableId userId nickname uid seats status startAt} createdAt updatedAt
+类型: type=FIXED|SOLO  scope=TRPG|BOARDGAME|CONSOLE|MAHJONG  status=ACTIVE|INACTIVE
+查询: query { managedTables(filter: { search: "A1", type: ["FIXED"], status: ["ACTIVE"], scope: ["MAHJONG"], store: "storeId", pagination: { offset: 0, limit: 20 } }) { ...字段 } }
+变更: createTable(input: { name, type, scope, capacity, storeId }) / updateTable(input: { id, name, description }) / removeTable(id) / toggleTableStatus(id)
+
+[Schema — 约局 Active]
+字段: id creatorId creator{id name} title boardGameId boardGame{id schName engName} storeId date time maxPlayers content isGame registrations{id activeId userId isWatching nickname uid} createdAt updatedAt
+查询: query { managedActives(filter: { search: "关键词", status: ["active","expired"], store: "storeId", pagination: { limit: 20 } }) { ...字段 } }
+变更: createActive(input: { title, date, time, maxPlayers, isGame, storeId, boardGameId, content }) / updateActive(input: { id, title, date, time, maxPlayers }) / removeActive(id) / batchRemoveActives(ids)
+     removeActiveRegistration(registrationId)
+
+[Schema — 活动公告 Event]
+字段: id title description coverImageUrl content isPublished createdAt updatedAt
+查询: query { managedEvents(filter: { search: "关键词", status: ["published","draft"], dateFrom, dateTo, store: "storeId" }) { ...字段 } }
+变更: createEvent(input: { title, description, content, coverImageUrl, isPublished }) / updateEvent(input: { id, title, ... }) / removeEvent(id) / toggleEventPublish(id)
+
+[Schema — 日麻对局 MahjongMatch]
+字段: id tableId table{id name code} matchType gszRecordId gszSynced gszError gszSyncedAt mode format startedAt endedAt terminationReason players{userId nickname seat finalScore} playersJson unsyncableReasons{nickname userId reason}
+模式: mode=THREE_PLAYER|FOUR_PLAYER  format=TONPUU|HANCHAN
+查询: query { managedMahjongMatches(filter: { mode: ["FOUR_PLAYER"], format: ["HANCHAN"], syncStatus: ["SYNCED","UNSYNCED"], dateFrom, dateTo, store: "storeId" }) { items { ...字段 } pageInfo { offset limit total hasMore } } }
+变更: terminateMahjongMatch(tableCode, reason) / updateMahjongScore(matchId, players: [{userId, nickname, seat, finalScore}]) / syncMahjongMatchToGsz(matchId) / batchSyncMahjongMatchesToGsz(matchIds)
+实时: query { activeMahjongMatches { tableCode tableName phase matchType mode format players{userId nickname seat currentPoints} startedAt } }
+
+[Schema — 价格 PricingSnapshot]
+字段: id name storeId data{config{daytimeStart daytimeEnd} plans} status summary createdAt publishedAt
+查询: query { pricingSnapshots(storeId) { ...字段 } } / query { publishedPricing(storeId) { id data{...} status publishedAt } } / query { pricingDraft(storeId) { data{...} snapshotId snapshotName status } }
+变更: savePricingSnapshot(input: { name, data: { config, plans }, storeId }) / publishPricingSnapshot(storeId) / restorePricingSnapshot(id)
+
+[Schema — 会员/积分]
+会员: query { membershipPlansByUser(userId) { id userId planType amount note startDate endDate createdAt updatedAt } }
+类型: planType = monthly | monthly_cc | yearly | stored_value
+变更: createMembershipPlan(input: { userId, planType, amount, note, startDate, endDate }) / updateMembershipPlan(input: { id, ... }) / removeMembershipPlan(id)
+储值扣款: deductStoredValue(input: { userId, amount, note }) { plan{id amount} deducted }
+积分: query { pointsLogByUser(userId) { id userId amount balanceAfter note createdBy createdAt } }
+变更: addPoints(input: { userId, amount, note }) / deductPoints(input: { userId, amount, note })
 
 [日期推断规则]
 - "今天" = ${new Date().toISOString().split("T")[0]}
@@ -242,14 +282,14 @@ export function buildSystemPrompt(params: {
 - 时间模糊表述: "下午" = 14:00, "晚上" = 19:00, "上午" = 10:00
 
 [营业数据查询模式]
-- 计算营业额: 查询 orders(filter: { status: ["ENDED"], dateFrom, dateTo }) 然后对 amount 字段求和
-- 最忙桌子: 查询 orders 按 tableCode 分组统计时长
-- 新用户数: 查询 managedUsers(filter: { dateFrom }) 的 pageInfo.total
+- 计算营业额: 查询 orders(filter: { status: ["SETTLED"], dateFrom, dateTo }) 然后对 finalPrice 字段求和
+- 最忙桌子: 查询 orders 按 table.code 分组统计时长 (endAt - startAt)
+- 新用户数: 查询 managedUsers(filter: { pagination: { limit: 1 } }) 的 pageInfo.total
 - 对比周期: 分别查询两个时间段的数据再做对比
 
 [多步操作]
 - "修改并发布价格" = 先调用 savePricingSnapshot 保存 → 确认 → 再调用 publishPricingSnapshot 发布
-- "结算所有暂停订单" = 先 query 获取暂停订单列表 → 提取 IDs → 再调用 settleOrders(ids)
+- "结算所有暂停订单" = 先 query orders(filter: {status:["PAUSED"]}) 获取列表 → 提取 IDs → 再调用 batchSettleOrders(input: {ids})
 
 [行为规则]
 - 使用中文回复，必要时可使用 Markdown 格式。

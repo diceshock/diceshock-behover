@@ -62,6 +62,36 @@ const MOCK_BUSINESS_CARDS = [
   { id: CURRENT_USER_ID, share_phone: true, wechat: "test_wx_001", qq: "12345678", custom_content: "桌游爱好者，最爱18XX" },
 ];
 
+const MOCK_TABLES = [
+  { id: "tbl001", name: "A1", type: "FIXED", scope: "BOARDGAME", status: "ACTIVE", capacity: 6, code: "A1GG", description: "六人大桌", store_id: "store_gg", create_at: 1748000000000 },
+  { id: "tbl002", name: "A2", type: "FIXED", scope: "BOARDGAME", status: "ACTIVE", capacity: 4, code: "A2GG", description: "四人标准桌", store_id: "store_gg", create_at: 1748000000000 },
+  { id: "tbl003", name: "M1", type: "FIXED", scope: "MAHJONG", status: "ACTIVE", capacity: 4, code: "M1GG", description: "麻将专用桌", store_id: "store_gg", create_at: 1748000000000 },
+  { id: "tbl004", name: "B1", type: "SOLO", scope: "CONSOLE", status: "INACTIVE", capacity: 2, code: "B1GG", description: "双人主机位", store_id: "store_gg", create_at: 1748000000000 },
+];
+
+const MOCK_ORDERS = [
+  { id: "ord001", table_id: "tbl001", user_id: CURRENT_USER_ID, nickname: "测试用户", uid: "DS0042", seats: 2, status: "ACTIVE", start_at: 1750300000000, end_at: null, final_price: null, table_name: "A1", table_code: "A1GG" },
+  { id: "ord002", table_id: "tbl002", user_id: "user_other_002", nickname: "路人甲", uid: "DS0088", seats: 1, status: "SETTLED", start_at: 1750200000000, end_at: 1750210000000, final_price: 35, table_name: "A2", table_code: "A2GG" },
+  { id: "ord003", table_id: "tbl003", user_id: CURRENT_USER_ID, nickname: "测试用户", uid: "DS0042", seats: 4, status: "PAUSED", start_at: 1750250000000, end_at: null, final_price: null, table_name: "M1", table_code: "M1GG" },
+];
+
+const MOCK_EVENTS = [
+  { id: "evt001", title: "周末卡坦岛联赛", description: "4v4循环赛", is_published: true, create_at: 1750000000000 },
+  { id: "evt002", title: "新人体验日", description: "免费试玩，老师教学", is_published: true, create_at: 1750100000000 },
+  { id: "evt003", title: "日麻大师赛(草稿)", description: "仅限段位R1800+", is_published: false, create_at: 1750200000000 },
+];
+
+const MOCK_POINTS_LOG = [
+  { id: "pt001", user_id: CURRENT_USER_ID, amount: 100, balance_after: 100, note: "注册赠送", created_by: "system", create_at: 1748000000000 },
+  { id: "pt002", user_id: CURRENT_USER_ID, amount: 50, balance_after: 150, note: "约局奖励", created_by: "system", create_at: 1750000000000 },
+  { id: "pt003", user_id: CURRENT_USER_ID, amount: -20, balance_after: 130, note: "兑换饮品", created_by: "staff_001", create_at: 1750100000000 },
+];
+
+const MOCK_MAHJONG_MATCHES = [
+  { id: "mj001", table_id: "tbl003", match_type: "ranked", mode: "FOUR_PLAYER", format: "HANCHAN", start_at: 1750200000000, end_at: 1750210000000, gsz_synced: true, players: [{user_id: CURRENT_USER_ID, nickname: "测试用户", seat: 0, final_score: 32000}, {user_id: "user_002", nickname: "东风侠", seat: 1, final_score: 28000}, {user_id: "user_003", nickname: "自摸王", seat: 2, final_score: 22000}, {user_id: "user_004", nickname: "点炮哥", seat: 3, final_score: 18000}] },
+  { id: "mj002", table_id: "tbl003", match_type: "casual", mode: "FOUR_PLAYER", format: "TONPUU", start_at: 1750250000000, end_at: 1750255000000, gsz_synced: false, players: [{user_id: CURRENT_USER_ID, nickname: "测试用户", seat: 0, final_score: 29000}, {user_id: "user_002", nickname: "东风侠", seat: 1, final_score: 31000}, {user_id: "user_005", nickname: "立直党", seat: 2, final_score: 24000}, {user_id: "user_006", nickname: "门清狂", seat: 3, final_score: 16000}] },
+];
+
 type MutationParams = Record<string, unknown>;
 
 let mutateLog: Array<{action: string; params: MutationParams; description: string}> = [];
@@ -143,7 +173,58 @@ function executeQuery(graphql: string): string {
     return JSON.stringify({ userBusinessCardTable: results }) + `\n[_meta: 本次返回${results.length}条]`;
   }
 
-  return `查询错误: 未识别的表名。可用表: boardGamesTable, activesTable, activeRegistrationsTable, userMembershipPlansTable, userInfoTable, userBusinessCardTable`;
+  if (n.includes("tablesTable") || n.includes("managedTables")) {
+    let results = [...MOCK_TABLES];
+    const statusMatch = n.match(/status:\s*\{eq:\s*"([^"]+)"\}/);
+    if (statusMatch) results = results.filter(t => t.status === statusMatch[1]);
+    const scopeMatch = n.match(/scope:\s*\{eq:\s*"([^"]+)"\}/);
+    if (scopeMatch) results = results.filter(t => t.scope === scopeMatch[1]);
+    const nameMatch = n.match(/name:\s*\{ilike:\s*"([^"]+)"\}/);
+    if (nameMatch) {
+      const kw = nameMatch[1].replace(/%/g, "").toLowerCase();
+      results = results.filter(t => t.name.toLowerCase().includes(kw));
+    }
+    return JSON.stringify({ tablesTable: results }) + `\n[_meta: 本次返回${results.length}条]`;
+  }
+
+  if (n.includes("ordersTable") || n.includes("orders")) {
+    let results = [...MOCK_ORDERS];
+    const statusMatch = n.match(/status:\s*\{eq:\s*"([^"]+)"\}/);
+    if (statusMatch) results = results.filter(o => o.status === statusMatch[1]);
+    const uidMatch = n.match(/user_id:\s*\{eq:\s*"([^"]+)"\}/);
+    if (uidMatch) results = results.filter(o => o.user_id === uidMatch[1]);
+    return JSON.stringify({ ordersTable: results }) + `\n[_meta: 本次返回${results.length}条]`;
+  }
+
+  if (n.includes("eventsTable")) {
+    let results = [...MOCK_EVENTS];
+    const pubMatch = n.match(/is_published:\s*\{eq:\s*(true|false)\}/);
+    if (pubMatch) results = results.filter(e => e.is_published === (pubMatch[1] === "true"));
+    if (n.includes("DESC")) results.sort((a, b) => b.create_at - a.create_at);
+    const limitMatch = n.match(/limit:\s*(\d+)/);
+    if (limitMatch) results = results.slice(0, parseInt(limitMatch[1]));
+    return JSON.stringify({ eventsTable: results }) + `\n[_meta: 本次返回${results.length}条]`;
+  }
+
+  if (n.includes("pointsLogTable") || n.includes("pointsLog")) {
+    let results = [...MOCK_POINTS_LOG];
+    const uidMatch = n.match(/user_id:\s*\{eq:\s*"([^"]+)"\}/);
+    if (uidMatch) results = results.filter(p => p.user_id === uidMatch[1]);
+    if (n.includes("DESC")) results.sort((a, b) => b.create_at - a.create_at);
+    return JSON.stringify({ pointsLogTable: results }) + `\n[_meta: 本次返回${results.length}条]`;
+  }
+
+  if (n.includes("mahjongMatchesTable") || n.includes("mahjongMatches")) {
+    let results = [...MOCK_MAHJONG_MATCHES];
+    const modeMatch = n.match(/mode:\s*\{eq:\s*"([^"]+)"\}/);
+    if (modeMatch) results = results.filter(m => m.mode === modeMatch[1]);
+    const formatMatch = n.match(/format:\s*\{eq:\s*"([^"]+)"\}/);
+    if (formatMatch) results = results.filter(m => m.format === formatMatch[1]);
+    if (n.includes("DESC")) results.sort((a, b) => b.start_at - a.start_at);
+    return JSON.stringify({ mahjongMatchesTable: results }) + `\n[_meta: 本次返回${results.length}条]`;
+  }
+
+  return `查询错误: 未识别的表名。可用表: boardGamesTable, activesTable, activeRegistrationsTable, userMembershipPlansTable, userInfoTable, userBusinessCardTable, tablesTable, ordersTable, eventsTable, pointsLogTable, mahjongMatchesTable`;
 }
 
 const ACTION_ALIASES: Record<string, string> = {
@@ -353,6 +434,16 @@ const SCENARIOS: Scenario[] = [
   { name: "昵称-修改", input: "修改我的昵称到 孤独摇滚第二季制作决定", expect: { mutateAction: "update_profile" } },
   { name: "设置-切换英文", input: "Switch to English", expect: { mutateAction: "update_preferences" } },
   { name: "设置-切换店铺", input: "切换到街道口店", expect: { mutateAction: "update_preferences" } },
+  { name: "桌台-查所有", input: "查看所有桌台", expect: { toolsCalled: ["query"] } },
+  { name: "桌台-搜麻将桌", input: "有哪些麻将桌", expect: { toolsCalled: ["query"] } },
+  { name: "订单-查进行中", input: "目前有哪些正在进行的订单", expect: { toolsCalled: ["query"] } },
+  { name: "订单-查我的", input: "我今天有订单吗", expect: { toolsCalled: ["query"] } },
+  { name: "活动-查最新", input: "最近有什么活动", expect: { toolsCalled: ["query"] } },
+  { name: "积分-查余额", input: "我还有多少积分", expect: { toolsCalled: ["query"] } },
+  { name: "积分-查记录", input: "看看我的积分记录", expect: { toolsCalled: ["query"] } },
+  { name: "日麻-查最近对局", input: "查一下我最近打的日麻", expect: { toolsCalled: ["query"] } },
+  { name: "日麻-查半庄", input: "有没有最近的半庄记录", expect: { toolsCalled: ["query"] } },
+  { name: "联合-积分+会员", input: "查一下我的积分和会员状态", expect: { toolsCalled: ["query"] } },
 ];
 
 async function runAllScenarios() {
