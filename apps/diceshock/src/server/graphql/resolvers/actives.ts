@@ -197,7 +197,7 @@ export const activesTypeDefs = `
 
   extend type Query {
     activeParticipants(activeId: ID!): [ActiveRegistration!]!
-    managedActives(storeId: ID): [Active!]!
+    managedActives(storeId: ID, filter: ActiveFilterInput): [Active!]!
     managedActive(id: ID!): Active!
   }
 `;
@@ -537,16 +537,112 @@ export const activesResolvers = {
 
     async managedActives(
       _source: unknown,
-      args: { storeId?: string },
+      args: {
+        storeId?: string | null;
+        filter?: {
+          search?: string | null;
+          status?: (string | null)[] | null;
+          store?: string | null;
+          type?: string | null;
+          creator?: string | null;
+          sortBy?: string | null;
+          sortOrder?: "ASC" | "DESC" | null;
+          pagination?: { cursor?: string | null; limit?: number | null } | null;
+        } | null;
+      },
       ctx: GQLContext,
     ) {
       requireStaff(ctx);
       const tdb = dbFactory(ctx.env.DB);
 
-      const storeId = args.storeId;
+      // ── No filter: legacy behavior ──────────────────────────────────
+      if (!args.filter) {
+        const storeId = args.storeId;
+        const rows = await tdb.query.activesTable.findMany({
+          where: storeId ? (a, { eq }) => eq(a.store_id, storeId) : undefined,
+          orderBy: (a, { desc }) => desc(a.create_at),
+          with: {
+            creator: { columns: { id: true, name: true, image: true } },
+            registrations: {
+              columns: {
+                id: true,
+                active_id: true,
+                user_id: true,
+                is_watching: true,
+                create_at: true,
+              },
+            },
+          },
+        });
+
+        return rows.map((r) => toGqlActive(r as Record<string, unknown>));
+      }
+
+      // ── DB-level filtering (relational query API with dynamic where) ──
+      const { filter } = args;
+      const pagination = filter.pagination ?? { limit: 20 };
+      const limit = pagination.limit ?? 20;
+      const cursor = pagination.cursor ?? null;
+
+      const todayStr = new Date().toISOString().slice(0, 10);
+
+      // Normalize status filter — actives table has no status column;
+      // active = date >= today, expired = date < today
+      const statuses = (filter.status ?? []).filter(
+        (s): s is string => s != null,
+      );
+      const hasActive = statuses.includes("active");
+      const hasExpired = statuses.includes("expired");
+
       const rows = await tdb.query.activesTable.findMany({
-        where: storeId ? (a, { eq }) => eq(a.store_id, storeId) : undefined,
-        orderBy: (a, { desc }) => desc(a.create_at),
+        where: (a, { eq, like, gte, lt, gt, and }) => {
+          const conds: ReturnType<typeof eq>[] = [];
+
+          if (filter.search) {
+            conds.push(like(a.title, `%${filter.search}%`));
+          }
+
+          // Status: only apply if exactly one status value is selected
+          // (both = no filter, neither = no filter)
+          if (hasActive && !hasExpired) conds.push(gte(a.date, todayStr));
+          if (hasExpired && !hasActive) conds.push(lt(a.date, todayStr));
+
+          if (filter.type) {
+            conds.push(eq(a.is_game, filter.type === "game"));
+          }
+          if (filter.creator) {
+            conds.push(eq(a.creator_id, filter.creator));
+          }
+
+          const storeId = filter.store || args.storeId;
+          if (storeId) {
+            conds.push(eq(a.store_id, storeId));
+          }
+
+          if (cursor) {
+            conds.push(gt(a.id, cursor));
+          }
+
+          return conds.length > 0 ? and(...conds) : undefined;
+        },
+        orderBy: (a, { desc, asc }) => {
+          const orderFn = filter.sortOrder === "ASC" ? asc : desc;
+          switch (filter.sortBy) {
+            case "title":
+              return [orderFn(a.title)];
+            case "date":
+              return [orderFn(a.date)];
+            case "max_players":
+              return [orderFn(a.max_players)];
+            case "update_at":
+              return [orderFn(a.update_at)];
+            case "id":
+              return [orderFn(a.id)];
+            default:
+              return [orderFn(a.create_at)];
+          }
+        },
+        limit,
         with: {
           creator: { columns: { id: true, name: true, image: true } },
           registrations: {

@@ -1,5 +1,5 @@
-query ManagedTables {
-  managedTables {
+query ManagedTables($filter: TableFilterInput) {
+  managedTables(filter: $filter) {
     id
     name
     type

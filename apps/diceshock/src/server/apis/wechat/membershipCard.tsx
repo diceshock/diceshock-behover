@@ -37,7 +37,7 @@ export async function generateAndSendMembershipCard(
   c: Context<HonoCtxEnv>,
   openId: string,
 ): Promise<void> {
-  const env = c.env as any;
+  const env = c.env;
   const d = db(env.DB);
 
   const account = await d
@@ -124,7 +124,7 @@ export async function generateAndSendMembershipCard(
 }
 
 async function pollForResult(
-  env: any,
+  env: { KV: KVNamespace },
   taskId: string,
   timeoutMs: number,
 ): Promise<string | null> {

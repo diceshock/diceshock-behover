@@ -37,11 +37,14 @@ export const CrossDataProvider: React.FC<{
 };
 
 export const useCrossDataRegister = () => {
-  const raw = (globalThis as any)[INJECTION_OBJ];
+  const raw = (
+    globalThis as typeof globalThis &
+      Record<typeof INJECTION_OBJ, string | undefined>
+  )[INJECTION_OBJ];
 
   let decoded: InjectCrossData | null = null;
   try {
-    const json = LZString.decompressFromBase64(raw);
+    const json = raw ? LZString.decompressFromBase64(raw) : null;
     if (json) decoded = injectCrossDataZ.parse(JSON.parse(json));
   } catch (e) {
     console.error("Error decoding server data", e);

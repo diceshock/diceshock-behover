@@ -3,9 +3,25 @@ import dbFactory, {
   orderPauseLogsTable,
   type pricingSnapshotsTable,
   tableOccupancyTable,
-  type tablesTable,
+  tablesTable,
+  userInfoTable,
   userMembershipPlansTable,
+  users,
 } from "@lib/db";
+import type { SQL } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  like,
+  lte,
+  or,
+} from "drizzle-orm";
 import { z } from "zod/v4";
 import {
   calculatePrice,
@@ -40,18 +56,18 @@ const paginationSchema = z
   })
   .default({ offset: 0, limit: 50 });
 
-const orderFilterSchema = z
-  .object({
-    status: z
-      .enum(["ALL", "ACTIVE", "PAUSED", "ENDED", "SETTLED", "CANCELLED"])
-      .default("ALL"),
-    tableId: z.string().optional(),
-    startDate: z.string().optional(),
-    endDate: z.string().optional(),
-    storeId: z.string().optional(),
-    search: z.string().optional(),
-  })
-  .default({ status: "ALL" });
+const orderFilterSchema = z.object({
+  search: z.string().nullable().optional(),
+  status: z.array(z.string()).nullable().optional(),
+  tableCode: z.string().nullable().optional(),
+  store: z.string().nullable().optional(),
+  dateFrom: z.string().nullable().optional(),
+  dateTo: z.string().nullable().optional(),
+  sortBy: z.string().nullable().optional(),
+  sortOrder: z.enum(["ASC", "DESC"]).nullable().optional(),
+  groupBy: z.string().nullable().optional(),
+  pagination: paginationSchema.optional(),
+});
 
 const ordersSchema = z.object({
   filter: orderFilterSchema.optional(),
@@ -67,6 +83,226 @@ const ordersSchema = z.object({
     })
     .optional(),
 });
+
+type LegacyOrderInput = NonNullable<z.infer<typeof ordersSchema>["input"]>;
+type OrderFilter = z.infer<typeof orderFilterSchema>;
+
+type DbOrderStatus = "active" | "paused" | "ended";
+
+function normalizeFilterStatus(
+  status: string,
+): NormalizedStatus | "ALL" | null {
+  const normalized = status.toUpperCase();
+  if (normalized === "ALL") return "ALL";
+  if (
+    normalized === "ACTIVE" ||
+    normalized === "PAUSED" ||
+    normalized === "ENDED" ||
+    normalized === "SETTLED"
+  ) {
+    return normalized;
+  }
+  return null;
+}
+
+function buildStatusCondition(
+  statuses: string[] | null | undefined,
+): SQL | null {
+  if (!statuses?.length) return null;
+  const normalized = statuses.map(normalizeFilterStatus).filter(Boolean);
+  if (normalized.includes("ALL")) return null;
+
+  const rawStatuses = normalized
+    .filter(
+      (status): status is "ACTIVE" | "PAUSED" =>
+        status === "ACTIVE" || status === "PAUSED",
+    )
+    .map((status) => status.toLowerCase() as DbOrderStatus);
+
+  const conditions: SQL[] = [];
+  if (rawStatuses.length === 1) {
+    conditions.push(eq(tableOccupancyTable.status, rawStatuses[0]!));
+  } else if (rawStatuses.length > 1) {
+    conditions.push(inArray(tableOccupancyTable.status, rawStatuses));
+  }
+  if (normalized.includes("ENDED")) {
+    conditions.push(
+      and(
+        eq(tableOccupancyTable.status, "ended"),
+        isNull(tableOccupancyTable.final_price),
+        isNull(tableOccupancyTable.settlement_snapshot),
+      ) as SQL,
+    );
+  }
+  if (normalized.includes("SETTLED")) {
+    conditions.push(
+      or(
+        isNotNull(tableOccupancyTable.final_price),
+        isNotNull(tableOccupancyTable.settlement_snapshot),
+      ) as SQL,
+    );
+  }
+
+  if (conditions.length === 0) return eq(tableOccupancyTable.id, "__none__");
+  return conditions.length === 1 ? conditions[0]! : (or(...conditions) as SQL);
+}
+
+function buildLegacyFilter(input: LegacyOrderInput) {
+  return {
+    search: input.search,
+    status: input.status,
+    tableId: undefined as string | undefined,
+    startDate: undefined as string | undefined,
+    endDate: undefined as string | undefined,
+    storeId: input.storeId,
+  };
+}
+
+function applyOrderGrouping(rows: OccupancyRow[], groupBy?: string | null) {
+  if (!groupBy || groupBy.toUpperCase() === "NONE") return rows;
+
+  const groups = new Map<string, OccupancyRow[]>();
+  for (const row of rows) {
+    let key = "";
+    switch (groupBy.toUpperCase()) {
+      case "TABLE":
+        key = row.table_id;
+        break;
+      case "USER":
+        key = row.user_id ?? row.temp_id ?? "unknown";
+        break;
+      case "DATE":
+        key = toIso(row.start_at)?.slice(0, 10) ?? "unknown";
+        break;
+      default:
+        key = "";
+    }
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(row);
+  }
+  return Array.from(groups.values()).flat();
+}
+
+async function fetchFilteredOrders(tdb: Database, filter: OrderFilter) {
+  const pagination = filter.pagination ?? { offset: 0, limit: 50 };
+  const conditions: SQL[] = [];
+  const statusCondition = buildStatusCondition(filter.status);
+  if (statusCondition) conditions.push(statusCondition);
+
+  if (filter.tableCode?.trim()) {
+    conditions.push(eq(tablesTable.code, filter.tableCode.trim()));
+  }
+  if (filter.store?.trim()) {
+    conditions.push(eq(tablesTable.store_id, filter.store.trim()));
+  }
+  if (filter.dateFrom) {
+    conditions.push(
+      gte(tableOccupancyTable.start_at, new Date(filter.dateFrom)),
+    );
+  }
+  if (filter.dateTo) {
+    conditions.push(lte(tableOccupancyTable.start_at, new Date(filter.dateTo)));
+  }
+  if (filter.search?.trim()) {
+    const search = filter.search.trim();
+    const term = `%${search}%`;
+    conditions.push(
+      or(
+        eq(tableOccupancyTable.id, search),
+        eq(tableOccupancyTable.user_id, search),
+        eq(tableOccupancyTable.temp_id, search),
+        like(tablesTable.name, term),
+        like(tablesTable.code, term),
+        like(users.name, term),
+        like(users.email, term),
+        like(userInfoTable.uid, term),
+        like(userInfoTable.nickname, term),
+        like(userInfoTable.phone, term),
+      ) as SQL,
+    );
+  }
+
+  const whereClause = conditions.length
+    ? (and(...conditions) as SQL)
+    : undefined;
+  const countQuery = tdb
+    .select({ count: drizzle.count() })
+    .from(tableOccupancyTable)
+    .leftJoin(tablesTable, eq(tableOccupancyTable.table_id, tablesTable.id))
+    .leftJoin(users, eq(tableOccupancyTable.user_id, users.id))
+    .leftJoin(userInfoTable, eq(tableOccupancyTable.user_id, userInfoTable.id))
+    .$dynamic();
+  const totalRows = whereClause
+    ? await countQuery.where(whereClause)
+    : await countQuery;
+  const total = (totalRows[0]?.count as number) ?? 0;
+
+  const orderFn = filter.sortOrder === "ASC" ? asc : desc;
+  const sortColumn = (() => {
+    switch (filter.sortBy) {
+      case "end_at":
+      case "ended_at":
+      case "END_AT":
+        return orderFn(tableOccupancyTable.end_at);
+      case "created_at":
+      case "create_at":
+        return orderFn(tableOccupancyTable.id);
+      case "start_at":
+      case "started_at":
+      case "START_AT":
+      default:
+        return orderFn(tableOccupancyTable.start_at);
+    }
+  })();
+
+  const idQuery = tdb
+    .select({ id: tableOccupancyTable.id })
+    .from(tableOccupancyTable)
+    .leftJoin(tablesTable, eq(tableOccupancyTable.table_id, tablesTable.id))
+    .leftJoin(users, eq(tableOccupancyTable.user_id, users.id))
+    .leftJoin(userInfoTable, eq(tableOccupancyTable.user_id, userInfoTable.id))
+    .$dynamic();
+  const filteredIdQuery = whereClause ? idQuery.where(whereClause) : idQuery;
+  const idRows = await filteredIdQuery
+    .orderBy(sortColumn)
+    .limit(pagination.limit)
+    .offset(pagination.offset);
+  const ids = idRows.map((row) => row.id);
+
+  if (ids.length === 0) {
+    return {
+      items: [],
+      pageInfo: {
+        offset: pagination.offset,
+        limit: pagination.limit,
+        total,
+        nextCursor: null,
+        hasMore: false,
+      },
+    };
+  }
+
+  const rows = (await tdb.query.tableOccupancyTable.findMany({
+    where: (o, { inArray: pgInArray }) => pgInArray(o.id, ids),
+    with: { table: true, pauseLogs: true },
+  })) as OccupancyRow[];
+  const rowMap = new Map(rows.map((row) => [row.id, row]));
+  const orderedRows = ids
+    .map((id) => rowMap.get(id))
+    .filter((row): row is OccupancyRow => Boolean(row));
+  const groupedRows = applyOrderGrouping(orderedRows, filter.groupBy);
+
+  return {
+    items: groupedRows.map(toGqlOrder),
+    pageInfo: {
+      offset: pagination.offset,
+      limit: pagination.limit,
+      total,
+      nextCursor: null,
+      hasMore: pagination.offset + pagination.limit < total,
+    },
+  };
+}
 
 const startOrderSchema = z.object({
   input: z.object({
@@ -590,12 +826,16 @@ export const ordersTypeDefs = `
   }
 
   input OrderFilterInput {
-    status: OrderStatusFilter = ALL
-    tableId: ID
-    startDate: String
-    endDate: String
-    storeId: ID
     search: String
+    status: [String!]
+    tableCode: String
+    store: String
+    dateFrom: String
+    dateTo: String
+    sortBy: String
+    sortOrder: SortOrder
+    groupBy: String
+    pagination: PaginationInput
   }
 
   extend type Query {
@@ -656,16 +896,19 @@ export const ordersResolvers = {
     async orders(_source: unknown, args: unknown, ctx: GQLContext) {
       requireStaff(ctx);
       const parsed = zodToGraphQLError(ordersSchema, args);
-      const filter = {
-        ...(parsed.input ?? {}),
-        ...(parsed.filter ?? {}),
-      };
-      const pagination = parsed.pagination ??
-        parsed.input?.pagination ?? {
+      const tdb = dbFactory(ctx.env.DB);
+
+      if (parsed.filter != null) {
+        return fetchFilteredOrders(tdb, parsed.filter);
+      }
+
+      const input = parsed.input ?? { status: "ALL" as const };
+      const filter = buildLegacyFilter(input);
+      const pagination = input.pagination ??
+        parsed.pagination ?? {
           offset: 0,
           limit: 50,
         };
-      const tdb = dbFactory(ctx.env.DB);
       const rows = (await tdb.query.tableOccupancyTable.findMany({
         with: { table: true, pauseLogs: true },
         orderBy: (o, { desc }) => desc(o.start_at),

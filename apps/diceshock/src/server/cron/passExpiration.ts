@@ -12,7 +12,13 @@ const PLAN_NAMES: Record<string, string> = {
   yearly: "年卡",
 };
 
-export async function checkPassExpiration(env: { DB: any; KV: any }) {
+export async function checkPassExpiration(env: {
+  DB: D1Database;
+  KV: KVNamespace;
+  NOTIFICATION_QUEUE: Queue;
+  WECHAT_MP_APP_ID: string;
+  WECHAT_MP_APP_SECRET: string;
+}) {
   const tdb = db(env.DB);
   const now = Date.now();
   const fiveDaysLater = now + 5 * 24 * 60 * 60 * 1000;

@@ -4,6 +4,10 @@ import Logo from "@/client/assets/svg/black-simplify-with-text-logo.svg?react";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import Gradient from "./Gradient";
 
+type StoreLocaleParams = { storeLocale?: string; id?: string; code?: string };
+
+const keepStoreLocaleParams = (prev: StoreLocaleParams) => prev;
+
 const Footer = () => {
   const { t } = useTranslation();
 
@@ -43,15 +47,15 @@ const Footer = () => {
         <nav>
           <h6 className="footer-title">{t("footer.services")}</h6>
           <Link
-            to="/$storeLocale/inventory"
-            params={(prev: any) => prev}
+            to="/{-$storeLocale}/inventory"
+            params={keepStoreLocaleParams}
             className="link link-hover"
           >
             {t("footer.inventory")}
           </Link>
           <Link
-            to="/$storeLocale/diceshock-agents"
-            params={(prev: any) => prev}
+            to="/{-$storeLocale}/diceshock-agents"
+            params={keepStoreLocaleParams}
             className="link link-hover"
           >
             {t("footer.agents")}
@@ -63,29 +67,29 @@ const Footer = () => {
         <nav>
           <h6 className="footer-title">{t("footer.aboutUs")}</h6>
           <Link
-            to="/$storeLocale/contact-us"
-            params={(prev: any) => prev}
+            to="/{-$storeLocale}/contact-us"
+            params={keepStoreLocaleParams}
             className="link link-hover"
           >
             {t("footer.contactUs")}
           </Link>
           <Link
-            to="/$storeLocale/"
-            params={(prev: any) => prev}
+            to="/{-$storeLocale}"
+            params={keepStoreLocaleParams}
             className="link link-hover"
           >
             {t("footer.joinUs")}
           </Link>
           <Link
-            to="/$storeLocale/"
-            params={(prev: any) => prev}
+            to="/{-$storeLocale}"
+            params={keepStoreLocaleParams}
             className="link link-hover"
           >
             {t("footer.termsOfService")}
           </Link>
           <Link
-            to="/$storeLocale/"
-            params={(prev: any) => prev}
+            to="/{-$storeLocale}"
+            params={keepStoreLocaleParams}
             className="link link-hover"
           >
             {t("footer.cookiePolicy")}

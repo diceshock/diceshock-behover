@@ -160,8 +160,10 @@ async function fetchAndClean(page: {
     const key = R2_PREFIX + page.path.replace(/\.(html?|htm)$/i, ".md");
 
     return { key, markdown: fullMd };
-  } catch (err: any) {
-    console.warn(`  ❌ Error fetching ${page.path}: ${err.message}`);
+  } catch (err: unknown) {
+    console.warn(
+      `  ❌ Error fetching ${page.path}: ${err instanceof Error ? err.message : "Unknown error"}`,
+    );
     return null;
   }
 }
@@ -228,8 +230,10 @@ async function main() {
       new ListObjectsV2Command({ Bucket: R2_BUCKET, MaxKeys: 1 }),
     );
     console.log(`✅ R2 connected (bucket: ${R2_BUCKET})`);
-  } catch (e: any) {
-    console.error(`❌ R2 connection failed: ${e.message}`);
+  } catch (e: unknown) {
+    console.error(
+      `❌ R2 connection failed: ${e instanceof Error ? e.message : "Unknown error"}`,
+    );
     process.exit(1);
   }
 

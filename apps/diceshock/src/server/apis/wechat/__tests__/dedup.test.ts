@@ -2,26 +2,26 @@ import { describe, expect, it, vi } from "vitest";
 import { isDuplicate, markProcessed } from "../dedup";
 
 describe("dedup", () => {
-  function mockKV(): KVNamespace {
+  function mockKV() {
     return {
       get: vi.fn(),
       put: vi.fn(),
       list: vi.fn(),
       delete: vi.fn(),
       getWithMetadata: vi.fn(),
-    } as unknown as KVNamespace;
+    };
   }
 
   describe("isDuplicate", () => {
     it("returns false for first message", async () => {
       const kv = mockKV();
-      (kv.get as any).mockResolvedValue(null);
+      vi.mocked(kv.get).mockResolvedValue(null);
       expect(await isDuplicate(kv, "msg123")).toBe(false);
     });
 
     it("returns true for duplicate message", async () => {
       const kv = mockKV();
-      (kv.get as any).mockResolvedValue("1");
+      vi.mocked(kv.get).mockResolvedValue("1");
       expect(await isDuplicate(kv, "msg456")).toBe(true);
     });
 
@@ -33,7 +33,7 @@ describe("dedup", () => {
 
     it("returns false for non-empty string already expired", async () => {
       const kv = mockKV();
-      (kv.get as any).mockResolvedValue(null);
+      vi.mocked(kv.get).mockResolvedValue(null);
       expect(await isDuplicate(kv, "expired-msg")).toBe(false);
       expect(kv.get).toHaveBeenCalledWith("wechat:dedup:expired-msg");
     });
@@ -58,7 +58,7 @@ describe("dedup", () => {
       const kv = mockKV();
       await markProcessed(kv, "unique-id");
       expect(kv.put).toHaveBeenCalledTimes(1);
-      const [key] = (kv.put as any).mock.calls[0];
+      const [key] = kv.put.mock.calls[0];
       expect(key).toBe("wechat:dedup:unique-id");
     });
   });
@@ -66,13 +66,13 @@ describe("dedup", () => {
   describe("integration: isDuplicate + markProcessed", () => {
     it("returns false then true after marking", async () => {
       const kv = mockKV();
-      (kv.get as any).mockResolvedValue(null);
+      vi.mocked(kv.get).mockResolvedValue(null);
       expect(await isDuplicate(kv, "msg789")).toBe(false);
 
       await markProcessed(kv, "msg789");
       expect(kv.put).toHaveBeenCalledTimes(1);
 
-      (kv.get as any).mockResolvedValue("1");
+      vi.mocked(kv.get).mockResolvedValue("1");
       expect(await isDuplicate(kv, "msg789")).toBe(true);
     });
   });

@@ -11,8 +11,8 @@ export default defineConfig({
   },
   test: {
     include: [
-      "apps/**/src/**/__tests__/**/*.test.ts",
-      "libs/**/src/**/__tests__/**/*.test.ts",
+      "apps/**/src/**/__tests__/**/*.test.{ts,tsx}",
+      "libs/**/src/**/__tests__/**/*.test.{ts,tsx}",
     ],
     globals: true,
   },

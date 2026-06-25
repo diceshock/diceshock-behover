@@ -595,7 +595,13 @@
     "confirmBatchDeleteTitle": "Massenlöschung bestätigen",
     "batchDeletePrefix": "Es werden gelöscht:",
     "batchDeleteSuffix": "Meetups und alle Anmeldungen. Diese Aktion kann nicht rückgängig gemacht werden.",
-    "confirmDeleteItems": "{count} Elemente löschen"
+    "confirmDeleteItems": "{count} Elemente löschen",
+    "type": "Typ",
+    "typeGame": "Spiel",
+    "typeNotGame": "Kein Spiel",
+    "store": "Geschäft",
+    "loadMore": "Mehr laden",
+    "noMoreData": "Alles geladen"
   },
   "dashEvents": {
     "copied": "Kopiert",

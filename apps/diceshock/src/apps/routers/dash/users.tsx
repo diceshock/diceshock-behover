@@ -1,3 +1,4 @@
+import { useSession } from "@hono/auth-js/react";
 import {
   CopyIcon,
   DotsThreeVerticalIcon,
@@ -5,7 +6,11 @@ import {
   UserMinusIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import type { ColumnDef, SortingState } from "@tanstack/react-table";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DashTable } from "@/client/components/dash/DashTable";
+import { usePendingSearch } from "@/client/components/dash/SearchBridge";
+import { TableToolbar } from "@/client/components/dash/TableToolbar";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import {
   getPlanConfig,
@@ -15,11 +20,19 @@ import {
 } from "@/client/components/diceshock/MembershipBadge";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import {
+  MembershipPlanType,
+  SortOrder,
   useDisableUserMutation,
   useUsersQuery,
 } from "@/client/graphql/__generated__";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
 import { useTranslation } from "@/client/hooks/useTranslation";
+import {
+  type ParsedSearch,
+  parseSearch,
+  serialize,
+  USER_SEARCH_GRAMMAR,
+} from "@/client/lib/searchParser";
 import dayjs from "@/shared/utils/dayjs-config";
 
 type UserList = NonNullable<
@@ -28,6 +41,12 @@ type UserList = NonNullable<
 type UserItem = UserList["items"][number];
 
 const PAGE_SIZE = 30;
+const PLAN_TYPE_BY_RAW: Record<string, MembershipPlan["plan_type"]> = {
+  [MembershipPlanType.Monthly]: "monthly",
+  [MembershipPlanType.MonthlyCc]: "monthly_cc",
+  [MembershipPlanType.StoredValue]: "stored_value",
+  [MembershipPlanType.Yearly]: "yearly",
+};
 
 export const Route = createFileRoute("/dash/users")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -37,50 +56,104 @@ export const Route = createFileRoute("/dash/users")({
   component: RouteComponent,
 });
 
-function RouteComponent() {
+export function buildFilter(
+  parsed: ParsedSearch,
+  page: number,
+  sorting: SortingState,
+) {
+  const roleFilter = parsed.filters.role?.value;
+  const storeFilter = parsed.filters.store?.value;
+  const nameFilter = parsed.filters.name?.value;
+
+  const searchParts = [parsed.freeText];
+  if (typeof nameFilter === "string") searchParts.push(nameFilter);
+  const search = searchParts.filter(Boolean).join(" ") || undefined;
+
+  return {
+    search,
+    role:
+      typeof roleFilter === "string"
+        ? [roleFilter.toUpperCase()]
+        : Array.isArray(roleFilter)
+          ? roleFilter.map((r) => r.toUpperCase())
+          : undefined,
+    store: typeof storeFilter === "string" ? storeFilter : undefined,
+    sortBy: sorting.length > 0 ? sorting[0].id : undefined,
+    sortOrder: sorting[0]?.desc ? SortOrder.Desc : SortOrder.Asc,
+    pagination: { offset: (page - 1) * PAGE_SIZE, limit: PAGE_SIZE },
+  };
+}
+
+export function RouteComponent() {
   const msg = useMsg();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   const { q, page } = Route.useSearch();
-  const navigate = useNavigate();
-  const setSearch = useCallback(
-    (updates: Partial<{ q: string; page: number }>) =>
-      navigate({
-        from: "/dash/users",
-        search: (prev) => ({ ...prev, ...updates }),
-        replace: true,
-      }),
-    [navigate],
+  const navigate = useNavigate({ from: Route.fullPath });
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [searchInput, setSearchInput] = useState(q);
+  const { data: session } = useSession();
+  const isAdmin = (session?.user as { role?: string })?.role === "admin";
+
+  const { pendingSearch, clearPendingSearch } = usePendingSearch();
+
+  const parsed = useMemo(() => parseSearch(q, USER_SEARCH_GRAMMAR), [q]);
+
+  // Raw membership plan data shape from GraphQL query
+  interface RawMembershipPlan {
+    id: string;
+    userId: string;
+    planType: string;
+    amount: number | null;
+    startDate: string | null;
+    endDate: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+  }
+
+  function mapRawPlan(p: RawMembershipPlan): MembershipPlan {
+    return {
+      id: p.id,
+      user_id: p.userId,
+      plan_type: PLAN_TYPE_BY_RAW[p.planType] ?? "monthly",
+      amount: p.amount,
+      start_date: p.startDate ?? null,
+      end_date: p.endDate ?? null,
+      create_at: p.createdAt ?? null,
+      update_at: p.updatedAt ?? null,
+    };
+  }
+  const filter = useMemo(
+    () => buildFilter(parsed, page, sorting),
+    [parsed, page, sorting],
   );
 
   const { data, loading } = useUsersQuery({
-    variables: {
-      input: {
-        searchWords: q.trim() || undefined,
-        pagination: {
-          offset: (page - 1) * PAGE_SIZE,
-          limit: PAGE_SIZE,
-        },
-      },
+    variables: { filter },
+    onError: (err) => {
+      msg.error(err.message || t("dashUsers.fetchFailed"));
     },
-    fetchPolicy: "cache-and-network",
   });
 
-  const [disableUser] = useDisableUserMutation();
+  const [disableUser] = useDisableUserMutation({
+    refetchQueries: ["Users"],
+  });
 
   const disableDialogRef = useRef<HTMLDialogElement>(null);
-
   const [pendingDisable, setPendingDisable] = useState<UserItem | null>(null);
   const [disablePending, setDisablePending] = useState(false);
 
-  const handleCopy = (text: string) => {
-    try {
-      navigator.clipboard.writeText(text);
-      msg.success(t("dashUsers.copied"));
-    } catch {
-      msg.error(t("dashUsers.clipboardDenied"));
-    }
-  };
+  const handleCopy = useCallback(
+    (text: string) => {
+      try {
+        navigator.clipboard.writeText(text);
+        msg.success(t("dashUsers.copied"));
+      } catch {
+        msg.error(t("dashUsers.clipboardDenied"));
+      }
+    },
+    [t, msg],
+  );
 
   const openDisableDialog = (user: UserItem) => {
     setPendingDisable(user);
@@ -106,254 +179,325 @@ function RouteComponent() {
     }
   };
 
+  const setSearchParam = useCallback(
+    (updates: Partial<{ q: string; page: number }>) =>
+      navigate({ search: (prev) => ({ ...prev, ...updates }), replace: true }),
+    [navigate],
+  );
+
+  useEffect(() => {
+    if (pendingSearch !== null) {
+      setSearchInput(pendingSearch);
+      setSearchParam({ q: pendingSearch, page: 1 });
+      clearPendingSearch();
+    }
+  }, [pendingSearch, clearPendingSearch, setSearchParam]);
+
+  const columns = useMemo<ColumnDef<UserItem, unknown>[]>(
+    () => [
+      {
+        accessorKey: "id",
+        header: "ID",
+        cell: ({ row }) => (
+          <div className="relative group flex items-center gap-1">
+            <span className="font-mono cursor-default">
+              {row.original.id.slice(0, 5)}
+            </span>
+            <button
+              type="button"
+              className="btn btn-xs btn-ghost btn-square shrink-0"
+              onClick={() => handleCopy(row.original.id)}
+              title={t("dashUsers.copyUserId")}
+            >
+              <CopyIcon className="size-3.5" />
+            </button>
+            <div className="absolute right-0 top-full z-30 hidden group-hover:block pt-1">
+              <div className="bg-base-200 shadow-lg rounded-lg px-3 py-1.5 text-xs font-mono whitespace-nowrap">
+                {row.original.id}
+              </div>
+            </div>
+          </div>
+        ),
+      },
+      {
+        accessorKey: "image",
+        header: "",
+        cell: ({ row }) =>
+          row.original.avatarUrl ? (
+            <img
+              src={row.original.avatarUrl}
+              alt=""
+              className="w-8 h-8 rounded-full object-cover"
+            />
+          ) : row.original.image ? (
+            <img
+              src={row.original.image}
+              alt=""
+              className="w-8 h-8 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-base-300 flex items-center justify-center text-sm">
+              {(row.original.name || row.original.nickname || "?")
+                .charAt(0)
+                .toUpperCase()}
+            </div>
+          ),
+      },
+      {
+        accessorKey: "nickname",
+        header: t("dashUsers.nickname"),
+        cell: ({ row }) => (
+          <span className="whitespace-nowrap">
+            {row.original.nickname || "—"}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "name",
+        header: t("dashUsers.name"),
+        cell: ({ row }) => (
+          <span className="whitespace-nowrap">{row.original.name || "—"}</span>
+        ),
+      },
+      {
+        accessorKey: "role",
+        header: t("dashUsers.role"),
+        cell: ({ row }) => {
+          switch (row.original.role) {
+            case "ADMIN":
+              return (
+                <span className="badge badge-sm badge-error">
+                  {t("dashUsers.admin")}
+                </span>
+              );
+            case "STAFF":
+              return (
+                <span className="badge badge-sm badge-info">
+                  {t("dashUsers.staff")}
+                </span>
+              );
+            default:
+              return (
+                <span className="badge badge-sm badge-ghost">
+                  {t("dashUsers.customer")}
+                </span>
+              );
+          }
+        },
+      },
+      {
+        accessorKey: "phone",
+        header: t("dashUsers.phone"),
+        cell: ({ row }) => {
+          if (!isAdmin)
+            return <span className="text-base-content/40">***</span>;
+          return (
+            <span className="whitespace-nowrap">
+              {row.original.phone || "—"}
+            </span>
+          );
+        },
+      },
+      {
+        id: "membership",
+        header: t("dashUsers.membershipPlan"),
+        cell: ({ row }) => {
+          const plans: MembershipPlan[] = (
+            row.original.membershipPlans ?? []
+          ).map(mapRawPlan);
+          const activePlans = plans.filter(isActivePlan);
+          const uniqueTypes = [
+            ...new Set(activePlans.map((p) => p.plan_type)),
+          ].sort(
+            (a, b) => getPlanConfig(a).priority - getPlanConfig(b).priority,
+          );
+          if (uniqueTypes.length === 0) return "—";
+          return (
+            <div className="flex items-center gap-1.5">
+              {uniqueTypes.map((t) => {
+                const cfg = getPlanConfig(t);
+                return <cfg.icon key={t} className="size-5" />;
+              })}
+            </div>
+          );
+        },
+      },
+      {
+        id: "storedBalance",
+        header: t("dashUsers.storedBalance"),
+        cell: ({ row }) => {
+          const plans: MembershipPlan[] = (
+            row.original.membershipPlans ?? []
+          ).map(mapRawPlan);
+          const storedBalance = getStoredValueBalance(plans);
+          return storedBalance > 0 ? (
+            <span className="font-mono text-sm">
+              ¥{(storedBalance / 100).toFixed(0)}
+            </span>
+          ) : (
+            "—"
+          );
+        },
+      },
+      {
+        accessorKey: "points",
+        header: t("dashUsers.points"),
+        cell: ({ row }) => (
+          <span className="font-mono whitespace-nowrap">
+            {row.original.points ?? 0}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "preferredStoreId",
+        header: t("dashUsers.store"),
+        cell: ({ row }) => (
+          <span className="font-mono text-xs whitespace-nowrap">
+            {row.original.preferredStoreId
+              ? row.original.preferredStoreId.slice(0, 8)
+              : "—"}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "uid",
+        header: "UID",
+        cell: ({ row }) => (
+          <span className="font-mono whitespace-nowrap">
+            {row.original.uid || "—"}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "createdAt",
+        header: t("dashUsers.createdAt"),
+        cell: ({ row }) =>
+          row.original.createdAt
+            ? dayjs(row.original.createdAt).format("YYYY/MM/DD HH:mm")
+            : "—",
+      },
+    ],
+    [t, handleCopy, isAdmin],
+  );
+
   const users = data?.managedUsers?.items ?? [];
+  const pageInfo = data?.managedUsers?.pageInfo;
+  const total = pageInfo?.total ?? users.length;
+  const hasMore = pageInfo?.hasMore ?? false;
 
   return (
     <main className="size-full flex flex-col">
-      <div className="px-4 pt-4">
+      <div className="px-4 pt-4 flex items-center gap-3">
         <DashBackButton />
+        <TableToolbar
+          searchBar={{
+            grammar: USER_SEARCH_GRAMMAR,
+            value: searchInput,
+            onChange: setSearchInput,
+            onSubmit: (parsedResult) => {
+              const serialized = serialize(parsedResult, USER_SEARCH_GRAMMAR);
+              setSearchParam({ q: serialized, page: 1 });
+            },
+            placeholder: t("dashUsers.searchPlaceholder") ?? "Search users…",
+          }}
+          quickFilters={[
+            {
+              label: t("dashUsers.admin"),
+              key: "role",
+              value: "admin",
+              active: parsed.filters.role?.value === "admin",
+            },
+            {
+              label: t("dashUsers.staff"),
+              key: "role",
+              value: "staff",
+              active: parsed.filters.role?.value === "staff",
+            },
+            {
+              label: t("dashUsers.customer"),
+              key: "role",
+              value: "authenticated",
+              active: parsed.filters.role?.value === "authenticated",
+            },
+          ]}
+        />
       </div>
-      <form
-        onSubmit={(e) => e.preventDefault()}
-        className="w-full flex flex-col items-center gap-6 px-4 pt-4 bg-base-100 z-10"
-      >
-        <div className="flex flex-col sm:flex-row gap-4 w-full">
-          <input
-            type="text"
-            value={q}
-            onChange={(evt) => {
-              setSearch({ q: evt.target.value, page: 1 });
-            }}
-            placeholder={t("dashUsers.searchPlaceholder")}
-            className="input input-lg w-full"
-          />
-        </div>
-      </form>
 
-      <div className="w-full flex-1 min-h-0 overflow-auto">
-        <table className="table table-lg table-pin-rows table-pin-cols min-w-[1200px]">
-          <thead>
-            <tr className="z-20">
-              <th></th>
-              <td className="whitespace-nowrap">ID</td>
-              <td className="whitespace-nowrap">{t("dashUsers.nickname")}</td>
-              <td className="whitespace-nowrap">{t("dashUsers.name")}</td>
-              <td className="whitespace-nowrap">{t("dashUsers.role")}</td>
-              <td className="whitespace-nowrap">
-                {t("dashUsers.membershipPlan")}
-              </td>
-              <td className="whitespace-nowrap">
-                {t("dashUsers.storedBalance")}
-              </td>
-              <td className="whitespace-nowrap">{t("dashUsers.phone")}</td>
-              <td className="whitespace-nowrap">UID</td>
-              <td className="whitespace-nowrap">{t("dashUsers.createdAt")}</td>
-              <th className="whitespace-nowrap">{t("dashUsers.actions")}</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={12} className="py-12 text-center">
-                  <span className="loading loading-dots loading-md"></span>
-                </td>
-              </tr>
-            ) : users.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={12}
-                  className="py-12 text-center text-base-content/60"
+      <div className="flex-1 min-h-0">
+        <DashTable
+          columns={columns}
+          data={users}
+          loading={loading}
+          emptyMessage={t("dashUsers.noData")}
+          pagination={{
+            offset: (page - 1) * PAGE_SIZE,
+            limit: PAGE_SIZE,
+            total,
+            hasMore,
+          }}
+          onPaginationChange={(p) =>
+            setSearchParam({
+              page: Math.floor(p.offset / PAGE_SIZE) + 1,
+            })
+          }
+          sorting={sorting}
+          onSortingChange={setSorting}
+          sortableColumns={["name"]}
+          getRowId={(row) => row.id}
+          renderActions={(row) =>
+            isMobile ? (
+              <div className="dropdown dropdown-end">
+                <div
+                  tabIndex={0}
+                  role="button"
+                  className="btn btn-xs btn-ghost btn-square"
                 >
-                  {t("dashUsers.noData")}
-                </td>
-              </tr>
+                  <DotsThreeVerticalIcon className="size-4" weight="bold" />
+                </div>
+                <ul
+                  tabIndex={0}
+                  className="dropdown-content menu bg-base-200 rounded-box z-50 w-32 p-2 shadow-lg"
+                >
+                  <li>
+                    <Link to="/dash/users/$id" params={{ id: row.id }}>
+                      <EyeIcon className="size-4" />
+                      {t("dashUsers.details")}
+                    </Link>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      className="text-error"
+                      onClick={() => openDisableDialog(row)}
+                    >
+                      <UserMinusIcon className="size-4" />
+                      {t("dashUsers.disable")}
+                    </button>
+                  </li>
+                </ul>
+              </div>
             ) : (
-              users.map((user: any) => {
-                const plans: MembershipPlan[] = (
-                  user.membershipPlans ?? []
-                ).map(
-                  (p: any): MembershipPlan => ({
-                    id: p.id,
-                    user_id: p.userId,
-                    plan_type: (p.planType ?? "").toLowerCase() as any,
-                    amount: p.amount,
-                    start_date: p.startDate ?? null,
-                    end_date: p.endDate ?? null,
-                    create_at: p.createdAt ?? null,
-                    update_at: p.updatedAt ?? null,
-                  }),
-                );
-                const storedBalance = getStoredValueBalance(plans);
-                return (
-                  <tr key={user.id}>
-                    <th className="z-10"></th>
-                    <td className="font-mono">
-                      <div className="relative group flex items-center gap-1">
-                        <span className="cursor-default">
-                          {user.id.slice(0, 5)}
-                        </span>
-                        <button
-                          type="button"
-                          className="btn btn-xs btn-ghost btn-square shrink-0"
-                          onClick={() => handleCopy(user.id)}
-                          title={t("dashUsers.copyUserId")}
-                        >
-                          <CopyIcon className="size-3.5" />
-                        </button>
-                        <div className="absolute right-0 top-full z-30 hidden group-hover:block pt-1">
-                          <div className="bg-base-200 shadow-lg rounded-lg px-3 py-1.5 text-xs font-mono whitespace-nowrap">
-                            {user.id}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="whitespace-nowrap">
-                      {user.nickname || "—"}
-                    </td>
-                    <td className="whitespace-nowrap">{user.name || "—"}</td>
-                    <td className="whitespace-nowrap">
-                      {user.role === "ADMIN" ? (
-                        <span className="badge badge-sm badge-error">
-                          {t("dashUsers.admin")}
-                        </span>
-                      ) : user.role === "STAFF" ? (
-                        <span className="badge badge-sm badge-info">
-                          {t("dashUsers.staff")}
-                        </span>
-                      ) : (
-                        <span className="badge badge-sm badge-ghost">
-                          {t("dashUsers.customer")}
-                        </span>
-                      )}
-                    </td>
-                    <td className="relative group">
-                      {(() => {
-                        const activePlans = plans.filter(isActivePlan);
-                        const uniqueTypes = [
-                          ...new Set(activePlans.map((p) => p.plan_type)),
-                        ].sort(
-                          (a, b) =>
-                            getPlanConfig(a).priority -
-                            getPlanConfig(b).priority,
-                        );
-                        if (uniqueTypes.length === 0) return "—";
-                        return (
-                          <>
-                            <div className="flex items-center gap-1.5">
-                              {uniqueTypes.map((t) => {
-                                const cfg = getPlanConfig(t);
-                                return <cfg.icon key={t} className="size-5" />;
-                              })}
-                            </div>
-                            <div className="absolute left-0 top-full z-30 hidden group-hover:block pt-1">
-                              <div className="card card-sm shadow-lg bg-base-200 w-56">
-                                <div className="card-body p-3 flex flex-col gap-1.5">
-                                  {uniqueTypes.map((t) => {
-                                    const cfg = getPlanConfig(t);
-                                    return (
-                                      <div
-                                        key={t}
-                                        className="flex items-center gap-2"
-                                      >
-                                        <cfg.icon className="size-5 shrink-0" />
-                                        <span className="text-sm">
-                                          {cfg.label}
-                                        </span>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </td>
-                    <td>
-                      {storedBalance > 0 ? (
-                        <span className="font-mono text-sm">
-                          ¥{(storedBalance / 100).toFixed(0)}
-                        </span>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="whitespace-nowrap">{user.phone || "—"}</td>
-                    <td className="font-mono whitespace-nowrap">
-                      {user.uid || "—"}
-                    </td>
-                    <td className="whitespace-nowrap">
-                      {user.createdAt
-                        ? dayjs(user.createdAt).format("YYYY/MM/DD HH:mm")
-                        : "—"}
-                    </td>
-                    <th className="whitespace-nowrap">
-                      {isMobile ? (
-                        <div className="dropdown dropdown-end">
-                          <div
-                            tabIndex={0}
-                            role="button"
-                            className="btn btn-xs btn-ghost btn-square"
-                          >
-                            <DotsThreeVerticalIcon
-                              className="size-4"
-                              weight="bold"
-                            />
-                          </div>
-                          <ul
-                            tabIndex={0}
-                            className="dropdown-content menu bg-base-200 rounded-box z-50 w-32 p-2 shadow-lg"
-                          >
-                            <li>
-                              <Link
-                                to="/dash/users/$id"
-                                params={{ id: user.id }}
-                              >
-                                <EyeIcon className="size-4" />
-                                {t("dashUsers.details")}
-                              </Link>
-                            </li>
-                            <li>
-                              <button
-                                type="button"
-                                className="text-error"
-                                onClick={() => openDisableDialog(user)}
-                              >
-                                <UserMinusIcon className="size-4" />
-                                {t("dashUsers.disable")}
-                              </button>
-                            </li>
-                          </ul>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-4 py-2 h-full">
-                          <Link
-                            to="/dash/users/$id"
-                            params={{ id: user.id }}
-                            className="btn btn-xs btn-ghost btn-primary"
-                          >
-                            {t("dashUsers.details")}
-                            <EyeIcon />
-                          </Link>
-
-                          <button
-                            type="button"
-                            className="btn btn-xs btn-ghost btn-error"
-                            onClick={() => openDisableDialog(user)}
-                          >
-                            {t("dashUsers.disable")}
-                            <UserMinusIcon />
-                          </button>
-                        </div>
-                      )}
-                    </th>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+              <div className="flex items-center gap-1">
+                <Link
+                  to="/dash/users/$id"
+                  params={{ id: row.id }}
+                  className="btn btn-xs btn-ghost btn-primary"
+                >
+                  {t("dashUsers.details")}
+                  <EyeIcon />
+                </Link>
+                <button
+                  type="button"
+                  className="btn btn-xs btn-ghost btn-error"
+                  onClick={() => openDisableDialog(row)}
+                >
+                  {t("dashUsers.disable")}
+                  <UserMinusIcon />
+                </button>
+              </div>
+            )
+          }
+        />
       </div>
 
       <dialog ref={disableDialogRef} className="modal">

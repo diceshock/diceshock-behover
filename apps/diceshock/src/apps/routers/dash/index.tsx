@@ -304,7 +304,7 @@ function RouteComponent() {
 
           <Link
             to="/dash/gsz"
-            search={{}}
+            search={{ q: "", page: 1 }}
             className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="card-body p-4">

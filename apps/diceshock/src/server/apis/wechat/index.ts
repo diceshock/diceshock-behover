@@ -22,7 +22,7 @@ function extractCdataContent(xml: string, tag: string): string | undefined {
 
 export async function wechatVerify(c: Context<HonoCtxEnv>) {
   const { signature, timestamp, nonce, echostr } = c.req.query();
-  const token = (c.env as any).WECHAT_MP_TOKEN as string;
+  const token = c.env.WECHAT_MP_TOKEN;
 
   if (!signature || !timestamp || !nonce || !echostr || !token) {
     console.log("[wechat:verify] missing params", {
@@ -56,7 +56,7 @@ export async function wechatVerify(c: Context<HonoCtxEnv>) {
 }
 
 export async function wechatMessage(c: Context<HonoCtxEnv>) {
-  const env = c.env as any;
+  const env = c.env;
   const body = await c.req.text();
   const encryptType = c.req.query("encrypt_type");
 
@@ -186,7 +186,7 @@ async function handleSubscribe(
   c: Context<HonoCtxEnv>,
   openId: string,
 ): Promise<void> {
-  const env = c.env as any;
+  const env = c.env;
   const tdb = db(env.DB);
 
   const existing = await tdb
@@ -315,7 +315,14 @@ Available / 可用:
 - Mahjong rankings 日麻排行
 - Membership info 会员信息`;
 
-async function sendWelcomeMessage(env: any, openId: string): Promise<void> {
+async function sendWelcomeMessage(
+  env: {
+    KV: KVNamespace;
+    WECHAT_MP_APP_ID: string;
+    WECHAT_MP_APP_SECRET: string;
+  },
+  openId: string,
+): Promise<void> {
   try {
     await sendCustomerTextMessage(env, openId, WELCOME_MESSAGE);
     console.log("[wechat:subscribe] welcome message sent");
@@ -352,7 +359,7 @@ const WECHAT_MENU = {
 };
 
 export async function wechatCreateMenu(c: Context<HonoCtxEnv>) {
-  const env = c.env as any;
+  const env = c.env;
   try {
     const token = await getWechatAccessToken(env);
     const url = `https://diceshock.com/wx-proxy/cgi-bin/menu/create?access_token=${token}`;

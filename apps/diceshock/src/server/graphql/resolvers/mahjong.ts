@@ -3,10 +3,9 @@ import dbFactory, {
   leaderboardSnapshotsTable,
   mahjongMatchesTable,
   mahjongRegistrationsTable,
-  userBadgesTable,
+  type userBadgesTable,
   userInfoTable,
 } from "@lib/db";
-import { desc, eq, like } from "drizzle-orm";
 import { z } from "zod/v4";
 import { gszFetch } from "@/server/utils/gszFetch";
 import {
@@ -19,6 +18,9 @@ import type { GQLContext } from "../context";
 import { forbidden, notFound, validationError } from "../errors";
 import { requireAuth, requireStaff } from "../guards";
 import { zodToGraphQLError } from "../validate";
+
+const { and, asc, desc, eq, gte, inArray, like, lte, notInArray, or } = drizzle;
+type SQL = drizzle.SQL;
 
 // ─── Zod Schemas ──────────────────────────────────────────────────────────
 
@@ -160,24 +162,7 @@ type PlayerJSON = {
   finalScore: number;
 };
 
-type MatchRow = {
-  id: string;
-  table_id: string | null;
-  store_id: string | null;
-  match_type: string | null;
-  gsz_record_id: number | null;
-  gsz_synced: boolean;
-  gsz_error: string | null;
-  gsz_synced_at: number | null;
-  mode: string;
-  format: string;
-  started_at: Date | number;
-  ended_at: Date | number;
-  termination_reason: string;
-  players: PlayerJSON[] | null;
-  config: { type?: string; mode: string; format: string } | null;
-  created_at: Date | number | null;
-};
+type MatchRow = typeof mahjongMatchesTable.$inferSelect;
 
 function toGqlMatch(row: MatchRow): Record<string, unknown> {
   const players = row.players ?? [];
@@ -440,37 +425,28 @@ interface VirtualBadge {
   awarded_at: null;
 }
 
-function toGqlBadge(
-  b: Record<string, unknown> | VirtualBadge,
-): Record<string, unknown> {
+type UserBadgeRow = typeof userBadgesTable.$inferSelect;
+type BadgeRow = UserBadgeRow | VirtualBadge;
+
+function toGqlBadge(b: BadgeRow): Record<string, unknown> {
   return {
     id: b.id,
-    userId:
-      (b as Record<string, unknown>).user_id ??
-      (b as Record<string, unknown>).userId ??
-      null,
-    badgeType: (b as Record<string, unknown>).badge_type ?? b.badge_type,
-    badgeRank: (b as Record<string, unknown>).badge_rank ?? b.badge_rank,
-    category: (b as Record<string, unknown>).category ?? b.category,
-    periodLabel: (b as Record<string, unknown>).period_label ?? b.period_label,
-    title: (b as Record<string, unknown>).title ?? b.title,
-    awardedAt: (b as Record<string, unknown>).awarded_at
-      ? new Date(
-          (b as Record<string, unknown>).awarded_at as number,
-        ).toISOString()
-      : null,
-    createdAt: (b as Record<string, unknown>).created_at
-      ? new Date(
-          (b as Record<string, unknown>).created_at as number,
-        ).toISOString()
-      : null,
+    userId: "user_id" in b ? b.user_id : null,
+    badgeType: b.badge_type,
+    badgeRank: b.badge_rank,
+    category: b.category,
+    periodLabel: b.period_label,
+    title: b.title,
+    awardedAt: b.awarded_at ? new Date(b.awarded_at).toISOString() : null,
+    createdAt:
+      "created_at" in b && b.created_at ? b.created_at.toISOString() : null,
   };
 }
 
 function withVirtualBadges(
-  dbBadges: Record<string, unknown>[],
+  dbBadges: UserBadgeRow[],
   hasMatches: boolean,
-): (Record<string, unknown> | VirtualBadge)[] {
+): BadgeRow[] {
   const virtual: VirtualBadge[] = [];
 
   virtual.push({
@@ -508,6 +484,26 @@ const managedMahjongMatchesInputSchema = z.object({
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   storeId: z.string().optional(),
+  pagination: z
+    .object({
+      offset: z.number().int().min(0).default(0),
+      limit: z.number().int().min(1).max(100).default(50),
+    })
+    .optional(),
+});
+
+const mahjongFilterSchema = z.object({
+  search: z.string().optional(),
+  mode: z.array(z.string()).optional(),
+  format: z.array(z.string()).optional(),
+  completion: z.array(z.string()).optional(),
+  syncStatus: z.array(z.string()).optional(),
+  tableCode: z.string().optional(),
+  dateFrom: z.string().optional(),
+  dateTo: z.string().optional(),
+  store: z.string().optional(),
+  sortBy: z.string().optional(),
+  sortOrder: z.enum(["ASC", "DESC"]).optional(),
   pagination: z
     .object({
       offset: z.number().int().min(0).default(0),
@@ -688,10 +684,7 @@ export const mahjongResolvers = {
           .then((rows) => rows.length),
       ]);
 
-      return withVirtualBadges(
-        badges.map((b) => b as unknown as Record<string, unknown>),
-        matchCount > 0,
-      ).map(toGqlBadge);
+      return withVirtualBadges(badges, matchCount > 0).map(toGqlBadge);
     },
 
     async userBadges(
@@ -723,10 +716,7 @@ export const mahjongResolvers = {
           .then((rows) => rows.length),
       ]);
 
-      return withVirtualBadges(
-        badges.map((b) => b as unknown as Record<string, unknown>),
-        matchCount > 0,
-      ).map(toGqlBadge);
+      return withVirtualBadges(badges, matchCount > 0).map(toGqlBadge);
     },
 
     async myPPStats(
@@ -795,7 +785,7 @@ export const mahjongResolvers = {
         limit: 50,
       });
 
-      return matches.map((m) => toGqlMatch(m as unknown as MatchRow));
+      return matches.map((m) => toGqlMatch(m));
     },
 
     async mahjongMatch(
@@ -818,7 +808,7 @@ export const mahjongResolvers = {
       });
 
       if (!match) return null;
-      return toGqlMatch(match as unknown as MatchRow);
+      return toGqlMatch(match);
     },
 
     async myMahjongRegistration(
@@ -904,7 +894,7 @@ export const mahjongResolvers = {
           : null;
 
       return {
-        items: items.map((m) => toGqlMatch(m as unknown as MatchRow)),
+        items: items.map((m) => toGqlMatch(m)),
         pageInfo: {
           offset: 0,
           limit: limitCount,
@@ -952,16 +942,221 @@ export const mahjongResolvers = {
 
     async managedMahjongMatches(
       _source: unknown,
-      args: { input?: Record<string, unknown> },
+      args: {
+        input?: Record<string, unknown>;
+        filter?: Record<string, unknown>;
+      },
       ctx: GQLContext,
     ) {
       requireStaff(ctx);
+      const tdb = dbFactory(ctx.env.DB);
+
+      if (args.filter != null) {
+        const filter = zodToGraphQLError(mahjongFilterSchema, args.filter);
+        const pagination = filter.pagination ?? { offset: 0, limit: 50 };
+        const conditions: SQL[] = [];
+
+        if (filter.mode?.length) {
+          const dbModes = filter.mode
+            .filter((m) => m === "FOUR_PLAYER" || m === "THREE_PLAYER")
+            .map((m) => (m === "THREE_PLAYER" ? "3p" : "4p"));
+          if (dbModes.length === 1) {
+            conditions.push(
+              eq(mahjongMatchesTable.mode, dbModes[0]! as "3p" | "4p"),
+            );
+          } else if (dbModes.length > 0) {
+            conditions.push(
+              inArray(mahjongMatchesTable.mode, dbModes as ("3p" | "4p")[]),
+            );
+          }
+        }
+
+        if (filter.format?.length) {
+          const dbFormats = filter.format
+            .filter((f) => f === "TONPUU" || f === "HANCHAN")
+            .map((f) => (f === "TONPUU" ? "tonpuu" : "hanchan"));
+          if (dbFormats.length === 1) {
+            conditions.push(
+              eq(
+                mahjongMatchesTable.format,
+                dbFormats[0]! as "tonpuu" | "hanchan",
+              ),
+            );
+          } else if (dbFormats.length > 0) {
+            conditions.push(
+              inArray(
+                mahjongMatchesTable.format,
+                dbFormats as ("tonpuu" | "hanchan")[],
+              ),
+            );
+          }
+        }
+
+        if (filter.completion?.length) {
+          type TermReason =
+            | "score_complete"
+            | "vote"
+            | "admin_abort"
+            | "order_invalid";
+          const incReasons: TermReason[] = ["admin_abort", "order_invalid"];
+          const hasComp = filter.completion.includes("COMPLETED");
+          const hasInc = filter.completion.includes("INCOMPLETE");
+          if (hasComp && hasInc) {
+            const completionCondition = or(
+              notInArray(mahjongMatchesTable.termination_reason, incReasons),
+              inArray(mahjongMatchesTable.termination_reason, incReasons),
+            );
+            if (completionCondition) conditions.push(completionCondition);
+          } else if (hasComp) {
+            conditions.push(
+              notInArray(mahjongMatchesTable.termination_reason, incReasons),
+            );
+          } else if (hasInc) {
+            conditions.push(
+              inArray(mahjongMatchesTable.termination_reason, incReasons),
+            );
+          }
+        }
+
+        if (filter.syncStatus?.length) {
+          const hasSync = filter.syncStatus.includes("SYNCED");
+          const hasUnsync = filter.syncStatus.includes("UNSYNCED");
+          if (hasSync && hasUnsync) {
+            const syncCondition = or(
+              eq(mahjongMatchesTable.gsz_synced, true),
+              and(
+                eq(mahjongMatchesTable.match_type, "tournament"),
+                eq(mahjongMatchesTable.gsz_synced, false),
+              ),
+            );
+            if (syncCondition) conditions.push(syncCondition);
+          } else if (hasSync) {
+            conditions.push(eq(mahjongMatchesTable.gsz_synced, true));
+          } else if (hasUnsync) {
+            const unsyncCondition = and(
+              eq(mahjongMatchesTable.match_type, "tournament"),
+              eq(mahjongMatchesTable.gsz_synced, false),
+            );
+            if (unsyncCondition) conditions.push(unsyncCondition);
+          }
+        }
+
+        if (filter.tableCode) {
+          const tableRow = await tdb.query.tablesTable.findFirst({
+            where: (t, { eq: e }) => e(t.code, filter.tableCode!),
+            columns: { id: true },
+          });
+          if (tableRow) {
+            conditions.push(eq(mahjongMatchesTable.table_id, tableRow.id));
+          } else {
+            return {
+              items: [],
+              pageInfo: {
+                offset: pagination.offset,
+                limit: pagination.limit,
+                total: 0,
+                nextCursor: null,
+                hasMore: false,
+              },
+            };
+          }
+        }
+
+        if (filter.dateFrom) {
+          conditions.push(
+            gte(mahjongMatchesTable.started_at, new Date(filter.dateFrom)),
+          );
+        }
+        if (filter.dateTo) {
+          conditions.push(
+            lte(mahjongMatchesTable.started_at, new Date(filter.dateTo)),
+          );
+        }
+
+        if (filter.store) {
+          conditions.push(eq(mahjongMatchesTable.store_id, filter.store));
+        }
+
+        if (filter.search?.trim()) {
+          const s = filter.search.trim();
+          const searchCondition = or(
+            eq(mahjongMatchesTable.id, s),
+            like(mahjongMatchesTable.players, `%${s}%`),
+          );
+          if (searchCondition) conditions.push(searchCondition);
+        }
+
+        const whereClause =
+          conditions.length > 0 ? and(...conditions) : undefined;
+        const countQuery = tdb
+          .select({ count: drizzle.count() })
+          .from(mahjongMatchesTable)
+          .$dynamic();
+        const totalRows = whereClause
+          ? await countQuery.where(whereClause)
+          : await countQuery;
+        const total = (totalRows[0]?.count as number) ?? 0;
+
+        const orderDir = filter.sortOrder === "ASC" ? asc : desc;
+        const sortCol = (() => {
+          switch (filter.sortBy) {
+            case "started_at":
+              return orderDir(mahjongMatchesTable.started_at);
+            case "ended_at":
+              return orderDir(mahjongMatchesTable.ended_at);
+            case "mode":
+              return orderDir(mahjongMatchesTable.mode);
+            case "format":
+              return orderDir(mahjongMatchesTable.format);
+            default:
+              return orderDir(mahjongMatchesTable.created_at);
+          }
+        })();
+
+        const query = tdb.select().from(mahjongMatchesTable).$dynamic();
+        const filtered = whereClause ? query.where(whereClause) : query;
+        const matches = await filtered
+          .orderBy(sortCol)
+          .limit(pagination.limit)
+          .offset(pagination.offset);
+
+        const allTables = await tdb.query.tablesTable.findMany({
+          columns: { id: true, name: true, code: true, scope: true },
+        });
+        const tableMap = new Map(allTables.map((t) => [t.id, t]));
+
+        const items = matches.map((m) => {
+          const tbl = m.table_id ? (tableMap.get(m.table_id) ?? null) : null;
+          const gql = toGqlMatch(m);
+          gql.table = tbl
+            ? {
+                id: tbl.id,
+                name: tbl.name,
+                code: tbl.code,
+                scope: tbl.scope?.toUpperCase() ?? null,
+              }
+            : null;
+          gql.matchType = m.match_type?.toUpperCase() ?? null;
+          return gql;
+        });
+
+        return {
+          items,
+          pageInfo: {
+            offset: pagination.offset,
+            limit: pagination.limit,
+            total,
+            nextCursor: null,
+            hasMore: pagination.offset + pagination.limit < total,
+          },
+        };
+      }
+
       const rawInput = args.input ?? {};
       const input = zodToGraphQLError(
         managedMahjongMatchesInputSchema,
         rawInput,
       );
-      const tdb = dbFactory(ctx.env.DB);
       const pagination = input.pagination ?? { offset: 0, limit: 50 };
 
       const matches = await tdb.query.mahjongMatchesTable.findMany({
@@ -975,7 +1170,7 @@ export const mahjongResolvers = {
 
       const allMatches: Record<string, unknown>[] = matches.map((m) => {
         const table = m.table_id ? (tableMap.get(m.table_id) ?? null) : null;
-        const gql = toGqlMatch(m as unknown as MatchRow);
+        const gql = toGqlMatch(m);
         gql.table = table
           ? {
               id: table.id,
@@ -988,52 +1183,59 @@ export const mahjongResolvers = {
         return gql;
       });
 
-      const gqlMatches: Record<string, unknown>[] = allMatches.filter(
-        (m: Record<string, unknown>) => {
-          if (input.mode && m.mode !== input.mode) return false;
-          if (input.format && m.format !== input.format) return false;
-          if (input.tableId && (m.table as any)?.id !== input.tableId)
+      const gqlMatches = allMatches.filter((raw: Record<string, unknown>) => {
+        const m = raw as {
+          id: string;
+          table: { id: string; name: string; code: string } | null;
+          mode: unknown;
+          format: unknown;
+          matchType: unknown;
+          playersJson: string;
+          gszSynced: unknown;
+          terminationReason: unknown;
+          startedAt: unknown;
+        };
+        if (input.mode && m.mode !== input.mode) return false;
+        if (input.format && m.format !== input.format) return false;
+        if (input.tableId && m.table?.id !== input.tableId) return false;
+        if (input.search?.trim()) {
+          const q = input.search.trim().toLowerCase();
+          const playersJson = m.playersJson ?? "";
+          if (
+            !m.id.toLowerCase().includes(q) &&
+            !playersJson.toLowerCase().includes(q) &&
+            !(m.table?.name ?? "").toLowerCase().includes(q) &&
+            !(m.table?.code ?? "").toLowerCase().includes(q)
+          )
             return false;
-          if (input.search?.trim()) {
-            const q = input.search.trim().toLowerCase();
-            const playersJson = (m as any).playersJson ?? "";
-            if (
-              !(m.id as string).toLowerCase().includes(q) &&
-              !playersJson.toLowerCase().includes(q) &&
-              !((m.table as any)?.name ?? "").toLowerCase().includes(q) &&
-              !((m.table as any)?.code ?? "").toLowerCase().includes(q)
-            )
-              return false;
-          }
-          if (input.completion) {
-            const isIncomplete = ["ADMIN_ABORT", "ORDER_INVALID"].includes(
-              m.terminationReason as string,
-            );
-            if (input.completion === "COMPLETED" && isIncomplete) return false;
-            if (input.completion === "INCOMPLETE" && !isIncomplete)
-              return false;
-          }
-          if (input.gszSync) {
-            if (input.gszSync === "SYNCED" && !m.gszSynced) return false;
-            if (
-              input.gszSync === "UNSYNCED" &&
-              (m.matchType !== "TOURNAMENT" || m.gszSynced)
-            )
-              return false;
-          }
-          if (input.startDate) {
-            const ms = new Date(input.startDate).getTime();
-            const startedAt = new Date(m.startedAt as string).getTime();
-            if (startedAt < ms) return false;
-          }
-          if (input.endDate) {
-            const ms = new Date(input.endDate).getTime();
-            const startedAt = new Date(m.startedAt as string).getTime();
-            if (startedAt > ms) return false;
-          }
-          return true;
-        },
-      );
+        }
+        if (input.completion) {
+          const isIncomplete = ["ADMIN_ABORT", "ORDER_INVALID"].includes(
+            m.terminationReason as string,
+          );
+          if (input.completion === "COMPLETED" && isIncomplete) return false;
+          if (input.completion === "INCOMPLETE" && !isIncomplete) return false;
+        }
+        if (input.gszSync) {
+          if (input.gszSync === "SYNCED" && !m.gszSynced) return false;
+          if (
+            input.gszSync === "UNSYNCED" &&
+            (m.matchType !== "TOURNAMENT" || m.gszSynced)
+          )
+            return false;
+        }
+        if (input.startDate) {
+          const ms = new Date(input.startDate).getTime();
+          const startedAt = new Date(m.startedAt as string).getTime();
+          if (startedAt < ms) return false;
+        }
+        if (input.endDate) {
+          const ms = new Date(input.endDate).getTime();
+          const startedAt = new Date(m.startedAt as string).getTime();
+          if (startedAt > ms) return false;
+        }
+        return true;
+      });
 
       const total = gqlMatches.length;
       const items = gqlMatches.slice(
@@ -1070,9 +1272,7 @@ export const mahjongResolvers = {
       await Promise.all(
         mahjongTables.map(async (table) => {
           try {
-            const env = ctx.env as unknown as {
-              DS_SUBSCRIPTION: DurableObjectNamespace;
-            };
+            const env = envWithDsSub(ctx);
             const doId = env.DS_SUBSCRIPTION.idFromName(table.code);
             const stub = env.DS_SUBSCRIPTION.get(doId);
             const res = await stub.fetch(
@@ -1183,7 +1383,7 @@ export const mahjongResolvers = {
       );
       await Promise.all(cats.map((c) => publishLeaderboardUpdated(ctx, c)));
 
-      return toGqlMatch(match as unknown as MatchRow);
+      return toGqlMatch(match);
     },
 
     async registerMahjong(
@@ -1447,7 +1647,7 @@ export const mahjongResolvers = {
         where: (m, { eq }) => eq(m.id, input.matchId),
       });
       if (!updated) throw notFound("Match not found after update");
-      return toGqlMatch(updated as unknown as MatchRow);
+      return toGqlMatch(updated);
     },
 
     async syncMahjongMatchToGsz(

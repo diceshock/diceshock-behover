@@ -110,6 +110,77 @@ interface PPStat {
   avgPP: number;
 }
 
+type MahjongHistoryItem = NonNullable<
+  NonNullable<
+    ReturnType<typeof useGetMahjongMatchHistoryQuery>["data"]
+  >["mahjongMatchHistory"]
+>["items"][number];
+
+type GqlBadge = NonNullable<
+  NonNullable<ReturnType<typeof useGetMyBadgesQuery>["data"]>["myBadges"]
+>[number];
+
+type GqlRankingEntry = NonNullable<
+  NonNullable<ReturnType<typeof useGetMyRankingsQuery>["data"]>["myRankings"]
+>[number];
+
+function enumToSnake(value: string): string {
+  return value.toLowerCase();
+}
+
+function mapMatchMode(mode: string): Match["mode"] {
+  return mode === "THREE_PLAYER" ? "3p" : "4p";
+}
+
+function mapMatchFormat(format: string): Match["format"] {
+  return format === "TONPUU" ? "tonpuu" : "hanchan";
+}
+
+function mapMatch(match: MahjongHistoryItem): Match {
+  return {
+    id: match.id,
+    table_id: match.tableId ?? null,
+    match_type: match.matchType ? enumToSnake(match.matchType) : null,
+    mode: mapMatchMode(match.mode),
+    format: mapMatchFormat(match.format),
+    started_at: match.startedAt,
+    ended_at: match.endedAt,
+    termination_reason: enumToSnake(match.terminationReason),
+    players: match.players,
+    config: match.config
+      ? {
+          type: match.config.type ?? undefined,
+          mode: match.config.mode,
+          format: match.config.format,
+        }
+      : null,
+    created_at: match.createdAt ?? null,
+  };
+}
+
+function mapBadge(badge: GqlBadge): Badge {
+  return {
+    id: badge.id,
+    badge_type: badge.badgeType,
+    badge_rank: badge.badgeRank,
+    category: badge.category,
+    period_label: badge.periodLabel,
+    title: badge.title,
+    awarded_at: badge.awardedAt ?? null,
+  };
+}
+
+function mapRanking(ranking: GqlRankingEntry): RankingEntry {
+  return {
+    category: enumToSnake(ranking.category) as PPCategory,
+    period: enumToSnake(ranking.period),
+    rank: ranking.rank ?? null,
+    totalPP: ranking.totalPP,
+    prevRank: ranking.prevRank ?? null,
+    matchCount: ranking.matchCount,
+  };
+}
+
 const PERIOD_LABEL_KEYS: Record<string, string> = {
   day: "riichi.today",
   week: "riichi.thisWeek",
@@ -511,12 +582,9 @@ function MyGszProfile() {
         const data = result.data?.mahjongMatchHistory;
         if (data) {
           if (cursor) {
-            setMatches((prev) => [
-              ...prev,
-              ...(data.items as unknown as Match[]),
-            ]);
+            setMatches((prev) => [...prev, ...data.items.map(mapMatch)]);
           } else {
-            setMatches(data.items as unknown as Match[]);
+            setMatches(data.items.map(mapMatch));
           }
           setMatchCursor(data.pageInfo.nextCursor);
           setHasMoreMatches(!!data.pageInfo.nextCursor);
@@ -554,12 +622,12 @@ function MyGszProfile() {
         }),
         Promise.resolve().then(() => {
           if (badgesData?.myBadges) {
-            setBadges(badgesData.myBadges as unknown as Badge[]);
+            setBadges(badgesData.myBadges.map(mapBadge));
           }
         }),
         Promise.resolve().then(() => {
           if (rankingsData?.myRankings) {
-            setRankings(rankingsData.myRankings as unknown as RankingEntry[]);
+            setRankings(rankingsData.myRankings.map(mapRanking));
           }
         }),
       ]).finally(() => setIsLoading(false));
@@ -567,7 +635,7 @@ function MyGszProfile() {
       Promise.allSettled([
         Promise.resolve().then(() => {
           if (userBadgesData?.userBadges) {
-            setBadges(userBadgesData.userBadges as unknown as Badge[]);
+            setBadges(userBadgesData.userBadges.map(mapBadge));
           }
         }),
       ]).finally(() => setIsLoading(false));

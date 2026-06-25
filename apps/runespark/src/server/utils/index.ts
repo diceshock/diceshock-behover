@@ -17,10 +17,10 @@ export const injectCrossDataToCtx = (
 };
 
 export const builderSubscription = subscribe as <
-  TArgs = Record<string, any>,
-  TPayload extends Record<string, any> = Record<string, any>,
-  TContext = any,
-  TSource = any,
+  TArgs = Record<string, unknown>,
+  TPayload extends Record<string, unknown> = Record<string, unknown>,
+  TContext = unknown,
+  TSource = unknown,
   TEvent extends {
     topic: string;
     payload: TPayload;

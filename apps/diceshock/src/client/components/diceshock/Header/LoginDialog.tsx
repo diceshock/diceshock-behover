@@ -1,16 +1,16 @@
+import { useApolloClient } from "@apollo/client";
 import { signIn } from "@hono/auth-js/react";
 import { WarningIcon, XIcon } from "@phosphor-icons/react/dist/ssr";
 import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import WechatIcon from "@/client/assets/svg/wechat.svg?react";
-import { useTranslation } from "@/client/hooks/useTranslation";
-import { formatMessage } from "@/shared/i18n";
-import { useApolloClient } from "@apollo/client";
 import {
   CaptchaSettingsDocument,
   TransferTempIdentityDocument,
   WechatOpenConfigDocument,
 } from "@/client/graphql/__generated__";
+import { useTranslation } from "@/client/hooks/useTranslation";
+import { formatMessage } from "@/shared/i18n";
 import useSmsCode from "../../../hooks/useSmsCode";
 import useTempIdentity from "../../../hooks/useTempIdentity";
 import Modal from "../../modal";
@@ -164,7 +164,9 @@ export default function LoginDialog({
               const parsed = JSON.parse(stored);
               if (parsed?.tempId) {
                 const session = await fetch("/api/auth/session");
-                const sessionData: any = await session.json();
+                const sessionData = (await session.json()) as {
+                  user?: { id?: string };
+                };
                 const userId = sessionData?.user?.id;
                 if (userId) {
                   await client.mutate({

@@ -5,7 +5,18 @@ import dbFactory, {
   gstoneGamesTable,
   pricingSnapshotsTable,
 } from "@lib/db";
-import { and, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  isNotNull,
+  isNull,
+  like,
+  lte,
+  sql,
+} from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import {
@@ -298,16 +309,85 @@ export const adminResolvers = {
     // ── Events (staff) ───────────────────────────────────────────────────
     async managedEvents(
       _source: unknown,
-      args: { storeId?: string },
+      args: {
+        storeId?: string;
+        filter?: {
+          search?: string | null;
+          status?: (string | null)[] | null;
+          dateFrom?: string | null;
+          dateTo?: string | null;
+          store?: string | null;
+          type?: string | null;
+          sortBy?: string | null;
+          sortOrder?: "ASC" | "DESC" | null;
+          pagination?: { offset?: number | null; limit?: number | null } | null;
+        };
+      },
       ctx: GQLContext,
     ) {
       requireStaff(ctx);
       const tdb = db(ctx);
-      const storeId = args.storeId ?? ctx.preferredStoreId;
-      const rows = await tdb.query.eventsTable.findMany({
-        where: (e, { eq }) => storeCondition(e.store_id, storeId),
-        orderBy: (e, { desc }) => desc(e.create_at),
-      });
+
+      // ── No filter: legacy behavior ──────────────────────────────────
+      if (!args.filter) {
+        const storeId = args.storeId ?? ctx.preferredStoreId;
+        const rows = await tdb.query.eventsTable.findMany({
+          where: (e, { eq }) => storeCondition(e.store_id, storeId),
+          orderBy: (e, { desc }) => desc(e.create_at),
+        });
+        return rows.map(mapEventRow);
+      }
+
+      const { filter } = args;
+
+      // ── DB-level filtering (SQL builder API) ─────────────────────────
+      const conditions: ReturnType<typeof eq>[] = [];
+
+      if (filter.search) {
+        conditions.push(like(eventsTable.title, `%${filter.search}%`));
+      }
+      if (filter.dateFrom) {
+        conditions.push(gte(eventsTable.create_at, new Date(filter.dateFrom)));
+      }
+      if (filter.dateTo) {
+        conditions.push(lte(eventsTable.create_at, new Date(filter.dateTo)));
+      }
+      const storeId = filter.store || args.storeId || ctx.preferredStoreId;
+      if (storeId) {
+        conditions.push(eq(eventsTable.store_id, storeId));
+      }
+
+      const where = conditions.length > 0 ? and(...conditions) : undefined;
+      const pagination = filter.pagination ?? { offset: 0, limit: 20 };
+      const limit = pagination.limit ?? 20;
+      const offset = pagination.offset ?? 0;
+
+      const orderFn = filter.sortOrder === "ASC" ? asc : desc;
+
+      // Build query with explicit column selection
+      let query = tdb.select().from(eventsTable).$dynamic();
+      if (where) query = query.where(where);
+
+      const base = filter.sortBy ?? "create_at";
+      const q = (() => {
+        switch (base) {
+          case "title":
+            return query.orderBy(orderFn(eventsTable.title));
+          case "id":
+            return query.orderBy(orderFn(eventsTable.id));
+          case "store_id":
+            return query.orderBy(orderFn(eventsTable.store_id));
+          case "is_published":
+            return query.orderBy(orderFn(eventsTable.is_published));
+          case "update_at":
+            return query.orderBy(orderFn(eventsTable.update_at));
+          default:
+            return query.orderBy(orderFn(eventsTable.create_at));
+        }
+      })();
+
+      const rows = await q.limit(limit).offset(offset);
+
       return rows.map(mapEventRow);
     },
 
@@ -439,10 +519,7 @@ export const adminResolvers = {
       _args: Record<string, never>,
       ctx: GQLContext,
     ) {
-      const appId =
-        ((ctx.env as unknown as Record<string, unknown>).WECHAT_OPEN_APP_ID as
-          | string
-          | null) || null;
+      const appId = ctx.env.WECHAT_OPEN_APP_ID || null;
       return { appId };
     },
 
@@ -599,25 +676,7 @@ export const adminResolvers = {
       args: { query: string; limit?: number },
       ctx: GQLContext,
     ) {
-      const aiSearch = (ctx.env as unknown as Record<string, unknown>)
-        .AI_SEARCH as
-        | {
-            search(opts: { query: string; max_num_results: number }): Promise<{
-              chunks?: Array<{
-                text?: string;
-                item?: { key: string };
-                score?: number;
-              }>;
-              data?: Array<{
-                text?: string;
-                content?: string;
-                filename?: string;
-                item?: { key: string };
-                score?: number;
-              }>;
-            }>;
-          }
-        | undefined;
+      const aiSearch = ctx.env.AI_SEARCH;
       if (!aiSearch) {
         return {
           results: [],
@@ -627,7 +686,9 @@ export const adminResolvers = {
 
       const results = await aiSearch.search({
         query: args.query,
-        max_num_results: args.limit ?? 5,
+        ai_search_options: {
+          retrieval: { max_num_results: args.limit ?? 5 },
+        },
       });
 
       const chunks: Array<{ text: string; source: string; score: number }> = [];
@@ -638,14 +699,6 @@ export const adminResolvers = {
             text: (chunk.text || "").slice(0, 1000),
             source: chunk.item?.key || "",
             score: chunk.score || 0,
-          });
-        }
-      } else if (results?.data?.length) {
-        for (const d of results.data) {
-          chunks.push({
-            text: (d.text || d.content || "").slice(0, 1000),
-            source: d.filename || d.item?.key || "",
-            score: d.score || 0,
           });
         }
       }
@@ -1365,10 +1418,12 @@ export const adminResolvers = {
 
       const [row] = await tdb
         .insert(pricingSnapshotsTable)
+        // @ts-expect-error - PricingPlan has [key: string]: unknown index signature,
+        // incompatible with Drizzle's strict inline $type for the data column
         .values({
           name: finalName,
           store_id: storeId ?? undefined,
-          data: data as any,
+          data: data,
           status: "draft",
           created_at: new Date(),
         })
@@ -1433,7 +1488,7 @@ export const adminResolvers = {
         .values({
           name: finalName,
           store_id: storeId ?? undefined,
-          data: snapshot.data as any,
+          data: snapshot.data,
           status: "draft",
           created_at: new Date(),
         })

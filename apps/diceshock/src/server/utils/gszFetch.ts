@@ -1,8 +1,11 @@
 const GSZ_BASE = "https://gsz.rmlinking.com";
 
-// biome-ignore lint/suspicious/noExplicitAny: env typing varies by context
+interface GszEnv {
+  GSZ_TOKEN?: string;
+}
+
 export async function gszFetch<T = unknown>(
-  env: any,
+  env: GszEnv,
   path: string,
   body: Record<string, unknown>,
   query?: Record<string, string | number>,

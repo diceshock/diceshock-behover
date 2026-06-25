@@ -71,7 +71,7 @@ describe("validateQueryString", () => {
     expect(result.error).toContain("subscription");
   });
 
-  it("4 | rejects depth > 3 for non-introspection queries", () => {
+  it("4 | allows depth > 3 for non-introspection queries (no depth limit)", () => {
     const result = validateQueryString(`{
       activesTable {
         activeRegistrationsTable {
@@ -83,8 +83,7 @@ describe("validateQueryString", () => {
         }
       }
     }`);
-    expect(result.valid).toBe(false);
-    expect(result.error).toContain("层级");
+    expect(result.valid).toBe(true);
   });
 
   it("5 | accepts depth = 3 exactly (at the limit)", () => {
@@ -179,7 +178,7 @@ describe("executeQueryTool", () => {
     const ctx = mockToolContext();
     const result = await executeQueryTool({ graphql: "{ broken query" }, ctx);
     expect(typeof result).toBe("string");
-    expect(result).toContain("语法错误");
+    expect(result).toContain("语法解析失败");
   });
 
   it("12 | returns error message string for mutation (does not throw)", async () => {
@@ -202,26 +201,20 @@ describe("executeQueryTool", () => {
     expect(result).toContain("subscription");
   });
 
-  it("14 | returns error for excessive depth", async () => {
-    const ctx = mockToolContext();
-    const result = await executeQueryTool(
-      {
-        graphql: `{
-          activesTable {
-            activeRegistrationsTable {
-              userInfoTable {
-                userBadgesTable {
-                  id
-                }
-              }
+  it("14 | validates deep query without depth rejection (no depth limit)", async () => {
+    const result = validateQueryString(`{
+      activesTable {
+        activeRegistrationsTable {
+          userInfoTable {
+            userBadgesTable {
+              id
             }
           }
-        }`,
-      },
-      ctx,
-    );
-    expect(typeof result).toBe("string");
-    expect(result).toContain("层级");
+        }
+      }
+    }`);
+    expect(result.valid).toBe(true);
+    expect(result.error).toBeUndefined();
   });
 
   it("15 | passes variables through validation without error", async () => {

@@ -642,9 +642,7 @@ async function handleUpsertBusinessCard(
       .set(data)
       .where(eq(userBusinessCardTable.id, userId));
   } else {
-    await d
-      .insert(userBusinessCardTable)
-      .values({ id: userId, ...data } as any);
+    await d.insert(userBusinessCardTable).values({ id: userId, ...data });
   }
 
   const parts: string[] = [];
@@ -1165,8 +1163,9 @@ async function handleVerifyPhone(
       provider: "SMS",
       providerAccountId: phone,
     };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await d.insert(accounts).values(accountValues as any);
+    // @ts-expect-error - Drizzle column $type restricts to AdapterAccountType
+    // which excludes "credentials", but it's valid at runtime
+    await d.insert(accounts).values(accountValues);
   }
 
   return `[通知] 手机号绑定成功\n${phone.slice(0, 3)}****${phone.slice(-4)}\n${SITE_LINKS.me()}`;

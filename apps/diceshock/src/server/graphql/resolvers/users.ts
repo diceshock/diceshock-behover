@@ -89,6 +89,21 @@ const userSearchSchema = z.object({
     .default({ offset: 0, limit: 20 }),
 });
 
+const userFilterSchema = z.object({
+  search: z.string().nullable().optional(),
+  role: z.array(z.string()).nullable().optional(),
+  store: z.string().nullable().optional(),
+  sortBy: z.string().nullable().optional(),
+  sortOrder: z.enum(["ASC", "DESC"]).nullable().optional(),
+  pagination: z
+    .object({
+      offset: z.number().int().min(0).optional().default(0),
+      limit: z.number().int().min(1).max(100).optional().default(20),
+    })
+    .optional()
+    .default({ offset: 0, limit: 20 }),
+});
+
 const userByIdSchema = z.object({
   id: z.string().min(1),
 });
@@ -137,7 +152,7 @@ export const usersTypeDefs = `
     myBusinessCard: BusinessCard
     businessCard(userId: ID!, activeId: ID!): BusinessCard
     participantBusinessCards(activeId: ID!): [BusinessCard!]!
-    users(input: UserSearchInput = {}): UserListResult!
+    users(input: UserSearchInput = {}, filter: UserFilterInput): UserListResult!
     user(id: ID!): UserProfile
     ownedBoardGames(input: BoardGameFilterInput = {}): [BoardGameSummary!]!
     ownedBoardGameCount: BoardGameCounts!
@@ -308,11 +323,196 @@ export const usersResolvers = {
 
     async managedUsers(
       _source: unknown,
-      args: { input?: unknown },
+      args: { input?: unknown; filter?: unknown },
       ctx: GQLContext,
     ) {
       requireStaff(ctx);
-      const input = zodToGraphQLError(userSearchSchema, args.input ?? {});
+      const { input: userInput, filter } = args;
+
+      if (filter) {
+        const f = zodToGraphQLError(userFilterSchema, filter ?? {});
+        const tdb = dbFactory(ctx.env.DB);
+        const { offset, limit } = f.pagination!;
+        const trimmedSearch = f.search?.trim();
+
+        let userInfoMatchedIds: string[] | null = null;
+
+        if (f.store) {
+          const storeMatches = await tdb.query.userInfoTable.findMany({
+            where: (ui, { eq }) => eq(ui.preferred_store_id, f.store!),
+            columns: { id: true },
+          });
+          userInfoMatchedIds = storeMatches.map((u) => u.id);
+        }
+
+        if (trimmedSearch) {
+          const phoneMatches = await tdb.query.userInfoTable.findMany({
+            where: (ui, { or, like }) =>
+              or(
+                like(ui.phone, `%${trimmedSearch}%`),
+                like(ui.uid, `%${trimmedSearch}%`),
+                like(ui.nickname, `%${trimmedSearch}%`),
+              ),
+            columns: { id: true },
+          });
+          const phoneIds = phoneMatches.map((u) => u.id);
+
+          if (trimmedSearch.length >= 8) {
+            phoneIds.push(trimmedSearch);
+          }
+
+          if (userInfoMatchedIds !== null) {
+            const phoneSet = new Set(phoneIds);
+            userInfoMatchedIds = userInfoMatchedIds.filter((id) =>
+              phoneSet.has(id),
+            );
+          } else {
+            userInfoMatchedIds = phoneIds;
+          }
+        }
+
+        const countQuery = tdb
+          .select({ count: drizzle.count() })
+          .from(users)
+          .$dynamic();
+
+        const sqlConds: ReturnType<typeof drizzle.and>[] = [];
+        if (trimmedSearch) {
+          const sConds: ReturnType<typeof drizzle.or>[] = [
+            drizzle.like(users.name, `%${trimmedSearch}%`),
+            drizzle.like(users.email, `%${trimmedSearch}%`),
+          ];
+          if (userInfoMatchedIds && userInfoMatchedIds.length > 0) {
+            sConds.push(drizzle.inArray(users.id, userInfoMatchedIds));
+          }
+          sqlConds.push(drizzle.or(...sConds));
+        } else if (userInfoMatchedIds !== null) {
+          if (userInfoMatchedIds.length === 0) {
+            sqlConds.push(drizzle.eq(users.id, "__none__"));
+          } else {
+            sqlConds.push(drizzle.inArray(users.id, userInfoMatchedIds));
+          }
+        }
+        if (f.role?.length) {
+          sqlConds.push(
+            drizzle.inArray(
+              users.role,
+              f.role.map(
+                (r) => r.toLowerCase() as "customer" | "staff" | "admin",
+              ),
+            ),
+          );
+        }
+        if (sqlConds.length > 0) {
+          countQuery.where(drizzle.and(...sqlConds));
+        }
+
+        const [countResult] = await countQuery;
+        const total = countResult?.count ?? 0;
+
+        const userList = await tdb.query.users.findMany({
+          with: { userInfo: true, membershipPlans: true },
+          limit,
+          offset,
+          where: (u, ops) => {
+            const conds: ReturnType<typeof ops.and>[] = [];
+            if (trimmedSearch) {
+              const searchNameConds: ReturnType<typeof ops.or>[] = [
+                ops.like(u.name, `%${trimmedSearch}%`),
+                ops.like(u.email, `%${trimmedSearch}%`),
+              ];
+              if (userInfoMatchedIds && userInfoMatchedIds.length > 0) {
+                searchNameConds.push(ops.inArray(u.id, userInfoMatchedIds));
+              }
+              conds.push(ops.or(...searchNameConds));
+            } else if (userInfoMatchedIds !== null) {
+              if (userInfoMatchedIds.length === 0) return undefined;
+              conds.push(ops.inArray(u.id, userInfoMatchedIds));
+            }
+            if (f.role?.length) {
+              conds.push(
+                ops.inArray(
+                  u.role,
+                  f.role.map(
+                    (r) => r.toLowerCase() as "customer" | "staff" | "admin",
+                  ),
+                ),
+              );
+            }
+            if (conds.length === 0) return undefined;
+            return ops.and(...conds);
+          },
+          orderBy: (u, { asc, desc }) => {
+            if (f.sortBy === "name") {
+              return f.sortOrder === "ASC" ? asc(u.name) : desc(u.name);
+            }
+            return desc(u.id);
+          },
+        });
+
+        const items = userList.map((user) => {
+          const u = user as typeof user & {
+            userInfo: {
+              uid: string;
+              nickname: string;
+              phone: string | null;
+              preferred_locale: string | null;
+              preferred_store_id: string | null;
+              create_at: Date | null;
+              meta: { auto_nickname?: boolean } | null;
+            } | null;
+            membershipPlans: Array<{
+              id: string;
+              user_id: string;
+              plan_type: string;
+              amount: number | null;
+              note: string | null;
+              start_date: Date | null;
+              end_date: Date | null;
+              create_at: Date | null;
+              update_at: Date | null;
+            }>;
+          };
+
+          return {
+            id: u.id,
+            uid: u.userInfo?.uid ?? null,
+            name: u.name,
+            email: u.email,
+            image: u.image,
+            role: u.role.toUpperCase(),
+            nickname: u.userInfo?.nickname ?? null,
+            phone: u.userInfo?.phone ?? null,
+            preferredLocale: u.userInfo?.preferred_locale ?? null,
+            preferredStoreId: u.userInfo?.preferred_store_id ?? null,
+            meta: u.userInfo?.meta ? JSON.stringify(u.userInfo.meta) : null,
+            createdAt: toIsoString(u.userInfo?.create_at ?? null),
+            membershipPlans: (u.membershipPlans ?? []).map((plan) => ({
+              id: plan.id,
+              userId: plan.user_id,
+              planType: plan.plan_type.toUpperCase(),
+              amount: plan.amount,
+              note: plan.note,
+              startDate: toIsoString(plan.start_date),
+              endDate: toIsoString(plan.end_date),
+              createdAt: toIsoString(plan.create_at),
+              updatedAt: toIsoString(plan.update_at),
+            })),
+          };
+        });
+
+        return {
+          items,
+          pageInfo: {
+            offset,
+            limit,
+            total,
+            hasMore: offset + limit < total,
+          },
+        };
+      }
+
+      const input = zodToGraphQLError(userSearchSchema, userInput ?? {});
       const tdb = dbFactory(ctx.env.DB);
 
       const { offset, limit } = input.pagination!;

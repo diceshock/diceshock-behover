@@ -127,7 +127,7 @@ export async function archiveToR2(
     created_at: number;
   }>,
 ): Promise<void> {
-  const r2 = (c.env as unknown as { R2?: R2Bucket }).R2;
+  const r2 = c.env.R2;
   if (!r2 || messages.length === 0) return;
 
   const date = new Date().toISOString().split("T")[0];

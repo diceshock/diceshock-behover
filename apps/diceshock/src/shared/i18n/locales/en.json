@@ -595,7 +595,13 @@
     "confirmBatchDeleteTitle": "Confirm Batch Deletion",
     "batchDeletePrefix": "About to delete",
     "batchDeleteSuffix": "meetups and all registrations. This action cannot be undone.",
-    "confirmDeleteItems": "Delete {count} Items"
+    "confirmDeleteItems": "Delete {count} Items",
+    "type": "Type",
+    "typeGame": "Game",
+    "typeNotGame": "Not a Game",
+    "store": "Store",
+    "loadMore": "Load More",
+    "noMoreData": "All Loaded"
   },
   "dashEvents": {
     "copied": "Copied",

@@ -3,7 +3,11 @@ import MemoryClient, { type Message } from "mem0ai";
 const MAX_MEMORIES_PER_USER = 20;
 const MEM0_TIMEOUT_MS = 5000; // 5s — WeChat has strict timing
 
-function getClient(env: any): MemoryClient | null {
+interface Mem0Env {
+  MEM0_API_KEY?: string;
+}
+
+function getClient(env: Mem0Env): MemoryClient | null {
   const apiKey = env.MEM0_API_KEY;
   if (!apiKey) return null;
   return new MemoryClient({ apiKey });
@@ -14,7 +18,7 @@ function getClient(env: any): MemoryClient | null {
  * Returns empty string on any failure (graceful degradation).
  */
 export async function searchMemory(
-  env: any,
+  env: Mem0Env,
   openId: string,
   query: string,
 ): Promise<string> {
@@ -51,7 +55,7 @@ export async function searchMemory(
  * Skips if count >= 20 or Mem0 unavailable — never throws.
  */
 export async function addMemory(
-  env: any,
+  env: Mem0Env,
   openId: string,
   messages: Array<{ role: string; content: string }>,
 ): Promise<void> {
@@ -106,7 +110,7 @@ export async function addMemory(
  * Returns MAX on error (safe default: prevents new writes when status is unknown).
  */
 export async function getMemoryCount(
-  env: any,
+  env: Mem0Env,
   openId: string,
 ): Promise<number> {
   const client = getClient(env);
@@ -135,7 +139,7 @@ export async function getMemoryCount(
 }
 
 export async function deleteAllMemories(
-  env: any,
+  env: Mem0Env,
   openId: string,
 ): Promise<void> {
   const client = getClient(env);

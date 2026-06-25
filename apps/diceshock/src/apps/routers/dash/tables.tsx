@@ -1,18 +1,22 @@
 import {
   DotsThreeVerticalIcon,
-  MagnifyingGlassIcon,
   PencilSimpleIcon,
   PlusIcon,
   PowerIcon,
+  QrCodeIcon,
   TrashIcon,
   XIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import AdminStoreFilter from "@/client/components/AdminStoreFilter";
+import { DashTable } from "@/client/components/dash/DashTable";
+import { usePendingSearch } from "@/client/components/dash/SearchBridge";
+import { TableToolbar } from "@/client/components/dash/TableToolbar";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import {
+  SortOrder,
   TableScope,
   TableStatus,
   TableType,
@@ -24,15 +28,15 @@ import {
 import { useAdminStoreFilter } from "@/client/hooks/useAdminStoreFilter";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
 import { useTranslation } from "@/client/hooks/useTranslation";
+import {
+  type ParsedSearch,
+  parseSearch,
+  serialize,
+  TABLE_SEARCH_GRAMMAR,
+} from "@/client/lib/searchParser";
 import dayjs from "@/shared/utils/dayjs-config";
 
-type TablesList = NonNullable<
-  ReturnType<typeof useManagedTablesQuery>["data"]
->["managedTables"];
-type TableItem = NonNullable<TablesList>[number];
-
-type TypeFilter = "all" | "fixed" | TableType.Solo;
-type StatusFilter = "all" | TableStatus.Active | "inactive";
+const PAGE_SIZE = 20;
 
 const TYPE_LABEL_KEYS: Record<string, string> = {
   fixed: "dashTables.fixedTable",
@@ -46,43 +50,115 @@ const SCOPE_LABEL_KEYS: Record<string, string> = {
   mahjong: "dashTables.riichiMahjong",
 };
 
+type TablesList = NonNullable<
+  ReturnType<typeof useManagedTablesQuery>["data"]
+>["managedTables"];
+type TableItem = NonNullable<TablesList>[number];
+
+function formatCreateAt(val: unknown): string {
+  if (!val) return "—";
+  try {
+    const d = dayjs.tz(val as string | number | Date, "Asia/Shanghai");
+    return d.isValid() ? d.format("YYYY/MM/DD HH:mm") : "—";
+  } catch {
+    return "—";
+  }
+}
+
+function typeLabel(t: (key: string) => string, value: string) {
+  const key = TYPE_LABEL_KEYS[value];
+  return key ? t(key) : value;
+}
+
+function scopeLabel(value: string) {
+  const key = SCOPE_LABEL_KEYS[value];
+  return key ?? value;
+}
+
 export const Route = createFileRoute("/dash/tables")({
   validateSearch: (search: Record<string, unknown>) => ({
     q: (search.q as string) ?? "",
-    type: ["all", "fixed", TableType.Solo].includes(search.type as string)
-      ? (search.type as TypeFilter)
-      : "all",
-    status: ["all", TableStatus.Active, "inactive"].includes(
-      search.status as string,
-    )
-      ? (search.status as StatusFilter)
-      : "all",
+    page: Number(search.page) > 0 ? Number(search.page) : 1,
   }),
   component: RouteComponent,
 });
 
-function RouteComponent() {
+export function buildFilter(
+  parsed: ParsedSearch,
+  page: number,
+  sorting: SortingState,
+) {
+  const typeFilter = parsed.filters.type?.value;
+  const statusFilter = parsed.filters.status?.value;
+  const storeFilter = parsed.filters.store?.value;
+  const nameFilter = parsed.filters.name?.value;
+
+  const search =
+    [parsed.freeText, typeof nameFilter === "string" ? nameFilter : undefined]
+      .filter(Boolean)
+      .join(" ") || undefined;
+
+  return {
+    search,
+    type:
+      typeof typeFilter === "string"
+        ? [typeFilter.toUpperCase()]
+        : Array.isArray(typeFilter)
+          ? typeFilter.map((v) => v.toUpperCase())
+          : undefined,
+    status:
+      typeof statusFilter === "string"
+        ? [statusFilter.toUpperCase()]
+        : Array.isArray(statusFilter)
+          ? statusFilter.map((v) => v.toUpperCase())
+          : undefined,
+    store: typeof storeFilter === "string" ? storeFilter : undefined,
+    sortBy: sorting.length > 0 ? sorting[0].id : undefined,
+    sortOrder: sorting[0]?.desc ? SortOrder.Desc : SortOrder.Asc,
+    pagination: { offset: (page - 1) * PAGE_SIZE, limit: PAGE_SIZE },
+  };
+}
+
+export function RouteComponent() {
   const msg = useMsg();
-  const isMobile = useIsMobile();
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const { storeFilter } = useAdminStoreFilter();
-  const { q, type, status } = Route.useSearch();
+  const { q, page } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
-  const setSearch = useCallback(
-    (updates: Partial<{ q: string; type: TypeFilter; status: StatusFilter }>) =>
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [searchInput, setSearchInput] = useState(q);
+
+  const { pendingSearch, clearPendingSearch } = usePendingSearch();
+
+  const setSearchParam = useCallback(
+    (updates: Partial<{ q: string; page: number }>) =>
       navigate({ search: (prev) => ({ ...prev, ...updates }), replace: true }),
     [navigate],
   );
-  const [tables, setTables] = useState<TableItem[]>([]);
 
-  const { loading, refetch: refreshTables } = useManagedTablesQuery({
-    onCompleted: (res) => {
-      setTables((res.managedTables ?? []) as TableItem[]);
-    },
+  useEffect(() => {
+    if (pendingSearch !== null) {
+      setSearchInput(pendingSearch);
+      setSearchParam({ q: pendingSearch, page: 1 });
+      clearPendingSearch();
+    }
+  }, [pendingSearch, clearPendingSearch, setSearchParam]);
+
+  const parsed = useMemo(() => parseSearch(q, TABLE_SEARCH_GRAMMAR), [q]);
+  const filter = useMemo(
+    () => buildFilter(parsed, page, sorting),
+    [parsed, page, sorting],
+  );
+
+  const { data, loading } = useManagedTablesQuery({
+    variables: { filter },
     onError: (err) => {
       msg.error(err.message || t("dashTables.loadFailed"));
     },
   });
+
+  const tables = (data?.managedTables ?? []) as TableItem[];
 
   const [createTableMutation] = useCreateTableMutation({
     refetchQueries: ["ManagedTables"],
@@ -106,27 +182,6 @@ function RouteComponent() {
   const deleteDialogRef = useRef<HTMLDialogElement>(null);
   const [pendingDelete, setPendingDelete] = useState<TableItem | null>(null);
   const [deletePending, setDeletePending] = useState(false);
-
-  const filteredTables = useMemo(() => {
-    let result = tables;
-
-    if (type !== "all") {
-      const filterType = type.toUpperCase();
-      result = result.filter((t) => t.type === filterType);
-    }
-
-    if (status !== "all") {
-      const filterStatus = status.toUpperCase();
-      result = result.filter((t) => t.status === filterStatus);
-    }
-
-    if (q.trim()) {
-      const search = q.trim().toLowerCase();
-      result = result.filter((t) => t.name.toLowerCase().includes(search));
-    }
-
-    return result;
-  }, [tables, type, status, q]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -214,254 +269,267 @@ function RouteComponent() {
     }
   };
 
-  function formatCreateAt(val: unknown): string {
-    if (!val) return "—";
-    try {
-      const d = dayjs.tz(val as string | number | Date, "Asia/Shanghai");
-      return d.isValid() ? d.format("YYYY/MM/DD HH:mm") : "—";
-    } catch {
-      return "—";
-    }
-  }
+  const columns = useMemo<ColumnDef<TableItem, unknown>[]>(
+    () => [
+      {
+        accessorKey: "code",
+        header: t("dashTables.code") ?? "Code",
+        cell: ({ row }) => (
+          <span className="font-mono text-xs">
+            {row.original.code ? row.original.code.slice(0, 8) : "—"}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "name",
+        header: t("dashTables.name"),
+        cell: ({ row }) => (
+          <span className="font-semibold">{row.original.name}</span>
+        ),
+      },
+      {
+        accessorKey: "type",
+        header: t("dashTables.type"),
+        cell: ({ row }) => (
+          <span
+            className={`badge badge-sm ${row.original.type === TableType.Solo ? "badge-secondary" : "badge-info"}`}
+          >
+            {typeLabel(t, row.original.type)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "status",
+        header: t("dashTables.status"),
+        cell: ({ row }) =>
+          row.original.status === TableStatus.Active ? (
+            <span className="badge badge-success badge-sm">
+              {t("dashTables.active")}
+            </span>
+          ) : (
+            <span className="badge badge-ghost badge-sm">
+              {t("dashTables.inactive")}
+            </span>
+          ),
+      },
+      {
+        accessorKey: "capacity",
+        header: t("dashTables.capacity"),
+        cell: ({ row }) => {
+          const occupiedCount = row.original.occupancies.length;
+          return (
+            <span>
+              {row.original.type === TableType.Solo
+                ? "∞"
+                : `${occupiedCount}/${row.original.capacity}`}
+            </span>
+          );
+        },
+      },
+      {
+        accessorKey: "scope",
+        header: t("dashTables.scope") ?? "Scope",
+        cell: ({ row }) => (
+          <span className="badge badge-sm badge-outline">
+            {scopeLabel(row.original.scope)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "createdAt",
+        header: t("dashTables.createdAt"),
+        cell: ({ row }) => formatCreateAt(row.original.createdAt),
+      },
+    ],
+    [t],
+  );
 
-  const typeLabel = (value: string) => {
-    const key = TYPE_LABEL_KEYS[value];
-    return key ? t(key) : value;
-  };
+  const total = tables.length;
+  const hasMore = tables.length === PAGE_SIZE;
 
-  const scopeLabel = (value: string) => {
-    const key = SCOPE_LABEL_KEYS[value];
-    return key ? t(key) : value;
-  };
+  const quickFilters = useMemo(
+    () => [
+      {
+        label: t("dashTables.fixedTable"),
+        key: "type",
+        value: "fixed",
+        active: parsed.filters.type?.value === "fixed",
+      },
+      {
+        label: t("dashTables.openTable"),
+        key: "type",
+        value: "solo",
+        active: parsed.filters.type?.value === "solo",
+      },
+      {
+        label: t("dashTables.active"),
+        key: "status",
+        value: "active",
+        active: parsed.filters.status?.value === "active",
+      },
+      {
+        label: t("dashTables.inactive"),
+        key: "status",
+        value: "inactive",
+        active: parsed.filters.status?.value === "inactive",
+      },
+    ],
+    [t, parsed],
+  );
 
   return (
     <main className="size-full flex flex-col">
-      <div className="px-4 pt-4 flex flex-col gap-3">
-        <div className="flex items-center gap-3">
-          <DashBackButton />
-          <AdminStoreFilter />
-          <label className="input input-bordered input-sm flex items-center gap-2 flex-1 min-w-0">
-            <MagnifyingGlassIcon className="size-4 opacity-50 shrink-0" />
-            <input
-              type="text"
-              className="grow min-w-0"
-              placeholder={t("dashTables.searchPlaceholder")}
-              value={q}
-              onChange={(e) => setSearch({ q: e.target.value })}
-            />
-          </label>
-          <button
-            type="button"
-            className="btn btn-sm btn-primary shrink-0"
-            onClick={() => createDialogRef.current?.showModal()}
-          >
-            <PlusIcon className="size-4" />
-            {t("dashTables.newTable")}
-          </button>
-        </div>
-
-        <div className="flex items-center gap-1">
-          {(
-            [
-              ["all", t("dashTables.all")],
-              ["fixed", t("dashTables.fixedTable")],
-              [TableType.Solo, t("dashTables.openTable")],
-            ] as const
-          ).map(([key, label]) => (
+      <div className="px-4 pt-4 flex items-center gap-3">
+        <DashBackButton />
+        <TableToolbar
+          searchBar={{
+            grammar: TABLE_SEARCH_GRAMMAR,
+            value: searchInput,
+            onChange: setSearchInput,
+            onSubmit: (parsedResult) => {
+              const serialized = serialize(parsedResult, TABLE_SEARCH_GRAMMAR);
+              setSearchParam({ q: serialized, page: 1 });
+            },
+            placeholder: t("dashTables.searchPlaceholder") ?? "Search tables…",
+          }}
+          quickFilters={quickFilters}
+          onQuickFilterToggle={(key, value) => {
+            const nextParsed = parseSearch(searchInput, TABLE_SEARCH_GRAMMAR);
+            const nextFilters = { ...nextParsed.filters };
+            const already = nextFilters[key]?.value === value;
+            if (already) delete nextFilters[key];
+            else nextFilters[key] = { operator: "eq", value };
+            const serialized = serialize(
+              { ...nextParsed, filters: nextFilters, errors: [] },
+              TABLE_SEARCH_GRAMMAR,
+            );
+            setSearchInput(serialized);
+            setSearchParam({ q: serialized, page: 1 });
+          }}
+          storeFilter
+          extra={
             <button
-              key={key}
               type="button"
-              className={`btn btn-xs ${type === key ? "btn-primary" : "btn-ghost"}`}
-              onClick={() => setSearch({ type: key })}
+              className="btn btn-primary btn-sm gap-1"
+              onClick={() => createDialogRef.current?.showModal()}
             >
-              {label}
+              <PlusIcon className="size-4" weight="bold" />
+              {t("dashTables.newTable")}
             </button>
-          ))}
-
-          <div className="flex items-center gap-1 ml-auto shrink-0">
-            {(
-              [
-                ["all", t("dashTables.all")],
-                [TableStatus.Active, t("dashTables.active")],
-                ["inactive", t("dashTables.inactive")],
-              ] as const
-            ).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                className={`btn btn-xs ${status === key ? "btn-secondary" : "btn-ghost"}`}
-                onClick={() => setSearch({ status: key })}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
+          }
+        />
       </div>
 
-      <div className="w-full flex-1 min-h-0 overflow-auto">
-        <table className="table table-lg table-pin-rows table-pin-cols min-w-[900px]">
-          <thead>
-            <tr className="z-20">
-              <td className="whitespace-nowrap">{t("dashTables.name")}</td>
-              <td className="whitespace-nowrap">{t("dashTables.type")}</td>
-              <td className="whitespace-nowrap">{t("dashTables.status")}</td>
-              <td className="whitespace-nowrap">{t("dashTables.capacity")}</td>
-              <td className="whitespace-nowrap">
-                {t("dashTables.currentUsage")}
-              </td>
-              <td className="whitespace-nowrap">{t("dashTables.createdAt")}</td>
-              <th className="whitespace-nowrap">{t("dashTables.actions")}</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={7} className="py-12 text-center">
-                  <span className="loading loading-dots loading-md" />
-                </td>
-              </tr>
-            ) : filteredTables.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={7}
-                  className="py-12 text-center text-base-content/60"
+      <div className="flex-1 min-h-0">
+        <DashTable
+          columns={columns}
+          data={tables}
+          loading={loading}
+          emptyMessage={t("dashTables.noMatchedTables")}
+          pagination={{
+            offset: (page - 1) * PAGE_SIZE,
+            limit: PAGE_SIZE,
+            total,
+            hasMore,
+          }}
+          onPaginationChange={(p) =>
+            setSearchParam({
+              page: Math.floor(p.offset / PAGE_SIZE) + 1,
+            })
+          }
+          sorting={sorting}
+          onSortingChange={setSorting}
+          sortableColumns={["name", "type", "status", "capacity", "createdAt"]}
+          getRowId={(row) => row.id}
+          renderActions={(row) =>
+            isMobile ? (
+              <div className="dropdown dropdown-end">
+                <div
+                  tabIndex={0}
+                  role="button"
+                  className="btn btn-xs btn-ghost btn-square"
                 >
-                  {q.trim() || type !== "all" || status !== "all"
-                    ? t("dashTables.noMatchedTables")
-                    : t("dashTables.noTables")}
-                </td>
-              </tr>
+                  <DotsThreeVerticalIcon className="size-4" weight="bold" />
+                </div>
+                <ul
+                  tabIndex={0}
+                  className="dropdown-content menu bg-base-200 rounded-box z-50 w-36 p-2 shadow-lg"
+                >
+                  <li>
+                    <Link to="/dash/tables/$id" params={{ id: row.id }}>
+                      <QrCodeIcon className="size-4" />
+                      {t("dashTables.viewQr") ?? "QR Code"}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/dash/tables/$id" params={{ id: row.id }}>
+                      <PencilSimpleIcon className="size-4" />
+                      {t("dashTables.details")}
+                    </Link>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => void handleToggleStatus(row)}
+                    >
+                      <PowerIcon className="size-3.5" />
+                      {row.status === TableStatus.Active
+                        ? t("dashTables.inactive")
+                        : t("dashTables.active")}
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      className="text-error"
+                      onClick={() => openDeleteDialog(row)}
+                    >
+                      <TrashIcon className="size-3.5" />
+                      {t("dashTables.delete")}
+                    </button>
+                  </li>
+                </ul>
+              </div>
             ) : (
-              filteredTables.map((table) => {
-                const occupiedCount = table.occupancies.length;
-
-                return (
-                  <tr key={table.id}>
-                    <td className="font-semibold whitespace-nowrap">
-                      {table.name}
-                    </td>
-                    <td className="whitespace-nowrap">
-                      <span
-                        className={`badge badge-sm ${table.type === TableType.Solo ? "badge-secondary" : "badge-info"}`}
-                      >
-                        {typeLabel(table.type)}
-                      </span>
-                      {table.scope && (
-                        <span className="badge badge-sm badge-outline ml-1">
-                          {scopeLabel(table.scope)}
-                        </span>
-                      )}
-                    </td>
-                    <td className="whitespace-nowrap">
-                      {table.status === TableStatus.Active ? (
-                        <span className="badge badge-success badge-sm">
-                          {t("dashTables.active")}
-                        </span>
-                      ) : (
-                        <span className="badge badge-ghost badge-sm">
-                          {t("dashTables.inactive")}
-                        </span>
-                      )}
-                    </td>
-                    <td className="whitespace-nowrap">
-                      {table.type === TableType.Solo ? "∞" : table.capacity}
-                    </td>
-                    <td className="whitespace-nowrap">
-                      {table.type === TableType.Solo
-                        ? occupiedCount
-                        : `${occupiedCount}/${table.capacity}`}
-                    </td>
-                    <td className="whitespace-nowrap">
-                      {formatCreateAt(table.createdAt)}
-                    </td>
-                    <th className="whitespace-nowrap">
-                      {isMobile ? (
-                        <div className="dropdown dropdown-end">
-                          <div
-                            tabIndex={0}
-                            role="button"
-                            className="btn btn-xs btn-ghost btn-square"
-                          >
-                            <DotsThreeVerticalIcon
-                              className="size-4"
-                              weight="bold"
-                            />
-                          </div>
-                          <ul
-                            tabIndex={0}
-                            className="dropdown-content menu bg-base-200 rounded-box z-50 w-32 p-2 shadow-lg"
-                          >
-                            <li>
-                              <button
-                                type="button"
-                                onClick={() => void handleToggleStatus(table)}
-                              >
-                                <PowerIcon className="size-3.5" />
-                                {table.status === TableStatus.Active
-                                  ? t("dashTables.inactive")
-                                  : t("dashTables.active")}
-                              </button>
-                            </li>
-                            <li>
-                              <Link
-                                to="/dash/tables/$id"
-                                params={{ id: table.id }}
-                              >
-                                <PencilSimpleIcon className="size-4" />
-                                {t("dashTables.details")}
-                              </Link>
-                            </li>
-                            <li>
-                              <button
-                                type="button"
-                                className="text-error"
-                                onClick={() => openDeleteDialog(table)}
-                              >
-                                <TrashIcon className="size-3.5" />
-                                {t("dashTables.delete")}
-                              </button>
-                            </li>
-                          </ul>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            className={`btn btn-xs btn-ghost ${table.status === TableStatus.Active ? "btn-neutral" : "btn-success"}`}
-                            onClick={() => void handleToggleStatus(table)}
-                          >
-                            <PowerIcon className="size-3.5" />
-                            {table.status === TableStatus.Active
-                              ? t("dashTables.inactive")
-                              : t("dashTables.active")}
-                          </button>
-                          <Link
-                            to="/dash/tables/$id"
-                            params={{ id: table.id }}
-                            className="btn btn-xs btn-ghost"
-                          >
-                            <PencilSimpleIcon className="size-4" />
-                            {t("dashTables.details")}
-                          </Link>
-                          <button
-                            type="button"
-                            className="btn btn-xs btn-ghost btn-error"
-                            onClick={() => openDeleteDialog(table)}
-                          >
-                            <TrashIcon className="size-3.5" />
-                            {t("dashTables.delete")}
-                          </button>
-                        </div>
-                      )}
-                    </th>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+              <div className="flex items-center gap-1">
+                <Link
+                  to="/dash/tables/$id"
+                  params={{ id: row.id }}
+                  className="btn btn-xs btn-ghost"
+                  title={t("dashTables.viewQr") ?? "QR Code"}
+                >
+                  <QrCodeIcon className="size-4" />
+                </Link>
+                <Link
+                  to="/dash/tables/$id"
+                  params={{ id: row.id }}
+                  className="btn btn-xs btn-ghost"
+                >
+                  <PencilSimpleIcon className="size-4" />
+                  {t("dashTables.details")}
+                </Link>
+                <button
+                  type="button"
+                  className={`btn btn-xs btn-ghost ${row.status === TableStatus.Active ? "btn-neutral" : "btn-success"}`}
+                  onClick={() => void handleToggleStatus(row)}
+                >
+                  <PowerIcon className="size-3.5" />
+                  {row.status === TableStatus.Active
+                    ? t("dashTables.inactive")
+                    : t("dashTables.active")}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-xs btn-ghost btn-error"
+                  onClick={() => openDeleteDialog(row)}
+                >
+                  <TrashIcon className="size-3.5" />
+                  {t("dashTables.delete")}
+                </button>
+              </div>
+            )
+          }
+        />
       </div>
 
       <dialog ref={createDialogRef} className="modal">
@@ -590,7 +658,7 @@ function RouteComponent() {
               </p>
               <p className="text-sm">
                 <strong>{t("dashTables.typeLabel")}</strong>{" "}
-                {typeLabel(pendingDelete.type)}
+                {typeLabel(t, pendingDelete.type)}
               </p>
               <p className="text-sm">
                 <strong>ID:</strong> {pendingDelete.id}

@@ -30,15 +30,12 @@ import MembershipBadge, {
   type PlanType,
 } from "@/client/components/diceshock/MembershipBadge";
 import { useMsg } from "@/client/components/diceshock/Msg";
-import type {
-  ActiveMahjongMatchesQuery,
-  SendWechatTemplateTestMutation,
-  SendWechatTemplateTestMutationVariables,
-} from "@/client/graphql/__generated__";
 import {
   ActiveMahjongMatchesDocument,
+  MembershipPlanType,
   SendWechatTemplateTestDocument,
-  useActiveMahjongMatchesQuery,
+  UserRole,
+  type useActiveMahjongMatchesQuery,
   useBatchPauseOrdersMutation,
   useBatchResumeOrdersMutation,
   useCreateMembershipPlanMutation,
@@ -64,9 +61,28 @@ export const Route = createFileRoute("/dash/users_/$id")({
 
 type UserDetail = NonNullable<ReturnType<typeof useUserQuery>["data"]>["user"];
 
-type ActiveMatch = NonNullable<
-  ActiveMahjongMatchesQuery["activeMahjongMatches"]
->[number];
+/**
+ * Admin UI accesses additional user fields not yet in the public GraphQL schema.
+ * These are returned by the API but not exposed in the generated gqty types.
+ */
+interface AdminUser extends UserDetail {
+  name?: string | null;
+  nickname?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  uid?: string | null;
+  role?: string | null;
+}
+
+type ActiveMatch = {
+  id: string;
+  tableCode?: string | null;
+  tableName?: string | null;
+  mode: string;
+  format: string;
+  phase: string;
+  players: Array<{ userId: string; nickname: string }>;
+};
 
 type UserOccupancy = NonNullable<
   ReturnType<typeof useOccupanciesByUserQuery>["data"]
@@ -103,6 +119,20 @@ const PLAN_TYPE_OPTIONS: { value: PlanType; label: string }[] = [
 ];
 
 const TIME_PLAN_TYPES: PlanType[] = ["monthly", "monthly_cc", "yearly"];
+
+const USER_ROLE_BY_FORM_VALUE: Record<string, UserRole> = {
+  admin: UserRole.Admin,
+  customer: UserRole.Customer,
+  staff: UserRole.Staff,
+};
+
+const MEMBERSHIP_PLAN_TYPE_BY_FORM_VALUE: Record<PlanType, MembershipPlanType> =
+  {
+    monthly: MembershipPlanType.Monthly,
+    monthly_cc: MembershipPlanType.MonthlyCc,
+    stored_value: MembershipPlanType.StoredValue,
+    yearly: MembershipPlanType.Yearly,
+  };
 
 const DEFAULT_DURATIONS: Record<string, number> = {
   monthly: 30,
@@ -243,6 +273,33 @@ function UserDetailPage() {
   const [deletingPlan, setDeletingPlan] = useState<MembershipPlan | null>(null);
   const [deletePending, setDeletePending] = useState(false);
 
+  const [updateUser] = useUpdateUserMutation();
+  const [updateUserRole] = useUpdateUserRoleMutation();
+  const [createMembershipPlan] = useCreateMembershipPlanMutation({
+    refetchQueries: ["MembershipPlansByUser"],
+  });
+  const [updateMembershipPlan] = useUpdateMembershipPlanMutation({
+    refetchQueries: ["MembershipPlansByUser"],
+  });
+  const [removeMembershipPlan] = useRemoveMembershipPlanMutation({
+    refetchQueries: ["MembershipPlansByUser"],
+  });
+  const [deductStoredValue] = useDeductStoredValueMutation({
+    refetchQueries: ["MembershipPlansByUser"],
+  });
+  const [pauseOrder] = usePauseOrderMutation({
+    refetchQueries: ["OccupanciesByUser"],
+  });
+  const [resumeOrder] = useResumeOrderMutation({
+    refetchQueries: ["OccupanciesByUser"],
+  });
+  const [batchPauseOrders] = useBatchPauseOrdersMutation({
+    refetchQueries: ["OccupanciesByUser"],
+  });
+  const [batchResumeOrders] = useBatchResumeOrdersMutation({
+    refetchQueries: ["OccupanciesByUser"],
+  });
+
   const { data: occupanciesQlData } = useOccupanciesByUserQuery({
     variables: { userId: id },
     skip: !id,
@@ -269,7 +326,7 @@ function UserDetailPage() {
     if (ids.length === 0) return;
     void navigate({
       to: "/dash/orders/settle",
-      search: { ids: ids } as any,
+      search: { ids: ids },
     });
   };
 
@@ -325,7 +382,7 @@ function UserDetailPage() {
     try {
       const res = await client.mutate({
         mutation: SendWechatTemplateTestDocument,
-        variables: { userId: id, slot: notifySlot as any },
+        variables: { userId: id, slot: notifySlot },
       });
       const data = res.data?.sendWechatTemplateTest;
       if (data?.success) {
@@ -390,7 +447,7 @@ function UserDetailPage() {
       const result = await client.query({
         query: ActiveMahjongMatchesDocument,
       });
-      const all = result.data?.activeMahjongMatches ?? [];
+      const all = (result.data?.activeMahjongMatches ?? []) as ActiveMatch[];
       const userMatches = all.filter((m) =>
         m.players.some((p) => p.userId === id),
       );
@@ -421,7 +478,7 @@ function UserDetailPage() {
       setOrderActionPending(null);
       void navigate({
         to: "/dash/orders/settle",
-        search: { ids: [occId] } as any,
+        search: { ids: [occId] },
       });
     }
   };
@@ -481,10 +538,11 @@ function UserDetailPage() {
   function parseConflictIds(err: unknown): string[] {
     if (!(err instanceof Error)) return [];
     try {
-      const parsed = JSON.parse(err.message);
-      if ((parsed as any)?.data?.message) {
-        const inner = JSON.parse((parsed as any).data.message);
-        if (Array.isArray(inner.conflictIds)) return inner.conflictIds;
+      const parsed = JSON.parse(err.message) as { data?: { message?: string } };
+      if (typeof parsed?.data?.message === "string") {
+        const inner = JSON.parse(parsed.data.message);
+        if (Array.isArray((inner as Record<string, unknown>).conflictIds))
+          return (inner as Record<string, unknown>).conflictIds as string[];
       }
     } catch {}
     try {
@@ -526,7 +584,7 @@ function UserDetailPage() {
         variables: {
           input: {
             id,
-            role: newRole as any,
+            role: USER_ROLE_BY_FORM_VALUE[newRole] ?? UserRole.Customer,
           },
         },
       });
@@ -551,7 +609,7 @@ function UserDetailPage() {
         variables: {
           input: {
             userId: id,
-            planType: addForm.planType.toUpperCase() as any,
+            planType: MEMBERSHIP_PLAN_TYPE_BY_FORM_VALUE[addForm.planType],
             amount:
               addForm.planType === "stored_value" && addForm.amount
                 ? Math.round(Number.parseFloat(addForm.amount) * 100)
@@ -652,7 +710,7 @@ function UserDetailPage() {
         variables: {
           input: {
             id: planId,
-            planType: editPlanForm.planType.toUpperCase() as any,
+            planType: MEMBERSHIP_PLAN_TYPE_BY_FORM_VALUE[editPlanForm.planType],
             amount:
               editPlanForm.planType === "stored_value" && editPlanForm.amount
                 ? Math.round(Number.parseFloat(editPlanForm.amount) * 100)
@@ -707,6 +765,16 @@ function UserDetailPage() {
     }
   };
 
+  useEffect(() => {
+    if (rawUser) {
+      setEditForm({
+        name: (rawUser as AdminUser).name ?? "",
+        nickname: (rawUser as AdminUser).nickname ?? "",
+        phone: (rawUser as AdminUser).phone ?? "",
+      });
+    }
+  }, [rawUser]);
+
   if (loading) {
     return (
       <main className="size-full flex items-center justify-center">
@@ -721,7 +789,7 @@ function UserDetailPage() {
         <p className="text-base-content/60">用户不存在</p>
         <Link
           to="/dash/users"
-          search={undefined as any}
+          search={{ q: "", page: 1 }}
           className="btn btn-primary btn-sm"
         >
           返回用户列表
@@ -731,16 +799,6 @@ function UserDetailPage() {
   }
 
   const user = rawUser;
-
-  useEffect(() => {
-    if (user) {
-      setEditForm({
-        name: (user as any).name ?? "",
-        nickname: (user as any).nickname ?? "",
-        phone: (user as any).phone ?? "",
-      });
-    }
-  }, [user]);
 
   return (
     <ClientOnly>
@@ -863,9 +921,7 @@ function UserDetailPage() {
                   <select
                     className="select select-bordered w-full"
                     value={
-                      (user as any).role
-                        ? (user as any).role.toLowerCase()
-                        : "customer"
+                      (user as AdminUser).role?.toLowerCase() ?? "customer"
                     }
                     onChange={(e) => handleRoleChange(e.target.value)}
                     disabled={rolePending}
@@ -881,7 +937,7 @@ function UserDetailPage() {
                   <input
                     type="email"
                     className="input input-bordered w-full"
-                    value={(user as any).email ?? ""}
+                    value={(user as AdminUser).email ?? ""}
                     disabled
                   />
                 </label>
@@ -891,7 +947,7 @@ function UserDetailPage() {
                   <input
                     type="text"
                     className="input input-bordered w-full font-mono"
-                    value={(user as any).uid ?? ""}
+                    value={(user as AdminUser).uid ?? ""}
                     disabled
                   />
                 </label>
@@ -900,7 +956,12 @@ function UserDetailPage() {
                   <button
                     type="button"
                     className="btn btn-ghost"
-                    onClick={() => navigate({ to: "/dash/users" } as any)}
+                    onClick={() =>
+                      navigate({
+                        to: "/dash/users",
+                        search: { q: "", page: 1 },
+                      })
+                    }
                   >
                     取消
                   </button>
@@ -1259,7 +1320,7 @@ function UserDetailPage() {
                     </span>
                     立直麻将进行中 ({activeMatches.length})
                   </div>
-                  {activeMatches.map((m: any) => (
+                  {activeMatches.map((m) => (
                     <div
                       key={m.tableCode}
                       className="flex items-center gap-3 p-3 bg-base-200 rounded-lg"
@@ -1280,12 +1341,15 @@ function UserDetailPage() {
                           </span>
                         </div>
                         <div className="text-xs text-base-content/50 mt-1 truncate">
-                          {m.players.map((p: any) => p.nickname).join(", ")}
+                          {m.players.map((p) => p.nickname).join(", ")}
                         </div>
                       </div>
                       <Link
                         to="/dash/gsz"
-                        search={undefined as any}
+                        search={{
+                          q: "",
+                          page: 1,
+                        }}
                         className="btn btn-xs btn-ghost btn-primary shrink-0"
                       >
                         <EyeIcon className="size-3.5" />
@@ -1300,7 +1364,13 @@ function UserDetailPage() {
                 <h3 className="text-lg font-semibold">订单</h3>
                 <Link
                   to="/dash/orders"
-                  search={undefined as any}
+                  search={{
+                    q: "",
+                    sortBy: "start_at",
+                    sortOrder: "desc",
+                    groupBy: "none",
+                    page: 1,
+                  }}
                   className="btn btn-xs btn-ghost btn-primary"
                 >
                   查看全部订单
@@ -1473,7 +1543,7 @@ function UserDetailPage() {
                                   {occStatus === "ended" && (
                                     <Link
                                       to="/dash/orders/settle"
-                                      search={{ ids: [occ.id] } as any}
+                                      search={{ ids: [occ.id] }}
                                       className="btn btn-xs btn-ghost"
                                     >
                                       <EyeIcon className="size-3.5" />

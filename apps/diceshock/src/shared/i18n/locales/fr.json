@@ -595,7 +595,13 @@
     "confirmBatchDeleteTitle": "Confirmer la suppression groupée",
     "batchDeletePrefix": "Vous allez supprimer",
     "batchDeleteSuffix": "rencontres et toutes leurs inscriptions. Cette action est irréversible.",
-    "confirmDeleteItems": "Supprimer {count} éléments"
+    "confirmDeleteItems": "Supprimer {count} éléments",
+    "type": "Type",
+    "typeGame": "Jeu",
+    "typeNotGame": "Non-jeu",
+    "store": "Magasin",
+    "loadMore": "Charger plus",
+    "noMoreData": "Tout chargé"
   },
   "dashEvents": {
     "copied": "Copié",

@@ -23,8 +23,10 @@ function ReferencePage() {
     fetch(`/edge/shortlink/${id}/data`)
       .then(async (res) => {
         if (!res.ok) {
-          const body = await res.json().catch(() => ({ error: "unknown" }));
-          setState({ status: "error", code: (body as any).error ?? "unknown" });
+          const body = (await res
+            .json()
+            .catch(() => ({ error: "unknown" }))) as { error?: string };
+          setState({ status: "error", code: body.error ?? "unknown" });
           return;
         }
         const data = (await res.json()) as ReferencePageData;

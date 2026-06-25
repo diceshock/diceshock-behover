@@ -5,6 +5,12 @@ import {
   uploadImageToWechat,
 } from "./wechatApi";
 
+interface PipelineEnv {
+  KV: KVNamespace;
+  WECHAT_MP_APP_ID: string;
+  WECHAT_MP_APP_SECRET: string;
+}
+
 const MAX_MESSAGES = 5;
 
 function stripCodeBlock(raw: string): string {
@@ -64,7 +70,7 @@ export function parseAgentOutput(rawOutput: string): AgentMessage[] {
 }
 
 export async function dispatchMessages(
-  env: any,
+  env: PipelineEnv,
   openId: string,
   messages: AgentMessage[],
 ): Promise<void> {
@@ -103,7 +109,7 @@ export async function dispatchMessages(
 }
 
 export async function sendStatusMessage(
-  env: any,
+  env: PipelineEnv,
   openId: string,
   status: string,
 ): Promise<void> {

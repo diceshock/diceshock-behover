@@ -595,7 +595,13 @@
     "confirmBatchDeleteTitle": "Confirmar exclusão em lote",
     "batchDeletePrefix": "Prestes a excluir",
     "batchDeleteSuffix": "encontros e todas as inscrições. Esta ação não pode ser desfeita.",
-    "confirmDeleteItems": "Excluir {count} itens"
+    "confirmDeleteItems": "Excluir {count} itens",
+    "type": "Tipo",
+    "typeGame": "Jogo",
+    "typeNotGame": "Não jogo",
+    "store": "Loja",
+    "loadMore": "Carregar mais",
+    "noMoreData": "Tudo carregado"
   },
   "dashEvents": {
     "copied": "Copiado",

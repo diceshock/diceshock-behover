@@ -103,9 +103,12 @@ async function processTranscode(
 
     const html = buildTranscodeHtml(sourceUrl, w, h);
     await page.setContent(html, { waitUntil: "networkidle0" });
-    await page.waitForFunction(() => (window as any).__ready === true, {
-      timeout: 15000,
-    });
+    await page.waitForFunction(
+      () => (window as { __ready?: boolean }).__ready === true,
+      {
+        timeout: 15000,
+      },
+    );
 
     const dataUrl = await page.evaluate(
       (fmt: string, q: number) => {
@@ -175,9 +178,12 @@ async function processQrCode(
 
     const html = buildQrCodeHtml(data, size, foreground, background, logoUrl);
     await page.setContent(html, { waitUntil: "networkidle0" });
-    await page.waitForFunction(() => (window as any).__ready === true, {
-      timeout: 15000,
-    });
+    await page.waitForFunction(
+      () => (window as { __ready?: boolean }).__ready === true,
+      {
+        timeout: 15000,
+      },
+    );
 
     const dataUrl = await page.evaluate((fmt: string) => {
       const canvas = document.getElementById("canvas") as HTMLCanvasElement;

@@ -106,7 +106,9 @@ export async function activeCard(c: Context<HonoCtxEnv>) {
               </div>
             )}
             <div style={{ marginTop: "auto", fontSize: 18, color: "#aaa" }}>
-              发起人: {(active.creator as any)?.nickname || "匿名"}
+              发起人:{" "}
+              {(active.creator as { nickname?: string | null } | null)
+                ?.nickname || "匿名"}
             </div>
           </div>
           <CardFooter logoUrl={logoDataUrl} />

@@ -236,7 +236,7 @@ extend type Query {
   actives(input: ActiveListInput = {}): ActiveListResult!
   active(id: ID!): Active!
   activeParticipants(activeId: ID!): [ActiveRegistration!]! # @auth(role: CUSTOMER)
-  managedActives(storeId: ID): [Active!]! # @auth(role: STAFF)
+  managedActives(storeId: ID, filter: ActiveFilterInput): [Active!]! # @auth(role: STAFF)
   managedActive(id: ID!): Active! # @auth(role: STAFF)
 }
 
@@ -504,11 +504,11 @@ input BatchSettleInput {
 extend type Query {
   tableByCode(code: String!, storeId: ID): Table!
   myActiveOccupancies(storeId: ID): [ActiveOccupancySummary!]! # @auth(role: CUSTOMER)
-  managedTables(storeId: ID): [Table!]! # @auth(role: STAFF)
+  managedTables(storeId: ID, filter: TableFilterInput): [Table!]! # @auth(role: STAFF)
   managedTable(id: ID!): Table! # @auth(role: STAFF)
   managedTableByCode(code: String!, storeId: ID): Table! # @auth(role: STAFF)
   occupanciesByUser(userId: ID!): [TableOccupancy!]! # @auth(role: STAFF)
-  orders(input: OrderListInput = {}): OrderListResult! # @auth(role: STAFF)
+  orders(input: OrderListInput = {}, filter: OrderFilterInput): OrderListResult! # @auth(role: STAFF)
   order(id: ID!): TableOccupancy! # @auth(role: STAFF)
   settlementPreview(id: ID!): SettlementPreview! # @auth(role: STAFF)
 }
@@ -728,7 +728,7 @@ input UpdatePreferencesInput {
 }
 
 extend type Query {
-  managedUsers(input: UserSearchInput = {}): UserListResult! # @auth(role: STAFF)
+  managedUsers(input: UserSearchInput = {}, filter: UserFilterInput): UserListResult! # @auth(role: STAFF)
   user(id: ID!): UserProfile # @auth(role: STAFF)
 }
 
@@ -771,7 +771,7 @@ input UpdateEventInput {
 extend type Query {
   events(storeId: ID): [Event!]!
   event(id: ID!): Event!
-  managedEvents(storeId: ID): [Event!]! # @auth(role: STAFF)
+  managedEvents(storeId: ID, filter: EventFilterInput): [Event!]! # @auth(role: STAFF)
   managedEvent(id: ID!): Event! # @auth(role: STAFF)
 }
 
@@ -1191,7 +1191,7 @@ extend type Query {
   myMahjongRegistration: MahjongRegistrationStatus! # @auth(role: CUSTOMER)
   mahjongMatchHistory(input: MahjongMatchHistoryInput = {}): MahjongMatchListResult! # @auth(role: CUSTOMER)
   mahjongHeatmap(userId: ID, storeId: ID): String! # @auth(role: CUSTOMER)
-  managedMahjongMatches(input: MahjongManagementListInput = {}): MahjongMatchListResult! # @auth(role: STAFF)
+  managedMahjongMatches(input: MahjongManagementListInput = {}, filter: MahjongFilterInput): MahjongMatchListResult! # @auth(role: STAFF)
   managedMahjongMatch(id: ID!): MahjongMatch! # @auth(role: STAFF)
   mahjongTables: [Table!]! # @auth(role: STAFF)
   activeMahjongMatches: [ActiveMahjongMatch!]! # @auth(role: STAFF)
@@ -1413,4 +1413,76 @@ type Subscription {
   notificationReceived(userId: ID!): NotificationPayload!
   leaderboardUpdated(category: LeaderboardCategory, period: LeaderboardPeriod, storeId: ID): LeaderboardUpdatedPayload!
   orderStatusChanged(orderId: ID, tableId: ID, storeId: ID): OrderStatusChangedPayload!
+}
+
+# === Unified filter input types (Wave 3 — Unified Table LUI) ===
+
+input EventFilterInput {
+  search: String
+  status: [String!]
+  dateFrom: String
+  dateTo: String
+  store: String
+  type: String
+  sortBy: String
+  sortOrder: SortOrder
+  pagination: PaginationInput
+}
+
+input TableFilterInput {
+  search: String
+  type: [String!]
+  status: [String!]
+  store: String
+  sortBy: String
+  sortOrder: SortOrder
+  pagination: PaginationInput
+}
+
+input ActiveFilterInput {
+  search: String
+  status: [String!]
+  store: String
+  type: String
+  creator: String
+  sortBy: String
+  sortOrder: SortOrder
+  pagination: CursorPaginationInput
+}
+
+input UserFilterInput {
+  search: String
+  role: [String!]
+  store: String
+  sortBy: String
+  sortOrder: SortOrder
+  pagination: PaginationInput
+}
+
+input MahjongFilterInput {
+  search: String
+  mode: [String!]
+  format: [String!]
+  completion: [String!]
+  syncStatus: [String!]
+  tableCode: String
+  dateFrom: String
+  dateTo: String
+  store: String
+  sortBy: String
+  sortOrder: SortOrder
+  pagination: PaginationInput
+}
+
+input OrderFilterInput {
+  search: String
+  status: [String!]
+  tableCode: String
+  store: String
+  dateFrom: String
+  dateTo: String
+  sortBy: String
+  sortOrder: SortOrder
+  groupBy: String
+  pagination: PaginationInput
 }

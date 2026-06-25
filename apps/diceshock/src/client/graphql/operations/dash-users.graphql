@@ -1,5 +1,5 @@
-query Users($input: UserSearchInput = {}) {
-  managedUsers(input: $input) {
+query Users($filter: UserFilterInput) {
+  managedUsers(filter: $filter) {
     items {
       id
       uid

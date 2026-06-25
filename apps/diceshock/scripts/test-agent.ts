@@ -62,7 +62,9 @@ const MOCK_BUSINESS_CARDS = [
   { id: CURRENT_USER_ID, share_phone: true, wechat: "test_wx_001", qq: "12345678", custom_content: "桌游爱好者，最爱18XX" },
 ];
 
-let mutateLog: Array<{action: string; params: any; description: string}> = [];
+type MutationParams = Record<string, unknown>;
+
+let mutateLog: Array<{action: string; params: MutationParams; description: string}> = [];
 
 function executeQuery(graphql: string): string {
   const n = graphql.replace(/\s+/g, " ").trim();
@@ -152,7 +154,7 @@ const ACTION_ALIASES: Record<string, string> = {
   exit_active: "leave_active",
 };
 
-function executeMutate(action: string, params: any, description: string): string {
+function executeMutate(action: string, params: MutationParams, description: string): string {
   const resolved = ACTION_ALIASES[action] || action;
   mutateLog.push({ action: resolved, params, description });
   switch (resolved) {
@@ -194,7 +196,7 @@ function executeTool(name: string, args: Record<string, unknown>, remaining: num
       result = executeQuery(args.graphql as string);
       break;
     case "mutate":
-      result = executeMutate(args.action as string, args.params, args.description as string);
+      result = executeMutate(args.action as string, getMutationParams(args.params), args.description as string);
       break;
     case "generate_totp":
       result = `[通知] TOTP: 123456`;
@@ -204,6 +206,10 @@ function executeTool(name: string, args: Record<string, unknown>, remaining: num
   }
   const suffix = remaining <= 1 ? `\n[剩余调用:${remaining}/${MAX_TOOL_CALLS}。请直接回复用户]` : `\n[剩余:${remaining}]`;
   return result + suffix;
+}
+
+function getMutationParams(value: unknown): MutationParams {
+  return value && typeof value === "object" ? (value as MutationParams) : {};
 }
 
 function buildSystemPrompt(userMessage: string): string {
@@ -238,16 +244,26 @@ const TOOLS = [
   { type: "function", function: { name: "generate_totp", description: "生成活动签到验证码", parameters: { type: "object", properties: {}, required: [] } } },
 ];
 
-interface Message { role: string; content: string; tool_calls?: any[]; tool_call_id?: string; }
+interface Message { role: string; content: string; tool_calls?: ToolCall[]; tool_call_id?: string; }
+interface ToolCall { id: string; function: { name: string; arguments: string }; }
 
-async function callDeepSeek(messages: Message[], useTools: boolean) {
+interface DeepSeekResponse {
+  choices?: Array<{
+    message?: {
+      content?: string;
+      tool_calls?: ToolCall[];
+    };
+  }>;
+}
+
+async function callDeepSeek(messages: Message[], useTools: boolean): Promise<DeepSeekResponse> {
   const res = await fetch("https://api.deepseek.com/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({ model: "deepseek-v4-flash", messages, ...(useTools ? { tools: TOOLS, tool_choice: "auto" } : {}), max_tokens: 1024 }),
   });
   if (!res.ok) throw new Error(`DeepSeek ${res.status}: ${(await res.text()).slice(0, 200)}`);
-  return (await res.json()) as any;
+  return (await res.json()) as DeepSeekResponse;
 }
 
 interface TestResult { query: string; passed: boolean; toolCalls: number; response: string; errors: string[] }

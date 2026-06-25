@@ -5,10 +5,14 @@ import apisRoot from "@/server/apis/apisRoot";
 import { avatarCard } from "@/server/apis/avatarCard";
 import avatarUpload from "@/server/apis/avatarUpload";
 import { boardGameCard } from "@/server/apis/boardGameCard";
+import confirmMutation from "@/server/apis/chat/confirmMutation";
+import chatSpike from "@/server/apis/chat/spike";
+import chatStream from "@/server/apis/chat/stream";
 import fileRoute from "@/server/apis/fileRoute";
 import { fontCss } from "@/server/apis/fontCss";
 import { graphqlHandler } from "@/server/apis/graphqlEndpoint";
 import { graphqlStreamHandler } from "@/server/apis/graphqlStream";
+import type { ImageProcessMessage } from "@/server/apis/imageProcess";
 import {
   imageProcessStatus,
   imageProcessSubmit,
@@ -32,6 +36,15 @@ import {
   wechatMessage,
   wechatVerify,
 } from "@/server/apis/wechat";
+import type {
+  GstoneCrawlMessage,
+  GstoneImageMessage,
+} from "@/server/queue/gstoneCrawlConsumer";
+import type {
+  GstoneDocCrawlMessage,
+  GstoneOcrMessage,
+} from "@/server/queue/gstoneDocCrawlConsumer";
+import type { NotificationMessage } from "@/server/queue/notificationConsumer";
 import type { HonoCtxEnv } from "@/shared/types";
 import seatRedirect from "./server/middlewares/seatRedirect";
 import "@/shared/utils/dayjs-config";
@@ -59,7 +72,13 @@ app.get("/wechat", wechatVerify);
 app.post("/wechat", wechatMessage);
 app.post("/wechat/menu", wechatCreateMenu);
 
+// Spike: AI SDK + DeepSeek V4 Pro streaming test endpoint
+app.route("/api/chat/spike", chatSpike);
+
 app.use(authInit);
+
+app.route("/api/chat/stream", chatStream);
+app.route("/api/chat/confirm", confirmMutation);
 
 app.use(serverMetaInj);
 
@@ -154,19 +173,19 @@ export default {
 
     if (event.cron === "0 4-22 * * *") {
       const { computeLeaderboards } = await import("./server/cron/leaderboard");
-      await computeLeaderboards({ DB: env.DB as unknown as D1Database });
+      await computeLeaderboards({ DB: env.DB });
 
       const { checkPassExpiration } = await import(
         "./server/cron/passExpiration"
       );
-      await checkPassExpiration({ DB: env.DB, KV: env.KV });
+      await checkPassExpiration(env);
 
       // Dispatch preference notifications during push window
       const { dispatchPreferenceNotifications } = await import(
         "./server/cron/notificationDispatcher"
       );
       await dispatchPreferenceNotifications({
-        DB: env.DB as unknown as D1Database,
+        DB: env.DB,
         KV: env.KV,
       });
     }
@@ -184,7 +203,7 @@ export default {
       );
 
       const matches = await runPreferenceMatching({
-        DB: env.DB as unknown as D1Database,
+        DB: env.DB,
       });
 
       // Create recommended actives for cross-matches
@@ -203,45 +222,57 @@ export default {
     env: HonoCtxEnv["Bindings"],
     _ctx: ExecutionContext,
   ): Promise<void> {
-    const queueName = (batch as any).queue;
+    const queueName = batch.queue;
     if (queueName === "diceshock-notifications") {
       const { handleNotificationQueue } = await import(
         "./server/queue/notificationConsumer"
       );
-      await handleNotificationQueue(batch as any, env as any);
+      await handleNotificationQueue(
+        batch as MessageBatch<NotificationMessage>,
+        env,
+      );
       return;
     }
     if (queueName === "diceshock-gstone-crawl") {
       const { handleGstoneCrawlQueue } = await import(
         "./server/queue/gstoneCrawlConsumer"
       );
-      await handleGstoneCrawlQueue(batch as any, env as any);
+      await handleGstoneCrawlQueue(
+        batch as MessageBatch<GstoneCrawlMessage>,
+        env,
+      );
       return;
     }
     if (queueName === "diceshock-gstone-images") {
       const { handleGstoneImageQueue } = await import(
         "./server/queue/gstoneCrawlConsumer"
       );
-      await handleGstoneImageQueue(batch as any, env as any);
+      await handleGstoneImageQueue(
+        batch as MessageBatch<GstoneImageMessage>,
+        env,
+      );
       return;
     }
     if (queueName === "diceshock-gstone-doc-crawl") {
       const { handleGstoneDocCrawlQueue } = await import(
         "./server/queue/gstoneDocCrawlConsumer"
       );
-      await handleGstoneDocCrawlQueue(batch as any, env as any);
+      await handleGstoneDocCrawlQueue(
+        batch as MessageBatch<GstoneDocCrawlMessage>,
+        env,
+      );
       return;
     }
     if (queueName === "diceshock-gstone-ocr") {
       const { handleGstoneOcrQueue } = await import(
         "./server/queue/gstoneOcrConsumer"
       );
-      await handleGstoneOcrQueue(batch as any, env as any);
+      await handleGstoneOcrQueue(batch as MessageBatch<GstoneOcrMessage>, env);
       return;
     }
     const { handleImageQueue } = await import(
       "./server/queue/imageQueueConsumer"
     );
-    await handleImageQueue(batch as MessageBatch<any>, env);
+    await handleImageQueue(batch as MessageBatch<ImageProcessMessage>, env);
   },
 };

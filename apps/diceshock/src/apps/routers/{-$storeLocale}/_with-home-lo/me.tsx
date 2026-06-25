@@ -248,7 +248,7 @@ function RouteComponent() {
 
     fetch("/api/auth/csrf")
       .then((r) => r.json())
-      .then((d: any) => {
+      .then((d: { csrfToken: string }) => {
         csrfInput.value = d.csrfToken;
         document.body.appendChild(form);
         form.submit();
@@ -411,8 +411,7 @@ function RouteComponent() {
             const updatedNickname = result.user.nickname ?? "";
             setUserInfoIm((draft) => {
               if (!draft) return undefined;
-              (draft as unknown as { nickname: string }).nickname =
-                updatedNickname;
+              draft.nickname = updatedNickname;
               return draft;
             });
             messages.success(t("me.nicknameSuccess"));
@@ -495,8 +494,7 @@ function RouteComponent() {
             const updatedPhone = result.user.phone ?? null;
             setUserInfoIm((draft) => {
               if (!draft) return undefined;
-              (draft as unknown as { phone: string | null }).phone =
-                updatedPhone;
+              draft.phone = updatedPhone;
               return draft;
             });
             messages.success(t("me.phoneSuccess"));

@@ -695,6 +695,7 @@ function TableDetailPage() {
                         </div>
                         <Link
                           to="/dash/gsz"
+                          search={{ q: "", page: 1 }}
                           className="btn btn-xs btn-ghost btn-primary shrink-0"
                         >
                           <EyeIcon className="size-3.5" />

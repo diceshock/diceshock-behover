@@ -128,7 +128,7 @@ function EventCard({ event }: { event: EventItem }) {
   return (
     <Link
       to="/{-$storeLocale}/events/$id"
-      params={(prev: any) => ({ ...prev, id: event.id })}
+      params={(prev) => ({ ...prev, id: event.id })}
       className="card bg-base-200 border border-base-content/10 hover:border-primary/30 transition-all hover:shadow-md overflow-hidden cursor-pointer"
     >
       {event.coverImageUrl && (
@@ -576,7 +576,7 @@ function SmActiveCard({
 
         <Link
           to="/{-$storeLocale}/actives/$id"
-          params={(prev: any) => ({ ...prev, id: active.id })}
+          params={(prev) => ({ ...prev, id: active.id })}
           className="block flex-1 card bg-base-200 border border-base-content/10 rounded-lg ml-5 my-1 hover:border-primary/30 transition-all hover:shadow-md cursor-pointer"
         >
           <div className="card-body p-4">
@@ -666,7 +666,7 @@ function ActiveCard({
 
       <Link
         to="/{-$storeLocale}/actives/$id"
-        params={(prev: any) => ({ ...prev, id: active.id })}
+        params={(prev) => ({ ...prev, id: active.id })}
         className={clsx(
           "block h-full pt-4 card bg-base-200 border border-base-content/10 border-t-0 rounded-lg rounded-t-none mx-2 mt-2 hover:border-primary/30 transition-all hover:shadow-md cursor-pointer",
         )}

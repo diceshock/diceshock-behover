@@ -23,7 +23,8 @@ export async function executeSearchRules(
   args: { query: string },
   context: ToolContext,
 ): Promise<string> {
-  const aiSearch = (context.env as any).AI_SEARCH;
+  // @ts-expect-error // AI_SEARCH not in ToolContext.env type from query.ts
+  const aiSearch = context.env.AI_SEARCH;
   if (!aiSearch) {
     return "规则搜索服务未配置";
   }

@@ -33,7 +33,7 @@ export async function riichiRankingCard(c: Context<HonoCtxEnv>) {
         .catch(() => []);
 
       const snapshot = snapshots[0];
-      const entries = ((snapshot?.data as any[]) ?? []).slice(0, 8);
+      const entries = ((snapshot?.data ?? []) as unknown[]).slice(0, 8);
 
       return renderCard(
         <CardShell>

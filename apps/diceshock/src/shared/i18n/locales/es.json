@@ -595,7 +595,13 @@
     "confirmBatchDeleteTitle": "Confirmar eliminación en lote",
     "batchDeletePrefix": "Se van a eliminar",
     "batchDeleteSuffix": "quedadas y todas sus inscripciones. Esta acción no se puede deshacer.",
-    "confirmDeleteItems": "Eliminar {count} elementos"
+    "confirmDeleteItems": "Eliminar {count} elementos",
+    "type": "Tipo",
+    "typeGame": "Juego",
+    "typeNotGame": "No juego",
+    "store": "Tienda",
+    "loadMore": "Cargar más",
+    "noMoreData": "Todo cargado"
   },
   "dashEvents": {
     "copied": "Copiado",

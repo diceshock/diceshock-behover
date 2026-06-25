@@ -54,9 +54,12 @@ export async function renderCardResponse(
     const page = await browser.newPage();
     await page.setViewport({ width: 1200, height: 630 });
     await page.setContent(html, { waitUntil: "networkidle0" });
-    await page.waitForFunction(() => (window as any).__ready === true, {
-      timeout: 15000,
-    });
+    await page.waitForFunction(
+      () => (window as { __ready?: boolean }).__ready === true,
+      {
+        timeout: 15000,
+      },
+    );
 
     const buffer = (await page.screenshot({ type: "png" })) as Buffer;
     const bytes = new Uint8Array(buffer);

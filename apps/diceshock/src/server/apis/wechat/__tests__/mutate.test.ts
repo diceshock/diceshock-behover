@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import type { MutateArgs } from "../graphql/mutateActions";
 import { executeMutateTool } from "../tools/mutate";
 import type { ToolContext } from "../tools/totp";
 
@@ -53,14 +54,18 @@ const VALID_ACTIONS = [
   "upsert_business_card",
 ] as const;
 
+function invalidMutateArgs(value: Record<string, unknown>): MutateArgs {
+  return value as MutateArgs;
+}
+
 describe("executeMutateTool - action validation", () => {
   it("rejects invalid action 'delete_user' and lists all 9 valid actions", async () => {
     const result = await executeMutateTool(
-      {
-        action: "delete_user" as any,
+      invalidMutateArgs({
+        action: "delete_user",
         params: {},
         description: DEFAULT_DESCRIPTION,
-      },
+      }),
       createContext(),
     );
 
@@ -73,11 +78,11 @@ describe("executeMutateTool - action validation", () => {
 
   it("rejects empty action ''", async () => {
     const result = await executeMutateTool(
-      {
-        action: "" as any,
+      invalidMutateArgs({
+        action: "",
         params: {},
         description: DEFAULT_DESCRIPTION,
-      },
+      }),
       createContext(),
     );
 
@@ -87,11 +92,11 @@ describe("executeMutateTool - action validation", () => {
 
   it("rejects non-existent action 'foobar'", async () => {
     const result = await executeMutateTool(
-      {
-        action: "foobar" as any,
+      invalidMutateArgs({
+        action: "foobar",
         params: {},
         description: DEFAULT_DESCRIPTION,
-      },
+      }),
       createContext(),
     );
 
@@ -107,11 +112,11 @@ describe("executeMutateTool - param validation", () => {
   describe("create_active", () => {
     it("rejects missing title", async () => {
       const result = await executeMutateTool(
-        {
+        invalidMutateArgs({
           action: "create_active",
-          params: { date: "2026-06-20", max_players: 4 } as any,
+          params: { date: "2026-06-20", max_players: 4 },
           description: DEFAULT_DESCRIPTION,
-        },
+        }),
         createContext(),
       );
       expect(result).toBe("操作失败: 缺少参数 title");
@@ -119,11 +124,11 @@ describe("executeMutateTool - param validation", () => {
 
     it("rejects missing date", async () => {
       const result = await executeMutateTool(
-        {
+        invalidMutateArgs({
           action: "create_active",
-          params: { title: "Test", max_players: 4 } as any,
+          params: { title: "Test", max_players: 4 },
           description: DEFAULT_DESCRIPTION,
-        },
+        }),
         createContext(),
       );
       expect(result).toBe("操作失败: 缺少参数 date");
@@ -131,11 +136,11 @@ describe("executeMutateTool - param validation", () => {
 
     it("rejects missing max_players", async () => {
       const result = await executeMutateTool(
-        {
+        invalidMutateArgs({
           action: "create_active",
-          params: { title: "Test", date: "2026-06-20" } as any,
+          params: { title: "Test", date: "2026-06-20" },
           description: DEFAULT_DESCRIPTION,
-        },
+        }),
         createContext(),
       );
       expect(result).toBe("操作失败: 缺少参数 max_players");
@@ -143,11 +148,11 @@ describe("executeMutateTool - param validation", () => {
 
     it("rejects empty string title", async () => {
       const result = await executeMutateTool(
-        {
+        invalidMutateArgs({
           action: "create_active",
-          params: { title: "", date: "2026-06-20", max_players: 4 } as any,
+          params: { title: "", date: "2026-06-20", max_players: 4 },
           description: DEFAULT_DESCRIPTION,
-        },
+        }),
         createContext(),
       );
       expect(result).toBe("操作失败: 缺少参数 title");
@@ -155,11 +160,11 @@ describe("executeMutateTool - param validation", () => {
 
     it("rejects null title", async () => {
       const result = await executeMutateTool(
-        {
+        invalidMutateArgs({
           action: "create_active",
-          params: { title: null, date: "2026-06-20", max_players: 4 } as any,
+          params: { title: null, date: "2026-06-20", max_players: 4 },
           description: DEFAULT_DESCRIPTION,
-        },
+        }),
         createContext(),
       );
       expect(result).toBe("操作失败: 缺少参数 title");
@@ -169,11 +174,11 @@ describe("executeMutateTool - param validation", () => {
   describe("join_active", () => {
     it("rejects missing active_id", async () => {
       const result = await executeMutateTool(
-        {
+        invalidMutateArgs({
           action: "join_active",
-          params: {} as any,
+          params: {},
           description: DEFAULT_DESCRIPTION,
-        },
+        }),
         createContext(),
       );
       expect(result).toBe("操作失败: 缺少参数 active_id");
@@ -183,11 +188,11 @@ describe("executeMutateTool - param validation", () => {
   describe("watch_active", () => {
     it("rejects missing active_id", async () => {
       const result = await executeMutateTool(
-        {
+        invalidMutateArgs({
           action: "watch_active",
-          params: {} as any,
+          params: {},
           description: DEFAULT_DESCRIPTION,
-        },
+        }),
         createContext(),
       );
       expect(result).toBe("操作失败: 缺少参数 active_id");
@@ -197,11 +202,11 @@ describe("executeMutateTool - param validation", () => {
   describe("update_active", () => {
     it("rejects missing id", async () => {
       const result = await executeMutateTool(
-        {
+        invalidMutateArgs({
           action: "update_active",
-          params: {} as any,
+          params: {},
           description: DEFAULT_DESCRIPTION,
-        },
+        }),
         createContext(),
       );
       expect(result).toBe("操作失败: 缺少参数 id");
@@ -211,11 +216,11 @@ describe("executeMutateTool - param validation", () => {
   describe("leave_active", () => {
     it("rejects missing active_id", async () => {
       const result = await executeMutateTool(
-        {
+        invalidMutateArgs({
           action: "leave_active",
-          params: {} as any,
+          params: {},
           description: DEFAULT_DESCRIPTION,
-        },
+        }),
         createContext(),
       );
       expect(result).toBe("操作失败: 缺少参数 active_id");
@@ -225,11 +230,11 @@ describe("executeMutateTool - param validation", () => {
   describe("send_sms_code", () => {
     it("rejects missing phone", async () => {
       const result = await executeMutateTool(
-        {
+        invalidMutateArgs({
           action: "send_sms_code",
-          params: {} as any,
+          params: {},
           description: DEFAULT_DESCRIPTION,
-        },
+        }),
         createContext(),
       );
       expect(result).toBe("操作失败: 缺少参数 phone");
@@ -239,7 +244,7 @@ describe("executeMutateTool - param validation", () => {
       const result = await executeMutateTool(
         {
           action: "send_sms_code",
-          params: { phone: "" } as any,
+          params: { phone: "" },
           description: DEFAULT_DESCRIPTION,
         },
         createContext(),
@@ -251,11 +256,11 @@ describe("executeMutateTool - param validation", () => {
   describe("verify_phone", () => {
     it("rejects missing code when phone is provided", async () => {
       const result = await executeMutateTool(
-        {
+        invalidMutateArgs({
           action: "verify_phone",
-          params: { phone: "13800138000" } as any,
+          params: { phone: "13800138000" },
           description: DEFAULT_DESCRIPTION,
-        },
+        }),
         createContext(),
       );
       expect(result).toBe("操作失败: 缺少参数 code");
@@ -263,11 +268,11 @@ describe("executeMutateTool - param validation", () => {
 
     it("rejects missing phone when code is provided", async () => {
       const result = await executeMutateTool(
-        {
+        invalidMutateArgs({
           action: "verify_phone",
-          params: { code: "123456" } as any,
+          params: { code: "123456" },
           description: DEFAULT_DESCRIPTION,
-        },
+        }),
         createContext(),
       );
       expect(result).toBe("操作失败: 缺少参数 phone");
@@ -275,11 +280,11 @@ describe("executeMutateTool - param validation", () => {
 
     it("rejects when both phone and code are missing", async () => {
       const result = await executeMutateTool(
-        {
+        invalidMutateArgs({
           action: "verify_phone",
-          params: {} as any,
+          params: {},
           description: DEFAULT_DESCRIPTION,
-        },
+        }),
         createContext(),
       );
       expect(result).toBe("操作失败: 缺少参数 phone");
@@ -289,11 +294,11 @@ describe("executeMutateTool - param validation", () => {
   describe("actions with no required params", () => {
     it("bind_gsz: accepts empty params, fails at user resolution instead of param validation", async () => {
       const result = await executeMutateTool(
-        {
+        invalidMutateArgs({
           action: "bind_gsz",
-          params: {} as any,
+          params: {},
           description: DEFAULT_DESCRIPTION,
-        },
+        }),
         createContext(),
       );
       expect(result).not.toContain("缺少参数");
@@ -304,7 +309,7 @@ describe("executeMutateTool - param validation", () => {
       const result = await executeMutateTool(
         {
           action: "upsert_business_card",
-          params: {} as any,
+          params: {},
           description: DEFAULT_DESCRIPTION,
         },
         createContext(),

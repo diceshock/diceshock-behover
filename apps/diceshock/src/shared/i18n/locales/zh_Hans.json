@@ -595,7 +595,13 @@
     "confirmBatchDeleteTitle": "确认批量删除",
     "batchDeletePrefix": "即将删除",
     "batchDeleteSuffix": "条约局及其所有报名记录，此操作不可撤销。",
-    "confirmDeleteItems": "确认删除 {count} 项"
+    "confirmDeleteItems": "确认删除 {count} 项",
+    "type": "类型",
+    "typeGame": "游戏局",
+    "typeNotGame": "非游戏",
+    "store": "门店",
+    "loadMore": "加载更多",
+    "noMoreData": "已加载全部"
   },
   "dashEvents": {
     "copied": "已复制",

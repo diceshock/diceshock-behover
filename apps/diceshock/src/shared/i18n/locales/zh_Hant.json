@@ -595,7 +595,13 @@
     "confirmBatchDeleteTitle": "確認批量刪除",
     "batchDeletePrefix": "即將刪除",
     "batchDeleteSuffix": "條約局及其所有報名記錄，此操作不可復原。",
-    "confirmDeleteItems": "確認刪除 {count} 項"
+    "confirmDeleteItems": "確認刪除 {count} 項",
+    "type": "類型",
+    "typeGame": "遊戲局",
+    "typeNotGame": "非遊戲",
+    "store": "門店",
+    "loadMore": "載入更多",
+    "noMoreData": "已載入全部"
   },
   "dashEvents": {
     "copied": "已複製",

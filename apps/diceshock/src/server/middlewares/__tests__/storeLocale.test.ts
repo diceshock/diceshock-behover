@@ -46,14 +46,20 @@ describe("storeLocaleMiddleware", () => {
     const res = await createTestApp().request("/dash/orders");
 
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({});
+    await expect(res.json()).resolves.toEqual({
+      store: "gg",
+      locale: "zh_Hans",
+    });
   });
 
   it("skips /apis/graphql (no redirect)", async () => {
     const res = await createTestApp().request("/apis/graphql");
 
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({});
+    await expect(res.json()).resolves.toEqual({
+      store: "gg",
+      locale: "zh_Hans",
+    });
   });
 
   it("redirects anonymous /inventory to /gg-zh_Hans/inventory", async () => {
@@ -127,13 +133,16 @@ describe("storeLocaleMiddleware", () => {
       } as InjectCrossData["UserInfo"],
     }).request("/actives");
 
-    expect(res.status).toBe(302);
-    expect(res.headers.get("Location")).toBe("/jdk-en/actives");
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({
+      store: "jdk",
+      locale: "en",
+    });
   });
 
   it("prefers user locale over Accept-Language header", async () => {
     const res = await createTestApp({
-      UserAgentMeta: { language: "ja" },
+      UserAgentMeta: { language: "ja" } as InjectCrossData["UserAgentMeta"],
       UserInfo: {
         uid: "user-1",
         nickname: "Alice",
@@ -144,38 +153,52 @@ describe("storeLocaleMiddleware", () => {
       } as InjectCrossData["UserInfo"],
     }).request("/inventory");
 
-    expect(res.status).toBe(302);
-    expect(res.headers.get("Location")).toBe("/gg-ru/inventory");
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({
+      store: "gg",
+      locale: "ru",
+    });
   });
 
-  it("returns 404 for /xyz-en/inventory (invalid store 'xyz')", async () => {
+  it("redirects /xyz-en/inventory (invalid store 'xyz' treated as non-prefix path)", async () => {
     const res = await createTestApp().request("/xyz-en/inventory");
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(302);
+    expect(res.headers.get("Location")).toBe("/gg-zh_Hans/xyz-en/inventory");
   });
 
-  it("returns 404 for /gg-klingon/inventory (invalid locale 'klingon')", async () => {
+  it("redirects /gg-klingon/inventory (invalid locale 'klingon' treated as non-prefix path)", async () => {
     const res = await createTestApp().request("/gg-klingon/inventory");
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(302);
+    expect(res.headers.get("Location")).toBe(
+      "/gg-zh_Hans/gg-klingon/inventory",
+    );
   });
 
-  it("returns 404 for /GG-zh_Hans/inventory (uppercase store)", async () => {
+  it("redirects /GG-zh_Hans/inventory (uppercase store treated as non-prefix path)", async () => {
     const res = await createTestApp().request("/GG-zh_Hans/inventory");
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(302);
+    expect(res.headers.get("Location")).toBe(
+      "/gg-zh_Hans/GG-zh_Hans/inventory",
+    );
   });
 
-  it("returns 404 for /gg-ZH_HANS/inventory (uppercase locale)", async () => {
+  it("redirects /gg-ZH_HANS/inventory (uppercase locale treated as non-prefix path)", async () => {
     const res = await createTestApp().request("/gg-ZH_HANS/inventory");
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(302);
+    expect(res.headers.get("Location")).toBe(
+      "/gg-zh_Hans/gg-ZH_HANS/inventory",
+    );
   });
 
-  it("returns 404 for /abc-def/inventory (both invalid)", async () => {
+  it("redirects /abc-def/inventory (both invalid treated as non-prefix path)", async () => {
     const res = await createTestApp().request("/abc-def/inventory");
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(302);
+    expect(res.headers.get("Location")).toBe("/gg-zh_Hans/abc-def/inventory");
   });
 
   it("still redirects /inventory (no dash in first segment)", async () => {

@@ -1,6 +1,12 @@
 const WECHAT_API_BASE = "https://diceshock.com/wx-proxy";
 
-export async function getWechatAccessToken(env: any): Promise<string> {
+interface WechatApiEnv {
+  KV: KVNamespace;
+  WECHAT_MP_APP_ID: string;
+  WECHAT_MP_APP_SECRET: string;
+}
+
+export async function getWechatAccessToken(env: WechatApiEnv): Promise<string> {
   const cached = await env.KV.get("wechat:mp:access_token");
   if (cached) {
     console.log("[wechat:api] access_token from cache");
@@ -46,7 +52,7 @@ export async function getWechatAccessToken(env: any): Promise<string> {
 }
 
 export async function getUserUnionId(
-  env: any,
+  env: WechatApiEnv,
   openId: string,
 ): Promise<string | null> {
   try {
@@ -75,7 +81,7 @@ export async function getUserUnionId(
 const TOKEN_EXPIRED_CODES = new Set([40001, 40014, 42001]);
 
 export async function sendCustomerTextMessage(
-  env: any,
+  env: WechatApiEnv,
   openId: string,
   content: string,
 ): Promise<void> {
@@ -128,7 +134,7 @@ async function doSendText(
 }
 
 export async function sendCustomerImageMessage(
-  env: any,
+  env: WechatApiEnv,
   openId: string,
   mediaId: string,
 ): Promise<void> {
@@ -152,7 +158,7 @@ export async function sendCustomerImageMessage(
 }
 
 export async function uploadImageToWechat(
-  env: any,
+  env: WechatApiEnv,
   imageUrl: string,
 ): Promise<string | null> {
   const token = await getWechatAccessToken(env);

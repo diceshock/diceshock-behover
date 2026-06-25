@@ -74,8 +74,8 @@ export function DashNavMenuButton() {
 function AccountButton({ onClick }: { onClick: () => void }) {
   const { userInfo, session } = useAuth();
   const name = userInfo?.nickname ?? "Anonymous";
-  const role = (session?.user as any)?.role as string | undefined;
-  const userId = (session?.user as any)?.id as string | undefined;
+  const role = session?.user?.role as string | undefined;
+  const userId = session?.user?.id as string | undefined;
 
   const roleBadge =
     role === "admin" ? "管理员" : role === "staff" ? "店员" : "";

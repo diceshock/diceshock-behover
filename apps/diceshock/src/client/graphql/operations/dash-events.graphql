@@ -1,5 +1,5 @@
-query ManagedEvents {
-  managedEvents {
+query ManagedEvents($filter: EventFilterInput) {
+  managedEvents(filter: $filter) {
     id
     title
     description

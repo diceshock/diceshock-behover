@@ -67,7 +67,7 @@ export async function handleTextMessage(
     return "已清理所有对话历史和记忆";
   }
 
-  const env = c.env as any;
+  const env = c.env;
   const pending = await getPendingAction(env.KV, openId);
   if (pending) {
     if (CONFIRM_KEYWORDS.has(content)) {
@@ -97,7 +97,7 @@ async function executeConfirmedAction(
   openId: string,
   pending: Awaited<ReturnType<typeof getPendingAction>> & {},
 ): Promise<void> {
-  const env = c.env as any;
+  const env = c.env;
   await clearPendingAction(env.KV, openId);
 
   const toolContext = {
@@ -122,7 +122,7 @@ async function processMessage(
   openId: string,
   content: string,
 ): Promise<void> {
-  const env = c.env as any;
+  const env = c.env;
   const t0 = Date.now();
   const tag = openId.slice(-6);
 
@@ -232,7 +232,7 @@ async function searchKnowledgeBase(
   c: Context<HonoCtxEnv>,
   query: string,
 ): Promise<string | undefined> {
-  const aiSearch = (c.env as any).AI_SEARCH;
+  const aiSearch = c.env.AI_SEARCH;
   if (!aiSearch) return undefined;
 
   try {
@@ -606,7 +606,7 @@ async function handlePreferenceCommand(
   const lower = content.toLowerCase();
 
   if (PREF_SHOW_KEYWORDS.has(lower)) {
-    const env = c.env as any;
+    const env = c.env;
     const userId = await resolveUserId(env.DB, openId);
     if (!userId)
       return "请先在骰子奇兵注册账号，再设置偏好~\nhttps://diceshock.com/me";
@@ -614,7 +614,7 @@ async function handlePreferenceCommand(
   }
 
   if (PREF_LANG_KEYWORDS.has(lower)) {
-    const env = c.env as any;
+    const env = c.env;
     const userId = await resolveUserId(env.DB, openId);
     if (!userId)
       return "请先在骰子奇兵注册账号，再设置偏好~\nhttps://diceshock.com/me";
@@ -625,7 +625,7 @@ async function handlePreferenceCommand(
   }
 
   if (PREF_STORE_KEYWORDS.has(lower)) {
-    const env = c.env as any;
+    const env = c.env;
     const userId = await resolveUserId(env.DB, openId);
     if (!userId)
       return "请先在骰子奇兵注册账号，再设置偏好~\nhttps://diceshock.com/me";
@@ -635,7 +635,7 @@ async function handlePreferenceCommand(
     return buildStoreOptions();
   }
 
-  const env = c.env as any;
+  const env = c.env;
   const pendingPref = await (env.KV as KVNamespace).get(
     `preference_menu:${openId}`,
   );
@@ -721,7 +721,7 @@ async function clearAllContext(
   c: Context<HonoCtxEnv>,
   openId: string,
 ): Promise<void> {
-  const env = c.env as any;
+  const env = c.env;
 
   await Promise.all([
     clearConversationHistory(c, openId),

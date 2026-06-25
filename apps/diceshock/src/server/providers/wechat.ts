@@ -1,5 +1,9 @@
 import { customFetch } from "@auth/core";
 import type { OAuthConfig } from "@auth/core/providers";
+import type {
+  WechatOAuthTokenResponse,
+  WechatUserInfoResponse,
+} from "@/types/wechat";
 
 interface WechatProfile {
   openid: string;
@@ -45,7 +49,7 @@ function createWechatFetch(appId: string, appSecret: string) {
 
       console.log("[WeChat OAuth] Fetching token:", tokenUrl.toString());
       const res = await fetch(tokenUrl.toString());
-      const data = (await res.json()) as any;
+      const data = (await res.json()) as WechatOAuthTokenResponse;
       console.log("[WeChat OAuth] Token response:", JSON.stringify(data));
 
       if (data.errcode) {
@@ -109,7 +113,7 @@ export function WechatOpen(config: WechatProviderConfig) {
       }: {
         tokens: { access_token: string; openid?: string };
       }) {
-        const openid = (tokens as any).openid || "";
+        const openid = tokens.openid || "";
         const url = new URL("https://api.weixin.qq.com/sns/userinfo");
         url.searchParams.set("access_token", tokens.access_token);
         url.searchParams.set("openid", openid);
@@ -117,7 +121,7 @@ export function WechatOpen(config: WechatProviderConfig) {
 
         console.log("[WeChat OAuth] Fetching userinfo:", url.toString());
         const res = await fetch(url.toString());
-        const data = (await res.json()) as any;
+        const data = (await res.json()) as WechatUserInfoResponse;
         console.log("[WeChat OAuth] Userinfo:", JSON.stringify(data));
 
         if (data.errcode) {
@@ -178,14 +182,14 @@ export function WechatMP(config: WechatProviderConfig) {
       }: {
         tokens: { access_token: string; openid?: string };
       }) {
-        const openid = (tokens as any).openid || "";
+        const openid = tokens.openid || "";
         const url = new URL("https://api.weixin.qq.com/sns/userinfo");
         url.searchParams.set("access_token", tokens.access_token);
         url.searchParams.set("openid", openid);
         url.searchParams.set("lang", "zh_CN");
 
         const res = await fetch(url.toString());
-        const data = (await res.json()) as any;
+        const data = (await res.json()) as WechatUserInfoResponse;
         if (data.errcode) {
           throw new Error(
             `WeChat userinfo error: ${data.errcode} - ${data.errmsg}`,
@@ -244,7 +248,7 @@ export function WechatMPSilent(config: WechatProviderConfig) {
       }: {
         tokens: { access_token: string; openid?: string };
       }) {
-        const openid = (tokens as any).openid || "";
+        const openid = tokens.openid || "";
         console.log("[WeChat Silent] openid from token:", openid);
         return {
           openid,

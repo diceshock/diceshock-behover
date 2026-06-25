@@ -9,15 +9,23 @@ import db, {
   userInfoTable,
   users,
 } from "@lib/db";
+import { eq } from "drizzle-orm";
 import { createSelectSchema } from "drizzle-zod";
 import type { Context } from "hono";
 import { nanoid } from "nanoid/non-secure";
 import type z from "zod/v4";
 import type { HonoCtxEnv } from "@/shared/types";
+import type { WechatUserInfoResponse } from "@/types/wechat";
 import { FACTORY } from "../factory";
 import { WechatMP, WechatMPSilent, WechatOpen } from "../providers/wechat";
 import { injectCrossDataToCtx } from "../utils";
 import { genNickname, getSmsTmpCodeKey } from "../utils/auth";
+
+declare module "@auth/core/types" {
+  interface User {
+    role?: string;
+  }
+}
 
 export const userInfoZ = createSelectSchema(userInfoTable)
   .omit({
@@ -32,6 +40,7 @@ export const userInfoZ = createSelectSchema(userInfoTable)
   });
 
 export type UserInfo = z.infer<typeof userInfoZ>;
+type ProviderAccountLookup = { provider: string; providerAccountId: string };
 
 export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
   const aliyunClient = c.get("AliyunClient");
@@ -39,11 +48,14 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
   const WECHAT_PROVIDERS = ["wechat-open", "wechat-mp", "wechat-mp-silent"];
   const baseAdapter = DrizzleAdapter(db(c.env.DB));
   const tdb = db(c.env.DB);
+  type AdapterAccountUser = Awaited<
+    ReturnType<NonNullable<typeof baseAdapter.getUserByAccount>>
+  >;
   const adapter = {
     ...baseAdapter,
     async getUserByAccount(
-      providerAccount: Record<string, string>,
-    ): Promise<any> {
+      providerAccount: ProviderAccountLookup,
+    ): Promise<AdapterAccountUser> {
       const result = await baseAdapter.getUserByAccount!(providerAccount);
       if (result) return result;
 
@@ -59,7 +71,7 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
           await tdb
             .insert(accounts)
             .values({
-              userId: (altResult as any).id,
+              userId: altResult.id,
               type: "oauth",
               provider: providerAccount.provider,
               providerAccountId: providerAccount.providerAccountId,
@@ -84,10 +96,10 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
     trustHost: true,
     basePath: "/api/auth",
     logger: {
-      error(code: any, ...message: any[]) {
+      error(code: unknown, ...message: unknown[]) {
         console.error("[Auth.js]", code, ...message);
       },
-      warn(code: any) {
+      warn(code: unknown) {
         console.warn("[Auth.js]", code);
       },
       debug() {},
@@ -101,7 +113,7 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
         }
 
         if (account && profile && token.sub) {
-          const unionid = (profile as any).unionid;
+          const unionid = getWechatProfileString(profile, "unionid");
           if (unionid) {
             const existingUserId = await c.env.KV.get(`unionid:${unionid}`);
             if (existingUserId && existingUserId !== token.sub) {
@@ -142,9 +154,10 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
         }
 
         if (token.sub) {
+          const tokenSub = token.sub;
           const tdb = db(c.env.DB);
           const dbUser = await tdb.query.users.findFirst({
-            where: (u: any, { eq }: any) => eq(u.id, token.sub),
+            where: (u, { eq }) => eq(u.id, tokenSub),
             columns: { role: true },
           });
           token.role = (dbUser?.role ?? "customer") as UserRole;
@@ -153,10 +166,9 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
         if (
           account?.provider === "wechat-mp" &&
           profile &&
-          "nickname" in profile &&
-          (profile as any).nickname
+          getWechatProfileString(profile, "nickname")
         ) {
-          token.name = (profile as any).nickname;
+          token.name = getWechatProfileString(profile, "nickname");
         }
 
         return token;
@@ -166,7 +178,7 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
 
         session.user.id = token.sub;
         session.user.name = token.name as string;
-        (session.user as any).role = (token.role as UserRole) ?? "customer";
+        session.user.role = (token.role as UserRole) ?? "customer";
 
         return session;
       },
@@ -234,7 +246,7 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
         // 查找该手机号是否已经存在账号
         console.log("[登录流程] 查找现有账号", { phone });
         const existingAccount = await tdb.query.accounts.findFirst({
-          where: (acc: any, { eq, and }: any) =>
+          where: (acc, { eq, and }) =>
             and(eq(acc.provider, "SMS"), eq(acc.providerAccountId, phone)),
         });
 
@@ -245,8 +257,7 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
           });
 
           const existingUser = await tdb.query.users.findFirst({
-            where: (user: any, { eq }: any) =>
-              eq(user.id, existingAccount.userId),
+            where: (user, { eq }) => eq(user.id, existingAccount.userId),
           });
 
           if (existingUser) {
@@ -271,7 +282,7 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
         // 如果账号不存在，检查 userInfoTable 中是否有相同手机号的用户
         console.log("[登录流程] 未找到现有账号，检查 userInfoTable", { phone });
         const existingUserInfo = await tdb.query.userInfoTable.findFirst({
-          where: (userInfo: any, { eq }: any) => eq(userInfo.phone, phone),
+          where: (userInfo, { eq }) => eq(userInfo.phone, phone),
         });
 
         if (existingUserInfo) {
@@ -282,7 +293,7 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
 
           // 确保 users 表中存在该用户
           let existingUser = await tdb.query.users.findFirst({
-            where: (user: any, { eq }: any) => eq(user.id, existingUserInfo.id),
+            where: (user, { eq }) => eq(user.id, existingUserInfo.id),
           });
 
           if (!existingUser) {
@@ -297,14 +308,13 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
               })
               .onConflictDoNothing();
             existingUser = await tdb.query.users.findFirst({
-              where: (user: any, { eq }: any) =>
-                eq(user.id, existingUserInfo.id),
+              where: (user, { eq }) => eq(user.id, existingUserInfo.id),
             });
           }
 
           // 确保 account 表中存在记录
           const accountExists = await tdb.query.accounts.findFirst({
-            where: (acc: any, { eq, and }: any) =>
+            where: (acc, { eq, and }) =>
               and(eq(acc.provider, "SMS"), eq(acc.providerAccountId, phone)),
           });
 
@@ -314,9 +324,10 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
               phone,
             });
             try {
+              // @ts-expect-error - credentials provider type not in AdapterAccount union
               await tdb.insert(accounts).values({
                 userId: existingUserInfo.id,
-                type: "credentials" as any,
+                type: "credentials",
                 provider: "SMS",
                 providerAccountId: phone,
               });
@@ -324,11 +335,19 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
                 userId: existingUserInfo.id,
                 phone,
               });
-            } catch (error: any) {
+            } catch (error) {
               // 如果因为主键冲突失败，说明记录已存在（可能是并发情况）
+              const errorRecord =
+                error && typeof error === "object"
+                  ? (error as Record<string, unknown>)
+                  : {};
+              const message =
+                typeof errorRecord.message === "string"
+                  ? errorRecord.message
+                  : "";
               if (
-                error?.message?.includes("UNIQUE constraint") ||
-                error?.code === "SQLITE_CONSTRAINT_UNIQUE"
+                message.includes("UNIQUE constraint") ||
+                errorRecord.code === "SQLITE_CONSTRAINT_UNIQUE"
               ) {
                 console.log("[登录流程] account 记录已存在（并发情况）", {
                   userId: existingUserInfo.id,
@@ -375,6 +394,14 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
   return config;
 });
 
+function getWechatProfileString(
+  profile: object,
+  key: keyof WechatUserInfoResponse,
+) {
+  const value = (profile as Record<string, unknown>)[key];
+  return typeof value === "string" ? value : undefined;
+}
+
 export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
   // 排除认证路由，这些路由由 authHandler 处理
   if (c.req.path.startsWith("/api/auth/")) return next();
@@ -392,7 +419,7 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
 
   // 确保用户存在于 user 表中（JWT 策略可能不会自动保存）
   const userExists = await db(c.env.DB).query.users.findFirst({
-    where: (user: any, { eq }: any) => eq(user.id, id),
+    where: (user, { eq }) => eq(user.id, id),
   });
 
   if (!userExists) {
@@ -409,7 +436,7 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
   const phone = (authUser.token?.phone ?? null) as string | null;
 
   const userInfoRaw = await db(c.env.DB).query.userInfoTable.findFirst({
-    where: (userInfo: any, { eq }: any) => eq(userInfo.id, id),
+    where: (userInfo, { eq }) => eq(userInfo.id, id),
   });
 
   if (!userInfoRaw) {
@@ -431,7 +458,7 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
     if (storeCode) {
       const tdb = db(c.env.DB);
       const store = await tdb.query.storesTable.findFirst({
-        where: (s: any, { eq }: any) => eq(s.code, storeCode),
+        where: (s, { eq }) => eq(s.code, storeCode),
       });
       preferredStoreId = store?.id ?? null;
     }
@@ -469,7 +496,7 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
     await tdb
       .update(userInfoTable)
       .set({ phone })
-      .where((drizzle as any).eq(userInfoTable.id, id));
+      .where(drizzle.eq(userInfoTable.id, id));
     userInfoRaw.phone = phone;
   }
 
@@ -485,7 +512,7 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
     await tdb
       .update(userInfoTable)
       .set({ nickname: oauthName, meta: null })
-      .where((drizzle as any).eq(userInfoTable.id, id));
+      .where(drizzle.eq(userInfoTable.id, id));
     userInfoRaw.nickname = oauthName;
     userInfoRaw.meta = null;
   }

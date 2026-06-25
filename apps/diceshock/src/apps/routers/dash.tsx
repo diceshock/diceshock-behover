@@ -4,6 +4,8 @@ import {
   Link,
   Outlet,
 } from "@tanstack/react-router";
+import ChatPanel from "@/client/components/dash/ChatPanel";
+import MobileChatSheet from "@/client/components/dash/MobileChatSheet";
 import DashNavDrawer from "@/client/components/diceshock/DashNavMenu";
 import { useTranslation } from "@/client/hooks/useTranslation";
 
@@ -18,7 +20,7 @@ export const Route = createFileRoute("/dash")({
   beforeLoad: async () => {
     if (typeof window === "undefined") return;
     const res = await fetch("/api/auth/session");
-    const session: any = await res.json();
+    const session = (await res.json()) as { user?: { role?: string } };
     const role = session?.user?.role;
     if (role !== "admin" && role !== "staff") {
       throw new ForbiddenError();
@@ -35,6 +37,8 @@ function RouteComponent() {
       <DashNavDrawer>
         <Outlet />
       </DashNavDrawer>
+      <ChatPanel />
+      <MobileChatSheet />
     </ClientOnly>
   );
 }

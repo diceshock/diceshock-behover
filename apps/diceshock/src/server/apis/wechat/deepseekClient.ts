@@ -322,7 +322,7 @@ export async function chatWithAgent(
   c: Context<HonoCtxEnv>,
   params: ChatWithAgentParams,
 ): Promise<AgentResult> {
-  const env = c.env as any;
+  const env = c.env;
   const apiKey = env.DEEPSEEK_API_KEY as string;
   const accountId =
     (env.CF_ACCOUNT_ID as string) || "3244c8f91cd34317ce18652158e5853a";
@@ -687,7 +687,7 @@ function synthesizeFromToolResults(toolResults: string[]): string {
         const items = data.actives
           .slice(0, 5)
           .map(
-            (a: any) =>
+            (a: { date?: string; title?: string; link?: string }) =>
               `- ${a.date || ""} ${a.title || ""}${a.link ? ` ${a.link}` : ""}`,
           );
         summaries.push(
@@ -697,7 +697,12 @@ function synthesizeFromToolResults(toolResults: string[]): string {
         const items = data.games
           .slice(0, 5)
           .map(
-            (g: any) =>
+            (g: {
+              sch_name?: string;
+              eng_name?: string;
+              name?: string;
+              link?: string;
+            }) =>
               `- ${g.sch_name || g.eng_name || g.name || ""}${g.link ? ` ${g.link}` : ""}`,
           );
         summaries.push(

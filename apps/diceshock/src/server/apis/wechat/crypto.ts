@@ -4,6 +4,12 @@ function decodeAESKey(encodingAESKey: string): Uint8Array {
   return Base64.toUint8Array(`${encodingAESKey}=`);
 }
 
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buffer).set(bytes);
+  return buffer;
+}
+
 export async function decryptMessage(
   encrypted: string,
   encodingAESKey: string,
@@ -14,16 +20,16 @@ export async function decryptMessage(
 
   const key = await crypto.subtle.importKey(
     "raw",
-    aesKey as unknown as BufferSource,
+    toArrayBuffer(aesKey),
     { name: "AES-CBC" },
     false,
     ["decrypt"],
   );
 
   const decrypted = await crypto.subtle.decrypt(
-    { name: "AES-CBC", iv: iv as unknown as BufferSource },
+    { name: "AES-CBC", iv: toArrayBuffer(iv) },
     key,
-    ciphertext as unknown as BufferSource,
+    toArrayBuffer(ciphertext),
   );
 
   const decryptedBytes = new Uint8Array(decrypted);
@@ -69,16 +75,16 @@ export async function encryptMessage(
 
   const key = await crypto.subtle.importKey(
     "raw",
-    aesKey as unknown as BufferSource,
+    toArrayBuffer(aesKey),
     { name: "AES-CBC" },
     false,
     ["encrypt"],
   );
 
   const ciphertext = await crypto.subtle.encrypt(
-    { name: "AES-CBC", iv: iv as unknown as BufferSource },
+    { name: "AES-CBC", iv: toArrayBuffer(iv) },
     key,
-    payload as unknown as BufferSource,
+    toArrayBuffer(payload),
   );
 
   return Base64.fromUint8Array(new Uint8Array(ciphertext));

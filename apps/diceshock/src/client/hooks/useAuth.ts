@@ -22,9 +22,9 @@ const userInfoAtom = atom<UserInfo | null>(null);
 export function useAuthRegister() {
   const { UserInfo } = useCrossData() ?? {};
 
-  const atoms: [WritableAtom<any, any, any>, any][] = [];
+  const atoms = new Map<typeof userInfoAtom, UserInfo>();
 
-  if (UserInfo) atoms.push([userInfoAtom, UserInfo]);
+  if (UserInfo) atoms.set(userInfoAtom, UserInfo);
 
   useHydrateAtoms(atoms);
 }

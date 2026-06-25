@@ -1,5 +1,5 @@
-query ManagedActives {
-  managedActives {
+query ManagedActives($filter: ActiveFilterInput) {
+  managedActives(filter: $filter) {
     id
     creatorId
     creator {

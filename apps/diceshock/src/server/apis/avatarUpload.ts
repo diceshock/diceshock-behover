@@ -10,7 +10,8 @@ const MAX_AVATAR_SIZE = 2 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 export default async function avatarUpload(c: Context<HonoCtxEnv>) {
-  const session = c.get("authSession" as any) as
+  // @ts-expect-error // Hono variable not typed in this route
+  const session = c.get("authSession") as
     | { user?: { id?: string } }
     | undefined;
   const userId = session?.user?.id;
@@ -70,7 +71,7 @@ export default async function avatarUpload(c: Context<HonoCtxEnv>) {
 
 async function moderateImage(ai: Ai, imageData: Uint8Array): Promise<boolean> {
   try {
-    const result = (await ai.run("@cf/microsoft/resnet-50" as any, {
+    const result = (await ai.run("@cf/microsoft/resnet-50", {
       image: [...imageData],
     })) as { result?: Array<{ label: string; score: number }> };
 

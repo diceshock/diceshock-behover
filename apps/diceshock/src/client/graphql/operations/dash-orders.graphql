@@ -1,5 +1,5 @@
-query Orders($input: OrderListInput = {}) {
-  orders(input: $input) {
+query Orders($input: OrderListInput = {}, $filter: OrderFilterInput) {
+  orders(input: $input, filter: $filter) {
     items {
       id
       tableId

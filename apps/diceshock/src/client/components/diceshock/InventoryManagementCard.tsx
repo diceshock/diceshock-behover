@@ -1,11 +1,11 @@
+import { useApolloClient } from "@apollo/client";
 import type { BoardGame } from "@lib/utils";
 import { CheckIcon, WarningIcon } from "@phosphor-icons/react/dist/ssr";
 import _ from "lodash";
 import { useCallback, useEffect, useState } from "react";
-import { useGetOwnedBoardGameCountQuery } from "@/client/graphql/__generated__";
-import { useApolloClient } from "@apollo/client";
 import {
   SyncOwnedBoardGamesDocument,
+  useGetOwnedBoardGameCountQuery,
   WakeOwnedBoardGamesDocument,
 } from "@/client/graphql/__generated__";
 
@@ -63,7 +63,7 @@ export default function InventoryManagementCard() {
         });
 
         const patch = data.syncOwnedBoardGames;
-        const fetchedItems = (patch as any).fetched as
+        const fetchedItems = patch.fetched as
           | BoardGame.BoardGameCol[]
           | undefined;
 
@@ -78,12 +78,8 @@ export default function InventoryManagementCard() {
         variables: { date },
       });
 
-      const clean = (wakeData.wakeOwnedBoardGames as any).clean as
-        | number
-        | undefined;
-      const hidded = (wakeData.wakeOwnedBoardGames as any).hidded as
-        | number
-        | undefined;
+      const clean = wakeData.wakeOwnedBoardGames.clean as number | undefined;
+      const hidded = wakeData.wakeOwnedBoardGames.hidded as number | undefined;
 
       let menuSynced = false;
       let menuError: string | undefined;

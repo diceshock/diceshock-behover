@@ -6,6 +6,7 @@ import dbFactory, {
   tempIdentitiesTable,
 } from "@lib/db";
 import { createId } from "@paralleldrive/cuid2";
+import { and, asc, desc, eq, inArray, like } from "drizzle-orm";
 import { z } from "zod/v4";
 import { genNickname } from "@/server/utils/auth";
 import { pauseWithReason } from "@/server/utils/pauseOrder";
@@ -422,6 +423,16 @@ export const tablesTypeDefs = `
     description: String
   }
 
+  input TableFilterInput {
+    search: String
+    type: [String!]
+    status: [String!]
+    store: String
+    sortBy: String
+    sortOrder: SortOrder
+    pagination: PaginationInput
+  }
+
   input AddOccupancyInput {
     tableId: ID!
     userId: ID!
@@ -441,7 +452,7 @@ export const tablesTypeDefs = `
   extend type Query {
     tableByCode(code: String!, storeId: ID): Table!
     myActiveOccupancies(storeId: ID): [ActiveOccupancySummary!]!
-    managedTables(storeId: ID): [Table!]!
+    managedTables(storeId: ID, filter: TableFilterInput): [Table!]!
     managedTable(id: ID!): Table!
     managedTableByCode(code: String!, storeId: ID): Table!
     occupanciesByUser(userId: ID!): [TableOccupancy!]!
@@ -606,17 +617,146 @@ export const tablesResolvers = {
 
     async managedTables(
       _source: unknown,
-      args: { storeId?: string | null },
+      args: {
+        storeId?: string | null;
+        filter?: {
+          search?: string | null;
+          type?: (string | null)[] | null;
+          status?: (string | null)[] | null;
+          store?: string | null;
+          sortBy?: string | null;
+          sortOrder?: "ASC" | "DESC" | null;
+          pagination?: { offset?: number | null; limit?: number | null } | null;
+        } | null;
+      },
       ctx: GQLContext,
     ) {
       requireStaff(ctx);
       const tdb = dbFactory(ctx.env.DB);
 
+      // ── No filter: legacy behavior ──────────────────────────────────
+      if (!args.filter) {
+        const tables = await tdb.query.tablesTable.findMany({
+          where: args.storeId
+            ? (t, { eq }) => eq(t.store_id, args.storeId!)
+            : undefined,
+          orderBy: (t, { desc }) => desc(t.create_at),
+          with: {
+            occupancies: {
+              where: (o, { ne }) => ne(o.status, "ended"),
+              columns: {
+                id: true,
+                user_id: true,
+                start_at: true,
+                status: true,
+                temp_id: true,
+                seats: true,
+                table_id: true,
+                end_at: true,
+                final_price: true,
+                pricing_snapshot_id: true,
+                price_breakdown: true,
+                settlement_snapshot: true,
+              },
+            },
+          },
+        });
+
+        return Promise.all(
+          tables.map(async (table) => {
+            const occupancies = await Promise.all(
+              table.occupancies.map((occ) =>
+                enrichOccupancyWithUserInfo(tdb, occ),
+              ),
+            );
+            return { ...toGqlTable(table), occupancies };
+          }),
+        );
+      }
+
+      const { filter } = args;
+
+      // ── DB-level filtering (SQL builder API) ─────────────────────────
+      const conditions: ReturnType<typeof eq>[] = [];
+
+      if (filter.search) {
+        const term = `%${filter.search}%`;
+        conditions.push(like(tablesTable.name, term));
+      }
+      if (filter.type && filter.type.length > 0) {
+        const dbTypes = filter.type
+          .filter((t): t is string => t != null)
+          .map((t) => t.toLowerCase());
+        if (dbTypes.length > 0) {
+          conditions.push(
+            inArray(tablesTable.type, dbTypes as ("fixed" | "solo")[]),
+          );
+        }
+      }
+      if (filter.status && filter.status.length > 0) {
+        const dbStatuses = filter.status
+          .filter((s): s is string => s != null)
+          .map((s) => s.toLowerCase());
+        if (dbStatuses.length > 0) {
+          conditions.push(
+            inArray(
+              tablesTable.status,
+              dbStatuses as ("active" | "inactive")[],
+            ),
+          );
+        }
+      }
+      const storeId = filter.store || args.storeId || ctx.preferredStoreId;
+      if (storeId) {
+        conditions.push(eq(tablesTable.store_id, storeId));
+      }
+
+      const where = conditions.length > 0 ? and(...conditions) : undefined;
+      const pagination = filter.pagination ?? { offset: 0, limit: 20 };
+      const limit = pagination.limit ?? 20;
+      const offset = pagination.offset ?? 0;
+
+      const orderFn = filter.sortOrder === "ASC" ? asc : desc;
+      const base = filter.sortBy ?? "create_at";
+
+      let query = tdb.select().from(tablesTable).$dynamic();
+      if (where) query = query.where(where);
+
+      switch (base) {
+        case "name":
+          query = query.orderBy(orderFn(tablesTable.name));
+          break;
+        case "type":
+          query = query.orderBy(orderFn(tablesTable.type));
+          break;
+        case "status":
+          query = query.orderBy(orderFn(tablesTable.status));
+          break;
+        case "code":
+          query = query.orderBy(orderFn(tablesTable.code));
+          break;
+        case "capacity":
+          query = query.orderBy(orderFn(tablesTable.capacity));
+          break;
+        case "update_at":
+          query = query.orderBy(orderFn(tablesTable.update_at));
+          break;
+        default:
+          query = query.orderBy(orderFn(tablesTable.create_at));
+          break;
+      }
+
+      query = query.limit(limit).offset(offset);
+
+      const rows = await query;
+
+      // Fetch occupancies and enrich each row
       const tables = await tdb.query.tablesTable.findMany({
-        where: args.storeId
-          ? (t, { eq }) => eq(t.store_id, args.storeId!)
-          : undefined,
-        orderBy: (t, { desc }) => desc(t.create_at),
+        where: (t, { inArray: pgInArray }) =>
+          pgInArray(
+            t.id,
+            rows.map((r) => r.id),
+          ),
         with: {
           occupancies: {
             where: (o, { ne }) => ne(o.status, "ended"),
@@ -638,14 +778,21 @@ export const tablesResolvers = {
         },
       });
 
+      // Build a map for quick lookup
+      const tableMap = new Map(
+        tables.map((t) => [
+          t.id,
+          t.occupancies as Array<typeof tableOccupancyTable.$inferSelect>,
+        ]),
+      );
+
       return Promise.all(
-        tables.map(async (table) => {
+        rows.map(async (row) => {
+          const occs = tableMap.get(row.id) ?? [];
           const occupancies = await Promise.all(
-            table.occupancies.map((occ) =>
-              enrichOccupancyWithUserInfo(tdb, occ),
-            ),
+            occs.map((occ) => enrichOccupancyWithUserInfo(tdb, occ)),
           );
-          return { ...toGqlTable(table), occupancies };
+          return { ...toGqlTable(row), occupancies };
         }),
       );
     },

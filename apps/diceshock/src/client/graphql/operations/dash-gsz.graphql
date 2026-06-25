@@ -80,8 +80,8 @@ mutation BatchSyncMahjongMatchesToGsz($matchIds: [ID!]!) {
   }
 }
 
-query ManagedMahjongMatches($input: MahjongManagementListInput) {
-  managedMahjongMatches(input: $input) {
+query ManagedMahjongMatches($filter: MahjongFilterInput) {
+  managedMahjongMatches(filter: $filter) {
     items {
       id
       tableId

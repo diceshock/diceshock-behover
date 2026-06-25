@@ -1,4 +1,3 @@
-import type { D1Database, KVNamespace } from "@cloudflare/workers-types";
 import db, { drizzle, userPreferencesTable } from "@lib/db";
 import {
   checkDailyPushLimit,
@@ -33,6 +32,9 @@ interface StoreEnv {
 interface DispatchEnv {
   DB: D1Database;
   KV: KVNamespace;
+  NOTIFICATION_QUEUE: Queue;
+  WECHAT_MP_APP_ID: string;
+  WECHAT_MP_APP_SECRET: string;
 }
 
 export async function storeMatchQueue(

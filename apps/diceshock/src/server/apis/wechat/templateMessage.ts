@@ -3,6 +3,14 @@ import { getWechatAccessToken } from "./wechatApi";
 
 const WECHAT_API_BASE = "https://diceshock.com/wx-proxy";
 
+interface TemplateMessageEnv {
+  KV: KVNamespace;
+  DB: D1Database;
+  NOTIFICATION_QUEUE: Queue;
+  WECHAT_MP_APP_ID: string;
+  WECHAT_MP_APP_SECRET: string;
+}
+
 interface TemplateDataItem {
   value: string;
 }
@@ -24,7 +32,10 @@ const TEMPLATE_KEYS = {
   PASS_EXPIRING: "wechat:template:pass_expiring",
 } as const;
 
-async function getTemplateId(env: any, key: string): Promise<string | null> {
+async function getTemplateId(
+  env: TemplateMessageEnv,
+  key: string,
+): Promise<string | null> {
   const templateId = await env.KV.get(key);
   if (!templateId) {
     console.warn("[wechat:template] not configured:", key);
@@ -33,7 +44,7 @@ async function getTemplateId(env: any, key: string): Promise<string | null> {
 }
 
 async function sendTemplateMessage(
-  env: any,
+  env: TemplateMessageEnv,
   openId: string,
   templateKey: string,
   data: Record<string, TemplateDataItem>,
@@ -83,7 +94,7 @@ async function sendTemplateMessage(
 // ─── OpenID Resolution ──────────────────────────────────────────
 
 export async function resolveUserOpenId(
-  env: any,
+  env: TemplateMessageEnv,
   userId: string,
 ): Promise<string | null> {
   const tdb = db(env.DB);
@@ -107,7 +118,7 @@ export async function resolveUserOpenId(
 }
 
 export async function resolveUsersOpenIds(
-  env: any,
+  env: TemplateMessageEnv,
   userIds: string[],
 ): Promise<Map<string, string>> {
   if (userIds.length === 0) return new Map();
@@ -140,7 +151,7 @@ export async function resolveUsersOpenIds(
 // ─── Notification Builders ──────────────────────────────────────
 
 export async function notifyOrderStart(
-  env: any,
+  env: TemplateMessageEnv,
   openId: string,
   data: { tableName: string; startTime: string; seats: number },
 ): Promise<SendResult | null> {
@@ -162,7 +173,7 @@ export async function notifyOrderStart(
 }
 
 export async function notifyTableTransfer(
-  env: any,
+  env: TemplateMessageEnv,
   openId: string,
   data: { fromTable: string; toTable: string; transferTime: string },
 ): Promise<SendResult | null> {
@@ -184,7 +195,7 @@ export async function notifyTableTransfer(
 }
 
 export async function notifyMahjongStart(
-  env: any,
+  env: TemplateMessageEnv,
   openId: string,
   data: { mode: string; format: string; tableName: string; startTime: string },
 ): Promise<SendResult | null> {
@@ -205,7 +216,7 @@ export async function notifyMahjongStart(
 }
 
 export async function notifyGszSync(
-  env: any,
+  env: TemplateMessageEnv,
   openId: string,
   data: { success: boolean; matchInfo: string; errorMsg?: string },
 ): Promise<SendResult | null> {
@@ -229,7 +240,7 @@ export async function notifyGszSync(
 }
 
 export async function notifyPhoneBound(
-  env: any,
+  env: TemplateMessageEnv,
   openId: string,
   data: { phone: string; bindTime: string },
 ): Promise<SendResult | null> {
@@ -250,7 +261,7 @@ export async function notifyPhoneBound(
 }
 
 export async function notifyOrderSettled(
-  env: any,
+  env: TemplateMessageEnv,
   openId: string,
   data: {
     tableName: string;
@@ -278,7 +289,7 @@ export async function notifyOrderSettled(
 }
 
 export async function notifyMembershipChange(
-  env: any,
+  env: TemplateMessageEnv,
   openId: string,
   data: { action: string; planName: string; detail: string },
 ): Promise<SendResult | null> {
@@ -300,7 +311,7 @@ export async function notifyMembershipChange(
 }
 
 export async function notifyPassExpiring(
-  env: any,
+  env: TemplateMessageEnv,
   openId: string,
   data: {
     planName: string;
@@ -338,7 +349,9 @@ interface PreferenceNotificationData {
   manageUrl: string;
 }
 
-async function resolvePreferenceTemplateId(env: any): Promise<string | null> {
+async function resolvePreferenceTemplateId(
+  env: TemplateMessageEnv,
+): Promise<string | null> {
   const cached = await env.KV.get("wechat:template:preference_match:resolved");
   if (cached) return cached;
 
@@ -425,7 +438,7 @@ function extractTemplateFields(content: string): string[] {
 }
 
 export async function sendPreferenceMatchNotification(
-  env: any,
+  env: TemplateMessageEnv,
   openId: string,
   data: PreferenceNotificationData,
 ): Promise<SendResult> {
@@ -596,7 +609,7 @@ export type NotificationMessage =
     };
 
 export async function queueNotification(
-  env: any,
+  env: TemplateMessageEnv,
   message: NotificationMessage,
 ): Promise<void> {
   await env.NOTIFICATION_QUEUE.send(message);

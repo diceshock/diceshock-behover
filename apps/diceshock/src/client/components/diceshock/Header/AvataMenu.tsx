@@ -84,7 +84,7 @@ function AvatarMenuContent() {
     /MicroMessenger/i.test(navigator.userAgent);
 
   const name = userInfo?.nickname ?? "Anonymous Shock";
-  const userId = (session?.user as any)?.id as string | undefined;
+  const userId = session?.user?.id as string | undefined;
   const isTiming = !!activeOccupancy;
 
   if (isInWechat) {

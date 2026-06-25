@@ -595,7 +595,13 @@
     "confirmBatchDeleteTitle": "Подтвердите пакетное удаление",
     "batchDeletePrefix": "Будет удалено",
     "batchDeleteSuffix": "встреч и все записи на участие. Это действие нельзя отменить.",
-    "confirmDeleteItems": "Удалить {count} элементов"
+    "confirmDeleteItems": "Удалить {count} элементов",
+    "type": "Тип",
+    "typeGame": "Игра",
+    "typeNotGame": "Не игра",
+    "store": "Магазин",
+    "loadMore": "Загрузить ещё",
+    "noMoreData": "Всё загружено"
   },
   "dashEvents": {
     "copied": "Скопировано",

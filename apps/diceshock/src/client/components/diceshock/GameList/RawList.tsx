@@ -6,6 +6,7 @@ import Swing from "../Swing";
 import LoadingImg from "./LoadingImg";
 
 export type GameWithDbId = BoardGame.BoardGameCol & { dbId: string };
+type InventoryItemParams = { storeLocale?: string; id?: string; code?: string };
 
 const RawList: React.FC<{ games: GameWithDbId[] | null }> = ({ games }) => {
   if (!games) return;
@@ -28,8 +29,8 @@ const RawList: React.FC<{ games: GameWithDbId[] | null }> = ({ games }) => {
         data-tip={`${sch_name || eng_name}${sch_name ? ` (${eng_name})` : ""}`}
       >
         <Link
-          to="/$storeLocale/inventory/$id"
-          params={(prev: any) => ({ ...prev, id: dbId })}
+          to="/{-$storeLocale}/inventory/$id"
+          params={(prev: InventoryItemParams) => ({ ...prev, id: dbId })}
         >
           <Swing
             className={{

@@ -595,7 +595,13 @@
     "confirmBatchDeleteTitle": "一括削除を確認",
     "batchDeletePrefix": "削除対象:",
     "batchDeleteSuffix": "件の対局募集とすべての参加記録。この操作は元に戻せません。",
-    "confirmDeleteItems": "{count}件を削除"
+    "confirmDeleteItems": "{count}件を削除",
+    "type": "タイプ",
+    "typeGame": "ゲーム",
+    "typeNotGame": "非ゲーム",
+    "store": "店舗",
+    "loadMore": "もっと読み込む",
+    "noMoreData": "すべて読み込み済み"
   },
   "dashEvents": {
     "copied": "コピーしました",

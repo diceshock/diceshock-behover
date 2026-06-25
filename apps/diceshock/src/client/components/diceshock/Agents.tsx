@@ -10,6 +10,10 @@ import TablePassLTS from "@/client/assets/svg/agents/DiceshockItems_table-pass-l
 import AgentsChannel from "@/client/assets/svg/agents_channel.svg?react";
 import Swing from "./Swing";
 
+type StoreLocaleParams = { storeLocale?: string; id?: string; code?: string };
+
+const keepStoreLocaleParams = (prev: StoreLocaleParams) => prev;
+
 const Agents: React.FC<{ className?: string }> = ({ className }) => {
   const [ref, inView] = useInView();
 
@@ -85,8 +89,8 @@ const Agents: React.FC<{ className?: string }> = ({ className }) => {
                 <p>充值福利, 付费折扣.</p>
                 <div className="card-actions justify-end">
                   <Link
-                    to="/$storeLocale/contact-us"
-                    params={(prev: any) => prev}
+                    to="/{-$storeLocale}/contact-us"
+                    params={keepStoreLocaleParams}
                     className="btn bg-black text-primary"
                   >
                     联系我们
@@ -118,8 +122,8 @@ const Agents: React.FC<{ className?: string }> = ({ className }) => {
                 <p>办理30天畅玩无限!</p>
                 <div className="card-actions justify-end">
                   <Link
-                    to="/$storeLocale/contact-us"
-                    params={(prev: any) => prev}
+                    to="/{-$storeLocale}/contact-us"
+                    params={keepStoreLocaleParams}
                     className="btn bg-black text-primary"
                   >
                     联系我们
@@ -151,8 +155,8 @@ const Agents: React.FC<{ className?: string }> = ({ className }) => {
                 <p>办理365天畅玩无限</p>
                 <div className="card-actions justify-end">
                   <Link
-                    to="/$storeLocale/contact-us"
-                    params={(prev: any) => prev}
+                    to="/{-$storeLocale}/contact-us"
+                    params={keepStoreLocaleParams}
                     className="btn bg-black text-primary"
                   >
                     联系我们
