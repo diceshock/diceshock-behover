@@ -81,8 +81,8 @@ describe("Chat Stream - production AI SDK endpoint", () => {
     mocks.getAuthUser.mockResolvedValue(staffAuth());
     mocks.createDeepSeek.mockReturnValue((modelId: string) => ({ modelId }));
     mocks.createChatTools.mockReturnValue({
-      query_gql: {
-        description: "query",
+      generate_totp: {
+        description: "totp",
         parameters: { type: "object", properties: {}, required: [] },
         execute: vi.fn(),
       },
@@ -294,9 +294,8 @@ describe("Chat Stream - production AI SDK endpoint", () => {
     });
     expect(prompt).toContain("使用中文回复");
     expect(prompt).toContain("Markdown");
-    expect(prompt).toContain("所有 mutation 都必须先调用 mutate_gql");
-    expect(prompt).toContain("query_gql");
-    expect(prompt).toContain("mutate_gql");
+    expect(prompt).toContain("graphql-mutation");
+    expect(prompt).toContain("graphql");
     expect(prompt).toContain("format_search_query");
   });
 

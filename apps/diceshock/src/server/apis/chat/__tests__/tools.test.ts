@@ -122,24 +122,19 @@ describe("chat tools", () => {
     });
   });
 
-  it("defines exactly six tools with JSON Schema parameters", () => {
+  it("defines exactly four tools with JSON Schema parameters", () => {
     const tools = createChatTools(createContext());
     expect(Object.keys(tools).sort()).toEqual([
       "format_search_query",
       "generate_totp",
-      "mutate_gql",
       "query_active_participants",
-      "query_gql",
       "search_rules",
     ]);
-    expect(tools.query_gql.parameters).toMatchObject({
+    expect(tools.generate_totp.parameters).toMatchObject({
       jsonSchema: {
         type: "object",
-        properties: {
-          query: { type: "string" },
-          variables: { type: "object" },
-        },
-        required: ["query"],
+        properties: {},
+        required: [],
       },
     });
   });

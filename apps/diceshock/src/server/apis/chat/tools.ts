@@ -483,69 +483,6 @@ export function executeFormatSearchQuery(args: {
 }
 
 export const createChatTools: ToolFactory = (context) => ({
-  query_gql: {
-    description:
-      "Execute a read-only GraphQL query against dashboard data with the current user's permissions.",
-    parameters: jsonSchema({
-      type: "object",
-      properties: {
-        query: { type: "string", description: "GraphQL query operation." },
-        variables: {
-          type: "object",
-          description: "Optional GraphQL variables.",
-        },
-      },
-      required: ["query"],
-    }),
-    execute: async ({
-      query,
-      variables,
-    }: {
-      query: string;
-      variables?: Record<string, unknown>;
-    }) =>
-      executeQueryGql(
-        { query: String(query), variables: variablesOrUndefined(variables) },
-        context,
-      ),
-  },
-  mutate_gql: {
-    description:
-      "Preview a GraphQL mutation. This never executes; call /api/chat/confirm after explicit user confirmation.",
-    parameters: jsonSchema({
-      type: "object",
-      properties: {
-        query: { type: "string", description: "GraphQL mutation operation." },
-        variables: {
-          type: "object",
-          description: "Optional GraphQL variables.",
-        },
-        description: {
-          type: "string",
-          description: "Human-readable summary of the intended change.",
-        },
-      },
-      required: ["query"],
-    }),
-    execute: async ({
-      query,
-      variables,
-      description,
-    }: {
-      query: string;
-      variables?: Record<string, unknown>;
-      description?: string;
-    }) =>
-      executeMutateGqlPreview(
-        {
-          query: String(query),
-          variables: variablesOrUndefined(variables),
-          description:
-            typeof description === "string" ? description : undefined,
-        },
-        context,
-      ),
-  },
   generate_totp: {
     description:
       "Generate a TOTP check-in code for the authenticated dashboard user.",

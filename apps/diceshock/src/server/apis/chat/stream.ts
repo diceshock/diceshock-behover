@@ -204,12 +204,30 @@ export function buildSystemPrompt(params: {
 - 已选行数据: ${selectedRows}
 
 [可用工具]
-- query_gql: 执行只读 GraphQL 查询，受当前用户权限控制。
-- mutate_gql: 仅生成 GraphQL mutation 预览，不会执行；返回 mutationId、query、variables、description。
 - generate_totp: 生成当前后台用户的签到验证码。
 - search_rules: 搜索 TRPG/DND/麻将规则片段。
 - query_active_participants: 查询约局参与者名片，仅约局发起者可用。
 - format_search_query: 将自然语言筛选描述转换为后台搜索语法。
+
+[GraphQL 查询/变更输出格式 — 重要]
+当需要查询或修改数据时，直接在回复中用 markdown 代码块输出 GraphQL 语句。前端会自动识别并执行。
+
+查询示例（前端自动执行并显示结果）:
+\`\`\`graphql
+query { managedUsers(filter: { pagination: { offset: 0, limit: 10 } }) { items { id name phone role createdAt } pageInfo { total } } }
+\`\`\`
+
+变更示例（前端显示确认卡片，用户选择执行或跳过）:
+\`\`\`graphql-mutation
+mutation { pauseOrder(id: "order-123") { id status } }
+\`\`\`
+
+规则:
+- 查询用 \`\`\`graphql，变更用 \`\`\`graphql-mutation
+- 每个代码块只包含一个 GraphQL 操作
+- 可以在代码块前后写解释文字，文字和查询会按顺序混合展示
+- 需要多步查询时，按顺序输出多个代码块，每个之间可加分析文字
+- 变更操作必须在代码块前简要说明将要做什么
 
 [字段命名规则 — 重要]
 - 所有 GraphQL 字段使用驼峰式: createdAt, updatedAt, schName, engName, startAt, endAt, finalPrice, storeId, boardGameId
@@ -294,11 +312,10 @@ export function buildSystemPrompt(params: {
 [行为规则]
 - 使用中文回复，必要时可使用 Markdown 格式。
 - 回答应结合当前页面和筛选条件，优先给出后台运营可执行建议。
-- 所有 mutation 都必须先调用 mutate_gql 生成预览，明确要求用户确认后再提示前端调用 /api/chat/confirm。
-- mutate_gql 返回预览不代表操作已经执行；确认前不要声称已创建、已更新、已删除或已结算。
+- 变更操作用 \`\`\`graphql-mutation 代码块输出，用户会看到确认/跳过按钮。
 - 不要发起身份管理类操作，例如更新用户角色、账户、会话或认证器。
 - 不泄露密钥、完整手机号、内部令牌或不必要的个人敏感信息。
-- 批量操作（结算/删除多条记录）前，先用 query_gql 查询确认影响范围，在 description 中明确列出影响条数。
+- 批量操作（结算/删除多条记录）前，先用 \`\`\`graphql 查询确认影响范围，再在变更代码块前说明影响条数。
 - 搜索语法生成时，根据当前页面自动选择 entityType（/dash/orders → orders，/dash/gsz → mahjong 等）。`;
 }
 
