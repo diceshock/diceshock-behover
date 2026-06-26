@@ -110,8 +110,8 @@ function AccountButton({ onClick }: { onClick: () => void }) {
           )}
         </div>
       </div>
-      <div className="min-w-0 flex flex-col items-start gap-0.5">
-        <span className="text-sm font-medium truncate w-full">{name}</span>
+      <div className="min-w-0 flex-1 flex flex-col items-start gap-0.5">
+        <span className="text-sm font-medium truncate max-w-full">{name}</span>
         {roleBadge && (
           <span className="badge badge-xs badge-primary">{roleBadge}</span>
         )}
