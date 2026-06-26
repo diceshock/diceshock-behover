@@ -89,7 +89,7 @@ function AccountButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="gap-12 flex-nowrap items-center w-full"
+      className="gap-3 flex-nowrap items-center w-full h-12"
     >
       <div className="avatar shrink-0">
         <div className="size-6 rounded-full overflow-hidden">
@@ -110,12 +110,10 @@ function AccountButton({ onClick }: { onClick: () => void }) {
           )}
         </div>
       </div>
-      <div className="min-w-0 whitespace-nowrap flex items-center gap-1.5">
-        <span className="text-sm font-medium truncate">{name}</span>
+      <div className="min-w-0 flex flex-col items-start gap-0.5">
+        <span className="text-sm font-medium leading-tight">{name}</span>
         {roleBadge && (
-          <span className="badge badge-xs badge-primary shrink-0">
-            {roleBadge}
-          </span>
+          <span className="badge badge-xs badge-primary">{roleBadge}</span>
         )}
       </div>
     </button>
