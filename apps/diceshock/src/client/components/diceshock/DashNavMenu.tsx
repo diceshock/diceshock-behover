@@ -89,7 +89,7 @@ function AccountButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="gap-3 flex-nowrap items-center w-full h-12 pr-2"
+      className="gap-12 flex-nowrap items-center w-full h-12"
     >
       <div className="avatar shrink-0">
         <div className="size-6 rounded-full overflow-hidden">
