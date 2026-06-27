@@ -513,7 +513,7 @@ export default function DashNavDrawer({
         />
       </div>
 
-      <div className="drawer drawer-end lg:hidden fixed inset-0 z-50 pointer-events-none">
+      <div className="drawer lg:hidden fixed inset-0 z-50 pointer-events-none">
         <input
           id="dash-nav-drawer"
           type="checkbox"
