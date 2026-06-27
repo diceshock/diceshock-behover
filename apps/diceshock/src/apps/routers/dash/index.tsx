@@ -164,35 +164,142 @@ function RouteComponent() {
           </select>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <a
-            href="https://diceshock.com/"
-            className="btn btn-sm btn-ghost gap-1.5"
-          >
-            <HouseIcon className="size-4 text-primary" />
-            {t("dashIndex.home")}
-          </a>
-          <a
-            href="https://diceshock.com/inventory"
-            className="btn btn-sm btn-ghost gap-1.5"
-          >
-            <PackageIcon className="size-4 text-info" />
-            {t("dashIndex.inventoryView")}
-          </a>
-          <a
-            href="https://diceshock.com/contact-us"
-            className="btn btn-sm btn-ghost gap-1.5"
-          >
-            <EnvelopeIcon className="size-4 text-success" />
-            {t("dashIndex.contactUs")}
-          </a>
-          <a
-            href="https://diceshock.com/actives"
-            className="btn btn-sm btn-ghost gap-1.5"
-          >
-            <CalendarDotsIcon className="size-4 text-error" />
-            {t("dashIndex.activitiesMeetups")}
-          </a>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="card bg-base-100 shadow-sm">
+            <div className="card-body p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold flex items-center gap-2">
+                  <ClipboardTextIcon className="size-5 text-info" />
+                  {t("dashIndex.recentOrders")}
+                </h3>
+                <Link
+                  to="/dash/orders"
+                  search={{}}
+                  className="btn btn-xs btn-ghost"
+                >
+                  {t("dashIndex.viewAll")}
+                </Link>
+              </div>
+              {loading ? (
+                <div className="flex justify-center py-6">
+                  <span className="loading loading-dots loading-sm" />
+                </div>
+              ) : recentOrders.length === 0 ? (
+                <p className="text-sm text-base-content/50 text-center py-6">
+                  {t("dashIndex.noOrders")}
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {recentOrders.slice(0, 5).map((order) => (
+                    <Link
+                      key={order.id}
+                      to="/dash/orders"
+                      search={{}}
+                      className="flex items-center justify-between p-2 rounded-lg hover:bg-base-200 transition-colors"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span
+                          className={`badge badge-xs ${
+                            order.status === "active"
+                              ? "badge-success"
+                              : order.status === "paused"
+                                ? "badge-neutral"
+                                : "badge-ghost"
+                          }`}
+                        />
+                        <span className="text-sm truncate">
+                          {order.table?.name ?? "—"}
+                        </span>
+                      </div>
+                      <span className="text-xs text-base-content/50 shrink-0 ml-2">
+                        {formatTime(order.start_at)}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="card bg-base-100 shadow-sm">
+            <div className="card-body p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold flex items-center gap-2">
+                  <TableIcon className="size-5 text-secondary" />
+                  {t("dashIndex.activeTables")}
+                </h3>
+                <Link
+                  to="/dash/tables"
+                  search={{}}
+                  className="btn btn-xs btn-ghost"
+                >
+                  {t("dashIndex.viewAll")}
+                </Link>
+              </div>
+              {loading ? (
+                <div className="flex justify-center py-6">
+                  <span className="loading loading-dots loading-sm" />
+                </div>
+              ) : activeTables.length === 0 ? (
+                <p className="text-sm text-base-content/50 text-center py-6">
+                  {t("dashIndex.noActiveTables")}
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {activeTables.map((table) => (
+                    <Link
+                      key={table.id}
+                      to="/dash/tables/$id"
+                      params={{ id: table.id }}
+                      className="flex items-center gap-2 p-2 rounded-lg hover:bg-base-200 transition-colors"
+                    >
+                      <span className="badge badge-xs badge-success" />
+                      <span className="text-sm">{table.name}</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="card bg-base-100 shadow-sm">
+            <div className="card-body p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold flex items-center gap-2">
+                  <UsersIcon className="size-5 text-accent" />
+                  {t("dashIndex.activeUsers")}
+                </h3>
+                <Link
+                  to="/dash/users"
+                  search={{}}
+                  className="btn btn-xs btn-ghost"
+                >
+                  {t("dashIndex.viewAll")}
+                </Link>
+              </div>
+              {loading ? (
+                <div className="flex justify-center py-6">
+                  <span className="loading loading-dots loading-sm" />
+                </div>
+              ) : activeUsers.length === 0 ? (
+                <p className="text-sm text-base-content/50 text-center py-6">
+                  {t("dashIndex.noActiveUsers")}
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {activeUsers.map((name) => (
+                    <div
+                      key={name}
+                      className="flex items-center gap-2 p-2 rounded-lg"
+                    >
+                      <span className="badge badge-xs badge-accent" />
+                      <span className="text-sm truncate">{name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -340,8 +447,8 @@ function RouteComponent() {
         </div>
 
         <div className="card bg-base-100 shadow-sm">
-          <div className="card-body p-4">
-            <h3 className="font-bold flex items-center gap-2 mb-3">
+          <div className="card-body p-4 space-y-4">
+            <h3 className="font-bold flex items-center gap-2">
               <ShieldCheckIcon className="size-5 text-warning" />
               {t("dashIndex.systemSettings")}
             </h3>
@@ -367,149 +474,40 @@ function RouteComponent() {
                 onChange={(e) => handleCaptchaToggle(e.target.checked)}
               />
             </div>
+            <div className="divider my-0" />
+            <InventoryManagementCard />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="card bg-base-100 shadow-sm">
-            <div className="card-body p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold flex items-center gap-2">
-                  <ClipboardTextIcon className="size-5 text-info" />
-                  {t("dashIndex.recentOrders")}
-                </h3>
-                <Link
-                  to="/dash/orders"
-                  search={{}}
-                  className="btn btn-xs btn-ghost"
-                >
-                  {t("dashIndex.viewAll")}
-                </Link>
-              </div>
-              {loading ? (
-                <div className="flex justify-center py-6">
-                  <span className="loading loading-dots loading-sm" />
-                </div>
-              ) : recentOrders.length === 0 ? (
-                <p className="text-sm text-base-content/50 text-center py-6">
-                  {t("dashIndex.noOrders")}
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {recentOrders.slice(0, 5).map((order) => (
-                    <Link
-                      key={order.id}
-                      to="/dash/orders"
-                      search={{}}
-                      className="flex items-center justify-between p-2 rounded-lg hover:bg-base-200 transition-colors"
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span
-                          className={`badge badge-xs ${
-                            order.status === "active"
-                              ? "badge-success"
-                              : order.status === "paused"
-                                ? "badge-neutral"
-                                : "badge-ghost"
-                          }`}
-                        />
-                        <span className="text-sm truncate">
-                          {order.table?.name ?? "—"}
-                        </span>
-                      </div>
-                      <span className="text-xs text-base-content/50 shrink-0 ml-2">
-                        {formatTime(order.start_at)}
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="card bg-base-100 shadow-sm">
-            <div className="card-body p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold flex items-center gap-2">
-                  <TableIcon className="size-5 text-secondary" />
-                  {t("dashIndex.activeTables")}
-                </h3>
-                <Link
-                  to="/dash/tables"
-                  search={{}}
-                  className="btn btn-xs btn-ghost"
-                >
-                  {t("dashIndex.viewAll")}
-                </Link>
-              </div>
-              {loading ? (
-                <div className="flex justify-center py-6">
-                  <span className="loading loading-dots loading-sm" />
-                </div>
-              ) : activeTables.length === 0 ? (
-                <p className="text-sm text-base-content/50 text-center py-6">
-                  {t("dashIndex.noActiveTables")}
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {activeTables.map((table) => (
-                    <Link
-                      key={table.id}
-                      to="/dash/tables/$id"
-                      params={{ id: table.id }}
-                      className="flex items-center gap-2 p-2 rounded-lg hover:bg-base-200 transition-colors"
-                    >
-                      <span className="badge badge-xs badge-success" />
-                      <span className="text-sm">{table.name}</span>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="card bg-base-100 shadow-sm">
-            <div className="card-body p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold flex items-center gap-2">
-                  <UsersIcon className="size-5 text-accent" />
-                  {t("dashIndex.activeUsers")}
-                </h3>
-                <Link
-                  to="/dash/users"
-                  search={{}}
-                  className="btn btn-xs btn-ghost"
-                >
-                  {t("dashIndex.viewAll")}
-                </Link>
-              </div>
-              {loading ? (
-                <div className="flex justify-center py-6">
-                  <span className="loading loading-dots loading-sm" />
-                </div>
-              ) : activeUsers.length === 0 ? (
-                <p className="text-sm text-base-content/50 text-center py-6">
-                  {t("dashIndex.noActiveUsers")}
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {activeUsers.map((name) => (
-                    <div
-                      key={name}
-                      className="flex items-center gap-2 p-2 rounded-lg"
-                    >
-                      <span className="badge badge-xs badge-accent" />
-                      <span className="text-sm truncate">{name}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <InventoryManagementCard />
+        <div className="flex flex-wrap gap-2">
+          <a
+            href="https://diceshock.com/"
+            className="btn btn-sm btn-ghost gap-1.5"
+          >
+            <HouseIcon className="size-4 text-primary" />
+            {t("dashIndex.home")}
+          </a>
+          <a
+            href="https://diceshock.com/inventory"
+            className="btn btn-sm btn-ghost gap-1.5"
+          >
+            <PackageIcon className="size-4 text-info" />
+            {t("dashIndex.inventoryView")}
+          </a>
+          <a
+            href="https://diceshock.com/contact-us"
+            className="btn btn-sm btn-ghost gap-1.5"
+          >
+            <EnvelopeIcon className="size-4 text-success" />
+            {t("dashIndex.contactUs")}
+          </a>
+          <a
+            href="https://diceshock.com/actives"
+            className="btn btn-sm btn-ghost gap-1.5"
+          >
+            <CalendarDotsIcon className="size-4 text-error" />
+            {t("dashIndex.activitiesMeetups")}
+          </a>
         </div>
       </div>
 
