@@ -1,6 +1,10 @@
 import { useApolloClient } from "@apollo/client";
 import type { BoardGame } from "@lib/utils";
-import { CheckIcon, WarningIcon } from "@phosphor-icons/react/dist/ssr";
+import {
+  ArrowsClockwiseIcon,
+  CheckIcon,
+  WarningIcon,
+} from "@phosphor-icons/react/dist/ssr";
 import _ from "lodash";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -115,69 +119,75 @@ export default function InventoryManagementCard() {
     fetch();
   }, [fetch]);
 
+  const hasResults =
+    synced.clean ||
+    synced.hidded ||
+    synced.fetched?.length ||
+    synced.menuSynced ||
+    synced.menuError;
+
   return (
-    <div className="card w-full bg-base-100 shadow-sm">
-      <div className="card-body">
-        <div className="flex justify-between">
-          <h2 className="text-3xl font-bold">同步信息</h2>
-          {count.current && (
-            <span className="text-xl">
-              {count.current}/{count.removed}
-            </span>
-          )}
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium">
+            同步信息
+            {count.current != null && (
+              <span className="text-xs text-base-content/60 ml-2">
+                {count.current}/{count.removed}
+              </span>
+            )}
+          </p>
+          <p className="text-xs text-base-content/60">同步库存、菜单等数据</p>
         </div>
-        <ul className="mt-6 flex flex-col gap-2 text-xs h-40">
-          {(synced.clean ?? null) && (
-            <li key="cleaned">
-              <CheckIcon className="size-4 me-2 inline-block text-success" />
-              清理了过期(超过2个月)数据
-              <span>{synced.clean}</span>项
+        <button
+          type="button"
+          onClick={sync}
+          disabled={synced.syncing}
+          className="btn btn-sm btn-primary gap-1.5"
+        >
+          {synced.syncing ? (
+            <span className="loading loading-spinner loading-xs" />
+          ) : (
+            <ArrowsClockwiseIcon className="size-4" />
+          )}
+          同步
+        </button>
+      </div>
+      {hasResults && (
+        <ul className="flex flex-col gap-1 text-xs pl-1">
+          {synced.clean != null && synced.clean > 0 && (
+            <li>
+              <CheckIcon className="size-3.5 me-1.5 inline-block text-success" />
+              清理了过期数据 {synced.clean} 项
             </li>
           )}
-          {(synced.hidded ?? null) && (
-            <li key="hidden">
-              <CheckIcon className="size-4 me-2 inline-block text-success" />
-              移动
-              <span>{synced.hidded}</span>项数据到回收站
+          {synced.hidded != null && synced.hidded > 0 && (
+            <li>
+              <CheckIcon className="size-3.5 me-1.5 inline-block text-success" />
+              移动 {synced.hidded} 项到回收站
             </li>
           )}
-          {(synced.fetched?.length ?? null) && (
-            <li key="fetched">
-              <CheckIcon className="size-4 me-2 inline-block text-success" />
-              总共爬取了
-              <span>{synced.fetched?.length}</span>项数据
+          {synced.fetched && synced.fetched.length > 0 && (
+            <li>
+              <CheckIcon className="size-3.5 me-1.5 inline-block text-success" />
+              爬取了 {synced.fetched.length} 项数据
             </li>
           )}
           {synced.menuSynced && (
-            <li key="menu">
-              <CheckIcon className="size-4 me-2 inline-block text-success" />
+            <li>
+              <CheckIcon className="size-3.5 me-1.5 inline-block text-success" />
               微信菜单已同步
             </li>
           )}
           {synced.menuError && (
-            <li key="menu-error">
-              <WarningIcon className="size-4 me-2 inline-block text-error" />
-              微信菜单同步失败: {synced.menuError}
-            </li>
-          )}
-          {!synced.fetched?.length && !synced.menuSynced && (
-            <li key="unfetch">
-              <WarningIcon className="size-4 me-2 inline-block text-error" />
-              还没同步呢...
+            <li>
+              <WarningIcon className="size-3.5 me-1.5 inline-block text-error" />
+              菜单同步失败: {synced.menuError}
             </li>
           )}
         </ul>
-        <div className="mt-6">
-          <button
-            onClick={sync}
-            disabled={synced?.syncing}
-            className="btn btn-primary btn-block"
-          >
-            {synced?.syncing && <span className="loading loading-spinner" />}
-            同步
-          </button>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

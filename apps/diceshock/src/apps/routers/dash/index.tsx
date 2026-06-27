@@ -479,36 +479,41 @@ function RouteComponent() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <a
-            href="https://diceshock.com/"
-            className="btn btn-sm btn-ghost gap-1.5"
-          >
-            <HouseIcon className="size-4 text-primary" />
-            {t("dashIndex.home")}
-          </a>
-          <a
-            href="https://diceshock.com/inventory"
-            className="btn btn-sm btn-ghost gap-1.5"
-          >
-            <PackageIcon className="size-4 text-info" />
-            {t("dashIndex.inventoryView")}
-          </a>
-          <a
-            href="https://diceshock.com/contact-us"
-            className="btn btn-sm btn-ghost gap-1.5"
-          >
-            <EnvelopeIcon className="size-4 text-success" />
-            {t("dashIndex.contactUs")}
-          </a>
-          <a
-            href="https://diceshock.com/actives"
-            className="btn btn-sm btn-ghost gap-1.5"
-          >
-            <CalendarDotsIcon className="size-4 text-error" />
-            {t("dashIndex.activitiesMeetups")}
-          </a>
-        </div>
+        <footer className="border-t border-base-300 pt-4 pb-2">
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+            <a
+              href="https://diceshock.com/"
+              className="link link-hover text-xs text-base-content/60 inline-flex items-center gap-1"
+            >
+              <HouseIcon className="size-3.5" />
+              {t("dashIndex.home")}
+            </a>
+            <span className="text-base-content/30">·</span>
+            <a
+              href="https://diceshock.com/inventory"
+              className="link link-hover text-xs text-base-content/60 inline-flex items-center gap-1"
+            >
+              <PackageIcon className="size-3.5" />
+              {t("dashIndex.inventoryView")}
+            </a>
+            <span className="text-base-content/30">·</span>
+            <a
+              href="https://diceshock.com/contact-us"
+              className="link link-hover text-xs text-base-content/60 inline-flex items-center gap-1"
+            >
+              <EnvelopeIcon className="size-3.5" />
+              {t("dashIndex.contactUs")}
+            </a>
+            <span className="text-base-content/30">·</span>
+            <a
+              href="https://diceshock.com/actives"
+              className="link link-hover text-xs text-base-content/60 inline-flex items-center gap-1"
+            >
+              <CalendarDotsIcon className="size-3.5" />
+              {t("dashIndex.activitiesMeetups")}
+            </a>
+          </div>
+        </footer>
       </div>
 
       <DashQRScannerDialog
