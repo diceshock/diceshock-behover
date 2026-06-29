@@ -20,6 +20,7 @@ const config = defineConfig({
         "// @ts-nocheck",
       ],
       autoCodeSplitting: true,
+      routeFileIgnorePattern: ".*/__tests__/.*",
       routesDirectory: path.resolve(__dirname, "./src/apps/routers"),
       generatedRouteTree: path.resolve(
         __dirname,

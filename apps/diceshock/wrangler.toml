@@ -155,10 +155,12 @@ AUTH_URL = "https://diceshock.com"
 [[ai_search]]
 binding = "AI_SEARCH"
 instance_name = "nameless-resonance-0d56"
+remote = true
 
 # Workers AI (embeddings, etc.)
 [ai]
 binding = "AI"
+remote = true
 
 # Secrets (set via `wrangler secret put`):
 # WECHAT_OPEN_APP_ID

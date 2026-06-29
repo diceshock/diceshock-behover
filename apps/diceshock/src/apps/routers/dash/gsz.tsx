@@ -170,542 +170,540 @@ export function buildFilter(
   };
 }
 
-export function RouteComponent() {
-  const msg = useMsg();
-  const { t } = useTranslation();
-  const isMobile = useIsMobile();
-  const { q, page } = Route.useSearch();
-  const navigate = useNavigate({ from: Route.fullPath });
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [searchInput, setSearchInput] = useState(q);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [syncingId, setSyncingId] = useState<string | null>(null);
-  const [batchSyncing, setBatchSyncing] = useState(false);
+function RouteComponent() { const msg = useMsg();
+const { t } = useTranslation();
+const isMobile = useIsMobile();
+const { q, page } = Route.useSearch();
+const navigate = useNavigate({ from: Route.fullPath });
+const [sorting, setSorting] = useState<SortingState>([]);
+const [searchInput, setSearchInput] = useState(q);
+const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+const [syncingId, setSyncingId] = useState<string | null>(null);
+const [batchSyncing, setBatchSyncing] = useState(false);
 
-  const unsyncableDialogRef = useRef<HTMLDialogElement>(null);
-  const [unsyncableReasons, setUnsyncableReasons] = useState<
-    Array<{ nickname: string; userId: string; reason: string }>
-  >([]);
+const unsyncableDialogRef = useRef<HTMLDialogElement>(null);
+const [unsyncableReasons, setUnsyncableReasons] = useState<
+  Array<{ nickname: string; userId: string; reason: string }>
+>([]);
 
-  const { pendingSearch, clearPendingSearch } = usePendingSearch();
+const { pendingSearch, clearPendingSearch } = usePendingSearch();
 
-  const setSearchParam = useCallback(
-    (updates: Partial<{ q: string; page: number }>) =>
-      navigate({ search: (prev) => ({ ...prev, ...updates }), replace: true }),
-    [navigate],
-  );
+const setSearchParam = useCallback(
+  (updates: Partial<{ q: string; page: number }>) =>
+    navigate({ search: (prev) => ({ ...prev, ...updates }), replace: true }),
+  [navigate],
+);
 
-  useEffect(() => {
-    if (pendingSearch !== null) {
-      setSearchInput(pendingSearch);
-      setSearchParam({ q: pendingSearch, page: 1 });
-      clearPendingSearch();
-    }
-  }, [pendingSearch, clearPendingSearch, setSearchParam]);
+useEffect(() => {
+  if (pendingSearch !== null) {
+    setSearchInput(pendingSearch);
+    setSearchParam({ q: pendingSearch, page: 1 });
+    clearPendingSearch();
+  }
+}, [pendingSearch, clearPendingSearch, setSearchParam]);
 
-  const parsed = useMemo(() => parseSearch(q, GSZ_SEARCH_GRAMMAR), [q]);
-  const filter = useMemo(
-    () => buildFilter(parsed, page, sorting),
-    [parsed, page, sorting],
-  );
+const parsed = useMemo(() => parseSearch(q, GSZ_SEARCH_GRAMMAR), [q]);
+const filter = useMemo(
+  () => buildFilter(parsed, page, sorting),
+  [parsed, page, sorting],
+);
 
-  const { data, loading } = useManagedMahjongMatchesQuery({
-    variables: { filter },
-    onError: (err) => {
-      msg.error(err.message || t("dashGsz.errors.fetchMatchesFailed"));
-    },
-  });
+const { data, loading } = useManagedMahjongMatchesQuery({
+  variables: { filter },
+  onError: (err) => {
+    msg.error(err.message || t("dashGsz.errors.fetchMatchesFailed"));
+  },
+});
 
-  const matches =
-    (data?.managedMahjongMatches?.items as MatchItem[] | undefined) ?? [];
+const matches =
+  (data?.managedMahjongMatches?.items as MatchItem[] | undefined) ?? [];
 
-  const matchesList = data?.managedMahjongMatches ?? null;
-  const total = matchesList?.pageInfo?.total ?? 0;
-  const hasMore = matchesList?.pageInfo?.hasMore ?? false;
-  const clearSelectedIds = useCallback(() => setSelectedIds(new Set()), []);
-  useSelectedTableData({
-    entityType: "日麻",
-    rows: matches,
-    selectedIds,
-    getRowId: (match) => match.id,
-    onClear: clearSelectedIds,
-  });
+const matchesList = data?.managedMahjongMatches ?? null;
+const total = matchesList?.pageInfo?.total ?? 0;
+const hasMore = matchesList?.pageInfo?.hasMore ?? false;
+const clearSelectedIds = useCallback(() => setSelectedIds(new Set()), []);
+useSelectedTableData({
+  entityType: "日麻",
+  rows: matches,
+  selectedIds,
+  getRowId: (match) => match.id,
+  onClear: clearSelectedIds,
+});
 
-  const { data: activeData, loading: activeLoading } =
-    useActiveMahjongMatchesQuery({ pollInterval: 10000 });
-  const activeMatches = activeData?.activeMahjongMatches ?? [];
+const { data: activeData, loading: activeLoading } =
+  useActiveMahjongMatchesQuery({ pollInterval: 10000 });
+const activeMatches = activeData?.activeMahjongMatches ?? [];
 
-  const { data: tablesData } = useMahjongTablesQuery();
-  const tableOptions = tablesData?.mahjongTables ?? [];
+const { data: tablesData } = useMahjongTablesQuery();
+const tableOptions = tablesData?.mahjongTables ?? [];
 
-  const [terminateMutation] = useTerminateMahjongMatchMutation({
-    refetchQueries: ["ManagedMahjongMatches", "ActiveMahjongMatches"],
-  });
-  const [syncMutation] = useSyncMahjongMatchToGszMutation({
-    refetchQueries: ["ManagedMahjongMatches"],
-  });
-  const [batchSyncMutation] = useBatchSyncMahjongMatchesToGszMutation({
-    refetchQueries: ["ManagedMahjongMatches"],
-  });
+const [terminateMutation] = useTerminateMahjongMatchMutation({
+  refetchQueries: ["ManagedMahjongMatches", "ActiveMahjongMatches"],
+});
+const [syncMutation] = useSyncMahjongMatchToGszMutation({
+  refetchQueries: ["ManagedMahjongMatches"],
+});
+const [batchSyncMutation] = useBatchSyncMahjongMatchesToGszMutation({
+  refetchQueries: ["ManagedMahjongMatches"],
+});
 
-  const handleTerminate = async (tableCode: string) => {
+const handleTerminate = async (tableCode: string) => {
+  try {
+    await terminateMutation({
+      variables: { tableCode, reason: "ADMIN_ABORT" },
+    });
+    msg.success(t("dashGsz.messages.terminated"));
+  } catch (err) {
+    msg.error(
+      err instanceof Error
+        ? err.message
+        : t("dashGsz.errors.terminateFailed"),
+    );
+  }
+};
+
+const handleSync = useCallback(
+  async (matchId: string) => {
+    setSyncingId(matchId);
     try {
-      await terminateMutation({
-        variables: { tableCode, reason: "ADMIN_ABORT" },
-      });
-      msg.success(t("dashGsz.messages.terminated"));
-    } catch (err) {
-      msg.error(
-        err instanceof Error
-          ? err.message
-          : t("dashGsz.errors.terminateFailed"),
-      );
-    }
-  };
-
-  const handleSync = useCallback(
-    async (matchId: string) => {
-      setSyncingId(matchId);
-      try {
-        const res = await syncMutation({ variables: { matchId } });
-        const result = res.data?.syncMahjongMatchToGsz;
-        if (result?.success) {
-          msg.success(t("dashGsz.messages.syncSuccess"));
-        } else {
-          msg.error(result?.error ?? t("dashGsz.errors.syncFailed"));
-        }
-      } catch (err) {
-        msg.error(
-          err instanceof Error ? err.message : t("dashGsz.errors.syncFailed"),
-        );
-      } finally {
-        setSyncingId(null);
+      const res = await syncMutation({ variables: { matchId } });
+      const result = res.data?.syncMahjongMatchToGsz;
+      if (result?.success) {
+        msg.success(t("dashGsz.messages.syncSuccess"));
+      } else {
+        msg.error(result?.error ?? t("dashGsz.errors.syncFailed"));
       }
-    },
-    [syncMutation, msg, t],
-  );
-
-  const handleBatchSync = async () => {
-    if (selectedIds.size === 0) return;
-    setBatchSyncing(true);
-    try {
-      const res = await batchSyncMutation({
-        variables: { matchIds: [...selectedIds] },
-      });
-      const result = res.data?.batchSyncMahjongMatchesToGsz;
-      msg.success(
-        formatMessage(t("dashGsz.messages.batchSyncComplete"), {
-          successCount: result?.successCount ?? 0,
-          failCount: result?.failCount ?? 0,
-        }),
-      );
-      clearSelectedIds();
     } catch (err) {
       msg.error(
-        err instanceof Error
-          ? err.message
-          : t("dashGsz.errors.batchSyncFailed"),
+        err instanceof Error ? err.message : t("dashGsz.errors.syncFailed"),
       );
     } finally {
-      setBatchSyncing(false);
+      setSyncingId(null);
     }
+  },
+  [syncMutation, msg, t],
+);
+
+const handleBatchSync = async () => {
+  if (selectedIds.size === 0) return;
+  setBatchSyncing(true);
+  try {
+    const res = await batchSyncMutation({
+      variables: { matchIds: [...selectedIds] },
+    });
+    const result = res.data?.batchSyncMahjongMatchesToGsz;
+    msg.success(
+      formatMessage(t("dashGsz.messages.batchSyncComplete"), {
+        successCount: result?.successCount ?? 0,
+        failCount: result?.failCount ?? 0,
+      }),
+    );
+    clearSelectedIds();
+  } catch (err) {
+    msg.error(
+      err instanceof Error
+        ? err.message
+        : t("dashGsz.errors.batchSyncFailed"),
+    );
+  } finally {
+    setBatchSyncing(false);
+  }
+};
+
+const selectedActions: BatchAction[] = [
+  {
+    key: "sync-gsz",
+    label: "同步到 GSZ",
+    icon: batchSyncing ? (
+      <span className="loading loading-spinner loading-xs" />
+    ) : (
+      <ArrowsClockwiseIcon className="size-4" />
+    ),
+    className: "btn-warning",
+    disabled: batchSyncing,
+    onClick: () => void handleBatchSync(),
+  },
+];
+
+const quickFilters = useMemo(() => {
+  const modeVal = parsed.filters.mode?.value;
+  const formatVal = parsed.filters.format?.value;
+  const syncVal = parsed.filters.sync?.value;
+  const completionVal = parsed.filters.completion?.value;
+
+  const isActive = (filterVal: unknown, target: string): boolean => {
+    if (typeof filterVal === "string") return filterVal === target;
+    if (Array.isArray(filterVal)) return filterVal.includes(target);
+    return false;
   };
 
-  const selectedActions: BatchAction[] = [
+  return [
     {
-      key: "sync-gsz",
-      label: "同步到 GSZ",
-      icon: batchSyncing ? (
-        <span className="loading loading-spinner loading-xs" />
-      ) : (
-        <ArrowsClockwiseIcon className="size-4" />
-      ),
-      className: "btn-warning",
-      disabled: batchSyncing,
-      onClick: () => void handleBatchSync(),
+      label: t("dashGsz.modes.threePlayer"),
+      key: "mode",
+      value: "3p",
+      active: isActive(modeVal, "3p"),
+    },
+    {
+      label: t("dashGsz.modes.fourPlayer"),
+      key: "mode",
+      value: "4p",
+      active: isActive(modeVal, "4p"),
+    },
+    {
+      label: t("dashGsz.formats.tonpuuRound"),
+      key: "format",
+      value: "tonpuu",
+      active: isActive(formatVal, "tonpuu"),
+    },
+    {
+      label: t("dashGsz.formats.hanchan"),
+      key: "format",
+      value: "hanchan",
+      active: isActive(formatVal, "hanchan"),
+    },
+    {
+      label: t("dashGsz.filters.synced"),
+      key: "sync",
+      value: "synced",
+      active: isActive(syncVal, "synced"),
+    },
+    {
+      label: t("dashGsz.filters.unsynced"),
+      key: "sync",
+      value: "unsynced",
+      active: isActive(syncVal, "unsynced"),
+    },
+    {
+      label: t("dashGsz.filters.completed"),
+      key: "completion",
+      value: "completed",
+      active: isActive(completionVal, "completed"),
+    },
+    {
+      label: t("dashGsz.filters.incomplete"),
+      key: "completion",
+      value: "incomplete",
+      active: isActive(completionVal, "incomplete"),
     },
   ];
+}, [parsed, t]);
 
-  const quickFilters = useMemo(() => {
-    const modeVal = parsed.filters.mode?.value;
-    const formatVal = parsed.filters.format?.value;
-    const syncVal = parsed.filters.sync?.value;
-    const completionVal = parsed.filters.completion?.value;
-
-    const isActive = (filterVal: unknown, target: string): boolean => {
-      if (typeof filterVal === "string") return filterVal === target;
-      if (Array.isArray(filterVal)) return filterVal.includes(target);
-      return false;
-    };
-
-    return [
-      {
-        label: t("dashGsz.modes.threePlayer"),
-        key: "mode",
-        value: "3p",
-        active: isActive(modeVal, "3p"),
-      },
-      {
-        label: t("dashGsz.modes.fourPlayer"),
-        key: "mode",
-        value: "4p",
-        active: isActive(modeVal, "4p"),
-      },
-      {
-        label: t("dashGsz.formats.tonpuuRound"),
-        key: "format",
-        value: "tonpuu",
-        active: isActive(formatVal, "tonpuu"),
-      },
-      {
-        label: t("dashGsz.formats.hanchan"),
-        key: "format",
-        value: "hanchan",
-        active: isActive(formatVal, "hanchan"),
-      },
-      {
-        label: t("dashGsz.filters.synced"),
-        key: "sync",
-        value: "synced",
-        active: isActive(syncVal, "synced"),
-      },
-      {
-        label: t("dashGsz.filters.unsynced"),
-        key: "sync",
-        value: "unsynced",
-        active: isActive(syncVal, "unsynced"),
-      },
-      {
-        label: t("dashGsz.filters.completed"),
-        key: "completion",
-        value: "completed",
-        active: isActive(completionVal, "completed"),
-      },
-      {
-        label: t("dashGsz.filters.incomplete"),
-        key: "completion",
-        value: "incomplete",
-        active: isActive(completionVal, "incomplete"),
-      },
-    ];
-  }, [parsed, t]);
-
-  const columns = useMemo<ColumnDef<MatchItem, unknown>[]>(
-    () => [
-      {
-        id: "table",
-        header: t("dashGsz.columns.table"),
-        cell: ({ row }) => (
-          <span className="whitespace-nowrap">
-            {row.original.table?.name ?? "—"}
+const columns = useMemo<ColumnDef<MatchItem, unknown>[]>(
+  () => [
+    {
+      id: "table",
+      header: t("dashGsz.columns.table"),
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap">
+          {row.original.table?.name ?? "—"}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "mode",
+      header: t("dashGsz.columns.mode"),
+      cell: ({ row }) => (
+        <span
+          className={`badge badge-sm ${row.original.mode === "FOUR_PLAYER" ? "badge-primary" : "badge-secondary"}`}
+        >
+          {MODE_LABEL_KEYS[row.original.mode]
+            ? t(MODE_LABEL_KEYS[row.original.mode])
+            : row.original.mode}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "format",
+      header: t("dashGsz.columns.format"),
+      cell: ({ row }) => (
+        <span className="badge badge-sm badge-outline">
+          {FORMAT_LABEL_KEYS[row.original.format]
+            ? t(FORMAT_LABEL_KEYS[row.original.format])
+            : row.original.format}
+        </span>
+      ),
+    },
+    {
+      id: "startedAt",
+      accessorFn: (row) => new Date(row.startedAt).getTime(),
+      header: t("dashGsz.columns.startTime"),
+      cell: ({ row }) =>
+        formatTime(new Date(row.original.startedAt).getTime()),
+      sortingFn: "basic",
+    },
+    {
+      id: "endedAt",
+      accessorFn: (row) => new Date(row.endedAt).getTime(),
+      header: t("dashGsz.columns.endTime"),
+      cell: ({ row }) => formatTime(new Date(row.original.endedAt).getTime()),
+      sortingFn: "basic",
+    },
+    {
+      id: "players",
+      header: t("dashGsz.columns.players"),
+      cell: ({ row }) => (
+        <span
+          className="max-w-[200px] truncate inline-block"
+          title={row.original.players
+            .map((p: MahjongPlayer) => p.nickname)
+            .join(", ")}
+        >
+          {row.original.players
+            .map((p: MahjongPlayer) => p.nickname)
+            .join(", ") || "—"}
+        </span>
+      ),
+    },
+    {
+      id: "terminationReason",
+      accessorKey: "terminationReason",
+      header: t("dashGsz.columns.terminationReason"),
+      cell: ({ row }) => (
+        <span
+          className={clsx(
+            "badge badge-sm",
+            INCOMPLETE_REASONS.has(row.original.terminationReason)
+              ? "badge-warning"
+              : "badge-ghost",
+          )}
+        >
+          {TERMINATION_LABEL_KEYS[row.original.terminationReason]
+            ? t(TERMINATION_LABEL_KEYS[row.original.terminationReason])
+            : row.original.terminationReason}
+        </span>
+      ),
+    },
+    {
+      id: "sync",
+      header: t("dashGsz.columns.sync"),
+      cell: ({ row }) => {
+        const match = row.original;
+        if (match.matchType !== MahjongMatchType.Tournament) {
+          return <span className="badge badge-sm badge-ghost">—</span>;
+        }
+        return match.gszSynced ? (
+          <span className="badge badge-sm badge-success">
+            {t("dashGsz.synced")}
           </span>
-        ),
-      },
-      {
-        accessorKey: "mode",
-        header: t("dashGsz.columns.mode"),
-        cell: ({ row }) => (
-          <span
-            className={`badge badge-sm ${row.original.mode === "FOUR_PLAYER" ? "badge-primary" : "badge-secondary"}`}
-          >
-            {MODE_LABEL_KEYS[row.original.mode]
-              ? t(MODE_LABEL_KEYS[row.original.mode])
-              : row.original.mode}
-          </span>
-        ),
-      },
-      {
-        accessorKey: "format",
-        header: t("dashGsz.columns.format"),
-        cell: ({ row }) => (
-          <span className="badge badge-sm badge-outline">
-            {FORMAT_LABEL_KEYS[row.original.format]
-              ? t(FORMAT_LABEL_KEYS[row.original.format])
-              : row.original.format}
-          </span>
-        ),
-      },
-      {
-        id: "startedAt",
-        accessorFn: (row) => new Date(row.startedAt).getTime(),
-        header: t("dashGsz.columns.startTime"),
-        cell: ({ row }) =>
-          formatTime(new Date(row.original.startedAt).getTime()),
-        sortingFn: "basic",
-      },
-      {
-        id: "endedAt",
-        accessorFn: (row) => new Date(row.endedAt).getTime(),
-        header: t("dashGsz.columns.endTime"),
-        cell: ({ row }) => formatTime(new Date(row.original.endedAt).getTime()),
-        sortingFn: "basic",
-      },
-      {
-        id: "players",
-        header: t("dashGsz.columns.players"),
-        cell: ({ row }) => (
-          <span
-            className="max-w-[200px] truncate inline-block"
-            title={row.original.players
-              .map((p: MahjongPlayer) => p.nickname)
-              .join(", ")}
-          >
-            {row.original.players
-              .map((p: MahjongPlayer) => p.nickname)
-              .join(", ") || "—"}
-          </span>
-        ),
-      },
-      {
-        id: "terminationReason",
-        accessorKey: "terminationReason",
-        header: t("dashGsz.columns.terminationReason"),
-        cell: ({ row }) => (
-          <span
-            className={clsx(
-              "badge badge-sm",
-              INCOMPLETE_REASONS.has(row.original.terminationReason)
-                ? "badge-warning"
-                : "badge-ghost",
-            )}
-          >
-            {TERMINATION_LABEL_KEYS[row.original.terminationReason]
-              ? t(TERMINATION_LABEL_KEYS[row.original.terminationReason])
-              : row.original.terminationReason}
-          </span>
-        ),
-      },
-      {
-        id: "sync",
-        header: t("dashGsz.columns.sync"),
-        cell: ({ row }) => {
-          const match = row.original;
-          if (match.matchType !== MahjongMatchType.Tournament) {
-            return <span className="badge badge-sm badge-ghost">—</span>;
-          }
-          return match.gszSynced ? (
-            <span className="badge badge-sm badge-success">
-              {t("dashGsz.synced")}
+        ) : (
+          <div className="flex items-center gap-1">
+            <span
+              className="badge badge-sm badge-warning cursor-help"
+              title={match.gszError ?? t("dashGsz.unsynced")}
+            >
+              {t("dashGsz.unsynced")}
             </span>
-          ) : (
-            <div className="flex items-center gap-1">
-              <span
-                className="badge badge-sm badge-warning cursor-help"
-                title={match.gszError ?? t("dashGsz.unsynced")}
-              >
-                {t("dashGsz.unsynced")}
-              </span>
-              {match.unsyncableReasons.length > 0 && (
-                <button
-                  type="button"
-                  className="btn btn-xs btn-ghost btn-square text-error"
-                  onClick={() => {
-                    setUnsyncableReasons(match.unsyncableReasons);
-                    unsyncableDialogRef.current?.showModal();
-                  }}
-                  title={t("dashGsz.unsyncable")}
-                >
-                  <WarningCircleIcon className="size-4" />
-                </button>
-              )}
+            {match.unsyncableReasons.length > 0 && (
               <button
                 type="button"
-                className="btn btn-xs btn-ghost btn-square"
-                disabled={syncingId === match.id}
-                onClick={() => handleSync(match.id)}
-                title={t("dashGsz.manualSync")}
+                className="btn btn-xs btn-ghost btn-square text-error"
+                onClick={() => {
+                  setUnsyncableReasons(match.unsyncableReasons);
+                  unsyncableDialogRef.current?.showModal();
+                }}
+                title={t("dashGsz.unsyncable")}
               >
-                {syncingId === match.id ? (
-                  <span className="loading loading-spinner loading-xs" />
-                ) : (
-                  <ArrowsClockwiseIcon className="size-3.5" />
-                )}
+                <WarningCircleIcon className="size-4" />
               </button>
-            </div>
-          );
-        },
+            )}
+            <button
+              type="button"
+              className="btn btn-xs btn-ghost btn-square"
+              disabled={syncingId === match.id}
+              onClick={() => handleSync(match.id)}
+              title={t("dashGsz.manualSync")}
+            >
+              {syncingId === match.id ? (
+                <span className="loading loading-spinner loading-xs" />
+              ) : (
+                <ArrowsClockwiseIcon className="size-3.5" />
+              )}
+            </button>
+          </div>
+        );
       },
-    ],
-    [t, syncingId, handleSync],
-  );
+    },
+  ],
+  [t, syncingId, handleSync],
+);
 
-  const hasEmptyFilter =
-    !parsed.freeText && Object.keys(parsed.filters).length === 0;
+const hasEmptyFilter =
+  !parsed.freeText && Object.keys(parsed.filters).length === 0;
 
-  return (
-    <main className="size-full flex flex-col">
-      <div className="px-4 pt-4 flex flex-col gap-3">
-        <div className="flex items-center gap-3">
-          <DashBackButton />
-          <TableToolbar
-            searchBar={{
-              grammar: GSZ_SEARCH_GRAMMAR,
-              value: searchInput,
-              onChange: setSearchInput,
-              onSubmit: (parsedResult) => {
-                const serialized = serialize(parsedResult, GSZ_SEARCH_GRAMMAR);
-                setSearchParam({ q: serialized, page: 1 });
-              },
-              placeholder: t("dashGsz.searchPlaceholder") ?? "Search matches…",
-            }}
-            quickFilters={quickFilters}
-            extra={
-              <div className="flex items-center gap-2">
-                {tableOptions.length > 0 && (
-                  <select
-                    className="select select-bordered select-sm"
-                    value={
-                      typeof parsed.filters.table?.value === "string"
-                        ? parsed.filters.table.value
-                        : ""
-                    }
-                    onChange={(e) => {
-                      const nextFilters = { ...parsed.filters };
-                      if (e.target.value) {
-                        nextFilters.table = {
-                          operator: "eq",
-                          value: e.target.value,
-                        };
-                      } else {
-                        delete nextFilters.table;
-                      }
-                      const serialized = serialize(
-                        { ...parsed, filters: nextFilters, errors: [] },
-                        GSZ_SEARCH_GRAMMAR,
-                      );
-                      setSearchInput(serialized);
-                      setSearchParam({ q: serialized, page: 1 });
-                    }}
-                  >
-                    <option value="">{t("dashGsz.allTables")}</option>
-                    {tableOptions.map((tbl: Table) => (
-                      <option key={tbl.id} value={tbl.code}>
-                        {tbl.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-            }
-          />
-        </div>
-      </div>
-
-      {!activeLoading && activeMatches.length > 0 && (
-        <ActiveMatchesSection
-          matches={activeMatches}
-          onTerminate={handleTerminate}
-          t={t}
-        />
-      )}
-
-      <div className="flex-1 min-h-0">
-        <DashTable
-          columns={columns}
-          data={matches}
-          loading={loading}
-          emptyMessage={
-            hasEmptyFilter
-              ? t("dashGsz.noRiichiData")
-              : t("dashGsz.noMatchedRecords")
-          }
-          pagination={{
-            offset: (page - 1) * PAGE_SIZE,
-            limit: PAGE_SIZE,
-            total,
-            hasMore,
+return (
+  <main className="size-full flex flex-col">
+    <div className="px-4 pt-4 flex flex-col gap-3">
+      <div className="flex items-center gap-3">
+        <DashBackButton />
+        <TableToolbar
+          searchBar={{
+            grammar: GSZ_SEARCH_GRAMMAR,
+            value: searchInput,
+            onChange: setSearchInput,
+            onSubmit: (parsedResult) => {
+              const serialized = serialize(parsedResult, GSZ_SEARCH_GRAMMAR);
+              setSearchParam({ q: serialized, page: 1 });
+            },
+            placeholder: t("dashGsz.searchPlaceholder") ?? "Search matches…",
           }}
-          onPaginationChange={(p) =>
-            setSearchParam({
-              page: Math.floor(p.offset / PAGE_SIZE) + 1,
-            })
-          }
-          sorting={sorting}
-          onSortingChange={setSorting}
-          sortableColumns={["startedAt", "endedAt"]}
-          getRowId={(row) => row.id}
-          enableRowSelection={true}
-          selectedRows={selectedIds}
-          onSelectedRowsChange={setSelectedIds}
-          renderActions={(row) =>
-            isMobile ? (
-              <div className="dropdown dropdown-end">
-                <div
-                  tabIndex={0}
-                  role="button"
-                  className="btn btn-xs btn-ghost btn-square"
+          quickFilters={quickFilters}
+          extra={
+            <div className="flex items-center gap-2">
+              {tableOptions.length > 0 && (
+                <select
+                  className="select select-bordered select-sm"
+                  value={
+                    typeof parsed.filters.table?.value === "string"
+                      ? parsed.filters.table.value
+                      : ""
+                  }
+                  onChange={(e) => {
+                    const nextFilters = { ...parsed.filters };
+                    if (e.target.value) {
+                      nextFilters.table = {
+                        operator: "eq",
+                        value: e.target.value,
+                      };
+                    } else {
+                      delete nextFilters.table;
+                    }
+                    const serialized = serialize(
+                      { ...parsed, filters: nextFilters, errors: [] },
+                      GSZ_SEARCH_GRAMMAR,
+                    );
+                    setSearchInput(serialized);
+                    setSearchParam({ q: serialized, page: 1 });
+                  }}
                 >
-                  <DotsThreeVerticalIcon className="size-4" weight="bold" />
-                </div>
-                <ul
-                  tabIndex={0}
-                  className="dropdown-content menu bg-base-200 rounded-box z-50 w-32 p-2 shadow-lg"
-                >
-                  <li>
-                    <Link to="/dash/gsz/$id" params={{ id: row.id }}>
-                      <EyeIcon className="size-4" />
-                      {t("dashGsz.details")}
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-            ) : (
-              <Link
-                to="/dash/gsz/$id"
-                params={{ id: row.id }}
-                className="btn btn-xs btn-ghost"
-              >
-                <EyeIcon className="size-4" />
-                {t("dashGsz.details")}
-              </Link>
-            )
+                  <option value="">{t("dashGsz.allTables")}</option>
+                  {tableOptions.map((tbl: Table) => (
+                    <option key={tbl.id} value={tbl.code}>
+                      {tbl.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
           }
         />
       </div>
+    </div>
 
-      <BatchActionBar
-        count={selectedIds.size}
-        actions={selectedActions}
-        onClear={clearSelectedIds}
-        unit="日麻记录"
+    {!activeLoading && activeMatches.length > 0 && (
+      <ActiveMatchesSection
+        matches={activeMatches}
+        onTerminate={handleTerminate}
+        t={t}
       />
+    )}
 
-      <dialog ref={unsyncableDialogRef} className="modal">
-        <div className="modal-box max-w-sm">
-          <h3 className="text-lg font-bold mb-3">
-            {t("dashGsz.unsyncableReasons")}
-          </h3>
-          <div className="flex flex-col gap-2">
-            {unsyncableReasons.map((r) => (
+    <div className="flex-1 min-h-0">
+      <DashTable
+        columns={columns}
+        data={matches}
+        loading={loading}
+        emptyMessage={
+          hasEmptyFilter
+            ? t("dashGsz.noRiichiData")
+            : t("dashGsz.noMatchedRecords")
+        }
+        pagination={{
+          offset: (page - 1) * PAGE_SIZE,
+          limit: PAGE_SIZE,
+          total,
+          hasMore,
+        }}
+        onPaginationChange={(p) =>
+          setSearchParam({
+            page: Math.floor(p.offset / PAGE_SIZE) + 1,
+          })
+        }
+        sorting={sorting}
+        onSortingChange={setSorting}
+        sortableColumns={["startedAt", "endedAt"]}
+        getRowId={(row) => row.id}
+        enableRowSelection={true}
+        selectedRows={selectedIds}
+        onSelectedRowsChange={setSelectedIds}
+        renderActions={(row) =>
+          isMobile ? (
+            <div className="dropdown dropdown-end">
               <div
-                key={r.userId}
-                className="flex items-center gap-2 text-sm p-2 bg-base-200 rounded-lg"
+                tabIndex={0}
+                role="button"
+                className="btn btn-xs btn-ghost btn-square"
               >
-                <WarningCircleIcon className="size-4 text-error shrink-0" />
-                <span className="font-medium">{r.nickname}</span>
-                <span className="text-base-content/60">
-                  {r.reason === "temp_user"
-                    ? t("dashGsz.tempUser")
-                    : t("dashGsz.noBoundPhone")}
-                </span>
+                <DotsThreeVerticalIcon className="size-4" weight="bold" />
               </div>
-            ))}
-          </div>
-          <div className="modal-action">
-            <form method="dialog">
-              <button type="submit" className="btn btn-sm">
-                {t("dashGsz.close")}
-              </button>
-            </form>
-          </div>
+              <ul
+                tabIndex={0}
+                className="dropdown-content menu bg-base-200 rounded-box z-50 w-32 p-2 shadow-lg"
+              >
+                <li>
+                  <Link to="/dash/gsz/$id" params={{ id: row.id }}>
+                    <EyeIcon className="size-4" />
+                    {t("dashGsz.details")}
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          ) : (
+            <Link
+              to="/dash/gsz/$id"
+              params={{ id: row.id }}
+              className="btn btn-xs btn-ghost"
+            >
+              <EyeIcon className="size-4" />
+              {t("dashGsz.details")}
+            </Link>
+          )
+        }
+      />
+    </div>
+
+    <BatchActionBar
+      count={selectedIds.size}
+      actions={selectedActions}
+      onClear={clearSelectedIds}
+      unit="日麻记录"
+    />
+
+    <dialog ref={unsyncableDialogRef} className="modal">
+      <div className="modal-box max-w-sm">
+        <h3 className="text-lg font-bold mb-3">
+          {t("dashGsz.unsyncableReasons")}
+        </h3>
+        <div className="flex flex-col gap-2">
+          {unsyncableReasons.map((r) => (
+            <div
+              key={r.userId}
+              className="flex items-center gap-2 text-sm p-2 bg-base-200 rounded-lg"
+            >
+              <WarningCircleIcon className="size-4 text-error shrink-0" />
+              <span className="font-medium">{r.nickname}</span>
+              <span className="text-base-content/60">
+                {r.reason === "temp_user"
+                  ? t("dashGsz.tempUser")
+                  : t("dashGsz.noBoundPhone")}
+              </span>
+            </div>
+          ))}
         </div>
-        <form method="dialog" className="modal-backdrop">
-          <button type="submit">close</button>
-        </form>
-      </dialog>
-    </main>
-  );
-}
+        <div className="modal-action">
+          <form method="dialog">
+            <button type="submit" className="btn btn-sm">
+              {t("dashGsz.close")}
+            </button>
+          </form>
+        </div>
+      </div>
+      <form method="dialog" className="modal-backdrop">
+        <button type="submit">close</button>
+      </form>
+    </dialog>
+  </main>
+); }
 
 function ActiveMatchesSection({
   matches,
