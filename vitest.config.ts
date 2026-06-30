@@ -12,6 +12,7 @@ export default defineConfig({
   test: {
     include: [
       "apps/**/src/**/__tests__/**/*.test.{ts,tsx}",
+      "apps/**/tests/**/*.test.{ts,tsx}",
       "libs/**/src/**/__tests__/**/*.test.{ts,tsx}",
     ],
     globals: true,
