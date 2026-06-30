@@ -14,10 +14,14 @@ const config: CodegenConfig = {
     },
     "src/client/graphql/__generated__/operations.ts": {
       plugins: [
-        { add: { content: "/* eslint-disable */" } },
+        { add: { content: "/* eslint-disable */\n// @ts-nocheck" } },
         "typescript-operations",
         "typescript-react-apollo",
       ],
+      preset: "import-types",
+      presetConfig: {
+        typesPath: "./schema",
+      },
       config: {
         withHooks: true,
         withHOC: false,
