@@ -391,11 +391,11 @@ describe("executeMutateTool - execution", () => {
     mocks.selectResults = [[{ userId: "user-123" }]];
 
     const result = await executeMutateTool(
-      {
+      invalidMutateArgs({
         action: "create_active",
         params: { title: "周末桌游", date: "2026-07-05", max_players: 4 },
         description: "test",
-      },
+      }),
       createContext(),
     );
 
@@ -421,11 +421,11 @@ describe("executeMutateTool - execution", () => {
     ];
 
     const result = await executeMutateTool(
-      {
+      invalidMutateArgs({
         action: "join_active",
         params: { active_id: activeId },
         description: "test",
-      },
+      }),
       createContext(),
     );
 
@@ -444,11 +444,11 @@ describe("executeMutateTool - execution", () => {
     ];
 
     const result = await executeMutateTool(
-      {
+      invalidMutateArgs({
         action: "leave_active",
         params: { active_id: activeId },
         description: "test",
-      },
+      }),
       createContext(),
       true, // skipConfirmation (leave_active is destructive)
     );

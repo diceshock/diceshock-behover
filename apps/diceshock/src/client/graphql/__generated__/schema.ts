@@ -137,6 +137,7 @@ export type BatchOrderResult = {
 export type BatchSettleInput = {
   deductFromStoredValue?: InputMaybe<Scalars['Boolean']['input']>;
   ids: Array<Scalars['ID']['input']>;
+  note?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type BatchSettlementResult = {

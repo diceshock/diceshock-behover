@@ -336,6 +336,7 @@ const batchSettleSchema = z.object({
     ids: z.array(z.string().min(1)).min(1),
     deductFromStoredValue: z.boolean().default(false),
     paymentMethod: z.string().nullable().optional(),
+    note: z.string().nullable().optional(),
   }),
 });
 const cleanupSchema = z.object({ dryRun: z.boolean().default(true) });
@@ -704,6 +705,7 @@ async function settleOrderById(
     id: string;
     deductFromStoredValue?: boolean;
     paymentMethod?: string | null;
+    note?: string | null;
   },
 ) {
   const existing = await fetchOrderOrThrow(tdb, input.id);
@@ -763,6 +765,7 @@ async function settleOrderById(
     })),
     recentOrders: [],
     createdAt: Date.now(),
+    note: input.note ?? null,
   };
 
   await tdb
@@ -980,6 +983,8 @@ export const ordersResolvers = {
       }
       return toGqlSettlementPreview(await buildSettlementData(tdb, orderId));
     },
+  },
+  Mutation: {
     async batchSettlementPreview(
       _source: unknown,
       args: unknown,
@@ -997,8 +1002,6 @@ export const ordersResolvers = {
       );
       return previews;
     },
-  },
-  Mutation: {
     async startOrder(_source: unknown, args: unknown, ctx: GQLContext) {
       requireStaff(ctx);
       const { input } = zodToGraphQLError(startOrderSchema, args);

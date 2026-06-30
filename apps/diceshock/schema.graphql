@@ -499,6 +499,7 @@ input SettleOrderInput {
 input BatchSettleInput {
   ids: [ID!]!
   deductFromStoredValue: Boolean = false
+  note: String
 }
 
 extend type Query {

@@ -119,6 +119,7 @@ function BatchSettlePage() {
   const [settling, setSettling] = useState(false);
   const [deductEnabled, setDeductEnabled] = useState(false);
   const [cancelIds, setCancelIds] = useState<Set<string>>(new Set());
+  const [note, setNote] = useState("");
 
   const [fetchPreview] = useBatchSettlementPreviewMutation();
   const [batchSettle] = useBatchSettleOrdersMutation();
@@ -197,6 +198,7 @@ function BatchSettlePage() {
           input: {
             ids: settleIds,
             deductFromStoredValue: deductEnabled,
+            note: note.trim() || null,
           },
         },
       });
@@ -348,6 +350,19 @@ function BatchSettlePage() {
           />
 
           <BatchPricingPlansSection previews={data.previews} />
+
+          <div className="bg-base-200 rounded-xl p-5 mb-4">
+            <h3 className="font-semibold text-sm text-base-content/60 mb-3">
+              结算备注
+            </h3>
+            <textarea
+              className="textarea textarea-bordered w-full"
+              placeholder="填写结算备注（可选）"
+              rows={2}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </div>
         </div>
 
         {!allEnded && (

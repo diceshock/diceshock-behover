@@ -81,9 +81,14 @@ export async function graphqlHandler(
 
       if (import.meta.env.DEV) {
         const testRole = c.req.header("X-Test-Role") as Role | undefined;
+        const testUserId = c.req.header("X-Test-UserId");
         if (testRole === "staff" || testRole === "admin") {
           role = testRole;
           userId = userId ?? "e2e-test-staff-001";
+          preferredStoreId = preferredStoreId ?? "store-e2e-gg";
+        } else if (testRole === "customer" && testUserId) {
+          role = "customer";
+          userId = testUserId;
           preferredStoreId = preferredStoreId ?? "store-e2e-gg";
         }
       }

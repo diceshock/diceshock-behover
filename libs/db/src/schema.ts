@@ -510,6 +510,8 @@ export const tableOccupancyTable = sqlite.sqliteTable("table_occupancy", {
       }>;
       /** 快照生成时间 */
       createdAt: number;
+      /** 结算备注 */
+      note?: string | null;
     }>(),
 });
 
