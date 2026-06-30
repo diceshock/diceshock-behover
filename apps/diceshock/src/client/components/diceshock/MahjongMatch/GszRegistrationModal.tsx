@@ -1,8 +1,8 @@
+import { useApolloClient } from "@apollo/client";
 import { Link } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import Modal from "@/client/components/modal";
-import { useApolloClient } from "@apollo/client";
 import {
   RegisterMahjongDocument,
   RequestSmsCodeDocument,
@@ -322,7 +322,8 @@ export default function GszRegistrationModal({
                       <div className="text-xs text-base-content/50 text-center">
                         你也可以稍后前往
                         <Link
-                          to="/me"
+                          to="/{-$storeLocale}/me"
+                          params={(prev) => prev}
                           className="link link-primary mx-1"
                           onClick={onClose}
                         >

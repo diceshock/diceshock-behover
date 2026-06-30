@@ -143,7 +143,11 @@ async function processHtml2Image(
     await page.setViewport({ width: viewportWidth, height: viewportHeight });
     await page.setContent(html, { waitUntil: "networkidle0" });
 
-    const screenshotOptions: Parameters<typeof page.screenshot>[0] = {
+    const screenshotOptions: {
+      type: "png" | "jpeg" | "webp";
+      fullPage: boolean;
+      quality?: number;
+    } = {
       type: format as "png" | "jpeg" | "webp",
       fullPage: true,
     };

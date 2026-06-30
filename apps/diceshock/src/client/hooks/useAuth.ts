@@ -72,7 +72,7 @@ export default function useAuth() {
       }
     } catch {}
 
-    await signOutAuthJs({ redirectTo: "/" });
+    await signOutAuthJs({ callbackUrl: "/" });
   }, [session, client]);
 
   return useMemo(

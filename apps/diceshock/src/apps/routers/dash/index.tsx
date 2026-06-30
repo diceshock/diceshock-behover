@@ -21,7 +21,9 @@ import DashQRScannerDialog from "@/client/components/diceshock/DashQRScannerDial
 import InventoryManagementCard from "@/client/components/diceshock/InventoryManagementCard";
 import {
   CaptchaSettingsDocument,
+  OrderStatus,
   OrdersDocument,
+  type OrdersQuery,
   SetCaptchaEnabledDocument,
 } from "@/client/graphql/__generated__";
 import { useStoreContext } from "@/client/hooks/useStoreContext";
@@ -34,16 +36,9 @@ export const Route = createFileRoute("/dash/")({
   component: RouteComponent,
 });
 
-type RecentOrder = {
-  id: string;
-  status: string;
-  start_at: number;
-  end_at: number | null;
-  nickname: string;
-  table: { id: string; name: string; type: string; code: string } | null;
-};
+type RecentOrder = OrdersQuery["orders"]["items"][number];
 
-function formatTime(val: number | null | undefined): string {
+function formatTime(val: string | null | undefined): string {
   if (!val) return "—";
   try {
     const d = dayjs.tz(val, "Asia/Shanghai");
@@ -130,13 +125,19 @@ function RouteComponent() {
     void fetchRecent();
   }, [fetchRecent]);
 
-  const activeOrders = recentOrders.filter((o) => o.status === "active");
+  const activeOrders = recentOrders.filter(
+    (o) => o.status === OrderStatus.Active,
+  );
   const activeTables = [
     ...new Map(
       activeOrders.filter((o) => o.table).map((o) => [o.table!.id, o.table!]),
     ).values(),
   ];
-  const activeUsers = [...new Set(activeOrders.map((o) => o.nickname))];
+  const activeUsers = [
+    ...new Set(
+      activeOrders.map((o) => o.nickname).filter((n): n is string => n != null),
+    ),
+  ];
 
   return (
     <main className="size-full p-4 overflow-y-auto">
@@ -174,7 +175,13 @@ function RouteComponent() {
                 </h3>
                 <Link
                   to="/dash/orders"
-                  search={{}}
+                  search={{
+                    q: "",
+                    sortBy: "start_at",
+                    sortOrder: "desc",
+                    groupBy: "none",
+                    page: 1,
+                  }}
                   className="btn btn-xs btn-ghost"
                 >
                   {t("dashIndex.viewAll")}
@@ -194,15 +201,21 @@ function RouteComponent() {
                     <Link
                       key={order.id}
                       to="/dash/orders"
-                      search={{}}
+                      search={{
+                        q: "",
+                        sortBy: "start_at",
+                        sortOrder: "desc",
+                        groupBy: "none",
+                        page: 1,
+                      }}
                       className="flex items-center justify-between p-2 rounded-lg hover:bg-base-200 transition-colors"
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <span
                           className={`badge badge-xs ${
-                            order.status === "active"
+                            order.status === OrderStatus.Active
                               ? "badge-success"
-                              : order.status === "paused"
+                              : order.status === OrderStatus.Paused
                                 ? "badge-neutral"
                                 : "badge-ghost"
                           }`}
@@ -212,7 +225,7 @@ function RouteComponent() {
                         </span>
                       </div>
                       <span className="text-xs text-base-content/50 shrink-0 ml-2">
-                        {formatTime(order.start_at)}
+                        {formatTime(order.startAt)}
                       </span>
                     </Link>
                   ))}
@@ -230,7 +243,7 @@ function RouteComponent() {
                 </h3>
                 <Link
                   to="/dash/tables"
-                  search={{}}
+                  search={{ q: "", page: 1 }}
                   className="btn btn-xs btn-ghost"
                 >
                   {t("dashIndex.viewAll")}
@@ -271,7 +284,7 @@ function RouteComponent() {
                 </h3>
                 <Link
                   to="/dash/users"
-                  search={{}}
+                  search={{ q: "", page: 1 }}
                   className="btn btn-xs btn-ghost"
                 >
                   {t("dashIndex.viewAll")}
@@ -305,7 +318,13 @@ function RouteComponent() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Link
             to="/dash/orders"
-            search={{}}
+            search={{
+              q: "",
+              sortBy: "start_at",
+              sortOrder: "desc",
+              groupBy: "none",
+              page: 1,
+            }}
             className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="card-body p-4">
@@ -323,7 +342,7 @@ function RouteComponent() {
 
           <Link
             to="/dash/users"
-            search={{}}
+            search={{ q: "", page: 1 }}
             className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="card-body p-4">
@@ -341,7 +360,7 @@ function RouteComponent() {
 
           <Link
             to="/dash/tables"
-            search={{}}
+            search={{ q: "", page: 1 }}
             className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="card-body p-4">
@@ -359,7 +378,7 @@ function RouteComponent() {
 
           <Link
             to="/dash/actives"
-            search={{}}
+            search={{ q: "" }}
             className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="card-body p-4">
@@ -377,6 +396,7 @@ function RouteComponent() {
 
           <Link
             to="/dash/events"
+            search={{ q: "", page: 1 }}
             className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="card-body p-4">
@@ -429,7 +449,7 @@ function RouteComponent() {
 
           <Link
             to="/dash/media"
-            search={{}}
+            search={{ q: "", type: "", sort: "uploaded-desc" }}
             className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="card-body p-4">

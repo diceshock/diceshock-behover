@@ -35,3 +35,8 @@ export const selectedTableDataAtom = atom<{
 });
 
 export const selectionClearSignalAtom = atom(0);
+
+/**
+ * Chat messages for the current session.
+ */
+export const chatMessagesAtom = atom<import("ai").Message[]>([]);

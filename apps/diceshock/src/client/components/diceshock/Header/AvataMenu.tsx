@@ -140,8 +140,11 @@ function AvatarMenuContent() {
                 <button
                   onClick={() =>
                     navigate({
-                      to: "/t/$code",
-                      params: { code: activeOccupancy.code },
+                      to: "/{-$storeLocale}/t/$code",
+                      params: (prev) => ({
+                        ...prev,
+                        code: activeOccupancy.code,
+                      }),
                       search: { from: "" },
                     })
                   }
@@ -156,7 +159,8 @@ function AvatarMenuContent() {
             {userInfo && (
               <li>
                 <Link
-                  to="/me"
+                  to="/{-$storeLocale}/me"
+                  params={(prev) => prev}
                   className="px-5 py-3 flex items-center justify-between"
                 >
                   <UserIcon weight="fill" className="size-5" />
@@ -241,8 +245,8 @@ function AvatarMenuContent() {
               <button
                 onClick={() =>
                   navigate({
-                    to: "/t/$code",
-                    params: { code: activeOccupancy.code },
+                    to: "/{-$storeLocale}/t/$code",
+                    params: (prev) => ({ ...prev, code: activeOccupancy.code }),
                     search: { from: "" },
                   })
                 }
@@ -259,7 +263,8 @@ function AvatarMenuContent() {
             <>
               <li>
                 <Link
-                  to="/me"
+                  to="/{-$storeLocale}/me"
+                  params={(prev) => prev}
                   className="px-5 py-3 flex items-center justify-between"
                 >
                   <UserIcon weight="fill" className="size-5" />

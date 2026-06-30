@@ -223,7 +223,6 @@ function BatchSettlePage() {
           to: "/dash/orders",
           search: {
             q: "",
-            status: "all",
             sortBy: "start_at",
             sortOrder: "desc",
             groupBy: "none",
@@ -251,7 +250,6 @@ function BatchSettlePage() {
         to: "/dash/orders",
         search: {
           q: "",
-          status: "all",
           sortBy: "start_at",
           sortOrder: "desc",
           groupBy: "none",
@@ -271,7 +269,6 @@ function BatchSettlePage() {
           to="/dash/orders"
           search={{
             q: "",
-            status: "all",
             sortBy: "start_at",
             sortOrder: "desc",
             groupBy: "none",
@@ -301,7 +298,6 @@ function BatchSettlePage() {
           to="/dash/orders"
           search={{
             q: "",
-            status: "all",
             sortBy: "start_at",
             sortOrder: "desc",
             groupBy: "none",
@@ -780,7 +776,7 @@ function BatchPricingPlansSection({
         参与结算的计划
       </h3>
       <div className="flex flex-col gap-2">
-        {allPlans.map((plan) => (
+        {allPlans.map((plan: SettlementPreviewItem["pricingPlans"][number]) => (
           <div
             key={plan.name}
             className={clsx(

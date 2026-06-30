@@ -1,3 +1,4 @@
+import { useApolloClient } from "@apollo/client";
 import {
   CameraIcon,
   ScanIcon,
@@ -9,13 +10,12 @@ import {
 import { useNavigate } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useTranslation } from "@/client/hooks/useTranslation";
-import { formatMessage } from "@/shared/i18n";
-import { useApolloClient } from "@apollo/client";
 import {
   TableByCodeDocument,
   VerifyTotpDashDocument,
 } from "@/client/graphql/__generated__";
+import { useTranslation } from "@/client/hooks/useTranslation";
+import { formatMessage } from "@/shared/i18n";
 import Modal from "../modal";
 
 const INTERNAL_HOSTS = [

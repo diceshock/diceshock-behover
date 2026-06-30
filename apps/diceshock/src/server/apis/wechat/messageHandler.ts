@@ -238,7 +238,7 @@ async function searchKnowledgeBase(
   try {
     const results = await aiSearch.search({
       query,
-      max_num_results: 3,
+      ai_search_options: { retrieval: { max_num_results: 3 } },
     });
 
     const chunks: string[] = [];
@@ -246,11 +246,6 @@ async function searchKnowledgeBase(
     if (results?.chunks?.length) {
       for (const chunk of results.chunks) {
         const text = chunk.text || "";
-        if (text) chunks.push(text.slice(0, 500));
-      }
-    } else if (results?.data?.length) {
-      for (const d of results.data) {
-        const text = d.text || d.content || "";
         if (text) chunks.push(text.slice(0, 500));
       }
     }

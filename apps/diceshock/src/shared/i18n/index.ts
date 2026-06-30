@@ -63,7 +63,7 @@ export function getTranslation(
     : undefined;
   if (translation !== undefined) return translation;
 
-  const fallback = resolvePath(TRANSLATIONS[BASE_LOCALE], key);
+  const fallback = resolvePath(TRANSLATIONS[BASE_LOCALE]!, key);
   if (fallback !== undefined) {
     if (import.meta.env?.DEV) {
       console.warn(
@@ -90,13 +90,13 @@ export function formatMessage(
 }
 
 export function getAllTranslations(locale: LocaleCode): TranslationDict {
-  return TRANSLATIONS[locale] ?? TRANSLATIONS[BASE_LOCALE];
+  return TRANSLATIONS[locale] ?? TRANSLATIONS[BASE_LOCALE]!;
 }
 
 export function getMissingKeys(locale: LocaleCode): string[] {
   if (locale === BASE_LOCALE) return [];
 
-  return collectKeys(TRANSLATIONS[BASE_LOCALE]).filter(
+  return collectKeys(TRANSLATIONS[BASE_LOCALE]!).filter(
     (key) => resolvePath(getAllTranslations(locale), key) === undefined,
   );
 }

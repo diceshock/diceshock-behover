@@ -6,6 +6,6 @@ export type GraphQLMockValue = unknown | ((request: {
 
 export type GraphQLMocks = Record<string, GraphQLMockValue>;
 
-export async function mockGraphQL() {
+export async function mockGraphQL(_page: import("@playwright/test").Page, _mocks?: GraphQLMocks) {
   return;
 }

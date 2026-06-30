@@ -1,10 +1,8 @@
 import dbFactory, { drizzle, userPreferencesTable } from "@lib/db";
 import { z } from "zod/v4";
-import {
-  PREFERENCE_CATEGORIES,
-  type PreferenceCategory,
-} from "@/shared/preferences/constants";
+import { PREFERENCE_CATEGORIES } from "@/shared/preferences/constants";
 import { rruleToHumanReadable } from "@/shared/preferences/rruleDisplay";
+import type { PreferenceCategory } from "@/shared/preferences/types";
 import type { GQLContext } from "../context";
 import { notFound, validationError } from "../errors";
 import { requireAuth } from "../guards";
@@ -129,11 +127,11 @@ function validateCategories(cats: unknown): cats is PreferenceCategory[] {
 }
 
 async function callDeepSeek(
-  env: Record<string, unknown>,
+  env: GQLContext["env"],
   userMessage: string,
 ): Promise<{ content: string }> {
   const apiKey = env.DEEPSEEK_API_KEY as string | undefined;
-  const accountId = (env.CF_ACCOUNT_ID as string) || "3244c8f91cd34317ce18652158e5853a";
+  const accountId = env.CF_ACCOUNT_ID || "3244c8f91cd34317ce18652158e5853a";
   const gatewayId = env.CF_AI_GATEWAY_ID as string | undefined;
 
   if (!apiKey) {
@@ -209,7 +207,11 @@ export const preferencesResolvers = {
       return prefs.map(toGqlPref);
     },
 
-    async myPreferencesCount(_source: unknown, _args: unknown, ctx: GQLContext) {
+    async myPreferencesCount(
+      _source: unknown,
+      _args: unknown,
+      ctx: GQLContext,
+    ) {
       requireAuth(ctx);
       const tdb = dbFactory(ctx.env.DB);
       const { count, eq } = drizzle;

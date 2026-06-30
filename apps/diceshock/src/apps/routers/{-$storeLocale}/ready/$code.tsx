@@ -5,11 +5,13 @@ import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   MyActiveOccupanciesDocument,
+  type MyActiveOccupanciesQuery,
   OccupyTableDocument,
   OccupyTableWithTempIdentityDocument,
   TableByCodeDocument,
   type TableByCodeQuery,
   TempIdentityActiveOccupanciesDocument,
+  type TempIdentityActiveOccupanciesQuery,
 } from "@/client/graphql/__generated__";
 import useAuth from "@/client/hooks/useAuth";
 import useTempIdentity from "@/client/hooks/useTempIdentity";
@@ -56,7 +58,9 @@ function ReadyPage() {
   const identity = useSeatIdentity();
   const client = useApolloClient();
 
-  const [tableData, setTableData] = useState<TableByCodeQuery["tableByCode"] | null>(null);
+  const [tableData, setTableData] = useState<
+    TableByCodeQuery["tableByCode"] | null
+  >(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [occupying, setOccupying] = useState(false);
@@ -88,7 +92,7 @@ function ReadyPage() {
     if (!identity) return;
     if (identity.kind === "real") {
       client
-        .query({
+        .query<MyActiveOccupanciesQuery>({
           query: MyActiveOccupanciesDocument,
         })
         .then(({ data }) => {
@@ -99,7 +103,7 @@ function ReadyPage() {
         .catch(() => {});
     } else if (identity.kind === "temp") {
       client
-        .query({
+        .query<TempIdentityActiveOccupanciesQuery>({
           query: TempIdentityActiveOccupanciesDocument,
           variables: { tempId: identity.tempId },
         })

@@ -7,7 +7,9 @@ import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import type { MahjongMatchQuery } from "@/client/graphql/__generated__";
 import {
+  MahjongFormat,
   MahjongMatchDocument,
+  MahjongMode,
   SyncMahjongMatchToGszDocument,
   UpdateMahjongScoreDocument,
 } from "@/client/graphql/__generated__";
@@ -21,13 +23,13 @@ type MatchDetail = NonNullable<MahjongMatchQuery["mahjongMatch"]>;
 type PlayerJSON = MatchDetail["players"][number];
 
 const MODE_LABELS: Record<string, string> = {
-  "3p": "三麻",
-  "4p": "四麻",
+  FOUR_PLAYER: "四麻",
+  THREE_PLAYER: "三麻",
 };
 
 const FORMAT_LABELS: Record<string, string> = {
-  tonpuu: "东风场",
-  hanchan: "半庄",
+  HANCHAN: "半庄",
+  TONPUU: "东风场",
 };
 
 const MATCH_TYPE_LABELS: Record<string, string> = {
@@ -41,6 +43,14 @@ const TERMINATION_LABELS: Record<string, string> = {
   admin_abort: "管理员终止",
   order_invalid: "订单失效",
 };
+
+function toMatchMode(mode: MahjongMode): MatchMode {
+  return mode === MahjongMode.ThreePlayer ? "3p" : "4p";
+}
+
+function toMatchFormat(format: MahjongFormat): MatchFormat {
+  return format === MahjongFormat.Tonpuu ? "tonpuu" : "hanchan";
+}
 
 export const Route = createFileRoute("/dash/gsz_/$id")({
   component: MatchDetailPage,
@@ -226,8 +236,8 @@ function MatchDetailPage() {
         <PlayersSection
           matchId={match.id}
           players={sortedPlayers}
-          mode={match.mode as MatchMode}
-          format={match.format as MatchFormat}
+          mode={toMatchMode(match.mode)}
+          format={toMatchFormat(match.format)}
           matchType={(match.matchType?.toLowerCase() ?? "store") as MatchType}
           terminationReason={match.terminationReason}
           isTournament={match.matchType === "TOURNAMENT"}

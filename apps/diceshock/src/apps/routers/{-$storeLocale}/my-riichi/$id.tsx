@@ -154,7 +154,7 @@ function mapMatch(match: MahjongHistoryItem): Match {
           format: match.config.format,
         }
       : null,
-    created_at: match.createdAt ?? null,
+    created_at: null,
   };
 }
 

@@ -18,6 +18,7 @@ import AdminStoreFilter from "@/client/components/AdminStoreFilter";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import {
+  type PricingSnapshotsQuery,
   usePricingDraftQuery,
   usePricingSnapshotQuery,
   usePricingSnapshotsQuery,
@@ -257,7 +258,7 @@ function PricingPage() {
 
   const effectiveData = data ?? EMPTY_DATA;
   const hasChanges = !isEqual(effectiveData, savedData);
-  const hasDraft = snapshots.some((s) => s.status === "DRAFT");
+  const hasDraft = snapshots.some((s: PricingSnapshotsQuery["pricingSnapshots"][number]) => s.status === "DRAFT");
 
   const fallbackPlan =
     effectiveData.plans.find(
@@ -641,7 +642,7 @@ function PricingPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold">
-                            {p.name as string}
+                            {String(p.name)}
                           </span>
                           {!p.enabled && (
                             <span className="badge badge-ghost badge-sm">
@@ -748,7 +749,7 @@ function PricingPage() {
                   {t("dashPricing.noSaveRecords")}
                 </div>
               ) : (
-                snapshots.map((s) => (
+                snapshots.map((s: PricingSnapshotsQuery["pricingSnapshots"][number]) => (
                   <div
                     key={s.id}
                     className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-base-200 rounded-lg px-4 py-3 gap-2 sm:gap-4"
@@ -1054,9 +1055,7 @@ function PricingPage() {
                       className={`rounded-lg p-3 ${p.enabled ? "bg-base-200" : "bg-base-200/50 opacity-60"}`}
                     >
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold">
-                          {p.name as string}
-                        </span>
+                        <span className="font-semibold">{String(p.name)}</span>
                         <span
                           className={`badge badge-xs ${p.plan_type === "fallback" ? "badge-success" : "badge-info"}`}
                         >
@@ -1070,7 +1069,7 @@ function PricingPage() {
                           </span>
                         )}
                         <span className="badge badge-xs badge-outline">
-                          #{p.sort_order as number}
+                          #{String(p.sort_order)}
                         </span>
                       </div>
 
@@ -1140,7 +1139,7 @@ function PricingPage() {
                             ⏳ {t("dashPricing.firstThirtyFree")}
                           </p>
                         )}
-                        {p.cap_enabled &&
+                        {Boolean(p.cap_enabled) &&
                           p.cap_unit === "per_day" &&
                           p.cap_price != null && (
                             <p>
@@ -1152,19 +1151,23 @@ function PricingPage() {
                               })}
                             </p>
                           )}
-                        {p.cap_enabled && p.cap_unit === "split_day_night" && (
-                          <p>
-                            🔒{" "}
-                            {formatMessage(t("dashPricing.cap.splitDayNight"), {
-                              dayPrice: (
-                                ((p.cap_price_day as number) ?? 0) / 100
-                              ).toFixed(2),
-                              nightPrice: (
-                                ((p.cap_price_night as number) ?? 0) / 100
-                              ).toFixed(2),
-                            })}
-                          </p>
-                        )}
+                        {Boolean(p.cap_enabled) &&
+                          p.cap_unit === "split_day_night" && (
+                            <p>
+                              🔒{" "}
+                              {formatMessage(
+                                t("dashPricing.cap.splitDayNight"),
+                                {
+                                  dayPrice: (
+                                    ((p.cap_price_day as number) ?? 0) / 100
+                                  ).toFixed(2),
+                                  nightPrice: (
+                                    ((p.cap_price_night as number) ?? 0) / 100
+                                  ).toFixed(2),
+                                },
+                              )}
+                            </p>
+                          )}
                         {!p.cap_enabled && p.billing_type === "hourly" && (
                           <p className="text-xs">{t("dashPricing.noCap")}</p>
                         )}

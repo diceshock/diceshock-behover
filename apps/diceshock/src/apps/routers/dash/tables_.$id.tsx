@@ -32,6 +32,7 @@ import {
   BatchPauseOrdersDocument,
   BatchResumeOrdersDocument,
   MahjongMode,
+  OrderStatus,
   PauseOrderDocument,
   ResumeOrderDocument,
   TableScope,
@@ -197,8 +198,10 @@ function TableDetailPage() {
 
   const handleBatchPauseOcc = async () => {
     const activeIds = (table?.occupancies ?? [])
-      .filter((o) => selectedOccIds.has(o.id) && o.status === "ACTIVE")
-      .map((o) => o.id);
+      .filter(
+        (o: Occupancy) => selectedOccIds.has(o.id) && o.status === OrderStatus.Active,
+      )
+      .map((o: Occupancy) => o.id);
     if (activeIds.length === 0) return;
     setOrderActionPending(true);
     try {
@@ -218,8 +221,10 @@ function TableDetailPage() {
 
   const handleBatchResumeOcc = async () => {
     const pausedIds = (table?.occupancies ?? [])
-      .filter((o) => selectedOccIds.has(o.id) && o.status === "PAUSED")
-      .map((o) => o.id);
+      .filter(
+        (o: Occupancy) => selectedOccIds.has(o.id) && o.status === OrderStatus.Paused,
+      )
+      .map((o: Occupancy) => o.id);
     if (pausedIds.length === 0) return;
     setOrderActionPending(true);
     try {
@@ -380,7 +385,7 @@ function TableDetailPage() {
   const handleNavigateToSettle = async (occ: Occupancy) => {
     setOrderActionPending(true);
     try {
-      if (occ.status === "ACTIVE") {
+      if (occ.status === OrderStatus.Active) {
         await client.mutate({
           mutation: PauseOrderDocument,
           variables: { id: occ.id },
@@ -440,7 +445,11 @@ function TableDetailPage() {
     return (
       <main className="size-full flex flex-col items-center justify-center gap-4">
         <p className="text-base-content/60">桌台不存在</p>
-        <Link to="/dash/tables" className="btn btn-primary btn-sm">
+        <Link
+          to="/dash/tables"
+          search={{ q: "", page: 1 }}
+          className="btn btn-primary btn-sm"
+        >
           返回桌台列表
         </Link>
       </main>
@@ -465,14 +474,14 @@ function TableDetailPage() {
               </p>
             </div>
             <span
-              className={`badge ${table.type === "solo" ? "badge-secondary" : "badge-info"}`}
+              className={`badge ${table.type === TableType.Solo ? "badge-secondary" : "badge-info"}`}
             >
               {TYPE_LABELS[table.type] ?? table.type}
             </span>
             <span className="badge badge-outline">
               {SCOPE_LABELS[table.scope] ?? table.scope}
             </span>
-            {table.status === "active" ? (
+            {table.status === TableStatus.Active ? (
               <span className="badge badge-success">上架</span>
             ) : (
               <span className="badge badge-ghost">下架</span>
@@ -503,8 +512,10 @@ function TableDetailPage() {
               onClick={() => setActiveTab("occupancy")}
             >
               订单 (
-              {table.occupancies.filter((o) => o.status === "active").length +
-                table.occupancies.filter((o) => o.status === "paused").length}
+              {table.occupancies.filter((o: Occupancy) => o.status === OrderStatus.Active)
+                .length +
+                table.occupancies.filter((o: Occupancy) => o.status === OrderStatus.Paused)
+                  .length}
               )
             </button>
           </div>
@@ -569,12 +580,12 @@ function TableDetailPage() {
                 <span className="label text-sm font-semibold">上架状态</span>
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-base-content/60">
-                    {table.status === "active" ? "上架中" : "已下架"}
+                    {table.status === TableStatus.Active ? "上架中" : "已下架"}
                   </span>
                   <input
                     type="checkbox"
                     className="toggle toggle-success"
-                    checked={table.status === "active"}
+                    checked={table.status === TableStatus.Active}
                     onChange={() => void handleToggleStatus()}
                     disabled={statusTogglePending}
                   />
@@ -619,7 +630,9 @@ function TableDetailPage() {
                 <button
                   type="button"
                   className="btn btn-ghost"
-                  onClick={() => navigate({ to: "/dash/tables" })}
+                  onClick={() =>
+                    navigate({ to: "/dash/tables", search: { q: "", page: 1 } })
+                  }
                 >
                   取消
                 </button>
@@ -648,11 +661,12 @@ function TableDetailPage() {
           {activeTab === "occupancy" &&
             (() => {
               const sortedOccupancies = [...table.occupancies].sort((a, b) => {
-                const order = { active: 0, paused: 1, ended: 2 };
-                return (
-                  (order[a.status as keyof typeof order] ?? 3) -
-                  (order[b.status as keyof typeof order] ?? 3)
-                );
+                const order: Record<string, number> = {
+                  [OrderStatus.Active]: 0,
+                  [OrderStatus.Paused]: 1,
+                  [OrderStatus.Settled]: 2,
+                };
+                return (order[a.status] ?? 3) - (order[b.status] ?? 3);
               });
 
               return (
@@ -708,7 +722,7 @@ function TableDetailPage() {
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold">
                       订单 (
-                      {table.type === "solo"
+                      {table.type === TableType.Solo
                         ? totalOccupied
                         : `${totalOccupied}/${table.capacity}`}
                       )
@@ -716,6 +730,13 @@ function TableDetailPage() {
                     <div className="flex items-center gap-2">
                       <Link
                         to="/dash/orders"
+                        search={{
+                          q: "",
+                          sortBy: "start_at",
+                          sortOrder: "desc",
+                          groupBy: "none",
+                          page: 1,
+                        }}
                         className="btn btn-xs btn-ghost btn-primary"
                       >
                         查看全部订单
@@ -750,15 +771,19 @@ function TableDetailPage() {
                                   className="checkbox checkbox-sm"
                                   checked={
                                     sortedOccupancies.filter(
-                                      (o) => o.status !== "ended",
+                                      (o) => o.status !== OrderStatus.Settled,
                                     ).length > 0 &&
                                     sortedOccupancies
-                                      .filter((o) => o.status !== "ended")
+                                      .filter(
+                                        (o) => o.status !== OrderStatus.Settled,
+                                      )
                                       .every((o) => selectedOccIds.has(o.id))
                                   }
                                   onChange={() => {
                                     const nonEnded = sortedOccupancies
-                                      .filter((o) => o.status !== "ended")
+                                      .filter(
+                                        (o) => o.status !== OrderStatus.Settled,
+                                      )
                                       .map((o) => o.id);
                                     if (
                                       nonEnded.every((oid) =>
@@ -782,7 +807,7 @@ function TableDetailPage() {
                           </thead>
                           <tbody>
                             {sortedOccupancies.map((occ) => {
-                              const start = dayjs(occ.start_at);
+                              const start = dayjs(occ.startAt);
                               const diffMin = dayjs().diff(start, "minute");
                               const hours = Math.floor(diffMin / 60);
                               const minutes = diffMin % 60;
@@ -794,7 +819,7 @@ function TableDetailPage() {
                               return (
                                 <tr key={occ.id}>
                                   <td>
-                                    {occ.status !== "ended" && (
+                                    {occ.status !== OrderStatus.Settled && (
                                       <input
                                         type="checkbox"
                                         className="checkbox checkbox-sm"
@@ -804,11 +829,11 @@ function TableDetailPage() {
                                     )}
                                   </td>
                                   <td>
-                                    {occ.status === "active" ? (
+                                    {occ.status === OrderStatus.Active ? (
                                       <span className="badge badge-success badge-sm">
                                         进行中
                                       </span>
-                                    ) : occ.status === "paused" ? (
+                                    ) : occ.status === OrderStatus.Paused ? (
                                       <span className="badge badge-neutral badge-sm">
                                         已暂停
                                       </span>
@@ -821,7 +846,7 @@ function TableDetailPage() {
                                   <td>
                                     <Link
                                       to="/dash/users/$id"
-                                      params={{ id: occ.user_id ?? "" }}
+                                      params={{ id: occ.userId ?? "" }}
                                       className="link link-hover"
                                     >
                                       {occ.nickname}
@@ -839,13 +864,13 @@ function TableDetailPage() {
                                   </td>
                                   <td className="text-sm">{durationStr}</td>
                                   <td className="font-mono text-sm">
-                                    {occ.final_price != null
-                                      ? formatPrice(occ.final_price)
+                                    {occ.finalPrice != null
+                                      ? formatPrice(occ.finalPrice)
                                       : "—"}
                                   </td>
                                   <th>
                                     <div className="flex items-center gap-1">
-                                      {occ.status === "active" && (
+                                      {occ.status === OrderStatus.Active && (
                                         <button
                                           type="button"
                                           className="btn btn-xs btn-ghost"
@@ -858,7 +883,7 @@ function TableDetailPage() {
                                           暂停
                                         </button>
                                       )}
-                                      {occ.status === "paused" && (
+                                      {occ.status === OrderStatus.Paused && (
                                         <button
                                           type="button"
                                           className="btn btn-xs btn-ghost btn-success"
@@ -871,7 +896,7 @@ function TableDetailPage() {
                                           继续
                                         </button>
                                       )}
-                                      {occ.status !== "ended" && (
+                                      {occ.status !== OrderStatus.Settled && (
                                         <button
                                           type="button"
                                           className="btn btn-xs btn-ghost btn-error"
@@ -884,7 +909,7 @@ function TableDetailPage() {
                                           终止
                                         </button>
                                       )}
-                                      {occ.status === "ended" && (
+                                      {occ.status === OrderStatus.Settled && (
                                         <Link
                                           to="/dash/orders/settle"
                                           search={{ ids: [occ.id] }}
@@ -916,7 +941,8 @@ function TableDetailPage() {
             onClear={() => setSelectedOccIds(new Set())}
             actions={[
               ...((table?.occupancies ?? []).some(
-                (o) => selectedOccIds.has(o.id) && o.status === "active",
+                (o: Occupancy) =>
+                  selectedOccIds.has(o.id) && o.status === OrderStatus.Active,
               )
                 ? [
                     {
@@ -930,7 +956,8 @@ function TableDetailPage() {
                   ]
                 : []),
               ...((table?.occupancies ?? []).some(
-                (o) => selectedOccIds.has(o.id) && o.status === "paused",
+                (o: Occupancy) =>
+                  selectedOccIds.has(o.id) && o.status === OrderStatus.Paused,
               )
                 ? [
                     {

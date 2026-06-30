@@ -117,7 +117,7 @@ export default function useTempIdentity() {
       tempId: created.id,
       nickname: created.nickname,
       totpSecret: created.totpSecret,
-      expiresAt: created.expiresAt,
+      expiresAt: Number(created.expiresAt),
     };
     setTempIdentity(data);
     saveToStorage(data);

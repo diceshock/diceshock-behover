@@ -44,7 +44,6 @@ export async function fontCss(c: Context<HonoCtxEnv>) {
   });
 }
 
-
 function normalizeFontLocale(value: string): LocaleCode | undefined {
   const normalized = value.trim().replace(/-/g, "_");
   const aliases: Record<string, LocaleCode> = {
@@ -71,7 +70,6 @@ async function fetchGoogleFontCss(family: string): Promise<string> {
 
   return resp.text();
 }
-
 
 function fallbackFontCss(): string {
   return `:root {

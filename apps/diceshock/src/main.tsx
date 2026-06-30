@@ -208,6 +208,9 @@ export default {
       await dispatchPreferenceNotifications({
         DB: env.DB,
         KV: env.KV,
+        NOTIFICATION_QUEUE: env.NOTIFICATION_QUEUE,
+        WECHAT_MP_APP_ID: env.WECHAT_MP_APP_ID,
+        WECHAT_MP_APP_SECRET: env.WECHAT_MP_APP_SECRET,
       });
     }
 

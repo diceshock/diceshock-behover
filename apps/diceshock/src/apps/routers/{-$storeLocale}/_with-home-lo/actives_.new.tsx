@@ -80,7 +80,10 @@ function NewActivePage() {
         });
         const active = data!.createActive;
         messages.success(t("actives.newCreateSuccess"));
-        navigate({ to: "/actives/$id", params: { id: active.id } });
+        navigate({
+          to: "/{-$storeLocale}/actives/$id",
+          params: (prev) => ({ ...prev, id: active.id }),
+        });
       } catch (error) {
         console.error("Failed to create active:", error);
         messages.error(t("actives.newCreateFailed"));
@@ -234,7 +237,7 @@ function NewActivePage() {
               <button
                 type="button"
                 className="btn btn-ghost"
-                onClick={() => navigate({ to: "/actives" })}
+                onClick={() => navigate({ to: "/{-$storeLocale}/actives" })}
                 disabled={submitting}
               >
                 {t("common.cancel")}

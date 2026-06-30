@@ -188,6 +188,7 @@ export async function executeConfirmedMutation(params: {
     pending.variables,
     gqlContext,
   );
+  pendingMutations.delete(params.mutationId);
   if (result.errors?.length) {
     return { status: 400, body: result };
   }

@@ -6,16 +6,28 @@ const config: CodegenConfig = {
   // Keep it out of client generation until those operations are implemented, otherwise codegen fails.
   documents: ["src/client/graphql/operations/**/*.graphql", "!src/client/graphql/operations/preferences.graphql"],
   generates: {
-    "src/client/graphql/__generated__/index.ts": {
-      plugins: ["typescript", "typescript-react-apollo"],
+    "src/client/graphql/__generated__/schema.ts": {
+      plugins: [
+        { add: { content: "/* eslint-disable */" } },
+        "typescript",
+      ],
+    },
+    "src/client/graphql/__generated__/operations.ts": {
+      plugins: [
+        { add: { content: "/* eslint-disable */\n// @ts-nocheck" } },
+        "typescript-operations",
+        "typescript-react-apollo",
+      ],
+      preset: "import-types",
+      presetConfig: {
+        typesPath: "./schema",
+      },
       config: {
         withHooks: true,
         withHOC: false,
         withComponent: false,
-        preResolveTypes: false,
       },
     },
   },
 };
-
 export default config;

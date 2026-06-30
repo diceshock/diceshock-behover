@@ -1,7 +1,9 @@
+import { useApolloClient } from "@apollo/client";
 import { GameControllerIcon, XIcon } from "@phosphor-icons/react/dist/ssr";
 import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Modal from "@/client/components/modal";
+import { MyMahjongMatchesDocument } from "@/client/graphql/__generated__";
 import useAuth from "@/client/hooks/useAuth";
 import type { Seat } from "@/shared/mahjong/constants";
 import {
@@ -20,8 +22,6 @@ import {
 } from "@/shared/mahjong/pp";
 import type { MatchType } from "@/shared/mahjong/types";
 import dayjs from "@/shared/utils/dayjs-config";
-import { useApolloClient } from "@apollo/client";
-import { MyMahjongMatchesDocument } from "@/client/graphql/__generated__";
 
 interface MatchPlayer {
   userId: string;

@@ -33,6 +33,7 @@ import { useMsg } from "@/client/components/diceshock/Msg";
 import {
   ActiveMahjongMatchesDocument,
   MembershipPlanType,
+  type MembershipPlansByUserQuery,
   SendWechatTemplateTestDocument,
   UserRole,
   type useActiveMahjongMatchesQuery,
@@ -59,20 +60,9 @@ export const Route = createFileRoute("/dash/users_/$id")({
   component: UserDetailPage,
 });
 
-type UserDetail = NonNullable<ReturnType<typeof useUserQuery>["data"]>["user"];
-
-/**
- * Admin UI accesses additional user fields not yet in the public GraphQL schema.
- * These are returned by the API but not exposed in the generated gqty types.
- */
-interface AdminUser extends UserDetail {
-  name?: string | null;
-  nickname?: string | null;
-  phone?: string | null;
-  email?: string | null;
-  uid?: string | null;
-  role?: string | null;
-}
+type UserDetail = NonNullable<
+  NonNullable<ReturnType<typeof useUserQuery>["data"]>["user"]
+>;
 
 type ActiveMatch = {
   id: string;
@@ -223,8 +213,18 @@ function UserDetailPage() {
     variables: { userId: id },
     skip: !id,
   });
-  const membershipPlans = useMemo(
-    () => (plansQlData?.membershipPlansByUser ?? []) as MembershipPlan[],
+  const membershipPlans: MembershipPlan[] = useMemo(
+    () =>
+      (plansQlData?.membershipPlansByUser ?? []).map((p: MembershipPlansByUserQuery["membershipPlansByUser"][number]) => ({
+        id: p.id,
+        user_id: p.userId,
+        plan_type: p.planType.toLowerCase() as PlanType,
+        amount: p.amount,
+        start_date: p.startDate ?? null,
+        end_date: p.endDate ?? null,
+        create_at: p.createdAt ?? null,
+        update_at: p.updatedAt ?? null,
+      })),
     [plansQlData],
   );
 
@@ -768,9 +768,9 @@ function UserDetailPage() {
   useEffect(() => {
     if (rawUser) {
       setEditForm({
-        name: (rawUser as AdminUser).name ?? "",
-        nickname: (rawUser as AdminUser).nickname ?? "",
-        phone: (rawUser as AdminUser).phone ?? "",
+        name: rawUser.name ?? "",
+        nickname: rawUser.nickname ?? "",
+        phone: rawUser.phone ?? "",
       });
     }
   }, [rawUser]);
@@ -920,9 +920,7 @@ function UserDetailPage() {
                   <span className="label text-sm font-semibold">角色</span>
                   <select
                     className="select select-bordered w-full"
-                    value={
-                      (user as AdminUser).role?.toLowerCase() ?? "customer"
-                    }
+                    value={user.role?.toLowerCase() ?? "customer"}
                     onChange={(e) => handleRoleChange(e.target.value)}
                     disabled={rolePending}
                   >
@@ -937,7 +935,7 @@ function UserDetailPage() {
                   <input
                     type="email"
                     className="input input-bordered w-full"
-                    value={(user as AdminUser).email ?? ""}
+                    value={user.email ?? ""}
                     disabled
                   />
                 </label>
@@ -947,7 +945,7 @@ function UserDetailPage() {
                   <input
                     type="text"
                     className="input input-bordered w-full font-mono"
-                    value={(user as AdminUser).uid ?? ""}
+                    value={user.uid ?? ""}
                     disabled
                   />
                 </label>

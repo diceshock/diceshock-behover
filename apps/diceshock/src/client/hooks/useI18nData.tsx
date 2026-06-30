@@ -1,7 +1,11 @@
 /** biome-ignore-all lint/security/noDangerouslySetInnerHtml: i18n data injection */
 
 import type React from "react";
-import { getAllTranslations, setTranslations } from "@/shared/i18n";
+import {
+  getAllTranslations,
+  setTranslations,
+  type TranslationDict,
+} from "@/shared/i18n";
 import type { LocaleCode } from "@/shared/store-locale";
 
 const INJECTION_KEY = "__I18N_DATA__";
@@ -50,7 +54,7 @@ export function useI18nDataRegister(): void {
   ) {
     const { locale, dict } = raw as {
       locale: LocaleCode;
-      dict: Record<string, unknown>;
+      dict: TranslationDict;
     };
     setTranslations(locale, dict);
   }

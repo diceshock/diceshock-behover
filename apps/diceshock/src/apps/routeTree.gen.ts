@@ -10,14 +10,12 @@
 
 import { Route as rootRouteImport } from './routers/__root'
 import { Route as Char123StoreLocaleChar125RouteImport } from './routers/{-$storeLocale}'
-import { Route as XRouteImport } from './routers/x'
 import { Route as DashRouteImport } from './routers/dash'
 import { Route as DashIndexRouteImport } from './routers/dash/index'
-import { Route as Char123StoreLocaleChar125TRouteImport } from './routers/{-$storeLocale}/t'
 import { Route as Char123StoreLocaleChar125ReadyRouteImport } from './routers/{-$storeLocale}/ready'
 import { Route as Char123StoreLocaleChar125MyRiichiRouteImport } from './routers/{-$storeLocale}/my-riichi'
 import { Route as Char123StoreLocaleChar125WithHomeLoRouteImport } from './routers/{-$storeLocale}/_with-home-lo'
-import { Route as XIdRouteImport } from './routers/x/$id'
+import { Route as XIdRouteImport } from './routers/x.$id'
 import { Route as DashUsersRouteImport } from './routers/dash/users'
 import { Route as DashTablesRouteImport } from './routers/dash/tables'
 import { Route as DashPricingRouteImport } from './routers/dash/pricing'
@@ -28,7 +26,7 @@ import { Route as DashEventsRouteImport } from './routers/dash/events'
 import { Route as DashCrawlerRouteImport } from './routers/dash/crawler'
 import { Route as DashActivesRouteImport } from './routers/dash/actives'
 import { Route as Char123StoreLocaleChar125WithHomeLoIndexRouteImport } from './routers/{-$storeLocale}/_with-home-lo/index'
-import { Route as Char123StoreLocaleChar125TCodeRouteImport } from './routers/{-$storeLocale}/t/$code'
+import { Route as Char123StoreLocaleChar125TCodeRouteImport } from './routers/{-$storeLocale}/t.$code'
 import { Route as Char123StoreLocaleChar125ReadyCodeRouteImport } from './routers/{-$storeLocale}/ready/$code'
 import { Route as Char123StoreLocaleChar125MyRiichiIdRouteImport } from './routers/{-$storeLocale}/my-riichi/$id'
 import { Route as Char123StoreLocaleChar125WithHomeLoRiichiRouteImport } from './routers/{-$storeLocale}/_with-home-lo/riichi'
@@ -58,11 +56,6 @@ const Char123StoreLocaleChar125Route =
     path: '/{-$storeLocale}',
     getParentRoute: () => rootRouteImport,
   } as any)
-const XRoute = XRouteImport.update({
-  id: '/x',
-  path: '/x',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DashRoute = DashRouteImport.update({
   id: '/dash',
   path: '/dash',
@@ -73,12 +66,6 @@ const DashIndexRoute = DashIndexRouteImport.update({
   path: '/',
   getParentRoute: () => DashRoute,
 } as any)
-const Char123StoreLocaleChar125TRoute =
-  Char123StoreLocaleChar125TRouteImport.update({
-    id: '/t',
-    path: '/t',
-    getParentRoute: () => Char123StoreLocaleChar125Route,
-  } as any)
 const Char123StoreLocaleChar125ReadyRoute =
   Char123StoreLocaleChar125ReadyRouteImport.update({
     id: '/ready',
@@ -97,9 +84,9 @@ const Char123StoreLocaleChar125WithHomeLoRoute =
     getParentRoute: () => Char123StoreLocaleChar125Route,
   } as any)
 const XIdRoute = XIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => XRoute,
+  id: '/x/$id',
+  path: '/x/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DashUsersRoute = DashUsersRouteImport.update({
   id: '/users',
@@ -154,9 +141,9 @@ const Char123StoreLocaleChar125WithHomeLoIndexRoute =
   } as any)
 const Char123StoreLocaleChar125TCodeRoute =
   Char123StoreLocaleChar125TCodeRouteImport.update({
-    id: '/$code',
-    path: '/$code',
-    getParentRoute: () => Char123StoreLocaleChar125TRoute,
+    id: '/t/$code',
+    path: '/t/$code',
+    getParentRoute: () => Char123StoreLocaleChar125Route,
   } as any)
 const Char123StoreLocaleChar125ReadyCodeRoute =
   Char123StoreLocaleChar125ReadyCodeRouteImport.update({
@@ -285,7 +272,6 @@ const DashOrdersIdSettleRoute = DashOrdersIdSettleRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/dash': typeof DashRouteWithChildren
-  '/x': typeof XRouteWithChildren
   '/{-$storeLocale}': typeof Char123StoreLocaleChar125RouteWithChildren
   '/dash/actives': typeof DashActivesRoute
   '/dash/crawler': typeof DashCrawlerRoute
@@ -299,7 +285,6 @@ export interface FileRoutesByFullPath {
   '/x/$id': typeof XIdRoute
   '/{-$storeLocale}/my-riichi': typeof Char123StoreLocaleChar125MyRiichiRouteWithChildren
   '/{-$storeLocale}/ready': typeof Char123StoreLocaleChar125ReadyRouteWithChildren
-  '/{-$storeLocale}/t': typeof Char123StoreLocaleChar125TRouteWithChildren
   '/dash/': typeof DashIndexRoute
   '/dash/actives/$id': typeof DashActivesIdRoute
   '/dash/events/$id': typeof DashEventsIdRoute
@@ -327,7 +312,6 @@ export interface FileRoutesByFullPath {
   '/{-$storeLocale}/inventory/$id': typeof Char123StoreLocaleChar125WithHomeLoInventoryIdRoute
 }
 export interface FileRoutesByTo {
-  '/x': typeof XRouteWithChildren
   '/{-$storeLocale}': typeof Char123StoreLocaleChar125WithHomeLoIndexRoute
   '/dash/actives': typeof DashActivesRoute
   '/dash/crawler': typeof DashCrawlerRoute
@@ -341,7 +325,6 @@ export interface FileRoutesByTo {
   '/x/$id': typeof XIdRoute
   '/{-$storeLocale}/my-riichi': typeof Char123StoreLocaleChar125MyRiichiRouteWithChildren
   '/{-$storeLocale}/ready': typeof Char123StoreLocaleChar125ReadyRouteWithChildren
-  '/{-$storeLocale}/t': typeof Char123StoreLocaleChar125TRouteWithChildren
   '/dash': typeof DashIndexRoute
   '/dash/actives/$id': typeof DashActivesIdRoute
   '/dash/events/$id': typeof DashEventsIdRoute
@@ -370,7 +353,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/dash': typeof DashRouteWithChildren
-  '/x': typeof XRouteWithChildren
   '/{-$storeLocale}': typeof Char123StoreLocaleChar125RouteWithChildren
   '/dash/actives': typeof DashActivesRoute
   '/dash/crawler': typeof DashCrawlerRoute
@@ -385,7 +367,6 @@ export interface FileRoutesById {
   '/{-$storeLocale}/_with-home-lo': typeof Char123StoreLocaleChar125WithHomeLoRouteWithChildren
   '/{-$storeLocale}/my-riichi': typeof Char123StoreLocaleChar125MyRiichiRouteWithChildren
   '/{-$storeLocale}/ready': typeof Char123StoreLocaleChar125ReadyRouteWithChildren
-  '/{-$storeLocale}/t': typeof Char123StoreLocaleChar125TRouteWithChildren
   '/dash/': typeof DashIndexRoute
   '/dash/actives_/$id': typeof DashActivesIdRoute
   '/dash/events_/$id': typeof DashEventsIdRoute
@@ -416,7 +397,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/dash'
-    | '/x'
     | '/{-$storeLocale}'
     | '/dash/actives'
     | '/dash/crawler'
@@ -430,7 +410,6 @@ export interface FileRouteTypes {
     | '/x/$id'
     | '/{-$storeLocale}/my-riichi'
     | '/{-$storeLocale}/ready'
-    | '/{-$storeLocale}/t'
     | '/dash/'
     | '/dash/actives/$id'
     | '/dash/events/$id'
@@ -458,7 +437,6 @@ export interface FileRouteTypes {
     | '/{-$storeLocale}/inventory/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/x'
     | '/{-$storeLocale}'
     | '/dash/actives'
     | '/dash/crawler'
@@ -472,7 +450,6 @@ export interface FileRouteTypes {
     | '/x/$id'
     | '/{-$storeLocale}/my-riichi'
     | '/{-$storeLocale}/ready'
-    | '/{-$storeLocale}/t'
     | '/dash'
     | '/dash/actives/$id'
     | '/dash/events/$id'
@@ -500,7 +477,6 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/dash'
-    | '/x'
     | '/{-$storeLocale}'
     | '/dash/actives'
     | '/dash/crawler'
@@ -515,7 +491,6 @@ export interface FileRouteTypes {
     | '/{-$storeLocale}/_with-home-lo'
     | '/{-$storeLocale}/my-riichi'
     | '/{-$storeLocale}/ready'
-    | '/{-$storeLocale}/t'
     | '/dash/'
     | '/dash/actives_/$id'
     | '/dash/events_/$id'
@@ -545,8 +520,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   DashRoute: typeof DashRouteWithChildren
-  XRoute: typeof XRouteWithChildren
   Char123StoreLocaleChar125Route: typeof Char123StoreLocaleChar125RouteWithChildren
+  XIdRoute: typeof XIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -556,13 +531,6 @@ declare module '@tanstack/react-router' {
       path: '/{-$storeLocale}'
       fullPath: '/{-$storeLocale}'
       preLoaderRoute: typeof Char123StoreLocaleChar125RouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/x': {
-      id: '/x'
-      path: '/x'
-      fullPath: '/x'
-      preLoaderRoute: typeof XRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dash': {
@@ -578,13 +546,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/dash/'
       preLoaderRoute: typeof DashIndexRouteImport
       parentRoute: typeof DashRoute
-    }
-    '/{-$storeLocale}/t': {
-      id: '/{-$storeLocale}/t'
-      path: '/t'
-      fullPath: '/{-$storeLocale}/t'
-      preLoaderRoute: typeof Char123StoreLocaleChar125TRouteImport
-      parentRoute: typeof Char123StoreLocaleChar125Route
     }
     '/{-$storeLocale}/ready': {
       id: '/{-$storeLocale}/ready'
@@ -609,10 +570,10 @@ declare module '@tanstack/react-router' {
     }
     '/x/$id': {
       id: '/x/$id'
-      path: '/$id'
+      path: '/x/$id'
       fullPath: '/x/$id'
       preLoaderRoute: typeof XIdRouteImport
-      parentRoute: typeof XRoute
+      parentRoute: typeof rootRouteImport
     }
     '/dash/users': {
       id: '/dash/users'
@@ -686,10 +647,10 @@ declare module '@tanstack/react-router' {
     }
     '/{-$storeLocale}/t/$code': {
       id: '/{-$storeLocale}/t/$code'
-      path: '/$code'
+      path: '/t/$code'
       fullPath: '/{-$storeLocale}/t/$code'
       preLoaderRoute: typeof Char123StoreLocaleChar125TCodeRouteImport
-      parentRoute: typeof Char123StoreLocaleChar125TRoute
+      parentRoute: typeof Char123StoreLocaleChar125Route
     }
     '/{-$storeLocale}/ready/$code': {
       id: '/{-$storeLocale}/ready/$code'
@@ -892,16 +853,6 @@ const DashRouteChildren: DashRouteChildren = {
 
 const DashRouteWithChildren = DashRoute._addFileChildren(DashRouteChildren)
 
-interface XRouteChildren {
-  XIdRoute: typeof XIdRoute
-}
-
-const XRouteChildren: XRouteChildren = {
-  XIdRoute: XIdRoute,
-}
-
-const XRouteWithChildren = XRoute._addFileChildren(XRouteChildren)
-
 interface Char123StoreLocaleChar125WithHomeLoRouteChildren {
   Char123StoreLocaleChar125WithHomeLoActivesRoute: typeof Char123StoreLocaleChar125WithHomeLoActivesRoute
   Char123StoreLocaleChar125WithHomeLoContactUsRoute: typeof Char123StoreLocaleChar125WithHomeLoContactUsRoute
@@ -983,25 +934,11 @@ const Char123StoreLocaleChar125ReadyRouteWithChildren =
     Char123StoreLocaleChar125ReadyRouteChildren,
   )
 
-interface Char123StoreLocaleChar125TRouteChildren {
-  Char123StoreLocaleChar125TCodeRoute: typeof Char123StoreLocaleChar125TCodeRoute
-}
-
-const Char123StoreLocaleChar125TRouteChildren: Char123StoreLocaleChar125TRouteChildren =
-  {
-    Char123StoreLocaleChar125TCodeRoute: Char123StoreLocaleChar125TCodeRoute,
-  }
-
-const Char123StoreLocaleChar125TRouteWithChildren =
-  Char123StoreLocaleChar125TRoute._addFileChildren(
-    Char123StoreLocaleChar125TRouteChildren,
-  )
-
 interface Char123StoreLocaleChar125RouteChildren {
   Char123StoreLocaleChar125WithHomeLoRoute: typeof Char123StoreLocaleChar125WithHomeLoRouteWithChildren
   Char123StoreLocaleChar125MyRiichiRoute: typeof Char123StoreLocaleChar125MyRiichiRouteWithChildren
   Char123StoreLocaleChar125ReadyRoute: typeof Char123StoreLocaleChar125ReadyRouteWithChildren
-  Char123StoreLocaleChar125TRoute: typeof Char123StoreLocaleChar125TRouteWithChildren
+  Char123StoreLocaleChar125TCodeRoute: typeof Char123StoreLocaleChar125TCodeRoute
 }
 
 const Char123StoreLocaleChar125RouteChildren: Char123StoreLocaleChar125RouteChildren =
@@ -1012,8 +949,7 @@ const Char123StoreLocaleChar125RouteChildren: Char123StoreLocaleChar125RouteChil
       Char123StoreLocaleChar125MyRiichiRouteWithChildren,
     Char123StoreLocaleChar125ReadyRoute:
       Char123StoreLocaleChar125ReadyRouteWithChildren,
-    Char123StoreLocaleChar125TRoute:
-      Char123StoreLocaleChar125TRouteWithChildren,
+    Char123StoreLocaleChar125TCodeRoute: Char123StoreLocaleChar125TCodeRoute,
   }
 
 const Char123StoreLocaleChar125RouteWithChildren =
@@ -1023,8 +959,8 @@ const Char123StoreLocaleChar125RouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   DashRoute: DashRouteWithChildren,
-  XRoute: XRouteWithChildren,
   Char123StoreLocaleChar125Route: Char123StoreLocaleChar125RouteWithChildren,
+  XIdRoute: XIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

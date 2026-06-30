@@ -22,7 +22,11 @@ const seatRedirect = FACTORY.createMiddleware(async (c, next) => {
 
     const occHere = await tdb.query.tableOccupancyTable.findFirst({
       where: (o, { eq, ne, and }) =>
-        and(eq(o.user_id, userId), eq(o.table_id, table.id), ne(o.status, "ended")),
+        and(
+          eq(o.user_id, userId),
+          eq(o.table_id, table.id),
+          ne(o.status, "ended"),
+        ),
     });
 
     if (occHere) return next();

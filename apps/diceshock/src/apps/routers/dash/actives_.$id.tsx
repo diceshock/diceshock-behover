@@ -59,10 +59,10 @@ function ActiveEditorPage() {
       setIsGame(active.isGame ?? true);
 
       setJoinedUsers(
-        active.registrations.filter((r) => !r.isWatching) as Registration[],
+        active.registrations.filter((r: Registration) => !r.isWatching) as Registration[],
       );
       setWatchingUsers(
-        active.registrations.filter((r) => r.isWatching) as Registration[],
+        active.registrations.filter((r: Registration) => r.isWatching) as Registration[],
       );
     },
     onError: (err) => {
@@ -108,7 +108,7 @@ function ActiveEditorPage() {
           },
         });
         msg.success("约局已保存");
-        navigate({ to: "/dash/actives" });
+        navigate({ to: "/dash/actives", search: { q: "" } });
       } catch (err) {
         msg.error(err instanceof Error ? err.message : "保存失败");
       } finally {
@@ -270,7 +270,9 @@ function ActiveEditorPage() {
                 <button
                   type="button"
                   className="btn btn-ghost"
-                  onClick={() => navigate({ to: "/dash/actives" })}
+                  onClick={() =>
+                    navigate({ to: "/dash/actives", search: { q: "" } })
+                  }
                   disabled={submitting}
                 >
                   取消

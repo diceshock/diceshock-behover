@@ -247,8 +247,8 @@ function RouteComponent() {
     form.appendChild(csrfInput);
 
     fetch("/api/auth/csrf")
-      .then((r) => r.json())
-      .then((d: { csrfToken: string }) => {
+      .then((r) => r.json() as Promise<{ csrfToken: string }>)
+      .then((d) => {
         csrfInput.value = d.csrfToken;
         document.body.appendChild(form);
         form.submit();

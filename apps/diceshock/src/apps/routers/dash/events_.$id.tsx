@@ -68,7 +68,7 @@ function EventEditorPage() {
           },
         });
         msg.success("活动已保存");
-        navigate({ to: "/dash/events" });
+        navigate({ to: "/dash/events", search: { q: "", page: 1 } });
       } catch (err) {
         msg.error(err instanceof Error ? err.message : "保存失败");
       } finally {
@@ -166,7 +166,9 @@ function EventEditorPage() {
               <button
                 type="button"
                 className="btn btn-ghost"
-                onClick={() => navigate({ to: "/dash/events" })}
+                onClick={() =>
+                  navigate({ to: "/dash/events", search: { q: "", page: 1 } })
+                }
                 disabled={submitting}
               >
                 取消
