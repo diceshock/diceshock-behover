@@ -529,6 +529,7 @@ function RouteComponent() {
             <Link
               to="/dash/tables/$id"
               params={{ id: row.original.tableId }}
+              search={{ tab: "basic" }}
               className="link link-hover"
             >
               {row.original.table.name}
@@ -547,6 +548,7 @@ function RouteComponent() {
             <Link
               to="/dash/users/$id"
               params={{ id: row.original.userId }}
+              search={{ tab: "basic" }}
               className="link link-hover block max-w-[120px] truncate"
               title={row.original.nickname ?? undefined}
             >
@@ -582,7 +584,7 @@ function RouteComponent() {
       },
       {
         accessorKey: "duration",
-        header: t("dashOrders.duration") ?? "Duration",
+        header: t("dashOrders.duration"),
         cell: ({ row }) =>
           formatDuration(row.original.startAt, row.original.endAt),
       },
@@ -881,7 +883,7 @@ function RouteComponent() {
           page: 1,
         });
       }}
-      sortableColumns={["start_at", "end_at"]}
+      sortableColumns={["start_at", "end_at", "status", "amount"]}
       enableRowSelection
       selectedRows={selectedIds}
       onSelectedRowsChange={setSelectedIds}

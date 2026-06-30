@@ -455,7 +455,8 @@
     "orderUnit": "件の注文",
     "batchPause": "一括一時停止 ({count})",
     "batchResume": "一括再開 ({count})",
-    "batchSettle": "一括精算 ({count})"
+    "batchSettle": "一括精算 ({count})",
+    "duration": "時間"
   },
   "dashTables": {
     "fixedTable": "固定卓",
@@ -501,7 +502,12 @@
     "typeLabel": "タイプ:",
     "cancel": "キャンセル",
     "deleting": "削除中...",
-    "confirmDelete": "削除を確認"
+    "confirmDelete": "削除を確認",
+    "code": "コード",
+    "scope": "利用範囲",
+    "operationSuccess": "操作が完了しました",
+    "enable": "有効化",
+    "disable": "無効化"
   },
   "dashMedia": {
     "sortNewest": "最新アップロード",
@@ -669,7 +675,8 @@
     "emailLabel": "メール:",
     "cancel": "キャンセル",
     "disabling": "停止中...",
-    "confirmDisable": "停止を確認"
+    "confirmDisable": "停止を確認",
+    "exportCsv": "CSVエクスポート"
   },
   "dashIndex": {
     "scan": "スキャン",
@@ -939,5 +946,14 @@
     "close": "Close",
     "activeWithCount": "In progress ({count})",
     "terminate": "Terminate"
+  },
+  "dashTable": {
+    "actions": "操作",
+    "previous": "前へ",
+    "next": "次へ",
+    "showingRange": "{start}-{end} / {total} 件",
+    "showingEmpty": "0 / 0 件",
+    "page": "{current} ページ",
+    "pageOf": "{current} / {total} ページ"
   }
 }

@@ -455,7 +455,8 @@
     "orderUnit": "commandes",
     "batchPause": "Pause groupée ({count})",
     "batchResume": "Reprise groupée ({count})",
-    "batchSettle": "Règlement groupé ({count})"
+    "batchSettle": "Règlement groupé ({count})",
+    "duration": "Durée"
   },
   "dashTables": {
     "fixedTable": "Fixed Table",
@@ -501,7 +502,12 @@
     "typeLabel": "Type :",
     "cancel": "Annuler",
     "deleting": "Suppression...",
-    "confirmDelete": "Confirmer la suppression"
+    "confirmDelete": "Confirmer la suppression",
+    "code": "Code",
+    "scope": "Périmètre",
+    "operationSuccess": "Opération réussie",
+    "enable": "Activer",
+    "disable": "Désactiver"
   },
   "dashMedia": {
     "sortNewest": "Dernier import",
@@ -669,7 +675,8 @@
     "emailLabel": "E-mail :",
     "cancel": "Annuler",
     "disabling": "Désactivation...",
-    "confirmDisable": "Confirmer la désactivation"
+    "confirmDisable": "Confirmer la désactivation",
+    "exportCsv": "Exporter CSV"
   },
   "dashIndex": {
     "scan": "Scanner",
@@ -939,5 +946,14 @@
     "close": "Close",
     "activeWithCount": "In progress ({count})",
     "terminate": "Terminate"
+  },
+  "dashTable": {
+    "actions": "Actions",
+    "previous": "Précédent",
+    "next": "Suivant",
+    "showingRange": "Affichage {start}-{end} sur {total}",
+    "showingEmpty": "Affichage 0 sur 0",
+    "page": "Page {current}",
+    "pageOf": "Page {current} sur {total}"
   }
 }

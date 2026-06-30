@@ -455,7 +455,8 @@
     "orderUnit": "pedidos",
     "batchPause": "Pausar em lote ({count})",
     "batchResume": "Retomar em lote ({count})",
-    "batchSettle": "Liquidar em lote ({count})"
+    "batchSettle": "Liquidar em lote ({count})",
+    "duration": "Duração"
   },
   "dashTables": {
     "fixedTable": "Fixed Table",
@@ -501,7 +502,12 @@
     "typeLabel": "Tipo:",
     "cancel": "Cancelar",
     "deleting": "Excluindo...",
-    "confirmDelete": "Confirmar exclusão"
+    "confirmDelete": "Confirmar exclusão",
+    "code": "Código",
+    "scope": "Âmbito",
+    "operationSuccess": "Operação bem-sucedida",
+    "enable": "Ativar",
+    "disable": "Desativar"
   },
   "dashMedia": {
     "sortNewest": "Upload mais recente",
@@ -669,7 +675,8 @@
     "emailLabel": "E-mail:",
     "cancel": "Cancelar",
     "disabling": "Desativando...",
-    "confirmDisable": "Confirmar desativação"
+    "confirmDisable": "Confirmar desativação",
+    "exportCsv": "Exportar CSV"
   },
   "dashIndex": {
     "scan": "Escanear",
@@ -939,5 +946,14 @@
     "close": "Close",
     "activeWithCount": "In progress ({count})",
     "terminate": "Terminate"
+  },
+  "dashTable": {
+    "actions": "Ações",
+    "previous": "Anterior",
+    "next": "Próximo",
+    "showingRange": "Exibindo {start}-{end} de {total}",
+    "showingEmpty": "Exibindo 0 de 0",
+    "page": "Página {current}",
+    "pageOf": "Página {current} de {total}"
   }
 }

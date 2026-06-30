@@ -9,6 +9,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DashTable } from "@/client/components/dash/DashTable";
+import { DateRangeFilter } from "@/client/components/dash/DateRangeFilter";
 import { usePendingSearch } from "@/client/components/dash/SearchBridge";
 import { TableToolbar } from "@/client/components/dash/TableToolbar";
 import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
@@ -67,6 +68,18 @@ export function buildFilter(
   const roleFilter = parsed.filters.role?.value;
   const storeFilter = parsed.filters.store?.value;
   const nameFilter = parsed.filters.name?.value;
+  const dateFilter = parsed.filters.date?.value;
+
+  let dateFrom: string | undefined;
+  let dateTo: string | undefined;
+  if (dateFilter) {
+    if (typeof dateFilter === "string") {
+      dateFrom = dateTo = dateFilter;
+    } else if (Array.isArray(dateFilter) && dateFilter.length === 2) {
+      dateFrom = dateFilter[0];
+      dateTo = dateFilter[1];
+    }
+  }
 
   const searchParts = [parsed.freeText];
   if (typeof nameFilter === "string") searchParts.push(nameFilter);
@@ -81,6 +94,8 @@ export function buildFilter(
           ? roleFilter.map((r) => r.toUpperCase())
           : undefined,
     store: typeof storeFilter === "string" ? storeFilter : undefined,
+    dateFrom,
+    dateTo,
     sortBy: sorting.length > 0 ? sorting[0].id : undefined,
     sortOrder: sorting[0]?.desc ? SortOrder.Desc : SortOrder.Asc,
     pagination: { offset: (page - 1) * PAGE_SIZE, limit: PAGE_SIZE },
@@ -390,7 +405,7 @@ function RouteComponent() {
   const selectedActions: BatchAction[] = [
     {
       key: "export-csv",
-      label: "导出 CSV",
+      label: t("dashUsers.exportCsv"),
       className: "btn-primary",
       onClick: () => {
         const selectedUsers = users.filter((user) => selectedIds.has(user.id));
@@ -450,6 +465,44 @@ function RouteComponent() {
               active: parsed.filters.role?.value === "authenticated",
             },
           ]}
+          extra={
+            <DateRangeFilter
+              value={
+                parsed.filters.date
+                  ? {
+                      from: Array.isArray(parsed.filters.date.value)
+                        ? parsed.filters.date.value[0]
+                        : typeof parsed.filters.date.value === "string"
+                          ? parsed.filters.date.value
+                          : undefined,
+                      to: Array.isArray(parsed.filters.date.value)
+                        ? parsed.filters.date.value[1]
+                        : typeof parsed.filters.date.value === "string"
+                          ? parsed.filters.date.value
+                          : undefined,
+                    }
+                  : undefined
+              }
+              onChange={(range) => {
+                const nextFilters = { ...parsed.filters };
+                if (!range) {
+                  delete nextFilters.date;
+                } else if (range.from && range.to) {
+                  nextFilters.date = { operator: "range", value: [range.from, range.to] };
+                } else if (range.from) {
+                  nextFilters.date = { operator: "gt", value: range.from };
+                } else if (range.to) {
+                  nextFilters.date = { operator: "lt", value: range.to };
+                }
+                const serialized = serialize(
+                  { ...parsed, filters: nextFilters, errors: [] },
+                  USER_SEARCH_GRAMMAR,
+                );
+                setSearchInput(serialized);
+                setSearchParam({ q: serialized, page: 1 });
+              }}
+            />
+          }
         />
       </div>
 
@@ -472,7 +525,7 @@ function RouteComponent() {
           }
           sorting={sorting}
           onSortingChange={setSorting}
-          sortableColumns={["name"]}
+          sortableColumns={["nickname", "name", "role", "points", "createdAt"]}
           enableRowSelection
           selectedRows={selectedIds}
           onSelectedRowsChange={setSelectedIds}
@@ -492,7 +545,7 @@ function RouteComponent() {
                   className="dropdown-content menu bg-base-200 rounded-box z-50 w-32 p-2 shadow-lg"
                 >
                   <li>
-                    <Link to="/dash/users/$id" params={{ id: row.id }}>
+                    <Link to="/dash/users/$id" params={{ id: row.id }} search={{ tab: "basic" }}>
                       <EyeIcon className="size-4" />
                       {t("dashUsers.details")}
                     </Link>
@@ -514,6 +567,7 @@ function RouteComponent() {
                 <Link
                   to="/dash/users/$id"
                   params={{ id: row.id }}
+                  search={{ tab: "basic" }}
                   className="btn btn-xs btn-ghost btn-primary"
                 >
                   {t("dashUsers.details")}

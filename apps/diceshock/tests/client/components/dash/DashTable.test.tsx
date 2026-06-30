@@ -1,11 +1,14 @@
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { SearchGrammar } from "@/client/lib/searchParser";
 import { buildNextSortingState, DashTable, getPageSummary } from "@/client/components/dash/DashTable";
 import { SearchBar } from "@/client/components/dash/SearchBar";
 import { TableToolbar } from "@/client/components/dash/TableToolbar";
+import { I18nProvider } from "@/client/providers/I18nProvider";
+import { setTranslations } from "@/shared/i18n";
+import { loadLocale } from "@/shared/i18n/loader";
 
 type Row = {
   id: string;
@@ -37,17 +40,23 @@ const grammar: SearchGrammar = {
 };
 
 describe("DashTable", () => {
+  beforeAll(async () => {
+    setTranslations("en", await loadLocale("en"));
+  });
+
   it("renders a DaisyUI table with columns, rows, selection, actions, and pagination", () => {
     const html = renderToString(
-      createElement(DashTable<Row>, {
-        columns,
-        data: rows,
-        enableRowSelection: true,
-        selectedRows: new Set(["a"]),
-        getRowId: (row) => row.id,
-        pagination: { offset: 0, limit: 10, total: 25, hasMore: true },
-        renderActions: (row) => createElement("button", null, `Open ${row.id}`),
-      }),
+      createElement(I18nProvider, { locale: "en" },
+        createElement(DashTable<Row>, {
+          columns,
+          data: rows,
+          enableRowSelection: true,
+          selectedRows: new Set(["a"]),
+          getRowId: (row) => row.id,
+          pagination: { offset: 0, limit: 10, total: 25, hasMore: true },
+          renderActions: (row) => createElement("button", null, `Open ${row.id}`),
+        }),
+      ),
     );
 
     expect(html).toContain("table table-lg table-pin-rows min-w-full");
@@ -61,14 +70,18 @@ describe("DashTable", () => {
 
   it("renders loading and empty states with full-width table rows", () => {
     const loadingHtml = renderToString(
-      createElement(DashTable<Row>, { columns, data: [], loading: true }),
+      createElement(I18nProvider, { locale: "en" },
+        createElement(DashTable<Row>, { columns, data: [], loading: true }),
+      ),
     );
     const emptyHtml = renderToString(
-      createElement(DashTable<Row>, {
-        columns,
-        data: [],
-        emptyMessage: "Nothing here",
-      }),
+      createElement(I18nProvider, { locale: "en" },
+        createElement(DashTable<Row>, {
+          columns,
+          data: [],
+          emptyMessage: "Nothing here",
+        }),
+      ),
     );
 
     expect(loadingHtml).toContain("loading loading-dots loading-lg");
@@ -89,11 +102,16 @@ describe("DashTable", () => {
   });
 
   it("summarizes offset pagination windows", () => {
+    const t = (key: string) => {
+      if (key === "dashTable.showingRange") return "Showing {start}-{end} of {total}";
+      if (key === "dashTable.showingEmpty") return "Showing 0 of 0";
+      return key;
+    };
     expect(
-      getPageSummary({ offset: 20, limit: 10, total: 35, hasMore: true }),
+      getPageSummary({ offset: 20, limit: 10, total: 35, hasMore: true }, t),
     ).toBe("Showing 21-30 of 35");
     expect(
-      getPageSummary({ offset: 30, limit: 10, total: 35, hasMore: false }),
+      getPageSummary({ offset: 30, limit: 10, total: 35, hasMore: false }, t),
     ).toBe("Showing 31-35 of 35");
   });
 });

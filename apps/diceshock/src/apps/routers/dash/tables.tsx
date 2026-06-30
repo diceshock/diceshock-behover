@@ -278,7 +278,7 @@ function RouteComponent() {
     () => [
       {
         accessorKey: "code",
-        header: t("dashTables.code") ?? "Code",
+        header: t("dashTables.code"),
         cell: ({ row }) => (
           <span className="font-mono text-xs">
             {row.original.code ? row.original.code.slice(0, 8) : "—"}
@@ -333,7 +333,7 @@ function RouteComponent() {
       },
       {
         accessorKey: "scope",
-        header: t("dashTables.scope") ?? "Scope",
+        header: t("dashTables.scope"),
         cell: ({ row }) => (
           <span className="badge badge-sm badge-outline">
             {scopeLabel(row.original.scope)}
@@ -371,7 +371,7 @@ function RouteComponent() {
       for (const table of targets) {
         await toggleTableStatusMutation({ variables: { id: table.id } });
       }
-      msg.success(t("dashTables.operationSuccess") ?? "操作成功");
+      msg.success(t("dashTables.operationSuccess"));
       clearSelectedIds();
     } catch (err) {
       msg.error(
@@ -385,15 +385,13 @@ function RouteComponent() {
   const selectedActions: BatchAction[] = [
     {
       key: "enable",
-      label: "启用",
-      className: "btn-success",
+      label: t("dashTables.enable"),
       disabled: batchPending,
       onClick: () => void handleBatchStatus(TableStatus.Active),
     },
     {
       key: "disable",
-      label: "禁用",
-      className: "btn-neutral",
+      label: t("dashTables.disable"),
       disabled: batchPending,
       onClick: () => void handleBatchStatus(TableStatus.Inactive),
     },
@@ -511,13 +509,13 @@ function RouteComponent() {
                   className="dropdown-content menu bg-base-200 rounded-box z-50 w-36 p-2 shadow-lg"
                 >
                   <li>
-                    <Link to="/dash/tables/$id" params={{ id: row.id }}>
+                    <Link to="/dash/tables/$id" params={{ id: row.id }} search={{ tab: "basic" }}>
                       <QrCodeIcon className="size-4" />
                       {t("dashTables.viewQr") ?? "QR Code"}
                     </Link>
                   </li>
                   <li>
-                    <Link to="/dash/tables/$id" params={{ id: row.id }}>
+                    <Link to="/dash/tables/$id" params={{ id: row.id }} search={{ tab: "basic" }}>
                       <PencilSimpleIcon className="size-4" />
                       {t("dashTables.details")}
                     </Link>
@@ -550,6 +548,7 @@ function RouteComponent() {
                 <Link
                   to="/dash/tables/$id"
                   params={{ id: row.id }}
+                  search={{ tab: "basic" }}
                   className="btn btn-xs btn-ghost"
                   title={t("dashTables.viewQr") ?? "QR Code"}
                 >
@@ -558,6 +557,7 @@ function RouteComponent() {
                 <Link
                   to="/dash/tables/$id"
                   params={{ id: row.id }}
+                  search={{ tab: "basic" }}
                   className="btn btn-xs btn-ghost"
                 >
                   <PencilSimpleIcon className="size-4" />

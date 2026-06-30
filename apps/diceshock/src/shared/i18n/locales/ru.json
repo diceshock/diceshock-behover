@@ -455,7 +455,8 @@
     "orderUnit": "заказов",
     "batchPause": "Пауза для выбранных ({count})",
     "batchResume": "Продолжить выбранные ({count})",
-    "batchSettle": "Рассчитать выбранные ({count})"
+    "batchSettle": "Рассчитать выбранные ({count})",
+    "duration": "Длительность"
   },
   "dashTables": {
     "fixedTable": "Fixed Table",
@@ -501,7 +502,12 @@
     "typeLabel": "Тип:",
     "cancel": "Отмена",
     "deleting": "Удаление...",
-    "confirmDelete": "Подтвердить удаление"
+    "confirmDelete": "Подтвердить удаление",
+    "code": "Код",
+    "scope": "Область",
+    "operationSuccess": "Операция выполнена",
+    "enable": "Включить",
+    "disable": "Отключить"
   },
   "dashMedia": {
     "sortNewest": "Сначала новые",
@@ -669,7 +675,8 @@
     "emailLabel": "Email:",
     "cancel": "Отмена",
     "disabling": "Отключение...",
-    "confirmDisable": "Подтвердить отключение"
+    "confirmDisable": "Подтвердить отключение",
+    "exportCsv": "Экспорт CSV"
   },
   "dashIndex": {
     "scan": "Сканировать",
@@ -939,5 +946,14 @@
     "close": "Close",
     "activeWithCount": "In progress ({count})",
     "terminate": "Terminate"
+  },
+  "dashTable": {
+    "actions": "Действия",
+    "previous": "Назад",
+    "next": "Далее",
+    "showingRange": "Показано {start}-{end} из {total}",
+    "showingEmpty": "Показано 0 из 0",
+    "page": "Стр. {current}",
+    "pageOf": "Стр. {current} из {total}"
   }
 }

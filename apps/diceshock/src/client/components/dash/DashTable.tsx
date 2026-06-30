@@ -1,3 +1,8 @@
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  ArrowsDownUpIcon,
+} from "@phosphor-icons/react/dist/ssr";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import {
   flexRender,
@@ -7,6 +12,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import type { ReactNode } from "react";
+import { useTranslation } from "@/client/hooks/useTranslation";
 
 export interface DashTableProps<TData> {
   columns: ColumnDef<TData, unknown>[];
@@ -44,17 +50,18 @@ export function buildNextSortingState(
   return [];
 }
 
-export function getPageSummary(pagination: {
-  offset: number;
-  limit: number;
-  total: number;
-  hasMore: boolean;
-}): string {
-  if (pagination.total === 0) return "Showing 0 of 0";
+export function getPageSummary(
+  pagination: { offset: number; limit: number; total: number; hasMore: boolean },
+  t: (key: string) => string,
+): string {
+  if (pagination.total === 0) return t("dashTable.showingEmpty");
 
   const start = pagination.offset + 1;
   const end = Math.min(pagination.offset + pagination.limit, pagination.total);
-  return `Showing ${start}-${end} of ${pagination.total}`;
+  return t("dashTable.showingRange")
+    .replace("{start}", String(start))
+    .replace("{end}", String(end))
+    .replace("{total}", String(pagination.total));
 }
 
 export function DashTable<TData>({
@@ -74,6 +81,7 @@ export function DashTable<TData>({
   getRowId,
   renderActions,
 }: DashTableProps<TData>) {
+  const { t } = useTranslation();
   const table = useReactTable({
     columns,
     data,
@@ -182,8 +190,16 @@ export function DashTable<TData>({
                             header.getContext(),
                           )}
                           {canSort && (
-                            <span className="text-xs text-base-content/60">
-                              {sorted ? (sorted.desc ? "▼" : "▲") : "↕"}
+                            <span className="text-base-content/40">
+                              {sorted ? (
+                                sorted.desc ? (
+                                  <ArrowDownIcon className="size-3.5" weight="bold" />
+                                ) : (
+                                  <ArrowUpIcon className="size-3.5" weight="bold" />
+                                )
+                              ) : (
+                                <ArrowsDownUpIcon className="size-3.5" />
+                              )}
                             </span>
                           )}
                         </button>
@@ -192,7 +208,9 @@ export function DashTable<TData>({
                   );
                 })}
                 {renderActions && (
-                  <th className="whitespace-nowrap">Actions</th>
+                  <th className="sticky right-0 z-10 bg-base-100 whitespace-nowrap">
+                    {t("dashTable.actions")}
+                  </th>
                 )}
               </tr>
             ))}
@@ -237,9 +255,9 @@ export function DashTable<TData>({
                     </td>
                   ))}
                   {renderActions && (
-                    <th className="whitespace-nowrap">
+                    <td className="sticky right-0 z-10 bg-base-100 whitespace-nowrap">
                       {renderActions(row.original)}
-                    </th>
+                    </td>
                   )}
                 </tr>
               ))
@@ -252,12 +270,12 @@ export function DashTable<TData>({
         <div className="shrink-0 flex flex-wrap items-center justify-end gap-3 px-2 py-3 border-t border-base-content/10">
           <span className="text-sm text-base-content/70">
             {paginationMode === "cursor"
-              ? `Page ${currentPage}`
-              : getPageSummary(pagination)}
+              ? t("dashTable.page").replace("{current}", String(currentPage))
+              : getPageSummary(pagination, t)}
           </span>
           {paginationMode === "offset" && (
             <span className="text-sm font-medium">
-              Page {currentPage} of {totalPages}
+              {t("dashTable.pageOf").replace("{current}", String(currentPage)).replace("{total}", String(totalPages))}
             </span>
           )}
           <div className="join">
@@ -267,7 +285,7 @@ export function DashTable<TData>({
               disabled={pagination.offset <= 0 || loading}
               onClick={goToPreviousPage}
             >
-              Previous
+              {t("dashTable.previous")}
             </button>
             <button
               type="button"
@@ -275,7 +293,7 @@ export function DashTable<TData>({
               disabled={!pagination.hasMore || loading}
               onClick={goToNextPage}
             >
-              Next
+              {t("dashTable.next")}
             </button>
           </div>
         </div>

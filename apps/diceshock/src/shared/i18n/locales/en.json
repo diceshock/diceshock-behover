@@ -455,7 +455,8 @@
     "orderUnit": "orders",
     "batchPause": "Batch pause ({count})",
     "batchResume": "Batch resume ({count})",
-    "batchSettle": "Batch settle ({count})"
+    "batchSettle": "Batch settle ({count})",
+    "duration": "Duration"
   },
   "dashTables": {
     "fixedTable": "Fixed Table",
@@ -501,7 +502,12 @@
     "typeLabel": "Type:",
     "cancel": "Cancel",
     "deleting": "Deleting...",
-    "confirmDelete": "Confirm delete"
+    "confirmDelete": "Confirm delete",
+    "code": "Code",
+    "scope": "Scope",
+    "operationSuccess": "Operation successful",
+    "enable": "Enable",
+    "disable": "Disable"
   },
   "dashMedia": {
     "sortNewest": "Newest upload",
@@ -669,7 +675,8 @@
     "emailLabel": "Email:",
     "cancel": "Cancel",
     "disabling": "Disabling...",
-    "confirmDisable": "Confirm Disable"
+    "confirmDisable": "Confirm Disable",
+    "exportCsv": "Export CSV"
   },
   "dashIndex": {
     "scan": "Scan",
@@ -939,5 +946,14 @@
     "close": "Close",
     "activeWithCount": "In progress ({count})",
     "terminate": "Terminate"
+  },
+  "dashTable": {
+    "actions": "Actions",
+    "previous": "Previous",
+    "next": "Next",
+    "showingRange": "Showing {start}-{end} of {total}",
+    "showingEmpty": "Showing 0 of 0",
+    "page": "Page {current}",
+    "pageOf": "Page {current} of {total}"
   }
 }

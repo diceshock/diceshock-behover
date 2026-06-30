@@ -455,7 +455,8 @@
     "orderUnit": "個訂單",
     "batchPause": "批量暫停 ({count})",
     "batchResume": "批量繼續 ({count})",
-    "batchSettle": "批量結算 ({count})"
+    "batchSettle": "批量結算 ({count})",
+    "duration": "時長"
   },
   "dashTables": {
     "fixedTable": "固定桌",
@@ -501,7 +502,12 @@
     "typeLabel": "類型:",
     "cancel": "取消",
     "deleting": "刪除中...",
-    "confirmDelete": "確認刪除"
+    "confirmDelete": "確認刪除",
+    "code": "編號",
+    "scope": "營業範圍",
+    "operationSuccess": "操作成功",
+    "enable": "啟用",
+    "disable": "停用"
   },
   "dashMedia": {
     "sortNewest": "最新上傳",
@@ -669,7 +675,8 @@
     "emailLabel": "信箱:",
     "cancel": "取消",
     "disabling": "關停中...",
-    "confirmDisable": "確認關停"
+    "confirmDisable": "確認關停",
+    "exportCsv": "匯出 CSV"
   },
   "dashIndex": {
     "scan": "掃碼",
@@ -939,5 +946,14 @@
     "close": "關閉",
     "activeWithCount": "進行中 ({count})",
     "terminate": "終止"
+  },
+  "dashTable": {
+    "actions": "操作",
+    "previous": "上一頁",
+    "next": "下一頁",
+    "showingRange": "顯示 {start}-{end}，共 {total}",
+    "showingEmpty": "顯示 0 / 0",
+    "page": "第 {current} 頁",
+    "pageOf": "第 {current} / {total} 頁"
   }
 }

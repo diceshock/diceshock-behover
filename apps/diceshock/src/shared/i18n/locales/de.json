@@ -455,7 +455,8 @@
     "orderUnit": "Bestellungen",
     "batchPause": "Stapel pausieren ({count})",
     "batchResume": "Stapel fortsetzen ({count})",
-    "batchSettle": "Stapel abrechnen ({count})"
+    "batchSettle": "Stapel abrechnen ({count})",
+    "duration": "Dauer"
   },
   "dashTables": {
     "fixedTable": "Fixed Table",
@@ -501,7 +502,12 @@
     "typeLabel": "Typ:",
     "cancel": "Abbrechen",
     "deleting": "Löschen...",
-    "confirmDelete": "Löschen bestätigen"
+    "confirmDelete": "Löschen bestätigen",
+    "code": "Code",
+    "scope": "Bereich",
+    "operationSuccess": "Vorgang erfolgreich",
+    "enable": "Aktivieren",
+    "disable": "Deaktivieren"
   },
   "dashMedia": {
     "sortNewest": "Neuester Upload",
@@ -669,7 +675,8 @@
     "emailLabel": "E-Mail:",
     "cancel": "Abbrechen",
     "disabling": "Wird deaktiviert...",
-    "confirmDisable": "Deaktivieren bestätigen"
+    "confirmDisable": "Deaktivieren bestätigen",
+    "exportCsv": "CSV exportieren"
   },
   "dashIndex": {
     "scan": "Scannen",
@@ -939,5 +946,14 @@
     "close": "Close",
     "activeWithCount": "In progress ({count})",
     "terminate": "Terminate"
+  },
+  "dashTable": {
+    "actions": "Aktionen",
+    "previous": "Zurück",
+    "next": "Weiter",
+    "showingRange": "Zeige {start}-{end} von {total}",
+    "showingEmpty": "Zeige 0 von 0",
+    "page": "Seite {current}",
+    "pageOf": "Seite {current} von {total}"
   }
 }
