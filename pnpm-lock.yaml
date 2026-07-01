@@ -29,9 +29,6 @@ importers:
       '@auth/drizzle-adapter':
         specifier: ^1.10.0
         version: 1.11.2
-      '@paralleldrive/cuid2':
-        specifier: ^2.3.1
-        version: 2.3.1
       '@types/cloudflare-turnstile':
         specifier: ^0.2.2
         version: 0.2.2
@@ -135,9 +132,6 @@ importers:
       '@hono/auth-js':
         specifier: ^1.1.1
         version: 1.1.1(@auth/core@0.41.2)(hono@4.12.26)(react@19.2.7)
-      '@paralleldrive/cuid2':
-        specifier: ^2.2.2
-        version: 2.3.1
       '@phosphor-icons/react':
         specifier: ^2.1.10
         version: 2.1.10(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -349,9 +343,6 @@ importers:
       '@hono/graphql-server':
         specifier: ^0.7.0
         version: 0.7.0(hono@4.12.26)
-      '@paralleldrive/cuid2':
-        specifier: ^2.2.2
-        version: 2.3.1
       '@phosphor-icons/react':
         specifier: ^2.1.10
         version: 2.1.10(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -2829,10 +2820,6 @@ packages:
       '@emnapi/core': ^1.7.1
       '@emnapi/runtime': ^1.7.1
 
-  '@noble/hashes@1.8.0':
-    resolution: {integrity: sha512-jCs9ldd7NwzpgXDIf6P3+NrHh9/sD6CQdxHyjQI+h/6rDNo88ypBxxz45UDuZHz9r3tNz7N/VInSVoVdtXEI4A==}
-    engines: {node: ^14.21.3 || >=16}
-
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
     engines: {node: '>= 8'}
@@ -2967,9 +2954,6 @@ packages:
 
   '@panva/hkdf@1.2.1':
     resolution: {integrity: sha512-6oclG6Y3PiDFcoyk8srjLfVKyMfVCKJ27JwNPViuXziFpmdz+MZnZN/aKY0JGXgYuO/VghU0jcOAZgWXZ1Dmrw==}
-
-  '@paralleldrive/cuid2@2.3.1':
-    resolution: {integrity: sha512-XO7cAxhnTZl0Yggq6jOgjiOHhbgcO4NqFqwSmQpjK3b6TEE6Uj/jfSk6wzYyemh3+I0sHirKSetjQwn5cZktFw==}
 
   '@phenomnomnominal/tsquery@6.2.0':
     resolution: {integrity: sha512-Vo9nkhfZxDB/sBiqIY3pjDC4mOSyure+AFlEW5hcy/tRE82MqCXjRN4InnVNMldinRt0dLYqg4HAU2XPq5e1LA==}
@@ -10880,8 +10864,6 @@ snapshots:
       '@tybys/wasm-util': 0.10.2
     optional: true
 
-  '@noble/hashes@1.8.0': {}
-
   '@nodelib/fs.scandir@2.1.5':
     dependencies:
       '@nodelib/fs.stat': 2.0.5
@@ -11056,10 +11038,6 @@ snapshots:
   '@oxc-project/types@0.133.0': {}
 
   '@panva/hkdf@1.2.1': {}
-
-  '@paralleldrive/cuid2@2.3.1':
-    dependencies:
-      '@noble/hashes': 1.8.0
 
   '@phenomnomnominal/tsquery@6.2.0(typescript@5.9.3)':
     dependencies:

@@ -1,5 +1,4 @@
 import dbFactory, { drizzle, userInfoTable } from "@lib/db";
-import { createId } from "@paralleldrive/cuid2";
 import type { Context } from "hono";
 import type { HonoCtxEnv } from "@/shared/types";
 import { cfAvatarUrl } from "@/shared/utils/cfImage";
@@ -48,7 +47,7 @@ export default async function avatarUpload(c: Context<HonoCtxEnv>) {
       : file.type === "image/webp"
         ? ".webp"
         : ".jpg";
-  const id = createId();
+  const id = crypto.randomUUID();
   const key = `${AVATAR_PREFIX}${userId}/${id}${ext}`;
 
   await c.env.R2.put(key, uint8, {

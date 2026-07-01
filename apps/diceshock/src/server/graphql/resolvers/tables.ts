@@ -5,7 +5,6 @@ import dbFactory, {
   tablesTable,
   tempIdentitiesTable,
 } from "@lib/db";
-import { createId } from "@paralleldrive/cuid2";
 import { and, asc, desc, eq, inArray, like } from "drizzle-orm";
 import { z } from "zod/v4";
 import { genNickname } from "@/server/utils/auth";
@@ -942,7 +941,7 @@ export const tablesResolvers = {
         }
       }
 
-      const id = createId();
+      const id = crypto.randomUUID();
       await tdb.insert(tableOccupancyTable).values({
         id,
         table_id: table.id,
@@ -1098,7 +1097,7 @@ export const tablesResolvers = {
       const tdb = dbFactory(ctx.env.DB);
 
       const now = new Date();
-      const id = createId();
+      const id = crypto.randomUUID();
       const code = await generateUniqueCode(tdb);
       const dbType = input.type === "FIXED" ? "fixed" : "solo";
       const dbScope = input.scope.toLowerCase() as
@@ -1297,7 +1296,7 @@ export const tablesResolvers = {
       if (table.status === "inactive")
         throw validationError("tableId", "Table is inactive");
 
-      const id = createId();
+      const id = crypto.randomUUID();
       await tdb.insert(tableOccupancyTable).values({
         id,
         table_id: input.tableId,
@@ -1372,7 +1371,7 @@ export const tablesResolvers = {
     ) {
       const tdb = dbFactory(ctx.env.DB);
 
-      const id = createId();
+      const id = crypto.randomUUID();
       const nickname = genNickname();
       const totpSecret = generateTotpSecret();
       const now = new Date();
@@ -1460,7 +1459,7 @@ export const tablesResolvers = {
         }
       }
 
-      const id = createId();
+      const id = crypto.randomUUID();
       await tdb.insert(tableOccupancyTable).values({
         id,
         table_id: table.id,

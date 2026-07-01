@@ -1,4 +1,3 @@
-import { createId } from "@paralleldrive/cuid2";
 import type { Context } from "hono";
 import type { HonoCtxEnv } from "@/shared/types";
 
@@ -58,7 +57,7 @@ export async function imageProcessSubmit(c: Context<HonoCtxEnv>) {
     return c.json({ error: `无效的任务类型: ${body.type}` }, 400);
   }
 
-  const taskId = createId();
+  const taskId = crypto.randomUUID();
 
   const message: ImageProcessMessage = {
     taskId,

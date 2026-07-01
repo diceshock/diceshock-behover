@@ -1,8 +1,9 @@
 import type { AdapterAccountType } from "@auth/core/adapters";
 import type { BoardGame } from "@lib/utils";
-import { createId } from "@paralleldrive/cuid2";
 import { relations } from "drizzle-orm";
 import * as sqlite from "drizzle-orm/sqlite-core";
+
+const createId = () => crypto.randomUUID();
 
 export const boardGamesTable = sqlite.sqliteTable("board_games_table", {
   id: sqlite.text().$defaultFn(createId).primaryKey(),

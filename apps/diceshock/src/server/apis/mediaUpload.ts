@@ -1,4 +1,3 @@
-import { createId } from "@paralleldrive/cuid2";
 import type { Context } from "hono";
 import type { HonoCtxEnv } from "@/shared/types";
 
@@ -19,7 +18,7 @@ export default async function mediaUpload(c: Context<HonoCtxEnv>) {
   }
 
   const ext = file.name.includes(".") ? `.${file.name.split(".").pop()}` : "";
-  const id = createId();
+  const id = crypto.randomUUID();
   const key = `${UPLOAD_PREFIX}${id}${ext}`;
 
   await c.env.R2.put(key, file.stream(), {
