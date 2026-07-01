@@ -703,6 +703,73 @@ export const pricingSnapshotsRelations = relations(
   }),
 );
 
+// ─── WeChat Menu Snapshots ──────────────────────────────────────
+
+export type WechatMenuItemType = "view" | "click" | "miniprogram";
+
+export interface WechatMenuItem {
+  id: string;
+  type: WechatMenuItemType;
+  name: string;
+  /** For type=view: URL to open */
+  url?: string;
+  /** For type=click: event key */
+  key?: string;
+  /** For type=view with special routes: "home" | "custom" | route path */
+  link_target?: string;
+  /** Notification message (for click type with notification) */
+  notification?: {
+    message: string;
+    translations: Record<string, string>;
+  };
+}
+
+export interface WechatMenuCategory {
+  id: string;
+  name: string;
+  items: WechatMenuItem[];
+}
+
+export type WechatMenuButton = WechatMenuItem | WechatMenuCategory;
+
+export interface WechatMenuData {
+  buttons: WechatMenuButton[];
+}
+
+export const wechatMenuSnapshotsTable = sqlite.sqliteTable(
+  "wechat_menu_snapshots",
+  {
+    id: sqlite.text().$defaultFn(createId).primaryKey(),
+    name: sqlite
+      .text("name")
+      .notNull()
+      .$default(() => "未命名菜单"),
+    store_id: sqlite.text("store_id").references(() => storesTable.id),
+    data: sqlite.text("data", { mode: "json" }).$type<WechatMenuData>(),
+    status: sqlite
+      .text("status", { enum: ["draft", "published"] })
+      .notNull()
+      .$default(() => "draft"),
+    created_at: sqlite
+      .integer("created_at", { mode: "timestamp_ms" })
+      .$defaultFn(() => new Date(Date.now())),
+    published_at: sqlite.integer("published_at", { mode: "timestamp_ms" }),
+  },
+  (table) => [
+    sqlite.index("idx_wechat_menu_snapshots_store_id").on(table.store_id),
+  ],
+);
+
+export const wechatMenuSnapshotsRelations = relations(
+  wechatMenuSnapshotsTable,
+  ({ one }) => ({
+    store: one(storesTable, {
+      fields: [wechatMenuSnapshotsTable.store_id],
+      references: [storesTable.id],
+    }),
+  }),
+);
+
 // ─── Authenticators ─────────────────────────────────────────────
 
 export const authenticators = sqlite.sqliteTable(
@@ -992,6 +1059,7 @@ export const storesRelations = relations(storesTable, ({ many }) => ({
   inventory: many(storeInventoryTable),
   tables: many(tablesTable),
   pricingSnapshots: many(pricingSnapshotsTable),
+  wechatMenuSnapshots: many(wechatMenuSnapshotsTable),
   events: many(eventsTable),
   actives: many(activesTable),
   mahjongMatches: many(mahjongMatchesTable),

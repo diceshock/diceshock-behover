@@ -9,67 +9,441 @@ import * as Types from './schema';
 import { gql } from '@apollo/client';
 import * as Apollo from '@apollo/client';
 const defaultOptions = {} as const;
+export type ActiveDateRange =
+  | 'MONTH'
+  | 'TODAY'
+  | 'WEEK'
+  | 'YEAR';
 
+export type ActiveFilterInput = {
+  creator?: string | null | undefined;
+  dateFrom?: string | null | undefined;
+  dateTo?: string | null | undefined;
+  pagination?: CursorPaginationInput | null | undefined;
+  search?: string | null | undefined;
+  sortBy?: string | null | undefined;
+  sortOrder?: SortOrder | null | undefined;
+  status?: Array<string> | null | undefined;
+  store?: string | null | undefined;
+  type?: string | null | undefined;
+};
 
+export type ActiveListInput = {
+  dateRange?: ActiveDateRange | null | undefined;
+  pagination?: CursorPaginationInput | null | undefined;
+  showExpired?: boolean | null | undefined;
+  storeId?: string | number | null | undefined;
+};
 
+export type AddOccupancyInput = {
+  tableId: string | number;
+  userId: string | number;
+};
 
+export type AddPointsInput = {
+  amount: number;
+  note?: string | null | undefined;
+  userId: string | number;
+};
 
+export type AddWechatTemplateFromLibraryInput = {
+  keywordNameList?: Array<string> | null | undefined;
+  slot: WechatTemplateSlotKey;
+  templateIdShort: string;
+};
 
+export type BatchSettleInput = {
+  deductFromStoredValue?: boolean | null | undefined;
+  ids: Array<string | number>;
+  note?: string | null | undefined;
+};
 
+export type BoardGameFilterInput = {
+  isBestNumOfPlayers?: boolean | null | undefined;
+  numOfPlayers?: number | null | undefined;
+  pagination?: PaginationInput | null | undefined;
+  searchWords?: string | null | undefined;
+  tags?: Array<string> | null | undefined;
+};
 
+export type CreateActiveInput = {
+  boardGameId?: string | number | null | undefined;
+  content?: string | null | undefined;
+  date: string;
+  isGame?: boolean | null | undefined;
+  maxPlayers: number;
+  storeId?: string | number | null | undefined;
+  time?: string | null | undefined;
+  title: string;
+};
 
+export type CreateMembershipPlanInput = {
+  amount?: number | null | undefined;
+  endDate?: string | null | undefined;
+  planType: MembershipPlanType;
+  startDate: string;
+  userId: string | number;
+};
 
+export type CreateTableInput = {
+  capacity?: number | null | undefined;
+  description?: string | null | undefined;
+  name: string;
+  scope: TableScope;
+  storeId?: string | number | null | undefined;
+  type: TableType;
+};
 
+export type CursorPaginationInput = {
+  cursor?: string | null | undefined;
+  limit?: number | null | undefined;
+};
 
+export type DeductPointsInput = {
+  amount: number;
+  note?: string | null | undefined;
+  userId: string | number;
+};
 
+export type DeductStoredValueInput = {
+  amount: number;
+  date: string;
+  note: string;
+  userId: string | number;
+};
 
+export type EventFilterInput = {
+  dateFrom?: string | null | undefined;
+  dateTo?: string | null | undefined;
+  pagination?: PaginationInput | null | undefined;
+  search?: string | null | undefined;
+  sortBy?: string | null | undefined;
+  sortOrder?: SortOrder | null | undefined;
+  status?: Array<string> | null | undefined;
+  store?: string | null | undefined;
+  type?: string | null | undefined;
+};
 
+export type EventInput = {
+  content?: string | null | undefined;
+  coverImageUrl?: string | null | undefined;
+  description?: string | null | undefined;
+  storeId?: string | number | null | undefined;
+  title: string;
+};
 
+export type LeaderboardCategory =
+  | 'STORE_3P_HANCHAN'
+  | 'STORE_3P_TONPUU'
+  | 'STORE_4P_HANCHAN'
+  | 'STORE_4P_TONPUU'
+  | 'TOURNAMENT';
 
+export type LeaderboardPeriod =
+  | 'DAY'
+  | 'MONTH'
+  | 'WEEK';
 
+export type LeaveTableInput = {
+  code: string;
+  occupancyId: string | number;
+};
 
+export type MahjongFilterInput = {
+  completion?: Array<string> | null | undefined;
+  dateFrom?: string | null | undefined;
+  dateTo?: string | null | undefined;
+  format?: Array<string> | null | undefined;
+  mode?: Array<string> | null | undefined;
+  pagination?: PaginationInput | null | undefined;
+  search?: string | null | undefined;
+  sortBy?: string | null | undefined;
+  sortOrder?: SortOrder | null | undefined;
+  store?: string | null | undefined;
+  syncStatus?: Array<string> | null | undefined;
+  tableCode?: string | null | undefined;
+};
 
+export type MahjongFormat =
+  | 'HANCHAN'
+  | 'TONPUU';
 
+export type MahjongMatchHistoryInput = {
+  endDate?: string | null | undefined;
+  format?: MahjongFormat | null | undefined;
+  matchType?: MahjongMatchType | null | undefined;
+  mode?: MahjongMode | null | undefined;
+  pagination?: CursorPaginationInput | null | undefined;
+  search?: string | null | undefined;
+  startDate?: string | null | undefined;
+  storeId?: string | number | null | undefined;
+  userId?: string | number | null | undefined;
+};
 
+export type MahjongMatchType =
+  | 'STORE'
+  | 'TOURNAMENT';
 
+export type MahjongMode =
+  | 'FOUR_PLAYER'
+  | 'THREE_PLAYER';
 
+export type MahjongPlayerInput = {
+  finalScore: number;
+  nickname: string;
+  seat?: string | null | undefined;
+  userId: string | number;
+};
 
+export type MahjongTerminationReason =
+  | 'ADMIN_ABORT'
+  | 'ORDER_INVALID'
+  | 'SCORE_COMPLETE'
+  | 'VOTE';
 
+export type MediaListInput = {
+  contentTypeFilter?: string | null | undefined;
+  cursor?: string | null | undefined;
+  limit?: number | null | undefined;
+  search?: string | null | undefined;
+};
 
+export type MembershipPlanType =
+  | 'MONTHLY'
+  | 'MONTHLY_CC'
+  | 'STORED_VALUE'
+  | 'YEARLY';
 
+export type OccupyTableInput = {
+  code: string;
+};
 
+export type OrderFilterInput = {
+  dateFrom?: string | null | undefined;
+  dateTo?: string | null | undefined;
+  groupBy?: string | null | undefined;
+  pagination?: PaginationInput | null | undefined;
+  search?: string | null | undefined;
+  sortBy?: string | null | undefined;
+  sortOrder?: SortOrder | null | undefined;
+  status?: Array<string> | null | undefined;
+  store?: string | null | undefined;
+  tableCode?: string | null | undefined;
+};
 
+export type OrderGroupBy =
+  | 'DATE'
+  | 'NONE'
+  | 'TABLE'
+  | 'USER';
 
+export type OrderListInput = {
+  groupBy?: OrderGroupBy | null | undefined;
+  pagination?: PaginationInput | null | undefined;
+  search?: string | null | undefined;
+  sortBy?: OrderSortBy | null | undefined;
+  sortOrder?: SortOrder | null | undefined;
+  status?: OrderStatusFilter | null | undefined;
+  storeId?: string | number | null | undefined;
+};
 
+export type OrderSortBy =
+  | 'END_AT'
+  | 'START_AT';
 
+export type OrderStatus =
+  | 'ACTIVE'
+  | 'CANCELLED'
+  | 'PAUSED'
+  | 'SETTLED';
 
+export type OrderStatusFilter =
+  | 'ACTIVE'
+  | 'ALL'
+  | 'PAUSED'
+  | 'SETTLED';
 
+export type PaginationInput = {
+  limit?: number | null | undefined;
+  offset?: number | null | undefined;
+};
 
+export type PricingSnapshotDataInput = {
+  config: string;
+  plans: string;
+};
 
+export type PricingSnapshotStatus =
+  | 'DRAFT'
+  | 'PUBLISHED';
 
+export type RegisterMahjongInput = {
+  gszName: string;
+  phone: string;
+  smsCode: string;
+  syncNickname?: boolean | null | undefined;
+};
 
+export type RequestSmsCodeInput = {
+  botcheck?: string | null | undefined;
+  phone: string;
+};
 
+export type SavePricingSnapshotInput = {
+  data: PricingSnapshotDataInput;
+  name: string;
+  storeId?: string | number | null | undefined;
+};
 
+export type SaveWechatMenuSnapshotInput = {
+  data: string;
+  name: string;
+  storeId?: string | number | null | undefined;
+};
 
+export type SettleOrderInput = {
+  deductFromStoredValue?: boolean | null | undefined;
+  id: string | number;
+};
 
+export type SortOrder =
+  | 'ASC'
+  | 'DESC';
 
+export type TableFilterInput = {
+  pagination?: PaginationInput | null | undefined;
+  search?: string | null | undefined;
+  sortBy?: string | null | undefined;
+  sortOrder?: SortOrder | null | undefined;
+  status?: Array<string> | null | undefined;
+  store?: string | null | undefined;
+  type?: Array<string> | null | undefined;
+};
 
+export type TableScope =
+  | 'BOARDGAME'
+  | 'CONSOLE'
+  | 'MAHJONG'
+  | 'TRPG';
 
+export type TableStatus =
+  | 'ACTIVE'
+  | 'INACTIVE';
 
+export type TableType =
+  | 'FIXED'
+  | 'SOLO';
 
+export type TempIdentityOccupyInput = {
+  code: string;
+  tempId: string | number;
+};
 
+export type UnsyncableReasonCode =
+  | 'NO_PHONE'
+  | 'TEMP_USER';
 
+export type UpdateActiveInput = {
+  boardGameId?: string | number | null | undefined;
+  content?: string | null | undefined;
+  date?: string | null | undefined;
+  id: string | number;
+  isGame?: boolean | null | undefined;
+  maxPlayers?: number | null | undefined;
+  time?: string | null | undefined;
+  title?: string | null | undefined;
+};
 
+export type UpdateEventInput = {
+  content?: string | null | undefined;
+  coverImageUrl?: string | null | undefined;
+  description?: string | null | undefined;
+  id: string | number;
+  title: string;
+};
 
+export type UpdateManagedUserInput = {
+  id: string | number;
+  name?: string | null | undefined;
+  nickname?: string | null | undefined;
+  phone?: string | null | undefined;
+};
 
+export type UpdateMembershipPlanInput = {
+  amount?: number | null | undefined;
+  endDate?: string | null | undefined;
+  id: string | number;
+  planType?: MembershipPlanType | null | undefined;
+  startDate?: string | null | undefined;
+};
 
+export type UpdateMyUserInfoInput = {
+  code?: string | null | undefined;
+  nickname?: string | null | undefined;
+  phone?: string | null | undefined;
+};
 
+export type UpdatePreferencesInput = {
+  preferredLocale?: string | null | undefined;
+  preferredStoreId?: string | number | null | undefined;
+};
 
+export type UpdateRoleInput = {
+  id: string | number;
+  role: UserRole;
+};
 
+export type UpdateTableInput = {
+  capacity?: number | null | undefined;
+  description?: string | null | undefined;
+  id: string | number;
+  name?: string | null | undefined;
+  scope?: TableScope | null | undefined;
+  type?: TableType | null | undefined;
+};
 
+export type UpsertBusinessCardInput = {
+  customContent?: string | null | undefined;
+  qq?: string | null | undefined;
+  sharePhone?: boolean | null | undefined;
+  wechat?: string | null | undefined;
+};
 
+export type UserFilterInput = {
+  dateFrom?: string | null | undefined;
+  dateTo?: string | null | undefined;
+  pagination?: PaginationInput | null | undefined;
+  role?: Array<string> | null | undefined;
+  search?: string | null | undefined;
+  sortBy?: string | null | undefined;
+  sortOrder?: SortOrder | null | undefined;
+  store?: string | null | undefined;
+};
 
+export type UserRole =
+  | 'ADMIN'
+  | 'CUSTOMER'
+  | 'STAFF';
 
+export type VerifyTotpInput = {
+  loginTime: number;
+  totp: string;
+  userAgent: string;
+};
+
+export type WechatMenuSnapshotStatus =
+  | 'DRAFT'
+  | 'PUBLISHED';
+
+export type WechatTemplateSlotKey =
+  | 'MAHJONG_GSZ_SYNC'
+  | 'MAHJONG_START'
+  | 'MEMBERSHIP_CHANGE'
+  | 'ORDER_SETTLED'
+  | 'ORDER_START'
+  | 'PASS_EXPIRING'
+  | 'PHONE_BOUND'
+  | 'TABLE_TRANSFER';
 
 export type GetActivesQueryVariables = Exact<{
   input?: Types.ActiveListInput | null | undefined;
@@ -679,6 +1053,61 @@ export type WakeOwnedBoardGamesMutationVariables = Exact<{
 
 
 export type WakeOwnedBoardGamesMutation = { wakeOwnedBoardGames: { success: boolean, message: string | null, processed: number | null } };
+
+export type WechatMenuDraftQueryVariables = Exact<{
+  storeId?: string | number | null | undefined;
+}>;
+
+
+export type WechatMenuDraftQuery = { wechatMenuDraft: { data: string, snapshotId: string | null, snapshotName: string | null, status: Types.WechatMenuSnapshotStatus | null } };
+
+export type WechatMenuSnapshotsQueryVariables = Exact<{
+  storeId?: string | number | null | undefined;
+}>;
+
+
+export type WechatMenuSnapshotsQuery = { wechatMenuSnapshots: Array<{ id: string, name: string, storeId: string | null, data: string, status: Types.WechatMenuSnapshotStatus, summary: string | null, createdAt: string | null, publishedAt: string | null }> };
+
+export type WechatMenuSnapshotQueryVariables = Exact<{
+  id: string | number;
+}>;
+
+
+export type WechatMenuSnapshotQuery = { wechatMenuSnapshot: { id: string, name: string, storeId: string | null, data: string, status: Types.WechatMenuSnapshotStatus, summary: string | null, createdAt: string | null, publishedAt: string | null } };
+
+export type WechatMenuVariablesQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type WechatMenuVariablesQuery = { wechatMenuVariables: Array<{ id: string, label: string, description: string | null, example: string | null }> };
+
+export type SaveWechatMenuSnapshotMutationVariables = Exact<{
+  input: Types.SaveWechatMenuSnapshotInput;
+}>;
+
+
+export type SaveWechatMenuSnapshotMutation = { saveWechatMenuSnapshot: { id: string, name: string, storeId: string | null, data: string, status: Types.WechatMenuSnapshotStatus, summary: string | null, createdAt: string | null, publishedAt: string | null } };
+
+export type PublishWechatMenuSnapshotMutationVariables = Exact<{
+  storeId?: string | number | null | undefined;
+}>;
+
+
+export type PublishWechatMenuSnapshotMutation = { publishWechatMenuSnapshot: { success: boolean, error: string | null, snapshot: { id: string, name: string, status: Types.WechatMenuSnapshotStatus, publishedAt: string | null } | null } };
+
+export type RestoreWechatMenuSnapshotMutationVariables = Exact<{
+  id: string | number;
+}>;
+
+
+export type RestoreWechatMenuSnapshotMutation = { restoreWechatMenuSnapshot: { id: string, name: string, data: string, status: Types.WechatMenuSnapshotStatus, summary: string | null, createdAt: string | null, publishedAt: string | null } };
+
+export type TranslateWechatMenuTextMutationVariables = Exact<{
+  text: string;
+  targetLocales: Array<string> | string;
+}>;
+
+
+export type TranslateWechatMenuTextMutation = { translateWechatMenuText: { translations: Array<{ locale: string, text: string }> } };
 
 export type WechatTemplatesQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -5047,6 +5476,353 @@ export function useWakeOwnedBoardGamesMutation(baseOptions?: Apollo.MutationHook
 export type WakeOwnedBoardGamesMutationHookResult = ReturnType<typeof useWakeOwnedBoardGamesMutation>;
 export type WakeOwnedBoardGamesMutationResult = Apollo.MutationResult<Types.WakeOwnedBoardGamesMutation>;
 export type WakeOwnedBoardGamesMutationOptions = Apollo.BaseMutationOptions<Types.WakeOwnedBoardGamesMutation, Types.WakeOwnedBoardGamesMutationVariables>;
+export const WechatMenuDraftDocument = gql`
+    query WechatMenuDraft($storeId: ID) {
+  wechatMenuDraft(storeId: $storeId) {
+    data
+    snapshotId
+    snapshotName
+    status
+  }
+}
+    `;
+
+/**
+ * __useWechatMenuDraftQuery__
+ *
+ * To run a query within a React component, call `useWechatMenuDraftQuery` and pass it any options that fit your needs.
+ * When your component renders, `useWechatMenuDraftQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useWechatMenuDraftQuery({
+ *   variables: {
+ *      storeId: // value for 'storeId'
+ *   },
+ * });
+ */
+export function useWechatMenuDraftQuery(baseOptions?: Apollo.QueryHookOptions<Types.WechatMenuDraftQuery, Types.WechatMenuDraftQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<Types.WechatMenuDraftQuery, Types.WechatMenuDraftQueryVariables>(WechatMenuDraftDocument, options);
+      }
+export function useWechatMenuDraftLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<Types.WechatMenuDraftQuery, Types.WechatMenuDraftQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<Types.WechatMenuDraftQuery, Types.WechatMenuDraftQueryVariables>(WechatMenuDraftDocument, options);
+        }
+// @ts-ignore
+export function useWechatMenuDraftSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<Types.WechatMenuDraftQuery, Types.WechatMenuDraftQueryVariables>): Apollo.UseSuspenseQueryResult<Types.WechatMenuDraftQuery, Types.WechatMenuDraftQueryVariables>;
+export function useWechatMenuDraftSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<Types.WechatMenuDraftQuery, Types.WechatMenuDraftQueryVariables>): Apollo.UseSuspenseQueryResult<Types.WechatMenuDraftQuery | undefined, Types.WechatMenuDraftQueryVariables>;
+export function useWechatMenuDraftSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<Types.WechatMenuDraftQuery, Types.WechatMenuDraftQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<Types.WechatMenuDraftQuery, Types.WechatMenuDraftQueryVariables>(WechatMenuDraftDocument, options);
+        }
+export type WechatMenuDraftQueryHookResult = ReturnType<typeof useWechatMenuDraftQuery>;
+export type WechatMenuDraftLazyQueryHookResult = ReturnType<typeof useWechatMenuDraftLazyQuery>;
+export type WechatMenuDraftSuspenseQueryHookResult = ReturnType<typeof useWechatMenuDraftSuspenseQuery>;
+export type WechatMenuDraftQueryResult = Apollo.QueryResult<Types.WechatMenuDraftQuery, Types.WechatMenuDraftQueryVariables>;
+export const WechatMenuSnapshotsDocument = gql`
+    query WechatMenuSnapshots($storeId: ID) {
+  wechatMenuSnapshots(storeId: $storeId) {
+    id
+    name
+    storeId
+    data
+    status
+    summary
+    createdAt
+    publishedAt
+  }
+}
+    `;
+
+/**
+ * __useWechatMenuSnapshotsQuery__
+ *
+ * To run a query within a React component, call `useWechatMenuSnapshotsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useWechatMenuSnapshotsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useWechatMenuSnapshotsQuery({
+ *   variables: {
+ *      storeId: // value for 'storeId'
+ *   },
+ * });
+ */
+export function useWechatMenuSnapshotsQuery(baseOptions?: Apollo.QueryHookOptions<Types.WechatMenuSnapshotsQuery, Types.WechatMenuSnapshotsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<Types.WechatMenuSnapshotsQuery, Types.WechatMenuSnapshotsQueryVariables>(WechatMenuSnapshotsDocument, options);
+      }
+export function useWechatMenuSnapshotsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<Types.WechatMenuSnapshotsQuery, Types.WechatMenuSnapshotsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<Types.WechatMenuSnapshotsQuery, Types.WechatMenuSnapshotsQueryVariables>(WechatMenuSnapshotsDocument, options);
+        }
+// @ts-ignore
+export function useWechatMenuSnapshotsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<Types.WechatMenuSnapshotsQuery, Types.WechatMenuSnapshotsQueryVariables>): Apollo.UseSuspenseQueryResult<Types.WechatMenuSnapshotsQuery, Types.WechatMenuSnapshotsQueryVariables>;
+export function useWechatMenuSnapshotsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<Types.WechatMenuSnapshotsQuery, Types.WechatMenuSnapshotsQueryVariables>): Apollo.UseSuspenseQueryResult<Types.WechatMenuSnapshotsQuery | undefined, Types.WechatMenuSnapshotsQueryVariables>;
+export function useWechatMenuSnapshotsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<Types.WechatMenuSnapshotsQuery, Types.WechatMenuSnapshotsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<Types.WechatMenuSnapshotsQuery, Types.WechatMenuSnapshotsQueryVariables>(WechatMenuSnapshotsDocument, options);
+        }
+export type WechatMenuSnapshotsQueryHookResult = ReturnType<typeof useWechatMenuSnapshotsQuery>;
+export type WechatMenuSnapshotsLazyQueryHookResult = ReturnType<typeof useWechatMenuSnapshotsLazyQuery>;
+export type WechatMenuSnapshotsSuspenseQueryHookResult = ReturnType<typeof useWechatMenuSnapshotsSuspenseQuery>;
+export type WechatMenuSnapshotsQueryResult = Apollo.QueryResult<Types.WechatMenuSnapshotsQuery, Types.WechatMenuSnapshotsQueryVariables>;
+export const WechatMenuSnapshotDocument = gql`
+    query WechatMenuSnapshot($id: ID!) {
+  wechatMenuSnapshot(id: $id) {
+    id
+    name
+    storeId
+    data
+    status
+    summary
+    createdAt
+    publishedAt
+  }
+}
+    `;
+
+/**
+ * __useWechatMenuSnapshotQuery__
+ *
+ * To run a query within a React component, call `useWechatMenuSnapshotQuery` and pass it any options that fit your needs.
+ * When your component renders, `useWechatMenuSnapshotQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useWechatMenuSnapshotQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useWechatMenuSnapshotQuery(baseOptions: Apollo.QueryHookOptions<Types.WechatMenuSnapshotQuery, Types.WechatMenuSnapshotQueryVariables> & ({ variables: Types.WechatMenuSnapshotQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<Types.WechatMenuSnapshotQuery, Types.WechatMenuSnapshotQueryVariables>(WechatMenuSnapshotDocument, options);
+      }
+export function useWechatMenuSnapshotLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<Types.WechatMenuSnapshotQuery, Types.WechatMenuSnapshotQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<Types.WechatMenuSnapshotQuery, Types.WechatMenuSnapshotQueryVariables>(WechatMenuSnapshotDocument, options);
+        }
+// @ts-ignore
+export function useWechatMenuSnapshotSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<Types.WechatMenuSnapshotQuery, Types.WechatMenuSnapshotQueryVariables>): Apollo.UseSuspenseQueryResult<Types.WechatMenuSnapshotQuery, Types.WechatMenuSnapshotQueryVariables>;
+export function useWechatMenuSnapshotSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<Types.WechatMenuSnapshotQuery, Types.WechatMenuSnapshotQueryVariables>): Apollo.UseSuspenseQueryResult<Types.WechatMenuSnapshotQuery | undefined, Types.WechatMenuSnapshotQueryVariables>;
+export function useWechatMenuSnapshotSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<Types.WechatMenuSnapshotQuery, Types.WechatMenuSnapshotQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<Types.WechatMenuSnapshotQuery, Types.WechatMenuSnapshotQueryVariables>(WechatMenuSnapshotDocument, options);
+        }
+export type WechatMenuSnapshotQueryHookResult = ReturnType<typeof useWechatMenuSnapshotQuery>;
+export type WechatMenuSnapshotLazyQueryHookResult = ReturnType<typeof useWechatMenuSnapshotLazyQuery>;
+export type WechatMenuSnapshotSuspenseQueryHookResult = ReturnType<typeof useWechatMenuSnapshotSuspenseQuery>;
+export type WechatMenuSnapshotQueryResult = Apollo.QueryResult<Types.WechatMenuSnapshotQuery, Types.WechatMenuSnapshotQueryVariables>;
+export const WechatMenuVariablesDocument = gql`
+    query WechatMenuVariables {
+  wechatMenuVariables {
+    id
+    label
+    description
+    example
+  }
+}
+    `;
+
+/**
+ * __useWechatMenuVariablesQuery__
+ *
+ * To run a query within a React component, call `useWechatMenuVariablesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useWechatMenuVariablesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useWechatMenuVariablesQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useWechatMenuVariablesQuery(baseOptions?: Apollo.QueryHookOptions<Types.WechatMenuVariablesQuery, Types.WechatMenuVariablesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<Types.WechatMenuVariablesQuery, Types.WechatMenuVariablesQueryVariables>(WechatMenuVariablesDocument, options);
+      }
+export function useWechatMenuVariablesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<Types.WechatMenuVariablesQuery, Types.WechatMenuVariablesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<Types.WechatMenuVariablesQuery, Types.WechatMenuVariablesQueryVariables>(WechatMenuVariablesDocument, options);
+        }
+// @ts-ignore
+export function useWechatMenuVariablesSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<Types.WechatMenuVariablesQuery, Types.WechatMenuVariablesQueryVariables>): Apollo.UseSuspenseQueryResult<Types.WechatMenuVariablesQuery, Types.WechatMenuVariablesQueryVariables>;
+export function useWechatMenuVariablesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<Types.WechatMenuVariablesQuery, Types.WechatMenuVariablesQueryVariables>): Apollo.UseSuspenseQueryResult<Types.WechatMenuVariablesQuery | undefined, Types.WechatMenuVariablesQueryVariables>;
+export function useWechatMenuVariablesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<Types.WechatMenuVariablesQuery, Types.WechatMenuVariablesQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<Types.WechatMenuVariablesQuery, Types.WechatMenuVariablesQueryVariables>(WechatMenuVariablesDocument, options);
+        }
+export type WechatMenuVariablesQueryHookResult = ReturnType<typeof useWechatMenuVariablesQuery>;
+export type WechatMenuVariablesLazyQueryHookResult = ReturnType<typeof useWechatMenuVariablesLazyQuery>;
+export type WechatMenuVariablesSuspenseQueryHookResult = ReturnType<typeof useWechatMenuVariablesSuspenseQuery>;
+export type WechatMenuVariablesQueryResult = Apollo.QueryResult<Types.WechatMenuVariablesQuery, Types.WechatMenuVariablesQueryVariables>;
+export const SaveWechatMenuSnapshotDocument = gql`
+    mutation SaveWechatMenuSnapshot($input: SaveWechatMenuSnapshotInput!) {
+  saveWechatMenuSnapshot(input: $input) {
+    id
+    name
+    storeId
+    data
+    status
+    summary
+    createdAt
+    publishedAt
+  }
+}
+    `;
+export type SaveWechatMenuSnapshotMutationFn = Apollo.MutationFunction<Types.SaveWechatMenuSnapshotMutation, Types.SaveWechatMenuSnapshotMutationVariables>;
+
+/**
+ * __useSaveWechatMenuSnapshotMutation__
+ *
+ * To run a mutation, you first call `useSaveWechatMenuSnapshotMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSaveWechatMenuSnapshotMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [saveWechatMenuSnapshotMutation, { data, loading, error }] = useSaveWechatMenuSnapshotMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useSaveWechatMenuSnapshotMutation(baseOptions?: Apollo.MutationHookOptions<Types.SaveWechatMenuSnapshotMutation, Types.SaveWechatMenuSnapshotMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<Types.SaveWechatMenuSnapshotMutation, Types.SaveWechatMenuSnapshotMutationVariables>(SaveWechatMenuSnapshotDocument, options);
+      }
+export type SaveWechatMenuSnapshotMutationHookResult = ReturnType<typeof useSaveWechatMenuSnapshotMutation>;
+export type SaveWechatMenuSnapshotMutationResult = Apollo.MutationResult<Types.SaveWechatMenuSnapshotMutation>;
+export type SaveWechatMenuSnapshotMutationOptions = Apollo.BaseMutationOptions<Types.SaveWechatMenuSnapshotMutation, Types.SaveWechatMenuSnapshotMutationVariables>;
+export const PublishWechatMenuSnapshotDocument = gql`
+    mutation PublishWechatMenuSnapshot($storeId: ID) {
+  publishWechatMenuSnapshot(storeId: $storeId) {
+    success
+    error
+    snapshot {
+      id
+      name
+      status
+      publishedAt
+    }
+  }
+}
+    `;
+export type PublishWechatMenuSnapshotMutationFn = Apollo.MutationFunction<Types.PublishWechatMenuSnapshotMutation, Types.PublishWechatMenuSnapshotMutationVariables>;
+
+/**
+ * __usePublishWechatMenuSnapshotMutation__
+ *
+ * To run a mutation, you first call `usePublishWechatMenuSnapshotMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `usePublishWechatMenuSnapshotMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [publishWechatMenuSnapshotMutation, { data, loading, error }] = usePublishWechatMenuSnapshotMutation({
+ *   variables: {
+ *      storeId: // value for 'storeId'
+ *   },
+ * });
+ */
+export function usePublishWechatMenuSnapshotMutation(baseOptions?: Apollo.MutationHookOptions<Types.PublishWechatMenuSnapshotMutation, Types.PublishWechatMenuSnapshotMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<Types.PublishWechatMenuSnapshotMutation, Types.PublishWechatMenuSnapshotMutationVariables>(PublishWechatMenuSnapshotDocument, options);
+      }
+export type PublishWechatMenuSnapshotMutationHookResult = ReturnType<typeof usePublishWechatMenuSnapshotMutation>;
+export type PublishWechatMenuSnapshotMutationResult = Apollo.MutationResult<Types.PublishWechatMenuSnapshotMutation>;
+export type PublishWechatMenuSnapshotMutationOptions = Apollo.BaseMutationOptions<Types.PublishWechatMenuSnapshotMutation, Types.PublishWechatMenuSnapshotMutationVariables>;
+export const RestoreWechatMenuSnapshotDocument = gql`
+    mutation RestoreWechatMenuSnapshot($id: ID!) {
+  restoreWechatMenuSnapshot(id: $id) {
+    id
+    name
+    data
+    status
+    summary
+    createdAt
+    publishedAt
+  }
+}
+    `;
+export type RestoreWechatMenuSnapshotMutationFn = Apollo.MutationFunction<Types.RestoreWechatMenuSnapshotMutation, Types.RestoreWechatMenuSnapshotMutationVariables>;
+
+/**
+ * __useRestoreWechatMenuSnapshotMutation__
+ *
+ * To run a mutation, you first call `useRestoreWechatMenuSnapshotMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRestoreWechatMenuSnapshotMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [restoreWechatMenuSnapshotMutation, { data, loading, error }] = useRestoreWechatMenuSnapshotMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useRestoreWechatMenuSnapshotMutation(baseOptions?: Apollo.MutationHookOptions<Types.RestoreWechatMenuSnapshotMutation, Types.RestoreWechatMenuSnapshotMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<Types.RestoreWechatMenuSnapshotMutation, Types.RestoreWechatMenuSnapshotMutationVariables>(RestoreWechatMenuSnapshotDocument, options);
+      }
+export type RestoreWechatMenuSnapshotMutationHookResult = ReturnType<typeof useRestoreWechatMenuSnapshotMutation>;
+export type RestoreWechatMenuSnapshotMutationResult = Apollo.MutationResult<Types.RestoreWechatMenuSnapshotMutation>;
+export type RestoreWechatMenuSnapshotMutationOptions = Apollo.BaseMutationOptions<Types.RestoreWechatMenuSnapshotMutation, Types.RestoreWechatMenuSnapshotMutationVariables>;
+export const TranslateWechatMenuTextDocument = gql`
+    mutation TranslateWechatMenuText($text: String!, $targetLocales: [String!]!) {
+  translateWechatMenuText(text: $text, targetLocales: $targetLocales) {
+    translations {
+      locale
+      text
+    }
+  }
+}
+    `;
+export type TranslateWechatMenuTextMutationFn = Apollo.MutationFunction<Types.TranslateWechatMenuTextMutation, Types.TranslateWechatMenuTextMutationVariables>;
+
+/**
+ * __useTranslateWechatMenuTextMutation__
+ *
+ * To run a mutation, you first call `useTranslateWechatMenuTextMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useTranslateWechatMenuTextMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [translateWechatMenuTextMutation, { data, loading, error }] = useTranslateWechatMenuTextMutation({
+ *   variables: {
+ *      text: // value for 'text'
+ *      targetLocales: // value for 'targetLocales'
+ *   },
+ * });
+ */
+export function useTranslateWechatMenuTextMutation(baseOptions?: Apollo.MutationHookOptions<Types.TranslateWechatMenuTextMutation, Types.TranslateWechatMenuTextMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<Types.TranslateWechatMenuTextMutation, Types.TranslateWechatMenuTextMutationVariables>(TranslateWechatMenuTextDocument, options);
+      }
+export type TranslateWechatMenuTextMutationHookResult = ReturnType<typeof useTranslateWechatMenuTextMutation>;
+export type TranslateWechatMenuTextMutationResult = Apollo.MutationResult<Types.TranslateWechatMenuTextMutation>;
+export type TranslateWechatMenuTextMutationOptions = Apollo.BaseMutationOptions<Types.TranslateWechatMenuTextMutation, Types.TranslateWechatMenuTextMutationVariables>;
 export const WechatTemplatesDocument = gql`
     query WechatTemplates {
   wechatTemplates {

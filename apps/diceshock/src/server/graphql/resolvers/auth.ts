@@ -1,13 +1,14 @@
 import type { AdapterAccountType } from "@auth/core/adapters";
-import dbFactory, { accounts, drizzle, userInfoTable } from "@lib/db";
+import dbFactory, { accounts, drizzle, userInfoTable, users } from "@lib/db";
 import { customAlphabet } from "nanoid";
 import { z } from "zod";
 import { getSmsTmpCodeKey } from "@/server/utils/auth";
+import { ADMIN_PHONES_KV_KEY, mergeByPhone } from "@/server/utils/phoneMerge";
 import { LOCALES, STORES } from "@/shared/store-locale";
 import { generateTOTP, generateTotpSecret } from "@/shared/utils/totp";
 import type { GQLContext } from "../context";
 import { internalError, notFound, validationError } from "../errors";
-import { requireAuth } from "../guards";
+import { requireAdmin, requireAuth } from "../guards";
 import { zodToGraphQLError } from "../validate";
 
 const smsCodeSchema = z.object({
@@ -156,6 +157,12 @@ export const authTypeDefs = `
 
   extend type Query {
     totpSecret: TotpSecretResult!
+    adminPhones: [String!]!
+  }
+
+  input AdminPhoneInput {
+    phone: String!
+    code: String!
   }
 
   extend type Mutation {
@@ -164,6 +171,8 @@ export const authTypeDefs = `
     updateProfile(input: UpdateProfileInput!): UserInfoUpdateResult!
     updatePreferences(input: UpdatePreferencesInput!): UserProfile!
     verifyTotp(input: VerifyTotpInput!): TotpVerificationResult!
+    addAdminPhone(input: AdminPhoneInput!): [String!]!
+    removeAdminPhone(input: AdminPhoneInput!): [String!]!
   }
 `;
 
@@ -188,6 +197,20 @@ export const authResolvers = {
         secret,
         qrUrl: totpOtpAuthUrl(ctx.userId, secret),
       };
+    },
+    async adminPhones(
+      _source: unknown,
+      _args: Record<string, never>,
+      ctx: GQLContext,
+    ) {
+      requireAdmin(ctx);
+      const raw = await ctx.env.KV.get(ADMIN_PHONES_KV_KEY);
+      if (!raw) return [];
+      try {
+        return JSON.parse(raw) as string[];
+      } catch {
+        return [];
+      }
     },
   },
   Mutation: {
@@ -227,22 +250,14 @@ export const authResolvers = {
       }
 
       const tdb = dbFactory(ctx.env.DB);
-      const existingAccount = await tdb.query.accounts.findFirst({
-        where: (account, { and, eq }) =>
-          and(
-            eq(account.provider, "SMS"),
-            eq(account.providerAccountId, input.phone),
-          ),
-      });
-      if (existingAccount && existingAccount.userId !== ctx.userId) {
-        throw validationError("phone", "Phone number is already in use");
-      }
 
+      // Update phone on current user's info
       await tdb
         .update(userInfoTable)
         .set({ phone: input.phone })
         .where(drizzle.eq(userInfoTable.id, ctx.userId));
 
+      // Ensure current user has an SMS account record
       const currentAccount = await tdb.query.accounts.findFirst({
         where: (account, { and, eq }) =>
           and(eq(account.userId, ctx.userId), eq(account.provider, "SMS")),
@@ -264,6 +279,23 @@ export const authResolvers = {
           type: "credentials" as AdapterAccountType,
           provider: "SMS",
           providerAccountId: input.phone,
+        });
+      }
+
+      // Merge any other accounts with the same phone into this user
+      const mergeResult = await mergeByPhone(
+        ctx.env.DB,
+        ctx.env.KV,
+        ctx.userId,
+        input.phone,
+      );
+
+      if (mergeResult.merged) {
+        console.log("[verifyPhone:merge]", {
+          targetUserId: ctx.userId,
+          phone: input.phone,
+          mergedUserIds: mergeResult.mergedUserIds,
+          finalRole: mergeResult.role,
         });
       }
 
@@ -336,6 +368,79 @@ export const authResolvers = {
       }
 
       return { success: true, userId: ctx.userId };
+    },
+
+    async addAdminPhone(
+      _source: unknown,
+      args: { input: unknown },
+      ctx: GQLContext,
+    ) {
+      requireAdmin(ctx);
+      const schema = z.object({
+        phone: z.string().regex(/^1[3-9]\d{9}$/),
+        code: z.string().regex(/^\d{6}$/),
+      });
+      const input = zodToGraphQLError(schema, args.input);
+
+      // Verify SMS code for the phone being added
+      const kvKey = getSmsTmpCodeKey(input.phone);
+      const storedCode = await ctx.env.KV.get(kvKey);
+      if (!storedCode || storedCode !== input.code) {
+        throw validationError("code", "SMS code is invalid or expired");
+      }
+      await ctx.env.KV.delete(kvKey);
+
+      // Add to admin phone list
+      const raw = await ctx.env.KV.get(ADMIN_PHONES_KV_KEY);
+      const phones: string[] = raw ? JSON.parse(raw) : [];
+      if (!phones.includes(input.phone)) {
+        phones.push(input.phone);
+        await ctx.env.KV.put(ADMIN_PHONES_KV_KEY, JSON.stringify(phones));
+      }
+
+      // Upgrade the user with this phone to admin
+      const tdb = dbFactory(ctx.env.DB);
+      const userWithPhone = await tdb.query.userInfoTable.findFirst({
+        where: (ui, { eq }) => eq(ui.phone, input.phone),
+        columns: { id: true },
+      });
+      if (userWithPhone) {
+        await tdb
+          .update(users)
+          .set({ role: "admin" })
+          .where(drizzle.eq(users.id, userWithPhone.id));
+      }
+
+      return phones;
+    },
+
+    async removeAdminPhone(
+      _source: unknown,
+      args: { input: unknown },
+      ctx: GQLContext,
+    ) {
+      requireAdmin(ctx);
+      const schema = z.object({
+        phone: z.string().regex(/^1[3-9]\d{9}$/),
+        code: z.string().regex(/^\d{6}$/),
+      });
+      const input = zodToGraphQLError(schema, args.input);
+
+      // Verify SMS code for authorization
+      const kvKey = getSmsTmpCodeKey(input.phone);
+      const storedCode = await ctx.env.KV.get(kvKey);
+      if (!storedCode || storedCode !== input.code) {
+        throw validationError("code", "SMS code is invalid or expired");
+      }
+      await ctx.env.KV.delete(kvKey);
+
+      // Remove from admin phone list
+      const raw = await ctx.env.KV.get(ADMIN_PHONES_KV_KEY);
+      const phones: string[] = raw ? JSON.parse(raw) : [];
+      const updated = phones.filter((p) => p !== input.phone);
+      await ctx.env.KV.put(ADMIN_PHONES_KV_KEY, JSON.stringify(updated));
+
+      return updated;
     },
   },
 };

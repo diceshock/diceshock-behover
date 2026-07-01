@@ -20,6 +20,7 @@ import { FACTORY } from "../factory";
 import { WechatMP, WechatMPSilent, WechatOpen } from "../providers/wechat";
 import { injectCrossDataToCtx } from "../utils";
 import { genNickname, getSmsTmpCodeKey } from "../utils/auth";
+import { mergeByPhone } from "../utils/phoneMerge";
 
 declare module "@auth/core/types" {
   interface User {
@@ -151,6 +152,48 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
               });
             }
           }
+
+          // After unionid merge, check if user has a phone → trigger phone merge
+          const tdbPhone = db(c.env.DB);
+          const userInfoForMerge = await tdbPhone.query.userInfoTable.findFirst({
+            where: (ui, { eq }) => eq(ui.id, token.sub as string),
+            columns: { phone: true },
+          });
+          if (userInfoForMerge?.phone) {
+            const phoneResult = await mergeByPhone(
+              c.env.DB,
+              c.env.KV,
+              token.sub as string,
+              userInfoForMerge.phone,
+            );
+            if (phoneResult.merged) {
+              console.log("[auth:wechat-phone-merge]", {
+                userId: (token.sub as string).slice(-8),
+                phone: userInfoForMerge.phone,
+                mergedUserIds: phoneResult.mergedUserIds,
+              });
+            }
+          }
+        }
+
+        // Phone-based merge for SMS login
+        if (account?.provider === "SMS" && token.sub && token.phone) {
+          const phone = token.phone as string;
+          const mergeResult = await mergeByPhone(
+            c.env.DB,
+            c.env.KV,
+            token.sub as string,
+            phone,
+          );
+          if (mergeResult.merged) {
+            console.log("[auth:phone-merge] SMS login triggered merge", {
+              userId: (token.sub as string).slice(-8),
+              phone,
+              mergedUserIds: mergeResult.mergedUserIds,
+              finalRole: mergeResult.role,
+            });
+          }
+          token.role = mergeResult.role as UserRole;
         }
 
         if (token.sub) {

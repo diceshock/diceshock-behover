@@ -162,6 +162,12 @@ input UpdateProfileInput {
 extend type Query {
   getTotpSecret: TotpSecretResult! # @auth(role: CUSTOMER)
   totpSecret: TotpSecretResult! # @auth(role: CUSTOMER)
+  adminPhones: [String!]! # @auth(role: ADMIN)
+}
+
+input AdminPhoneInput {
+  phone: String!
+  code: String!
 }
 
 extend type Mutation {
@@ -172,6 +178,8 @@ extend type Mutation {
   updateMyUserInfo(input: UpdateMyUserInfoInput!): UserInfoUpdateResult! # @auth(role: CUSTOMER)
   updatePreferences(input: UpdatePreferencesInput!): UserProfile! # @auth(role: CUSTOMER)
   verifyTotp(input: VerifyTotpInput!): TotpVerificationResult! # @auth(role: STAFF)
+  addAdminPhone(input: AdminPhoneInput!): [String!]! # @auth(role: ADMIN)
+  removeAdminPhone(input: AdminPhoneInput!): [String!]! # @auth(role: ADMIN)
 }
 
 
@@ -1581,4 +1589,97 @@ extend type Mutation {
   createPreference(input: CreatePreferenceInput!): UserPreference!
   deletePreference(id: ID!): DeletePreferenceResult!
   togglePreference(id: ID!): UserPreference!
+}
+
+# ─── WeChat Menu Management ──────────────────────────────────────────────────
+
+enum WechatMenuSnapshotStatus {
+  DRAFT
+  PUBLISHED
+}
+
+type WechatMenuSnapshot {
+  id: ID!
+  name: String!
+  storeId: ID
+  data: String!
+  status: WechatMenuSnapshotStatus!
+  summary: String
+  createdAt: String
+  publishedAt: String
+}
+
+type WechatMenuDraft {
+  data: String!
+  snapshotId: ID
+  snapshotName: String
+  status: WechatMenuSnapshotStatus
+}
+
+input SaveWechatMenuSnapshotInput {
+  name: String!
+  data: String!
+  storeId: ID
+}
+
+type WechatMenuPublishResult {
+  success: Boolean!
+  error: String
+  snapshot: WechatMenuSnapshot
+}
+
+type WechatMenuTranslation {
+  locale: String!
+  text: String!
+}
+
+type WechatMenuTranslateResult {
+  translations: [WechatMenuTranslation!]!
+}
+
+type WechatMenuVariable {
+  id: String!
+  label: String!
+  description: String
+  example: String
+}
+
+extend type Query {
+  wechatMenuDraft(storeId: ID): WechatMenuDraft! # @auth(role: STAFF)
+  wechatMenuSnapshots(storeId: ID): [WechatMenuSnapshot!]! # @auth(role: STAFF)
+  wechatMenuSnapshot(id: ID!): WechatMenuSnapshot! # @auth(role: STAFF)
+  wechatMenuVariables: [WechatMenuVariable!]! # @auth(role: STAFF)
+}
+
+extend type Mutation {
+  saveWechatMenuSnapshot(input: SaveWechatMenuSnapshotInput!): WechatMenuSnapshot! # @auth(role: STAFF)
+  publishWechatMenuSnapshot(storeId: ID): WechatMenuPublishResult! # @auth(role: STAFF)
+  restoreWechatMenuSnapshot(id: ID!): WechatMenuSnapshot! # @auth(role: STAFF)
+  translateWechatMenuText(text: String!, targetLocales: [String!]!): WechatMenuTranslateResult! # @auth(role: STAFF)
+}
+
+# ─── WeChat Article Publish ────────────────────────────────────────────────────
+
+enum ArticleType {
+  ACTIVE
+  EVENT
+}
+
+input PublishArticleInput {
+  type: ArticleType!
+  id: ID!
+  """If true, immediately publish after creating draft"""
+  autoPublish: Boolean = false
+}
+
+type ArticlePublishResult {
+  success: Boolean!
+  draftMediaId: String
+  publishId: String
+  imageUrls: [String!]
+  error: String
+}
+
+extend type Mutation {
+  publishArticleToWechat(input: PublishArticleInput!): ArticlePublishResult! # @auth(role: STAFF)
 }

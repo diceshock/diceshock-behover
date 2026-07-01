@@ -14,6 +14,7 @@ import type { PreferenceCategory } from "@/shared/preferences/types";
 import type { MutateAction, MutateArgs } from "../graphql/mutateActions";
 import { MUTATE_ACTIONS } from "../graphql/mutateActions";
 import { SITE_LINKS } from "../linkRegistry";
+import { mergeByPhone } from "@/server/utils/phoneMerge";
 import type { ToolContext } from "./totp";
 
 const { and, eq } = drizzle;
@@ -1139,24 +1140,25 @@ async function handleVerifyPhone(
 
   const d = db(env.DB);
 
-  const existingAccount = await d
-    .select({ userId: accounts.userId })
-    .from(accounts)
-    .where(
-      and(eq(accounts.provider, "SMS"), eq(accounts.providerAccountId, phone)),
-    )
-    .limit(1);
-
-  if (existingAccount.length > 0 && existingAccount[0].userId !== userId) {
-    return "该手机号已被其他账号使用";
-  }
-
+  // Update phone on current user
   await d
     .update(userInfoTable)
     .set({ phone })
     .where(eq(userInfoTable.id, userId));
 
-  if (existingAccount.length === 0) {
+  // Ensure SMS account record exists for this user
+  const currentAccount = await d
+    .select({ userId: accounts.userId })
+    .from(accounts)
+    .where(and(eq(accounts.userId, userId), eq(accounts.provider, "SMS")))
+    .limit(1);
+
+  if (currentAccount.length > 0) {
+    await d
+      .update(accounts)
+      .set({ providerAccountId: phone })
+      .where(and(eq(accounts.userId, userId), eq(accounts.provider, "SMS")));
+  } else {
     const accountValues = {
       userId,
       type: "credentials",
@@ -1164,11 +1166,25 @@ async function handleVerifyPhone(
       providerAccountId: phone,
     };
     // @ts-expect-error - Drizzle column $type restricts to AdapterAccountType
-    // which excludes "credentials", but it's valid at runtime
     await d.insert(accounts).values(accountValues);
   }
 
-  return `[通知] 手机号绑定成功\n${phone.slice(0, 3)}****${phone.slice(-4)}\n${SITE_LINKS.me()}`;
+  // Merge any other accounts with the same phone
+  const mergeResult = await mergeByPhone(env.DB, env.KV, userId, phone);
+
+  let msg = `[通知] 手机号绑定成功\n${phone.slice(0, 3)}****${phone.slice(-4)}`;
+  if (mergeResult.merged) {
+    msg += `\n已合并 ${mergeResult.mergedUserIds.length} 个关联账号`;
+    console.log("[wechat:verify-phone-merge]", {
+      userId,
+      phone,
+      mergedUserIds: mergeResult.mergedUserIds,
+      finalRole: mergeResult.role,
+    });
+  }
+  msg += `\n${SITE_LINKS.me()}`;
+
+  return msg;
 }
 
 async function handleBindGsz(

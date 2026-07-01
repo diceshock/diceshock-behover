@@ -24,6 +24,7 @@ import { Route as DashMediaRouteImport } from './routers/dash/media'
 import { Route as DashGszRouteImport } from './routers/dash/gsz'
 import { Route as DashEventsRouteImport } from './routers/dash/events'
 import { Route as DashCrawlerRouteImport } from './routers/dash/crawler'
+import { Route as DashAdminPhonesRouteImport } from './routers/dash/admin-phones'
 import { Route as DashActivesRouteImport } from './routers/dash/actives'
 import { Route as Char123StoreLocaleChar125WithHomeLoIndexRouteImport } from './routers/{-$storeLocale}/_with-home-lo/index'
 import { Route as Char123StoreLocaleChar125TCodeRouteImport } from './routers/{-$storeLocale}/t.$code'
@@ -126,6 +127,11 @@ const DashEventsRoute = DashEventsRouteImport.update({
 const DashCrawlerRoute = DashCrawlerRouteImport.update({
   id: '/crawler',
   path: '/crawler',
+  getParentRoute: () => DashRoute,
+} as any)
+const DashAdminPhonesRoute = DashAdminPhonesRouteImport.update({
+  id: '/admin-phones',
+  path: '/admin-phones',
   getParentRoute: () => DashRoute,
 } as any)
 const DashActivesRoute = DashActivesRouteImport.update({
@@ -274,6 +280,7 @@ export interface FileRoutesByFullPath {
   '/dash': typeof DashRouteWithChildren
   '/{-$storeLocale}': typeof Char123StoreLocaleChar125RouteWithChildren
   '/dash/actives': typeof DashActivesRoute
+  '/dash/admin-phones': typeof DashAdminPhonesRoute
   '/dash/crawler': typeof DashCrawlerRoute
   '/dash/events': typeof DashEventsRoute
   '/dash/gsz': typeof DashGszRoute
@@ -314,6 +321,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/{-$storeLocale}': typeof Char123StoreLocaleChar125WithHomeLoIndexRoute
   '/dash/actives': typeof DashActivesRoute
+  '/dash/admin-phones': typeof DashAdminPhonesRoute
   '/dash/crawler': typeof DashCrawlerRoute
   '/dash/events': typeof DashEventsRoute
   '/dash/gsz': typeof DashGszRoute
@@ -355,6 +363,7 @@ export interface FileRoutesById {
   '/dash': typeof DashRouteWithChildren
   '/{-$storeLocale}': typeof Char123StoreLocaleChar125RouteWithChildren
   '/dash/actives': typeof DashActivesRoute
+  '/dash/admin-phones': typeof DashAdminPhonesRoute
   '/dash/crawler': typeof DashCrawlerRoute
   '/dash/events': typeof DashEventsRoute
   '/dash/gsz': typeof DashGszRoute
@@ -399,6 +408,7 @@ export interface FileRouteTypes {
     | '/dash'
     | '/{-$storeLocale}'
     | '/dash/actives'
+    | '/dash/admin-phones'
     | '/dash/crawler'
     | '/dash/events'
     | '/dash/gsz'
@@ -439,6 +449,7 @@ export interface FileRouteTypes {
   to:
     | '/{-$storeLocale}'
     | '/dash/actives'
+    | '/dash/admin-phones'
     | '/dash/crawler'
     | '/dash/events'
     | '/dash/gsz'
@@ -479,6 +490,7 @@ export interface FileRouteTypes {
     | '/dash'
     | '/{-$storeLocale}'
     | '/dash/actives'
+    | '/dash/admin-phones'
     | '/dash/crawler'
     | '/dash/events'
     | '/dash/gsz'
@@ -629,6 +641,13 @@ declare module '@tanstack/react-router' {
       path: '/crawler'
       fullPath: '/dash/crawler'
       preLoaderRoute: typeof DashCrawlerRouteImport
+      parentRoute: typeof DashRoute
+    }
+    '/dash/admin-phones': {
+      id: '/dash/admin-phones'
+      path: '/admin-phones'
+      fullPath: '/dash/admin-phones'
+      preLoaderRoute: typeof DashAdminPhonesRouteImport
       parentRoute: typeof DashRoute
     }
     '/dash/actives': {
@@ -811,6 +830,7 @@ declare module '@tanstack/react-router' {
 
 interface DashRouteChildren {
   DashActivesRoute: typeof DashActivesRoute
+  DashAdminPhonesRoute: typeof DashAdminPhonesRoute
   DashCrawlerRoute: typeof DashCrawlerRoute
   DashEventsRoute: typeof DashEventsRoute
   DashGszRoute: typeof DashGszRoute
@@ -832,6 +852,7 @@ interface DashRouteChildren {
 
 const DashRouteChildren: DashRouteChildren = {
   DashActivesRoute: DashActivesRoute,
+  DashAdminPhonesRoute: DashAdminPhonesRoute,
   DashCrawlerRoute: DashCrawlerRoute,
   DashEventsRoute: DashEventsRoute,
   DashGszRoute: DashGszRoute,

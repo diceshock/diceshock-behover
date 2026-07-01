@@ -119,6 +119,25 @@ export type AddWechatTemplateFromLibraryInput = {
   templateIdShort: Scalars['String']['input'];
 };
 
+export type AdminPhoneInput = {
+  code: Scalars['String']['input'];
+  phone: Scalars['String']['input'];
+};
+
+export type ArticlePublishResult = {
+  __typename?: 'ArticlePublishResult';
+  draftMediaId?: Maybe<Scalars['String']['output']>;
+  error?: Maybe<Scalars['String']['output']>;
+  imageUrls?: Maybe<Array<Scalars['String']['output']>>;
+  publishId?: Maybe<Scalars['String']['output']>;
+  success: Scalars['Boolean']['output'];
+};
+
+export enum ArticleType {
+  Active = 'ACTIVE',
+  Event = 'EVENT'
+}
+
 export type BatchOperationResult = {
   __typename?: 'BatchOperationResult';
   error?: Maybe<Scalars['String']['output']>;
@@ -256,6 +275,13 @@ export type CreateMembershipPlanInput = {
   userId: Scalars['ID']['input'];
 };
 
+export type CreatePreferenceInput = {
+  categories: Array<Scalars['String']['input']>;
+  playerCount?: InputMaybe<Scalars['Int']['input']>;
+  rawText: Scalars['String']['input'];
+  rrule: Scalars['String']['input'];
+};
+
 export type CreateShortlinkInput = {
   expiresInSeconds?: InputMaybe<Scalars['Int']['input']>;
   slug?: InputMaybe<Scalars['String']['input']>;
@@ -287,6 +313,11 @@ export type DeductStoredValueInput = {
   date: Scalars['String']['input'];
   note: Scalars['String']['input'];
   userId: Scalars['ID']['input'];
+};
+
+export type DeletePreferenceResult = {
+  __typename?: 'DeletePreferenceResult';
+  success: Scalars['Boolean']['output'];
 };
 
 export type Event = {
@@ -644,6 +675,7 @@ export enum MembershipPlanType {
 
 export type Mutation = {
   __typename?: 'Mutation';
+  addAdminPhone: Array<Scalars['String']['output']>;
   addPoints: UserPointsLog;
   addTableOccupancy: TableOccupancy;
   addWechatTemplateFromLibrary: WechatTemplateAssignment;
@@ -651,20 +683,25 @@ export type Mutation = {
   batchPauseOrders: Array<BatchOrderResult>;
   batchRemoveActives: Array<Active>;
   batchResumeOrders: Array<BatchOrderResult>;
+  batchSettle: Array<BatchOrderResult>;
   batchSettleOrders: BatchSettlementResult;
   batchSettlementPreview: Array<SettlementPreview>;
   batchSyncMahjongMatchesToGsz: GszSyncResult;
   cancelBatchSettlement: Array<BatchOrderResult>;
+  cancelSettlement: BatchOrderResult;
+  cleanupOrphanedData: CleanupOrphanedDataResult;
   cleanupOrphanedOrders: CleanupOrphanedDataResult;
   closeShortlink: Shortlink;
   createActive: Active;
   createEvent: Event;
   createMembershipPlan: MembershipPlan;
+  createPreference: UserPreference;
   createShortlink: Shortlink;
   createTable: Table;
   createTempIdentity: TempIdentity;
   deductPoints: UserPointsLog;
   deductStoredValue: MembershipDeductionResult;
+  deletePreference: DeletePreferenceResult;
   disableUser: UserProfile;
   endOrder: TableOccupancy;
   gszRegister: GszCustomer;
@@ -676,13 +713,17 @@ export type Mutation = {
   leaveTableWithTempIdentity: SettlementResult;
   occupyTable: OccupyTableResult;
   occupyTableWithTempIdentity: OccupyTableResult;
+  parsePreference: PreferenceParseResult;
   pauseMyOrder: TableOccupancy;
   pauseOrder: TableOccupancy;
+  publishArticleToWechat: ArticlePublishResult;
   publishPricingSnapshot: PricingSnapshot;
+  publishWechatMenuSnapshot: WechatMenuPublishResult;
   regenerateTableCode: Table;
   registerMahjong: MahjongRegistrationStatus;
   removeActive: Active;
   removeActiveRegistration: ActiveRegistration;
+  removeAdminPhone: Array<Scalars['String']['output']>;
   removeEvent: Event;
   removeMediaObject: MediaObject;
   removeMembershipPlan: MembershipPlan;
@@ -693,31 +734,45 @@ export type Mutation = {
   requestSmsCode: SmsCodeResult;
   resetCrawlerErrors: CrawlerStats;
   restorePricingSnapshot: PricingSnapshot;
+  restoreWechatMenuSnapshot: WechatMenuSnapshot;
   resumeOrder: TableOccupancy;
   saveMahjongMatch: MahjongMatch;
   savePricingSnapshot: PricingSnapshot;
+  saveWechatMenuSnapshot: WechatMenuSnapshot;
+  sendSmsCode: SmsCodeResult;
   sendWechatTemplateTest: WechatTemplateAssignment;
   setCaptchaEnabled: CaptchaSettings;
   settleOrder: SettlementResult;
+  startOrder: TableOccupancy;
   syncMahjongMatchToGsz: GszSyncResult;
   syncOwnedBoardGames: BoardGameSyncResult;
   terminateMahjongMatch: MahjongMatch;
   toggleEventPublish: Event;
+  togglePreference: UserPreference;
   toggleTableStatus: Table;
   transferTempIdentity: TempIdentityTransferResult;
+  translateWechatMenuText: WechatMenuTranslateResult;
   updateActive: Active;
   updateEvent: Event;
   updateMahjongScore: MahjongMatch;
   updateMembershipPlan: MembershipPlan;
   updateMyPreferences: UserProfile;
   updateMyUserInfo: UserInfoUpdateResult;
+  updatePreferences: UserProfile;
+  updateProfile: UserInfoUpdateResult;
   updateShortlinkExpiry: Shortlink;
   updateTable: Table;
   updateUser: UserProfile;
   updateUserRole: UserProfile;
   upsertBusinessCard: BusinessCard;
+  verifyPhone: UserInfoUpdateResult;
   verifyTotp: TotpVerificationResult;
   wakeOwnedBoardGames: BoardGameSyncResult;
+};
+
+
+export type MutationAddAdminPhoneArgs = {
+  input: AdminPhoneInput;
 };
 
 
@@ -757,6 +812,11 @@ export type MutationBatchResumeOrdersArgs = {
 };
 
 
+export type MutationBatchSettleArgs = {
+  input: BatchSettleInput;
+};
+
+
 export type MutationBatchSettleOrdersArgs = {
   input: BatchSettleInput;
 };
@@ -774,6 +834,16 @@ export type MutationBatchSyncMahjongMatchesToGszArgs = {
 
 export type MutationCancelBatchSettlementArgs = {
   ids: Array<Scalars['ID']['input']>;
+};
+
+
+export type MutationCancelSettlementArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type MutationCleanupOrphanedDataArgs = {
+  dryRun?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 
@@ -802,6 +872,11 @@ export type MutationCreateMembershipPlanArgs = {
 };
 
 
+export type MutationCreatePreferenceArgs = {
+  input: CreatePreferenceInput;
+};
+
+
 export type MutationCreateShortlinkArgs = {
   input: CreateShortlinkInput;
 };
@@ -819,6 +894,11 @@ export type MutationDeductPointsArgs = {
 
 export type MutationDeductStoredValueArgs = {
   input: DeductStoredValueInput;
+};
+
+
+export type MutationDeletePreferenceArgs = {
+  id: Scalars['ID']['input'];
 };
 
 
@@ -877,6 +957,11 @@ export type MutationOccupyTableWithTempIdentityArgs = {
 };
 
 
+export type MutationParsePreferenceArgs = {
+  rawText: Scalars['String']['input'];
+};
+
+
 export type MutationPauseMyOrderArgs = {
   input: LeaveTableInput;
 };
@@ -887,7 +972,17 @@ export type MutationPauseOrderArgs = {
 };
 
 
+export type MutationPublishArticleToWechatArgs = {
+  input: PublishArticleInput;
+};
+
+
 export type MutationPublishPricingSnapshotArgs = {
+  storeId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+
+export type MutationPublishWechatMenuSnapshotArgs = {
   storeId?: InputMaybe<Scalars['ID']['input']>;
 };
 
@@ -909,6 +1004,11 @@ export type MutationRemoveActiveArgs = {
 
 export type MutationRemoveActiveRegistrationArgs = {
   registrationId: Scalars['ID']['input'];
+};
+
+
+export type MutationRemoveAdminPhoneArgs = {
+  input: AdminPhoneInput;
 };
 
 
@@ -958,6 +1058,11 @@ export type MutationRestorePricingSnapshotArgs = {
 };
 
 
+export type MutationRestoreWechatMenuSnapshotArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
 export type MutationResumeOrderArgs = {
   id: Scalars['ID']['input'];
 };
@@ -970,6 +1075,16 @@ export type MutationSaveMahjongMatchArgs = {
 
 export type MutationSavePricingSnapshotArgs = {
   input: SavePricingSnapshotInput;
+};
+
+
+export type MutationSaveWechatMenuSnapshotArgs = {
+  input: SaveWechatMenuSnapshotInput;
+};
+
+
+export type MutationSendSmsCodeArgs = {
+  input: SendSmsCodeInput;
 };
 
 
@@ -986,6 +1101,11 @@ export type MutationSetCaptchaEnabledArgs = {
 
 export type MutationSettleOrderArgs = {
   input: SettleOrderInput;
+};
+
+
+export type MutationStartOrderArgs = {
+  input: StartOrderInput;
 };
 
 
@@ -1012,6 +1132,11 @@ export type MutationToggleEventPublishArgs = {
 };
 
 
+export type MutationTogglePreferenceArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
 export type MutationToggleTableStatusArgs = {
   id: Scalars['ID']['input'];
 };
@@ -1020,6 +1145,12 @@ export type MutationToggleTableStatusArgs = {
 export type MutationTransferTempIdentityArgs = {
   tempId: Scalars['ID']['input'];
   userId: Scalars['ID']['input'];
+};
+
+
+export type MutationTranslateWechatMenuTextArgs = {
+  targetLocales: Array<Scalars['String']['input']>;
+  text: Scalars['String']['input'];
 };
 
 
@@ -1054,6 +1185,16 @@ export type MutationUpdateMyUserInfoArgs = {
 };
 
 
+export type MutationUpdatePreferencesArgs = {
+  input: UpdatePreferencesInput;
+};
+
+
+export type MutationUpdateProfileArgs = {
+  input: UpdateProfileInput;
+};
+
+
 export type MutationUpdateShortlinkExpiryArgs = {
   expiresInSeconds?: InputMaybe<Scalars['Int']['input']>;
   slug: Scalars['String']['input'];
@@ -1077,6 +1218,11 @@ export type MutationUpdateUserRoleArgs = {
 
 export type MutationUpsertBusinessCardArgs = {
   input: UpsertBusinessCardInput;
+};
+
+
+export type MutationVerifyPhoneArgs = {
+  input: VerifyPhoneInput;
 };
 
 
@@ -1216,6 +1362,23 @@ export type PaginationInput = {
   offset?: InputMaybe<Scalars['Int']['input']>;
 };
 
+export type PreferenceParseError = {
+  __typename?: 'PreferenceParseError';
+  error: Scalars['String']['output'];
+  success: Scalars['Boolean']['output'];
+};
+
+export type PreferenceParseResult = PreferenceParseError | PreferenceParseSuccess;
+
+export type PreferenceParseSuccess = {
+  __typename?: 'PreferenceParseSuccess';
+  categories: Array<Scalars['String']['output']>;
+  confidence: Scalars['Float']['output'];
+  playerCount?: Maybe<Scalars['Int']['output']>;
+  rrule: Scalars['String']['output'];
+  success: Scalars['Boolean']['output'];
+};
+
 export type PriceBreakdown = {
   __typename?: 'PriceBreakdown';
   billableHalfHours: Scalars['Int']['output'];
@@ -1281,12 +1444,20 @@ export enum PricingSnapshotStatus {
   Published = 'PUBLISHED'
 }
 
+export type PublishArticleInput = {
+  /** If true, immediately publish after creating draft */
+  autoPublish?: InputMaybe<Scalars['Boolean']['input']>;
+  id: Scalars['ID']['input'];
+  type: ArticleType;
+};
+
 export type Query = {
   __typename?: 'Query';
   active: Active;
   activeMahjongMatches: Array<ActiveMahjongMatch>;
   activeParticipants: Array<ActiveRegistration>;
   actives: ActiveListResult;
+  adminPhones: Array<Scalars['String']['output']>;
   businessCard?: Maybe<BusinessCard>;
   captchaSettings: CaptchaSettings;
   crawlerErrors: Array<CrawlerError>;
@@ -1321,6 +1492,8 @@ export type Query = {
   myMembershipPlans: Array<MembershipPlan>;
   myPPStats: PpStats;
   myPointsBalance: Scalars['Int']['output'];
+  myPreferences: Array<UserPreference>;
+  myPreferencesCount: Scalars['Int']['output'];
   myRankings: Array<RankingSummary>;
   occupanciesByUser: Array<TableOccupancy>;
   order: TableOccupancy;
@@ -1339,9 +1512,14 @@ export type Query = {
   shortlinks: ShortlinkListResult;
   tableByCode: Table;
   tempIdentityActiveOccupancies: Array<ActiveOccupancySummary>;
+  totpSecret: TotpSecretResult;
   user?: Maybe<UserProfile>;
   userBadges: Array<UserBadge>;
   validateTempIdentity: TempIdentity;
+  wechatMenuDraft: WechatMenuDraft;
+  wechatMenuSnapshot: WechatMenuSnapshot;
+  wechatMenuSnapshots: Array<WechatMenuSnapshot>;
+  wechatMenuVariables: Array<WechatMenuVariable>;
   wechatOpenConfig: WechatOpenConfig;
   wechatTemplateSlots: Array<WechatTemplateSlot>;
   wechatTemplates: WechatTemplateListResult;
@@ -1602,6 +1780,21 @@ export type QueryValidateTempIdentityArgs = {
   tempId: Scalars['ID']['input'];
 };
 
+
+export type QueryWechatMenuDraftArgs = {
+  storeId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+
+export type QueryWechatMenuSnapshotArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type QueryWechatMenuSnapshotsArgs = {
+  storeId?: InputMaybe<Scalars['ID']['input']>;
+};
+
 export type RankingSummary = {
   __typename?: 'RankingSummary';
   category: LeaderboardCategory;
@@ -1665,12 +1858,23 @@ export type SavePricingSnapshotInput = {
   storeId?: InputMaybe<Scalars['ID']['input']>;
 };
 
+export type SaveWechatMenuSnapshotInput = {
+  data: Scalars['String']['input'];
+  name: Scalars['String']['input'];
+  storeId?: InputMaybe<Scalars['ID']['input']>;
+};
+
 export type SeatUpdatePayload = {
   __typename?: 'SeatUpdatePayload';
   occupancies: Array<TableOccupancy>;
   table: Table;
   tableCode: Scalars['String']['output'];
   updatedAt: Scalars['String']['output'];
+};
+
+export type SendSmsCodeInput = {
+  botcheck?: InputMaybe<Scalars['String']['input']>;
+  phone: Scalars['String']['input'];
 };
 
 export type SettleOrderInput = {
@@ -1736,6 +1940,15 @@ export enum SortOrder {
   Asc = 'ASC',
   Desc = 'DESC'
 }
+
+export type StartOrderInput = {
+  planId?: InputMaybe<Scalars['ID']['input']>;
+  seats?: InputMaybe<Scalars['Int']['input']>;
+  storeId?: InputMaybe<Scalars['ID']['input']>;
+  tableId: Scalars['ID']['input'];
+  tempId?: InputMaybe<Scalars['ID']['input']>;
+  userId?: InputMaybe<Scalars['ID']['input']>;
+};
 
 export type Store = {
   __typename?: 'Store';
@@ -1829,6 +2042,8 @@ export type TableFilterInput = {
 
 export type TableOccupancy = {
   __typename?: 'TableOccupancy';
+  amount?: Maybe<Scalars['Int']['output']>;
+  duration: Scalars['Int']['output'];
   endAt?: Maybe<Scalars['String']['output']>;
   finalPrice?: Maybe<Scalars['Int']['output']>;
   id: Scalars['ID']['output'];
@@ -1962,6 +2177,10 @@ export type UpdatePreferencesInput = {
   preferredStoreId?: InputMaybe<Scalars['ID']['input']>;
 };
 
+export type UpdateProfileInput = {
+  nickname: Scalars['String']['input'];
+};
+
 export type UpdateRoleInput = {
   id: Scalars['ID']['input'];
   role: UserRole;
@@ -2031,6 +2250,19 @@ export type UserPointsLog = {
   userId: Scalars['ID']['output'];
 };
 
+export type UserPreference = {
+  __typename?: 'UserPreference';
+  categories: Array<Scalars['String']['output']>;
+  createdAt?: Maybe<Scalars['String']['output']>;
+  enabled: Scalars['Boolean']['output'];
+  id: Scalars['ID']['output'];
+  playerCount?: Maybe<Scalars['Int']['output']>;
+  rawText: Scalars['String']['output'];
+  rrule: Scalars['String']['output'];
+  updatedAt?: Maybe<Scalars['String']['output']>;
+  userId: Scalars['ID']['output'];
+};
+
 export type UserProfile = {
   __typename?: 'UserProfile';
   avatarUrl?: Maybe<Scalars['String']['output']>;
@@ -2061,10 +2293,66 @@ export type UserSearchInput = {
   searchWords?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type VerifyPhoneInput = {
+  code: Scalars['String']['input'];
+  phone: Scalars['String']['input'];
+};
+
 export type VerifyTotpInput = {
   loginTime: Scalars['Float']['input'];
   totp: Scalars['String']['input'];
   userAgent: Scalars['String']['input'];
+};
+
+export type WechatMenuDraft = {
+  __typename?: 'WechatMenuDraft';
+  data: Scalars['String']['output'];
+  snapshotId?: Maybe<Scalars['ID']['output']>;
+  snapshotName?: Maybe<Scalars['String']['output']>;
+  status?: Maybe<WechatMenuSnapshotStatus>;
+};
+
+export type WechatMenuPublishResult = {
+  __typename?: 'WechatMenuPublishResult';
+  error?: Maybe<Scalars['String']['output']>;
+  snapshot?: Maybe<WechatMenuSnapshot>;
+  success: Scalars['Boolean']['output'];
+};
+
+export type WechatMenuSnapshot = {
+  __typename?: 'WechatMenuSnapshot';
+  createdAt?: Maybe<Scalars['String']['output']>;
+  data: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+  publishedAt?: Maybe<Scalars['String']['output']>;
+  status: WechatMenuSnapshotStatus;
+  storeId?: Maybe<Scalars['ID']['output']>;
+  summary?: Maybe<Scalars['String']['output']>;
+};
+
+export enum WechatMenuSnapshotStatus {
+  Draft = 'DRAFT',
+  Published = 'PUBLISHED'
+}
+
+export type WechatMenuTranslateResult = {
+  __typename?: 'WechatMenuTranslateResult';
+  translations: Array<WechatMenuTranslation>;
+};
+
+export type WechatMenuTranslation = {
+  __typename?: 'WechatMenuTranslation';
+  locale: Scalars['String']['output'];
+  text: Scalars['String']['output'];
+};
+
+export type WechatMenuVariable = {
+  __typename?: 'WechatMenuVariable';
+  description?: Maybe<Scalars['String']['output']>;
+  example?: Maybe<Scalars['String']['output']>;
+  id: Scalars['String']['output'];
+  label: Scalars['String']['output'];
 };
 
 export type WechatOpenConfig = {
