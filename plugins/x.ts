@@ -19,6 +19,20 @@ function stripAnsi(s: string): string {
   return s.replace(ANSI_RE, "");
 }
 
+/** Strip pnpm-injected npm_config_ env vars that npm 11 doesn't recognize. */
+function cleanNpmEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  const bad = ["npm_config__jsr-registry", "npm_config_npm-globalconfig", "npm_config_verify_deps_before_run"];
+  for (const key of bad) delete env[key];
+  // Also drop any npm_config_ keys with hyphens (pnpm-specific, not valid for npm 11)
+  for (const key of Object.keys(env)) {
+    if (key.startsWith("npm_config_") && key !== "npm_config_user_agent" && key.includes("-")) {
+      delete env[key];
+    }
+  }
+  return env;
+}
+
 function run(opts: RunOpts): ChildProcess {
   const log = new RotatingLog(opts.name, opts.cmd.join(" "));
   const tag = opts.tag ? `[${opts.tag}] ` : "";
@@ -26,6 +40,7 @@ function run(opts: RunOpts): ChildProcess {
   const child = spawn(opts.cmd[0], opts.cmd.slice(1), {
     cwd: opts.cwd,
     stdio: ["inherit", "pipe", "pipe"],
+    env: cleanNpmEnv(),
   });
 
   child.stdout.on("data", (chunk: Buffer) => {
@@ -57,7 +72,7 @@ function devMode() {
   const children = apps.map((app) =>
     run({
       name: app.name,
-      cmd: ["npx", "vite", "--host"],
+      cmd: [resolve(root, "node_modules/.bin/vite"), "--host"],
       cwd: app.cwd,
       tag: app.name,
     }),
@@ -81,7 +96,7 @@ function nxMode() {
 
   const child = run({
     name,
-    cmd: ["npx", "nx", "run", target, ...extra],
+    cmd: [resolve(root, "node_modules/.bin/nx"), "run", target, ...extra],
     cwd: root,
   });
 
