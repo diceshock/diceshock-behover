@@ -18,6 +18,7 @@
  *   - Queries merged state to verify correctness
  */
 import { expect, test } from "@playwright/test";
+import type { APIRequestContext } from "@playwright/test";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -135,7 +136,7 @@ async function cleanupMergeTestData(): Promise<void> {
 
 /** Call GraphQL as a specific user via dev auth headers */
 async function gqlAs(
-  request: import("@playwright/test").APIRequestContext,
+  request: APIRequestContext,
   userId: string,
   query: string,
   variables?: Record<string, unknown>,
