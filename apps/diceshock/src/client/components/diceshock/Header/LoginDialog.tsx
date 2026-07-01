@@ -62,6 +62,12 @@ function WechatQREmbed({ onFallback }: { onFallback: () => void }) {
     containerRef.current.appendChild(iframe);
   }, [appId, key]);
 
+  useEffect(() => {
+    if (!loading && !appId) {
+      onFallback();
+    }
+  }, [loading, appId, onFallback]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -71,7 +77,6 @@ function WechatQREmbed({ onFallback }: { onFallback: () => void }) {
   }
 
   if (!appId) {
-    onFallback();
     return null;
   }
 
@@ -111,13 +116,19 @@ export default function LoginDialog({
   const { create: createTempIdentity } = useTempIdentity();
 
   const [captchaEnabled, setCaptchaEnabled] = useState(true);
+  const [captchaPrefix, setCaptchaPrefix] = useState<string | undefined>();
+  const [captchaSceneId, setCaptchaSceneId] = useState<string | undefined>();
   const [useQRFallback, setUseQRFallback] = useState(false);
   const client = useApolloClient();
 
   useEffect(() => {
     client
       .query({ query: CaptchaSettingsDocument })
-      .then(({ data }) => setCaptchaEnabled(data.captchaSettings.enabled))
+      .then(({ data }) => {
+        setCaptchaEnabled(data.captchaSettings.enabled);
+        if (data.captchaSettings.prefix) setCaptchaPrefix(data.captchaSettings.prefix);
+        if (data.captchaSettings.sceneId) setCaptchaSceneId(data.captchaSettings.sceneId);
+      })
       .catch(() => {});
   }, [client]);
 
@@ -137,6 +148,8 @@ export default function LoginDialog({
       activeTab === "phonenumber" &&
       import.meta.env.PROD &&
       captchaEnabled,
+    captchaPrefix,
+    captchaSceneId,
   });
 
   useEffect(() => {

@@ -2,6 +2,8 @@ query CaptchaSettings {
   captchaSettings {
     enabled
     disabledUntil
+    prefix
+    sceneId
   }
 }
 

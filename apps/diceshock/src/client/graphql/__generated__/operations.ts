@@ -886,7 +886,7 @@ export type RestorePricingSnapshotMutation = { restorePricingSnapshot: { id: str
 export type CaptchaSettingsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type CaptchaSettingsQuery = { captchaSettings: { enabled: boolean, disabledUntil: string | null } };
+export type CaptchaSettingsQuery = { captchaSettings: { enabled: boolean, disabledUntil: string | null, prefix: string | null, sceneId: string | null } };
 
 export type SetCaptchaEnabledMutationVariables = Exact<{
   enabled: boolean;
@@ -4368,6 +4368,8 @@ export const CaptchaSettingsDocument = gql`
   captchaSettings {
     enabled
     disabledUntil
+    prefix
+    sceneId
   }
 }
     `;

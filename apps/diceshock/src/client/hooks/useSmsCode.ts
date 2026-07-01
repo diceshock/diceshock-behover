@@ -10,8 +10,8 @@ import { apolloClient } from "@/client/graphql/client";
  * 使用弹出式验证，用户点击「获取验证码」时手动触发验证弹窗
  */
 
-const CAPTCHA_PREFIX = "1bqoki";
-const CAPTCHA_SCENE_ID = CAPTCHA_PREFIX;
+const DEFAULT_CAPTCHA_PREFIX = "1bqoki";
+const DEFAULT_CAPTCHA_SCENE_ID = "1iwji8e9";
 
 declare global {
   interface Window {
@@ -78,10 +78,14 @@ export default function useSmsCode({
   phone,
   containerId = "#captcha-element",
   enabled = true,
+  captchaPrefix = DEFAULT_CAPTCHA_PREFIX,
+  captchaSceneId = DEFAULT_CAPTCHA_SCENE_ID,
 }: {
   phone: string;
   containerId?: string;
   enabled?: boolean;
+  captchaPrefix?: string;
+  captchaSceneId?: string;
 }) {
   const _theme = useAtomValue(themeA);
   const [error, setError] = useState<string | null>(null);
@@ -92,6 +96,7 @@ export default function useSmsCode({
   const phoneRef = useRef(phone);
   phoneRef.current = phone;
   const initializingRef = useRef(false);
+  const captchaFailedRef = useRef(false);
 
   const userRequestedRef = useRef(false);
 
@@ -109,6 +114,7 @@ export default function useSmsCode({
   const initCaptchaInstance =
     useCallback(async (): Promise<AliyunCaptchaInstance | null> => {
       if (captchaInstanceRef.current) return captchaInstanceRef.current;
+      if (captchaFailedRef.current) return null;
       if (initializingRef.current) return null;
       if (!window.initAliyunCaptcha) return null;
 
@@ -117,9 +123,11 @@ export default function useSmsCode({
       try {
         let resolvedInstance: AliyunCaptchaInstance | null = null;
 
-        await window.initAliyunCaptcha({
-          SceneId: CAPTCHA_SCENE_ID,
-          prefix: CAPTCHA_PREFIX,
+        // 阿里云 SDK 内部在 scene 无效时会无限重试 InitCaptcha，
+        // 用 timeout 兜底防止永不 resolve
+        const initPromise = window.initAliyunCaptcha({
+          SceneId: captchaSceneId,
+          prefix: captchaPrefix,
           mode: "popup",
           element: containerId,
           // 不绑定 button — 我们手动调用 show()
@@ -170,6 +178,12 @@ export default function useSmsCode({
           language: "cn",
         });
 
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Captcha init timeout")), 8000),
+        );
+
+        await Promise.race([initPromise, timeoutPromise]);
+
         if (resolvedInstance) {
           captchaInstanceRef.current = resolvedInstance;
         }
@@ -177,11 +191,12 @@ export default function useSmsCode({
         return captchaInstanceRef.current;
       } catch (err) {
         console.error("初始化阿里云验证码失败:", err);
+        captchaFailedRef.current = true;
         return null;
       } finally {
         initializingRef.current = false;
       }
-    }, [containerId]);
+    }, [containerId, captchaPrefix, captchaSceneId]);
 
   // 等待 SDK 加载
   useEffect(() => {

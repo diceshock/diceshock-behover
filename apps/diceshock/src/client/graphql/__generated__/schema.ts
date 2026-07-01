@@ -224,6 +224,8 @@ export type CaptchaSettings = {
   __typename?: 'CaptchaSettings';
   disabledUntil?: Maybe<Scalars['String']['output']>;
   enabled: Scalars['Boolean']['output'];
+  prefix?: Maybe<Scalars['String']['output']>;
+  sceneId?: Maybe<Scalars['String']['output']>;
 };
 
 export type CleanupOrphanedDataResult = {

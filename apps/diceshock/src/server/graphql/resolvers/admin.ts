@@ -505,12 +505,17 @@ export const adminResolvers = {
     ) {
       const KV_KEY = "settings:captcha_disabled_until";
       const disabledUntil = await ctx.env.KV.get(KV_KEY);
+      const env = ctx.env as Record<string, unknown>;
+      const prefix = (env.CAPTCHA_PREFIX as string) || null;
+      const sceneId = (env.CAPTCHA_SCENE_ID as string) || null;
       if (!disabledUntil) {
-        return { enabled: true, disabledUntil: null };
+        return { enabled: true, disabledUntil: null, prefix, sceneId };
       }
       return {
         enabled: false,
         disabledUntil: new Date(Number(disabledUntil)).toISOString(),
+        prefix,
+        sceneId,
       };
     },
 

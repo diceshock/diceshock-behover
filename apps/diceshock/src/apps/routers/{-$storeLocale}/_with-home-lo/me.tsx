@@ -207,6 +207,8 @@ function RouteComponent() {
   const messages = useMessages();
 
   const [captchaEnabled, setCaptchaEnabled] = useState(true);
+  const [captchaPrefix, setCaptchaPrefix] = useState<string | undefined>();
+  const [captchaSceneId, setCaptchaSceneId] = useState<string | undefined>();
 
   const isAutoNickname = (userInfo?.meta as { auto_nickname?: boolean } | null)
     ?.auto_nickname;
@@ -261,7 +263,11 @@ function RouteComponent() {
       .query<CaptchaSettingsQuery>({
         query: CaptchaSettingsDocument,
       })
-      .then(({ data }) => setCaptchaEnabled(data.captchaSettings.enabled))
+      .then(({ data }) => {
+        setCaptchaEnabled(data.captchaSettings.enabled);
+        if (data.captchaSettings.prefix) setCaptchaPrefix(data.captchaSettings.prefix);
+        if (data.captchaSettings.sceneId) setCaptchaSceneId(data.captchaSettings.sceneId);
+      })
       .catch(() => {});
   }, [client]);
 
@@ -366,6 +372,8 @@ function RouteComponent() {
     phone,
     containerId: "#phone-captcha-container",
     enabled: isEditingPhone && import.meta.env.PROD && captchaEnabled,
+    captchaPrefix,
+    captchaSceneId,
   });
 
   const handleEditClick = useCallback(() => {

@@ -881,6 +881,8 @@ extend type Mutation {
 type CaptchaSettings {
   enabled: Boolean!
   disabledUntil: String
+  prefix: String
+  sceneId: String
 }
 
 type WechatOpenConfig {
