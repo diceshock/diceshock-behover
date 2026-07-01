@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import QRCode from "qrcode";
+import { useEffect, useRef } from "react";
 import HookHole from "@/client/assets/svg/hook-hole.svg?react";
 import QQ from "@/client/assets/svg/tencent-qq.svg?react";
 import Wechat from "@/client/assets/svg/wechat.svg?react";
@@ -18,11 +20,22 @@ const STORE_CONTACTS = {
   jdk: { wechat: "DiceShockJDK", label: "街道口店客服:" },
 } as const;
 
+const WECHAT_OA_URL = "http://weixin.qq.com/r/mp/7Cc3L1TEcgkNrRBM93L_";
+
 function RouteComponent() {
   const { t } = useTranslation();
   const { storeCode } = useStoreContext();
   const current = STORE_CONTACTS[storeCode] ?? STORE_CONTACTS.gg;
   const other = storeCode === "jdk" ? STORE_CONTACTS.gg : STORE_CONTACTS.jdk;
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    QRCode.toCanvas(canvasRef.current, WECHAT_OA_URL, {
+      width: 180,
+      margin: 1,
+    }).catch(() => {});
+  }, []);
 
   return (
     <>
@@ -91,6 +104,21 @@ function RouteComponent() {
 
                 {<CopyItem tx="GahonTian" />}
               </div>
+            </div>
+          </div>
+        </Swing>
+
+        <Swing>
+          <div className="card bg-base-200 h-[30rem] w-[20rem] shadow-xl border-b-2 border-base-300 mb-10 mx-10">
+            <figure className="relative h-[15rem] bg-success text-black">
+              <HookHole className="absolute text-base-100 left-1/2 top-[0.90rem] -translate-x-1/2 w-14" />
+
+              <Wechat className="size-14" />
+            </figure>
+            <div className="card-body items-center">
+              <h2 className="card-title">{t("contact.officialAccount")}</h2>
+              <p className="text-sm opacity-70">DiceShockDS</p>
+              <canvas ref={canvasRef} className="mt-2" />
             </div>
           </div>
         </Swing>

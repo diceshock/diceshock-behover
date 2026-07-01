@@ -306,7 +306,8 @@
     "qqGroupLabel": "QQ群(DiceShock桌游·日麻·主机):",
     "hostGahon": "联系主持人辣条(ID: Gahon):",
     "hostHygge": "联系主持人辣条(ID: Hygge):",
-    "customerService": "客服微信:"
+    "customerService": "客服微信:",
+    "officialAccount": "微信公众号"
   },
   "errors": {
     "notFound": "页面不存在",

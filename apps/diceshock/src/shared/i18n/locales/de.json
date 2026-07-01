@@ -306,7 +306,8 @@
     "qqGroupLabel": "QQ-Gruppe (DiceShock Brettspiele · Mahjong · Konsole):",
     "hostGahon": "Kontaktiere Host Latiao (ID: Gahon):",
     "hostHygge": "Kontaktiere Host Latiao (ID: Hygge):",
-    "customerService": "Kundendienst WeChat:"
+    "customerService": "Kundendienst WeChat:",
+    "officialAccount": "Offizielles Konto"
   },
   "errors": {
     "notFound": "Seite nicht gefunden",
