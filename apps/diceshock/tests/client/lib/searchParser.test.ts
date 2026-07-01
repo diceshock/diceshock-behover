@@ -243,6 +243,7 @@ describe("searchParser", () => {
       "role",
       "store",
       "name",
+      "date",
     ]);
     expect(getAvailableKeys(TABLE_SEARCH_GRAMMAR)).toEqual([
       "type",
@@ -255,6 +256,7 @@ describe("searchParser", () => {
       "type",
       "store",
       "creator",
+      "date",
     ]);
     expect(getAvailableKeys(EVENT_SEARCH_GRAMMAR)).toEqual([
       "status",
