@@ -20,7 +20,7 @@ import { FACTORY } from "../factory";
 import { WechatMP, WechatMPSilent, WechatOpen } from "../providers/wechat";
 import { injectCrossDataToCtx } from "../utils";
 import { genNickname, getSmsTmpCodeKey } from "../utils/auth";
-import { mergeByPhone } from "../utils/phoneMerge";
+import { mergeByPhone, mergeByUnionid } from "../utils/phoneMerge";
 
 declare module "@auth/core/types" {
   interface User {
@@ -116,39 +116,18 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
         if (account && profile && token.sub) {
           const unionid = getWechatProfileString(profile, "unionid");
           if (unionid) {
-            const existingUserId = await c.env.KV.get(`unionid:${unionid}`);
-            if (existingUserId && existingUserId !== token.sub) {
-              console.log("[auth:merge] unionid match, merging", {
-                newUserId: (token.sub as string).slice(-8),
-                existingUserId: existingUserId.slice(-8),
-                provider: account.provider,
-              });
-              const tdb = db(c.env.DB);
-              await tdb
-                .update(accounts)
-                .set({ userId: existingUserId })
-                .where(
-                  drizzle.and(
-                    drizzle.eq(accounts.provider, account.provider),
-                    drizzle.eq(
-                      accounts.providerAccountId,
-                      account.providerAccountId!,
-                    ),
-                  ),
-                );
-              const orphanedId = token.sub as string;
-              const orphanHasOtherAccounts = await tdb
-                .select({ userId: accounts.userId })
-                .from(accounts)
-                .where(drizzle.eq(accounts.userId, orphanedId))
-                .limit(1);
-              if (orphanHasOtherAccounts.length === 0) {
-                await tdb.delete(users).where(drizzle.eq(users.id, orphanedId));
-              }
-              token.sub = existingUserId;
-            } else if (!existingUserId) {
-              await c.env.KV.put(`unionid:${unionid}`, token.sub as string, {
-                expirationTtl: 86400 * 365,
+            // Full unionid-based merge: absorbs source user data, disables source
+            const unionidResult = await mergeByUnionid(
+              c.env.DB,
+              c.env.KV,
+              token.sub as string,
+              unionid,
+            );
+            if (unionidResult.merged) {
+              console.log("[auth:unionid-merge]", {
+                userId: (token.sub as string).slice(-8),
+                unionid: unionid.slice(0, 8),
+                mergedUserIds: unionidResult.mergedUserIds,
               });
             }
           }

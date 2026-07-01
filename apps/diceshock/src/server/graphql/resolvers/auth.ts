@@ -274,12 +274,15 @@ export const authResolvers = {
             ),
           );
       } else {
-        await tdb.insert(accounts).values({
-          userId: ctx.userId,
-          type: "credentials" as AdapterAccountType,
-          provider: "SMS",
-          providerAccountId: input.phone,
-        });
+        await tdb
+          .insert(accounts)
+          .values({
+            userId: ctx.userId,
+            type: "credentials" as AdapterAccountType,
+            provider: "SMS",
+            providerAccountId: input.phone,
+          })
+          .onConflictDoNothing();
       }
 
       // Merge any other accounts with the same phone into this user
