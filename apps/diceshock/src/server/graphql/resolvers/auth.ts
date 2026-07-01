@@ -87,6 +87,7 @@ async function getUserProfile(ctx: GQLContext, userId: string) {
     role: user.role.toUpperCase(),
     nickname: user.userInfo.nickname,
     phone: user.userInfo.phone,
+    points: user.userInfo.points ?? 0,
     preferredLocale: user.userInfo.preferred_locale,
     preferredStoreId: user.userInfo.preferred_store_id,
     meta: user.userInfo.meta ? JSON.stringify(user.userInfo.meta) : null,
@@ -257,35 +258,9 @@ export const authResolvers = {
         .set({ phone: input.phone })
         .where(drizzle.eq(userInfoTable.id, ctx.userId));
 
-      // Ensure current user has an SMS account record
-      const currentAccount = await tdb.query.accounts.findFirst({
-        where: (account, { and, eq }) =>
-          and(eq(account.userId, ctx.userId), eq(account.provider, "SMS")),
-      });
-
-      if (currentAccount) {
-        await tdb
-          .update(accounts)
-          .set({ providerAccountId: input.phone })
-          .where(
-            drizzle.and(
-              drizzle.eq(accounts.userId, ctx.userId),
-              drizzle.eq(accounts.provider, "SMS"),
-            ),
-          );
-      } else {
-        await tdb
-          .insert(accounts)
-          .values({
-            userId: ctx.userId,
-            type: "credentials" as AdapterAccountType,
-            provider: "SMS",
-            providerAccountId: input.phone,
-          })
-          .onConflictDoNothing();
-      }
-
       // Merge any other accounts with the same phone into this user
+      // (must happen BEFORE updating the SMS account to avoid unique constraint
+      // conflicts when the phone is already another user's providerAccountId)
       const mergeResult = await mergeByPhone(
         ctx.env.DB,
         ctx.env.KV,
@@ -300,6 +275,61 @@ export const authResolvers = {
           mergedUserIds: mergeResult.mergedUserIds,
           finalRole: mergeResult.role,
         });
+      }
+
+      // Ensure exactly one SMS account with the new phone exists for this user.
+      // After merge, the user may have multiple SMS accounts (old phone + absorbed phone).
+      // Strategy: check if the correct one already exists; if so, delete stale ones.
+      // If not, upsert it.
+      const smsWithNewPhone = await tdb.query.accounts.findFirst({
+        where: (account, { and, eq }) =>
+          and(
+            eq(account.userId, ctx.userId),
+            eq(account.provider, "SMS"),
+            eq(account.providerAccountId, input.phone),
+          ),
+      });
+
+      if (smsWithNewPhone) {
+        // The correct account exists (likely moved from source user).
+        // Delete any OTHER SMS accounts for this user (stale phones).
+        await tdb
+          .delete(accounts)
+          .where(
+            drizzle.and(
+              drizzle.eq(accounts.userId, ctx.userId),
+              drizzle.eq(accounts.provider, "SMS"),
+              drizzle.ne(accounts.providerAccountId, input.phone),
+            ),
+          );
+      } else {
+        // No SMS account with the new phone. Update existing or insert.
+        const anySmS = await tdb.query.accounts.findFirst({
+          where: (account, { and, eq }) =>
+            and(eq(account.userId, ctx.userId), eq(account.provider, "SMS")),
+        });
+        if (anySmS) {
+          await tdb
+            .update(accounts)
+            .set({ providerAccountId: input.phone })
+            .where(
+              drizzle.and(
+                drizzle.eq(accounts.userId, ctx.userId),
+                drizzle.eq(accounts.provider, "SMS"),
+                drizzle.eq(accounts.providerAccountId, anySmS.providerAccountId),
+              ),
+            );
+        } else {
+          await tdb
+            .insert(accounts)
+            .values({
+              userId: ctx.userId,
+              type: "credentials" as AdapterAccountType,
+              provider: "SMS",
+              providerAccountId: input.phone,
+            })
+            .onConflictDoNothing();
+        }
       }
 
       await ctx.env.KV.delete(kvKey);
