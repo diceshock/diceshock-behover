@@ -323,6 +323,13 @@
       "when": 1782203967236,
       "tag": "0045_soft_machine_man",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "6",
+      "when": 1782882213247,
+      "tag": "0046_wechat_menu_snapshots",
+      "breakpoints": true
     }
   ]
 }

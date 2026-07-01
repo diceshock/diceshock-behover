@@ -52,6 +52,10 @@ export type AddWechatTemplateFromLibraryInput = {
   templateIdShort: string;
 };
 
+export type ArticleType =
+  | 'ACTIVE'
+  | 'EVENT';
+
 export type BatchSettleInput = {
   deductFromStoredValue?: boolean | null | undefined;
   ids: Array<string | number>;
@@ -276,6 +280,13 @@ export type PricingSnapshotDataInput = {
 export type PricingSnapshotStatus =
   | 'DRAFT'
   | 'PUBLISHED';
+
+export type PublishArticleInput = {
+  /** If true, immediately publish after creating draft */
+  autoPublish?: boolean | null | undefined;
+  id: string | number;
+  type: ArticleType;
+};
 
 export type RegisterMahjongInput = {
   gszName: string;
@@ -585,6 +596,13 @@ export type RemoveActiveRegistrationMutationVariables = Exact<{
 
 
 export type RemoveActiveRegistrationMutation = { removeActiveRegistration: { id: string } };
+
+export type PublishArticleToWechatMutationVariables = Exact<{
+  input: Types.PublishArticleInput;
+}>;
+
+
+export type PublishArticleToWechatMutation = { publishArticleToWechat: { success: boolean, draftMediaId: string | null, publishId: string | null, imageUrls: Array<string> | null, error: string | null } };
 
 export type CrawlerStatsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -2367,6 +2385,43 @@ export function useRemoveActiveRegistrationMutation(baseOptions?: Apollo.Mutatio
 export type RemoveActiveRegistrationMutationHookResult = ReturnType<typeof useRemoveActiveRegistrationMutation>;
 export type RemoveActiveRegistrationMutationResult = Apollo.MutationResult<Types.RemoveActiveRegistrationMutation>;
 export type RemoveActiveRegistrationMutationOptions = Apollo.BaseMutationOptions<Types.RemoveActiveRegistrationMutation, Types.RemoveActiveRegistrationMutationVariables>;
+export const PublishArticleToWechatDocument = gql`
+    mutation PublishArticleToWechat($input: PublishArticleInput!) {
+  publishArticleToWechat(input: $input) {
+    success
+    draftMediaId
+    publishId
+    imageUrls
+    error
+  }
+}
+    `;
+export type PublishArticleToWechatMutationFn = Apollo.MutationFunction<Types.PublishArticleToWechatMutation, Types.PublishArticleToWechatMutationVariables>;
+
+/**
+ * __usePublishArticleToWechatMutation__
+ *
+ * To run a mutation, you first call `usePublishArticleToWechatMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `usePublishArticleToWechatMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [publishArticleToWechatMutation, { data, loading, error }] = usePublishArticleToWechatMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function usePublishArticleToWechatMutation(baseOptions?: Apollo.MutationHookOptions<Types.PublishArticleToWechatMutation, Types.PublishArticleToWechatMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<Types.PublishArticleToWechatMutation, Types.PublishArticleToWechatMutationVariables>(PublishArticleToWechatDocument, options);
+      }
+export type PublishArticleToWechatMutationHookResult = ReturnType<typeof usePublishArticleToWechatMutation>;
+export type PublishArticleToWechatMutationResult = Apollo.MutationResult<Types.PublishArticleToWechatMutation>;
+export type PublishArticleToWechatMutationOptions = Apollo.BaseMutationOptions<Types.PublishArticleToWechatMutation, Types.PublishArticleToWechatMutationVariables>;
 export const CrawlerStatsDocument = gql`
     query CrawlerStats {
   crawlerStats {

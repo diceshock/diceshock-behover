@@ -1,0 +1,9 @@
+mutation PublishArticleToWechat($input: PublishArticleInput!) {
+  publishArticleToWechat(input: $input) {
+    success
+    draftMediaId
+    publishId
+    imageUrls
+    error
+  }
+}

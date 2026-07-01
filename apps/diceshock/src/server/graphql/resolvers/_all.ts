@@ -1,6 +1,7 @@
 import baseSchema from "../../../../schema.graphql?raw";
 import type { ResolverMap } from "../schema";
 import { activesResolvers } from "./actives";
+import { articleResolvers } from "./article";
 import { adminResolvers } from "./admin";
 import { authResolvers } from "./auth";
 import { mahjongResolvers } from "./mahjong";
@@ -11,6 +12,7 @@ import { preferencesResolvers } from "./preferences";
 import { subscriptionResolvers } from "./subscriptions";
 import { tablesResolvers } from "./tables";
 import { usersResolvers } from "./users";
+import { wechatMenuResolvers } from "./wechatMenu";
 
 function mergeResolverMaps(
   ...maps: Record<string, Record<string, unknown>>[]
@@ -27,6 +29,7 @@ function mergeResolverMaps(
 
 export const ALL_RESOLVERS: ResolverMap = mergeResolverMaps(
   activesResolvers as Record<string, Record<string, unknown>>,
+  articleResolvers as Record<string, Record<string, unknown>>,
   adminResolvers as Record<string, Record<string, unknown>>,
   authResolvers as Record<string, Record<string, unknown>>,
   mahjongResolvers as Record<string, Record<string, unknown>>,
@@ -37,6 +40,7 @@ export const ALL_RESOLVERS: ResolverMap = mergeResolverMaps(
   subscriptionResolvers as Record<string, Record<string, unknown>>,
   tablesResolvers as Record<string, Record<string, unknown>>,
   usersResolvers as Record<string, Record<string, unknown>>,
+  wechatMenuResolvers as Record<string, Record<string, unknown>>,
 );
 
 export const ALL_TYPEDEFS = baseSchema;

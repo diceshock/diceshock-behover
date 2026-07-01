@@ -37,6 +37,7 @@ import {
   wechatMessage,
   wechatVerify,
 } from "@/server/apis/wechat";
+import { articlePreview } from "@/server/apis/wechat/articlePreview";
 import type {
   GstoneCrawlMessage,
   GstoneImageMessage,
@@ -121,6 +122,7 @@ app.get("/edge/media/card/event/:id", eventCard);
 app.get("/edge/media/card/inventory", inventoryCard);
 app.get("/edge/media/card/site-og", siteOgCard);
 app.get("/edge/media/card/avatar/:userId", avatarCard);
+app.get("/edge/media/article/:type/:id", articlePreview);
 
 app.use("/api/auth/*", authHandler());
 

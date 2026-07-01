@@ -403,7 +403,8 @@
     "theme": "主题",
     "logout": "登出",
     "navigation": "导航",
-    "menuLabel": "导航菜单"
+    "menuLabel": "导航菜单",
+    "wechatMenu": "微信菜单"
   },
   "dashOrders": {
     "loadFailed": "获取订单列表失败",
@@ -956,5 +957,73 @@
     "showingEmpty": "显示 0 / 0",
     "page": "第 {current} 页",
     "pageOf": "第 {current} / {total} 页"
+  },
+  "dashWechatMenu": {
+    "title": "微信公众号菜单",
+    "addButton": "添加按钮",
+    "addCategory": "添加分类",
+    "save": "保存草稿",
+    "saving": "保存中...",
+    "publish": "发布到微信",
+    "publishing": "发布中...",
+    "published": "已发布",
+    "draft": "草稿",
+    "restore": "恢复",
+    "restoring": "恢复中...",
+    "restored": "已恢复",
+    "view": "查看",
+    "history": "修改历史",
+    "historyWithCount": "修改历史 ({count})",
+    "unsaved": "未保存",
+    "unsavedChanges": "有未保存的修改",
+    "saveDraftFirst": "请先保存草稿",
+    "noDraftToPublish": "没有可发布的草稿",
+    "noItems": "还没有菜单项，点击上方按钮添加",
+    "confirmDelete": "确定要删除此项吗？",
+    "publishError": "发布失败",
+    "untitled": "未命名菜单",
+    "snapshotName": "版本名称",
+    "errors": {
+      "saveFailed": "保存失败",
+      "publishFailed": "发布失败",
+      "restoreFailed": "恢复失败",
+      "loadFailed": "加载失败",
+      "enterSnapshotName": "请输入版本名称"
+    },
+    "messages": {
+      "draftSaved": "草稿已保存",
+      "published": "已成功发布到微信",
+      "restored": "已恢复到该版本",
+      "translateDone": "翻译完成"
+    },
+    "itemType": {
+      "view": "链接",
+      "click": "通知消息"
+    },
+    "linkTarget": {
+      "home": "主页",
+      "custom": "自定义链接"
+    },
+    "notification": {
+      "message": "通知消息内容",
+      "translate": "翻译到所有语言",
+      "translating": "翻译中...",
+      "translations": "其他语言翻译",
+      "variable": "变量",
+      "insertVariable": "插入变量"
+    },
+    "category": {
+      "title": "分类名称",
+      "addItem": "添加子项",
+      "empty": "分类为空，请添加子项"
+    },
+    "routes": {
+      "inventory": "桌游库存",
+      "riichi": "日麻战绩",
+      "actives": "约局",
+      "me": "个人中心",
+      "contactUs": "联系我们",
+      "agents": "会员计划"
+    }
   }
 }

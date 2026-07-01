@@ -1,0 +1,90 @@
+query WechatMenuDraft($storeId: ID) {
+  wechatMenuDraft(storeId: $storeId) {
+    data
+    snapshotId
+    snapshotName
+    status
+  }
+}
+
+query WechatMenuSnapshots($storeId: ID) {
+  wechatMenuSnapshots(storeId: $storeId) {
+    id
+    name
+    storeId
+    data
+    status
+    summary
+    createdAt
+    publishedAt
+  }
+}
+
+query WechatMenuSnapshot($id: ID!) {
+  wechatMenuSnapshot(id: $id) {
+    id
+    name
+    storeId
+    data
+    status
+    summary
+    createdAt
+    publishedAt
+  }
+}
+
+query WechatMenuVariables {
+  wechatMenuVariables {
+    id
+    label
+    description
+    example
+  }
+}
+
+mutation SaveWechatMenuSnapshot($input: SaveWechatMenuSnapshotInput!) {
+  saveWechatMenuSnapshot(input: $input) {
+    id
+    name
+    storeId
+    data
+    status
+    summary
+    createdAt
+    publishedAt
+  }
+}
+
+mutation PublishWechatMenuSnapshot($storeId: ID) {
+  publishWechatMenuSnapshot(storeId: $storeId) {
+    success
+    error
+    snapshot {
+      id
+      name
+      status
+      publishedAt
+    }
+  }
+}
+
+mutation RestoreWechatMenuSnapshot($id: ID!) {
+  restoreWechatMenuSnapshot(id: $id) {
+    id
+    name
+    data
+    status
+    summary
+    createdAt
+    publishedAt
+  }
+}
+
+mutation TranslateWechatMenuText($text: String!, $targetLocales: [String!]!) {
+  translateWechatMenuText(text: $text, targetLocales: $targetLocales) {
+    translations {
+      locale
+      text
+    }
+  }
+}

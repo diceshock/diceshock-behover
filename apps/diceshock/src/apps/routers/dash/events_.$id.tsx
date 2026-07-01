@@ -1,15 +1,18 @@
+import { PaperPlaneTiltIcon } from "@phosphor-icons/react/dist/ssr";
 import {
   ClientOnly,
   createFileRoute,
   useNavigate,
 } from "@tanstack/react-router";
 import clsx from "clsx";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import MarkdownTextEditor from "@/client/components/diceshock/MarkdownEditor/MarkdownTextEditor";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import {
+  ArticleType,
   useManagedEventQuery,
+  usePublishArticleToWechatMutation,
   useUpdateEventMutation,
 } from "@/client/graphql/__generated__";
 
@@ -45,6 +48,36 @@ function EventEditorPage() {
   const [updateEventMutation] = useUpdateEventMutation({
     refetchQueries: ["ManagedEvent"],
   });
+
+  const [publishArticleMutation] = usePublishArticleToWechatMutation();
+  const [publishing, setPublishing] = useState(false);
+  const publishDialogRef = useRef<HTMLDialogElement>(null);
+
+  const handlePublishToWechat = async (autoPublish: boolean) => {
+    setPublishing(true);
+    try {
+      const { data } = await publishArticleMutation({
+        variables: {
+          input: { type: ArticleType.Event, id, autoPublish },
+        },
+      });
+      const result = data?.publishArticleToWechat;
+      if (result?.success) {
+        msg.success(
+          autoPublish
+            ? "已发布到微信服务号"
+            : "草稿已创建，请在微信公众平台确认发布",
+        );
+      } else {
+        msg.error(`发布失败: ${result?.error ?? "未知错误"}`);
+      }
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "发布失败");
+    } finally {
+      setPublishing(false);
+      publishDialogRef.current?.close();
+    }
+  };
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -103,7 +136,18 @@ function EventEditorPage() {
         </div>
 
         <div className="mx-auto w-full max-w-2xl px-4 pb-20">
-          <h1 className="text-2xl font-bold mb-8">活动详情</h1>
+          <div className="flex items-center justify-between mb-8">
+            <h1 className="text-2xl font-bold">活动详情</h1>
+            <button
+              type="button"
+              className={clsx("btn btn-sm btn-primary gap-1", publishing && "loading")}
+              onClick={() => publishDialogRef.current?.showModal()}
+              disabled={publishing}
+            >
+              <PaperPlaneTiltIcon className="size-4" weight="fill" />
+              发布到微信
+            </button>
+          </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
             <label className="flex flex-col gap-2">
@@ -184,6 +228,44 @@ function EventEditorPage() {
           </form>
         </div>
       </main>
+
+      <dialog ref={publishDialogRef} className="modal">
+        <div className="modal-box">
+          <h3 className="font-bold text-lg mb-4">发布到微信服务号</h3>
+          <p className="text-sm text-base-content/70 mb-2">
+            将此活动渲染为图片文章并同步到微信服务号。
+          </p>
+          <p className="text-sm text-base-content/70">
+            「创建草稿」仅创建草稿，需要在微信公众平台手动发布；「立即发布」将直接发布到服务号。
+          </p>
+          <div className="modal-action mt-6">
+            <button
+              type="button"
+              className="btn"
+              onClick={() => publishDialogRef.current?.close()}
+              disabled={publishing}
+            >
+              取消
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => void handlePublishToWechat(false)}
+              disabled={publishing}
+            >
+              {publishing ? "处理中..." : "创建草稿"}
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => void handlePublishToWechat(true)}
+              disabled={publishing}
+            >
+              {publishing ? "发布中..." : "立即发布"}
+            </button>
+          </div>
+        </div>
+      </dialog>
     </ClientOnly>
   );
 }

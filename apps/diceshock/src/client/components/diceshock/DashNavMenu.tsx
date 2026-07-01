@@ -17,6 +17,7 @@ import {
   TableIcon,
   TranslateIcon,
   UsersIcon,
+  WechatLogoIcon,
   XIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { Link, useMatches } from "@tanstack/react-router";
@@ -61,6 +62,11 @@ const NAV_ITEMS: ReadonlyArray<{
     labelKey: "dashNav.pricing",
   },
   { to: "/dash/media", icon: ImageSquareIcon, labelKey: "dashNav.media" },
+  {
+    to: "/dash/wechat-menu",
+    icon: WechatLogoIcon,
+    labelKey: "dashNav.wechatMenu",
+  },
 ];
 
 export function DashNavMenuButton() {

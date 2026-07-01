@@ -179,3 +179,159 @@ export async function uploadImageToWechat(
   }
   return data.media_id;
 }
+
+// ─── Permanent Media (for articles) ─────────────────────────────────────────
+
+/**
+ * Upload an image for use inside article body (permanent, no media_id limit).
+ * Returns a URL that can be used in <img src="..."> within the article HTML.
+ * Uses /cgi-bin/media/uploadimg
+ */
+export async function uploadArticleBodyImage(
+  env: WechatApiEnv,
+  imageData: Uint8Array | Blob,
+  filename = "article.png",
+): Promise<string | null> {
+  const token = await getWechatAccessToken(env);
+  const formData = new FormData();
+  const blob =
+    imageData instanceof Blob
+      ? imageData
+      : new Blob([new Uint8Array(imageData)], { type: "image/png" });
+  formData.append("media", blob, filename);
+
+  const url = `${WECHAT_API_BASE}/cgi-bin/media/uploadimg?access_token=${token}`;
+  const res = await fetch(url, { method: "POST", body: formData });
+  const data = (await res.json()) as { url?: string; errcode?: number; errmsg?: string };
+
+  if (data.errcode || !data.url) {
+    console.error("[wechat:api] uploadimg failed:", data);
+    return null;
+  }
+  return data.url;
+}
+
+/**
+ * Upload a permanent thumb image for article cover.
+ * Returns media_id for use in draft.
+ * Uses /cgi-bin/material/add_material?type=thumb
+ */
+export async function uploadArticleCover(
+  env: WechatApiEnv,
+  imageData: Uint8Array | Blob,
+  filename = "cover.png",
+): Promise<string | null> {
+  const token = await getWechatAccessToken(env);
+  const formData = new FormData();
+  const blob =
+    imageData instanceof Blob
+      ? imageData
+      : new Blob([new Uint8Array(imageData)], { type: "image/png" });
+  formData.append("media", blob, filename);
+
+  const url = `${WECHAT_API_BASE}/cgi-bin/material/add_material?access_token=${token}&type=thumb`;
+  const res = await fetch(url, { method: "POST", body: formData });
+  const data = (await res.json()) as {
+    media_id?: string;
+    errcode?: number;
+    errmsg?: string;
+  };
+
+  if (data.errcode || !data.media_id) {
+    console.error("[wechat:api] add_material thumb failed:", data);
+    return null;
+  }
+  return data.media_id;
+}
+
+// ─── Draft & Publish ─────────────────────────────────────────────────────────
+
+export interface WechatDraftArticle {
+  title: string;
+  /** Author display name */
+  author?: string;
+  /** Abstract/digest shown in message list */
+  digest?: string;
+  /** HTML content body — images should use uploadArticleBodyImage URLs */
+  content: string;
+  /** Cover image media_id from uploadArticleCover */
+  thumb_media_id: string;
+  /** 1 = show cover in article body, 0 = don't */
+  show_cover_pic?: 0 | 1;
+  /** Redirect URL when "Read More" is tapped */
+  content_source_url?: string;
+}
+
+/**
+ * Create a draft (草稿) with one or more articles.
+ * Returns media_id of the draft.
+ */
+export async function createDraft(
+  env: WechatApiEnv,
+  articles: WechatDraftArticle[],
+): Promise<string | null> {
+  const token = await getWechatAccessToken(env);
+  const url = `${WECHAT_API_BASE}/cgi-bin/draft/add?access_token=${token}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      articles: articles.map((a) => ({
+        title: a.title,
+        author: a.author ?? "Diceshock",
+        digest: a.digest ?? "",
+        content: a.content,
+        thumb_media_id: a.thumb_media_id,
+        show_cover_pic: a.show_cover_pic ?? 0,
+        content_source_url: a.content_source_url ?? "",
+      })),
+    }),
+  });
+
+  const data = (await res.json()) as {
+    media_id?: string;
+    errcode?: number;
+    errmsg?: string;
+  };
+
+  if (data.errcode || !data.media_id) {
+    console.error("[wechat:api] draft/add failed:", data);
+    return null;
+  }
+
+  console.log("[wechat:api] draft created:", data.media_id);
+  return data.media_id;
+}
+
+/**
+ * Submit a draft for publishing (发布).
+ * Returns publish_id for tracking.
+ */
+export async function submitPublish(
+  env: WechatApiEnv,
+  draftMediaId: string,
+): Promise<string | null> {
+  const token = await getWechatAccessToken(env);
+  const url = `${WECHAT_API_BASE}/cgi-bin/freepublish/submit?access_token=${token}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ media_id: draftMediaId }),
+  });
+
+  const data = (await res.json()) as {
+    publish_id?: string;
+    errcode?: number;
+    errmsg?: string;
+  };
+
+  if (data.errcode || !data.publish_id) {
+    console.error("[wechat:api] freepublish/submit failed:", data);
+    return null;
+  }
+
+  console.log("[wechat:api] publish submitted:", data.publish_id);
+  return data.publish_id;
+}

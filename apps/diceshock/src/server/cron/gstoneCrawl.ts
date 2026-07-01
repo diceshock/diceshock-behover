@@ -170,7 +170,7 @@ export async function dispatchGstoneOcr(env: {
     `SELECT document_id, ocr_pages FROM documents
      WHERE crawled_at IS NOT NULL AND ocr_at IS NULL AND error IS NULL
        AND ocr_pages IS NOT NULL AND updated_at < ?
-     LIMIT 5`,
+     LIMIT 25`,
   )
     .bind(staleThreshold)
     .all<{ document_id: number; ocr_pages: string }>();
@@ -196,12 +196,12 @@ export async function dispatchGstoneOcr(env: {
      WHERE crawled_at IS NOT NULL AND ocr_at IS NULL AND error IS NULL AND ocr_pages IS NOT NULL`,
   ).first<{ c: number }>();
 
-  if ((inflight?.c ?? 0) > 10) return;
+  if ((inflight?.c ?? 0) > 50) return;
 
   const pending = await env.GSTONE_DB.prepare(
     `SELECT document_id FROM documents
      WHERE crawled_at IS NOT NULL AND ocr_at IS NULL AND error IS NULL AND ocr_pages IS NULL
-     LIMIT 5`,
+     LIMIT 25`,
   ).all<{ document_id: number }>();
 
   const docs = pending.results ?? [];

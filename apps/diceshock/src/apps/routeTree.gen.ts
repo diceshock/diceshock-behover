@@ -16,6 +16,7 @@ import { Route as Char123StoreLocaleChar125ReadyRouteImport } from './routers/{-
 import { Route as Char123StoreLocaleChar125MyRiichiRouteImport } from './routers/{-$storeLocale}/my-riichi'
 import { Route as Char123StoreLocaleChar125WithHomeLoRouteImport } from './routers/{-$storeLocale}/_with-home-lo'
 import { Route as XIdRouteImport } from './routers/x.$id'
+import { Route as DashWechatMenuRouteImport } from './routers/dash/wechat-menu'
 import { Route as DashUsersRouteImport } from './routers/dash/users'
 import { Route as DashTablesRouteImport } from './routers/dash/tables'
 import { Route as DashPricingRouteImport } from './routers/dash/pricing'
@@ -88,6 +89,11 @@ const XIdRoute = XIdRouteImport.update({
   id: '/x/$id',
   path: '/x/$id',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DashWechatMenuRoute = DashWechatMenuRouteImport.update({
+  id: '/wechat-menu',
+  path: '/wechat-menu',
+  getParentRoute: () => DashRoute,
 } as any)
 const DashUsersRoute = DashUsersRouteImport.update({
   id: '/users',
@@ -289,6 +295,7 @@ export interface FileRoutesByFullPath {
   '/dash/pricing': typeof DashPricingRoute
   '/dash/tables': typeof DashTablesRoute
   '/dash/users': typeof DashUsersRoute
+  '/dash/wechat-menu': typeof DashWechatMenuRoute
   '/x/$id': typeof XIdRoute
   '/{-$storeLocale}/my-riichi': typeof Char123StoreLocaleChar125MyRiichiRouteWithChildren
   '/{-$storeLocale}/ready': typeof Char123StoreLocaleChar125ReadyRouteWithChildren
@@ -330,6 +337,7 @@ export interface FileRoutesByTo {
   '/dash/pricing': typeof DashPricingRoute
   '/dash/tables': typeof DashTablesRoute
   '/dash/users': typeof DashUsersRoute
+  '/dash/wechat-menu': typeof DashWechatMenuRoute
   '/x/$id': typeof XIdRoute
   '/{-$storeLocale}/my-riichi': typeof Char123StoreLocaleChar125MyRiichiRouteWithChildren
   '/{-$storeLocale}/ready': typeof Char123StoreLocaleChar125ReadyRouteWithChildren
@@ -372,6 +380,7 @@ export interface FileRoutesById {
   '/dash/pricing': typeof DashPricingRoute
   '/dash/tables': typeof DashTablesRoute
   '/dash/users': typeof DashUsersRoute
+  '/dash/wechat-menu': typeof DashWechatMenuRoute
   '/x/$id': typeof XIdRoute
   '/{-$storeLocale}/_with-home-lo': typeof Char123StoreLocaleChar125WithHomeLoRouteWithChildren
   '/{-$storeLocale}/my-riichi': typeof Char123StoreLocaleChar125MyRiichiRouteWithChildren
@@ -417,6 +426,7 @@ export interface FileRouteTypes {
     | '/dash/pricing'
     | '/dash/tables'
     | '/dash/users'
+    | '/dash/wechat-menu'
     | '/x/$id'
     | '/{-$storeLocale}/my-riichi'
     | '/{-$storeLocale}/ready'
@@ -458,6 +468,7 @@ export interface FileRouteTypes {
     | '/dash/pricing'
     | '/dash/tables'
     | '/dash/users'
+    | '/dash/wechat-menu'
     | '/x/$id'
     | '/{-$storeLocale}/my-riichi'
     | '/{-$storeLocale}/ready'
@@ -499,6 +510,7 @@ export interface FileRouteTypes {
     | '/dash/pricing'
     | '/dash/tables'
     | '/dash/users'
+    | '/dash/wechat-menu'
     | '/x/$id'
     | '/{-$storeLocale}/_with-home-lo'
     | '/{-$storeLocale}/my-riichi'
@@ -586,6 +598,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/x/$id'
       preLoaderRoute: typeof XIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/dash/wechat-menu': {
+      id: '/dash/wechat-menu'
+      path: '/wechat-menu'
+      fullPath: '/dash/wechat-menu'
+      preLoaderRoute: typeof DashWechatMenuRouteImport
+      parentRoute: typeof DashRoute
     }
     '/dash/users': {
       id: '/dash/users'
@@ -839,6 +858,7 @@ interface DashRouteChildren {
   DashPricingRoute: typeof DashPricingRoute
   DashTablesRoute: typeof DashTablesRoute
   DashUsersRoute: typeof DashUsersRoute
+  DashWechatMenuRoute: typeof DashWechatMenuRoute
   DashIndexRoute: typeof DashIndexRoute
   DashActivesIdRoute: typeof DashActivesIdRoute
   DashEventsIdRoute: typeof DashEventsIdRoute
@@ -861,6 +881,7 @@ const DashRouteChildren: DashRouteChildren = {
   DashPricingRoute: DashPricingRoute,
   DashTablesRoute: DashTablesRoute,
   DashUsersRoute: DashUsersRoute,
+  DashWechatMenuRoute: DashWechatMenuRoute,
   DashIndexRoute: DashIndexRoute,
   DashActivesIdRoute: DashActivesIdRoute,
   DashEventsIdRoute: DashEventsIdRoute,

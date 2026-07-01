@@ -2,6 +2,7 @@ import {
   CopyIcon,
   DotsThreeVerticalIcon,
   EyeIcon,
+  PaperPlaneTiltIcon,
   PlusIcon,
   TrashIcon,
 } from "@phosphor-icons/react/dist/ssr";
@@ -18,9 +19,11 @@ import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import {
+  ArticleType,
   SortOrder,
   useCreateEventMutation,
   useManagedEventsQuery,
+  usePublishArticleToWechatMutation,
   useRemoveEventMutation,
   useToggleEventPublishMutation,
 } from "@/client/graphql/__generated__";
@@ -160,6 +163,73 @@ function RouteComponent() {
   const [deletePending, setDeletePending] = useState(false);
   const [batchDeletePending, setBatchDeletePending] = useState(false);
 
+  const [publishArticleMutation] = usePublishArticleToWechatMutation();
+  const publishDialogRef = useRef<HTMLDialogElement>(null);
+  const [publishTarget, setPublishTarget] = useState<EventItem | null>(null);
+  const [publishPending, setPublishPending] = useState(false);
+  const [batchPublishPending, setBatchPublishPending] = useState(false);
+  const batchPublishDialogRef = useRef<HTMLDialogElement>(null);
+
+  const openPublishDialog = (event: EventItem) => {
+    setPublishTarget(event);
+    setTimeout(() => publishDialogRef.current?.showModal(), 0);
+  };
+
+  const handlePublishToWechat = async (autoPublish: boolean) => {
+    if (!publishTarget) return;
+    setPublishPending(true);
+    try {
+      const { data } = await publishArticleMutation({
+        variables: {
+          input: { type: ArticleType.Event, id: publishTarget.id, autoPublish },
+        },
+      });
+      const result = data?.publishArticleToWechat;
+      if (result?.success) {
+        msg.success(autoPublish ? "已发布到微信" : "草稿已创建");
+      } else {
+        msg.error(`发布失败: ${result?.error ?? "未知错误"}`);
+      }
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "发布失败");
+    } finally {
+      setPublishPending(false);
+      publishDialogRef.current?.close();
+      setPublishTarget(null);
+    }
+  };
+
+  const openBatchPublishDialog = () => {
+    setTimeout(() => batchPublishDialogRef.current?.showModal(), 0);
+  };
+
+  const handleBatchPublishToWechat = async (autoPublish: boolean) => {
+    if (selectedIds.size === 0) return;
+    setBatchPublishPending(true);
+    let successCount = 0;
+    let failCount = 0;
+    for (const eventId of selectedIds) {
+      try {
+        const { data } = await publishArticleMutation({
+          variables: {
+            input: { type: ArticleType.Event, id: eventId, autoPublish },
+          },
+        });
+        if (data?.publishArticleToWechat?.success) successCount++;
+        else failCount++;
+      } catch {
+        failCount++;
+      }
+    }
+    if (failCount === 0) {
+      msg.success(`${successCount} 条活动已${autoPublish ? "发布" : "创建草稿"}`);
+    } else {
+      msg.error(`成功 ${successCount} 条，失败 ${failCount} 条`);
+    }
+    setBatchPublishPending(false);
+    batchPublishDialogRef.current?.close();
+  };
+
   const handleCopy = useCallback(
     (text: string) => {
       try {
@@ -258,6 +328,14 @@ function RouteComponent() {
   };
 
   const selectedActions: BatchAction[] = [
+    {
+      key: "publish",
+      label: "发布微信",
+      icon: <PaperPlaneTiltIcon className="size-4" />,
+      className: "btn-primary",
+      disabled: batchPublishPending,
+      onClick: openBatchPublishDialog,
+    },
     {
       key: "delete",
       label: "删除",
@@ -474,6 +552,15 @@ function RouteComponent() {
                   <li>
                     <button
                       type="button"
+                      onClick={() => openPublishDialog(row)}
+                    >
+                      <PaperPlaneTiltIcon className="size-4" />
+                      发布微信
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
                       className="text-error"
                       onClick={() => openDeleteDialog(row)}
                     >
@@ -501,6 +588,14 @@ function RouteComponent() {
                   {row.isPublished
                     ? t("dashEvents.unpublish")
                     : t("dashEvents.publish")}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-xs btn-ghost"
+                  onClick={() => openPublishDialog(row)}
+                  title="发布到微信"
+                >
+                  <PaperPlaneTiltIcon className="size-4" />
                 </button>
                 <button
                   type="button"
@@ -569,6 +664,81 @@ function RouteComponent() {
             </div>
           </div>
         )}
+      </dialog>
+
+      <dialog ref={publishDialogRef} className="modal">
+        {publishTarget && (
+          <div className="modal-box">
+            <h3 className="font-bold text-lg mb-4">发布到微信服务号</h3>
+            <p className="text-sm text-base-content/70 mb-2">
+              将活动「{publishTarget.title}」渲染为图片文章并同步到微信。
+            </p>
+            <div className="modal-action mt-6">
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  publishDialogRef.current?.close();
+                  setPublishTarget(null);
+                }}
+                disabled={publishPending}
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => void handlePublishToWechat(false)}
+                disabled={publishPending}
+              >
+                {publishPending ? "处理中..." : "创建草稿"}
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => void handlePublishToWechat(true)}
+                disabled={publishPending}
+              >
+                {publishPending ? "发布中..." : "立即发布"}
+              </button>
+            </div>
+          </div>
+        )}
+      </dialog>
+
+      <dialog ref={batchPublishDialogRef} className="modal">
+        <div className="modal-box">
+          <h3 className="font-bold text-lg mb-4">批量发布到微信</h3>
+          <p className="text-sm text-base-content/70">
+            将选中的 <strong>{selectedIds.size}</strong> 条活动逐一渲染并同步到微信服务号。
+          </p>
+          <div className="modal-action mt-6">
+            <button
+              type="button"
+              className="btn"
+              onClick={() => batchPublishDialogRef.current?.close()}
+              disabled={batchPublishPending}
+            >
+              取消
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => void handleBatchPublishToWechat(false)}
+              disabled={batchPublishPending}
+            >
+              {batchPublishPending ? "处理中..." : "批量创建草稿"}
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => void handleBatchPublishToWechat(true)}
+              disabled={batchPublishPending}
+            >
+              {batchPublishPending ? "发布中..." : "批量立即发布"}
+            </button>
+          </div>
+        </div>
       </dialog>
     </main>
   );
