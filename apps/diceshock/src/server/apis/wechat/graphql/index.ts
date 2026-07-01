@@ -42,12 +42,15 @@ const buildDrizzleSchema = buildSchema as (db: unknown) => BuiltSchema;
 const MAX_FIND_MANY_LIMIT = 50;
 
 const schemaCache = new WeakMap<
-  GraphQLContext["db"],
+  HonoCtxEnv["Bindings"]["DB"],
   { schema: GraphQLSchema }
 >();
 
-function getSchema(db: GraphQLContext["db"]): { schema: GraphQLSchema } {
-  const cached = schemaCache.get(db);
+function getSchema(
+  db: GraphQLContext["db"],
+  d1: HonoCtxEnv["Bindings"]["DB"],
+): { schema: GraphQLSchema } {
+  const cached = schemaCache.get(d1);
   if (cached) return cached;
 
   try {
@@ -58,7 +61,7 @@ function getSchema(db: GraphQLContext["db"]): { schema: GraphQLSchema } {
     const merged = mergeSchemas(built.schema, ALL_TYPEDEFS, ALL_RESOLVERS);
     console.log("[gql:schema] Schema ready");
     const result = { schema: merged };
-    schemaCache.set(db, result);
+    schemaCache.set(d1, result);
     return result;
   } catch (err) {
     console.error("[gql:schema] Build failed:", err);
@@ -233,7 +236,7 @@ export async function executeGraphQL(
   variables: Record<string, unknown> | undefined,
   context: GraphQLContext,
 ): Promise<{ data?: unknown; errors?: string[] }> {
-  const { schema } = getSchema(context.db);
+  const { schema } = getSchema(context.db, context.env.DB);
 
   let document: DocumentNode;
   try {
