@@ -6,9 +6,10 @@ import {
   TrashIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DashTable } from "@/client/components/dash/DashTable";
+import { DateRangeFilter } from "@/client/components/dash/DateRangeFilter";
 import { usePendingSearch } from "@/client/components/dash/SearchBridge";
 import { TableToolbar } from "@/client/components/dash/TableToolbar";
 import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
@@ -17,6 +18,7 @@ import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import {
   type ActiveFilterInput,
+  SortOrder,
   useBatchRemoveActivesMutation,
   useManagedActivesQuery,
   useRemoveActiveMutation,
@@ -58,6 +60,7 @@ export const Route = createFileRoute("/dash/actives")({
 
 export function buildFilter(
   parsed: ParsedSearch,
+  sorting: SortingState,
   cursor?: string,
 ): ActiveFilterInput {
   const statusFilter = parsed.filters.status?.value;
@@ -71,6 +74,18 @@ export function buildFilter(
   const typeValue = parsed.filters.type?.value;
   const creatorValue = parsed.filters.creator?.value;
   const storeValue = parsed.filters.store?.value;
+  const dateFilter = parsed.filters.date?.value;
+
+  let dateFrom: string | undefined;
+  let dateTo: string | undefined;
+  if (dateFilter) {
+    if (typeof dateFilter === "string") {
+      dateFrom = dateTo = dateFilter;
+    } else if (Array.isArray(dateFilter) && dateFilter.length === 2) {
+      dateFrom = dateFilter[0];
+      dateTo = dateFilter[1];
+    }
+  }
 
   const input: ActiveFilterInput = {};
 
@@ -79,6 +94,12 @@ export function buildFilter(
   if (typeof typeValue === "string") input.type = typeValue;
   if (typeof creatorValue === "string") input.creator = creatorValue;
   if (typeof storeValue === "string") input.store = storeValue;
+  if (dateFrom) input.dateFrom = dateFrom;
+  if (dateTo) input.dateTo = dateTo;
+  if (sorting.length > 0) {
+    input.sortBy = sorting[0].id;
+    input.sortOrder = sorting[0].desc ? SortOrder.Desc : SortOrder.Asc;
+  }
   input.pagination = { cursor: cursor ?? undefined, limit: PAGE_SIZE };
 
   return input;
@@ -91,12 +112,13 @@ function RouteComponent() {
   const { q } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const [searchInput, setSearchInput] = useState(q);
+  const [sorting, setSorting] = useState<SortingState>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { pendingSearch, clearPendingSearch } = usePendingSearch();
 
   const parsed = useMemo(() => parseSearch(q, ACTIVE_SEARCH_GRAMMAR), [q]);
-  const filter = useMemo(() => buildFilter(parsed), [parsed]);
+  const filter = useMemo(() => buildFilter(parsed, sorting), [parsed, sorting]);
 
   const { data, loading, fetchMore, networkStatus } = useManagedActivesQuery({
     variables: { filter },
@@ -163,7 +185,7 @@ function RouteComponent() {
     if (!lastCursor || isLoadingMore) return;
     await fetchMore({
       variables: {
-        filter: buildFilter(parsed, lastCursor),
+        filter: buildFilter(parsed, sorting, lastCursor),
       },
       updateQuery: (prev, { fetchMoreResult }) => {
         if (!fetchMoreResult) return prev;
@@ -175,7 +197,7 @@ function RouteComponent() {
         };
       },
     });
-  }, [fetchMore, parsed, lastCursor, isLoadingMore]);
+  }, [fetchMore, parsed, sorting, lastCursor, isLoadingMore]);
 
   const openDeleteDialog = (active: ActiveItem) => {
     setPendingDelete(active);
@@ -371,6 +393,44 @@ function RouteComponent() {
           }}
           quickFilters={quickFilters}
           storeFilter
+          extra={
+            <DateRangeFilter
+              value={
+                parsed.filters.date
+                  ? {
+                      from: Array.isArray(parsed.filters.date.value)
+                        ? parsed.filters.date.value[0]
+                        : typeof parsed.filters.date.value === "string"
+                          ? parsed.filters.date.value
+                          : undefined,
+                      to: Array.isArray(parsed.filters.date.value)
+                        ? parsed.filters.date.value[1]
+                        : typeof parsed.filters.date.value === "string"
+                          ? parsed.filters.date.value
+                          : undefined,
+                    }
+                  : undefined
+              }
+              onChange={(range) => {
+                const nextFilters = { ...parsed.filters };
+                if (!range) {
+                  delete nextFilters.date;
+                } else if (range.from && range.to) {
+                  nextFilters.date = { operator: "range", value: [range.from, range.to] };
+                } else if (range.from) {
+                  nextFilters.date = { operator: "gt", value: range.from };
+                } else if (range.to) {
+                  nextFilters.date = { operator: "lt", value: range.to };
+                }
+                const serialized = serialize(
+                  { ...parsed, filters: nextFilters, errors: [] },
+                  ACTIVE_SEARCH_GRAMMAR,
+                );
+                setSearchInput(serialized);
+                setSearchParam({ q: serialized });
+              }}
+            />
+          }
         />
       </div>
 
@@ -381,6 +441,9 @@ function RouteComponent() {
           loading={loading}
           emptyMessage={t("dashActives.noData")}
           paginationMode="none"
+          sorting={sorting}
+          onSortingChange={setSorting}
+          sortableColumns={["title", "date", "maxPlayers", "createdAt"]}
           enableRowSelection
           selectedRows={selectedIds}
           onSelectedRowsChange={setSelectedIds}

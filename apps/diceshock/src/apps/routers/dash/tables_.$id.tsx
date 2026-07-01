@@ -95,6 +95,13 @@ const GSZ_PHASE_LABELS: Record<string, string> = {
 };
 
 export const Route = createFileRoute("/dash/tables_/$id")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    tab: (["basic", "qrcode", "occupancy"] as const).includes(
+      search.tab as "basic" | "qrcode" | "occupancy",
+    )
+      ? (search.tab as "basic" | "qrcode" | "occupancy")
+      : "basic",
+  }),
   component: TableDetailPage,
 });
 
@@ -139,9 +146,9 @@ function TableDetailPage() {
       msg.error(err.message || "加载桌台失败");
     },
   });
-  const [activeTab, setActiveTab] = useState<"basic" | "qrcode" | "occupancy">(
-    "basic",
-  );
+  const { tab: activeTab } = Route.useSearch();
+  const setActiveTab = (tab: "basic" | "qrcode" | "occupancy") =>
+    navigate({ from: Route.fullPath, search: { tab }, replace: true });
 
   const [editForm, setEditForm] = useState({
     name: "",
@@ -847,6 +854,7 @@ function TableDetailPage() {
                                     <Link
                                       to="/dash/users/$id"
                                       params={{ id: occ.userId ?? "" }}
+                                      search={{ tab: "basic" }}
                                       className="link link-hover"
                                     >
                                       {occ.nickname}

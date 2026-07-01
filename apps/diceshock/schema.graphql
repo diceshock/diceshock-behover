@@ -145,13 +145,32 @@ input VerifyTotpInput {
   loginTime: Float!
 }
 
+input SendSmsCodeInput {
+  phone: String!
+  botcheck: String
+}
+
+input VerifyPhoneInput {
+  phone: String!
+  code: String!
+}
+
+input UpdateProfileInput {
+  nickname: String!
+}
+
 extend type Query {
   getTotpSecret: TotpSecretResult! # @auth(role: CUSTOMER)
+  totpSecret: TotpSecretResult! # @auth(role: CUSTOMER)
 }
 
 extend type Mutation {
   requestSmsCode(input: RequestSmsCodeInput!): SmsCodeResult!
+  sendSmsCode(input: SendSmsCodeInput!): SmsCodeResult!
+  verifyPhone(input: VerifyPhoneInput!): UserInfoUpdateResult! # @auth(role: CUSTOMER)
+  updateProfile(input: UpdateProfileInput!): UserInfoUpdateResult! # @auth(role: CUSTOMER)
   updateMyUserInfo(input: UpdateMyUserInfoInput!): UserInfoUpdateResult! # @auth(role: CUSTOMER)
+  updatePreferences(input: UpdatePreferencesInput!): UserProfile! # @auth(role: CUSTOMER)
   verifyTotp(input: VerifyTotpInput!): TotpVerificationResult! # @auth(role: STAFF)
 }
 
@@ -525,15 +544,19 @@ extend type Mutation {
   regenerateTableCode(id: ID!): Table! # @auth(role: STAFF)
   addTableOccupancy(input: AddOccupancyInput!): TableOccupancy! # @auth(role: STAFF)
   removeTableOccupancy(id: ID!): TableOccupancy! # @auth(role: STAFF)
+  startOrder(input: StartOrderInput!): TableOccupancy! # @auth(role: STAFF)
   endOrder(id: ID!): TableOccupancy! # @auth(role: STAFF)
   pauseOrder(id: ID!): TableOccupancy! # @auth(role: STAFF)
   resumeOrder(id: ID!): TableOccupancy! # @auth(role: STAFF)
   settleOrder(input: SettleOrderInput!): SettlementResult! # @auth(role: STAFF)
+  batchSettle(input: BatchSettleInput!): [BatchOrderResult!]! # @auth(role: STAFF)
   batchPauseOrders(ids: [ID!]!): [BatchOrderResult!]! # @auth(role: STAFF)
   batchResumeOrders(ids: [ID!]!): [BatchOrderResult!]! # @auth(role: STAFF)
   batchSettlementPreview(ids: [ID!]!): [SettlementPreview!]! # @auth(role: STAFF)
   batchSettleOrders(input: BatchSettleInput!): BatchSettlementResult! # @auth(role: STAFF)
+  cancelSettlement(id: ID!): BatchOrderResult! # @auth(role: STAFF)
   cancelBatchSettlement(ids: [ID!]!): [BatchOrderResult!]! # @auth(role: STAFF)
+  cleanupOrphanedData(dryRun: Boolean = true): CleanupOrphanedDataResult! # @auth(role: STAFF)
   cleanupOrphanedOrders(dryRun: Boolean = true): CleanupOrphanedDataResult! # @auth(role: STAFF)
 }
 
@@ -1446,6 +1469,8 @@ input ActiveFilterInput {
   store: String
   type: String
   creator: String
+  dateFrom: String
+  dateTo: String
   sortBy: String
   sortOrder: SortOrder
   pagination: CursorPaginationInput
@@ -1455,6 +1480,8 @@ input UserFilterInput {
   search: String
   role: [String!]
   store: String
+  dateFrom: String
+  dateTo: String
   sortBy: String
   sortOrder: SortOrder
   pagination: PaginationInput
@@ -1486,4 +1513,72 @@ input OrderFilterInput {
   sortOrder: SortOrder
   groupBy: String
   pagination: PaginationInput
+}
+
+# ─── Orders: missing input/extend ────────────────────────────────────
+
+input StartOrderInput {
+  tableId: ID!
+  userId: ID
+  tempId: ID
+  planId: ID
+  seats: Int = 1
+  storeId: ID
+}
+
+extend type TableOccupancy {
+  duration: Int!
+  amount: Int
+}
+
+# ─── Preferences ─────────────────────────────────────────────────────
+
+type UserPreference {
+  id: ID!
+  userId: ID!
+  rawText: String!
+  rrule: String!
+  categories: [String!]!
+  playerCount: Int
+  enabled: Boolean!
+  createdAt: String
+  updatedAt: String
+}
+
+union PreferenceParseResult = PreferenceParseSuccess | PreferenceParseError
+
+type PreferenceParseSuccess {
+  success: Boolean!
+  rrule: String!
+  categories: [String!]!
+  playerCount: Int
+  confidence: Float!
+}
+
+type PreferenceParseError {
+  success: Boolean!
+  error: String!
+}
+
+type DeletePreferenceResult {
+  success: Boolean!
+}
+
+input CreatePreferenceInput {
+  rawText: String!
+  rrule: String!
+  categories: [String!]!
+  playerCount: Int
+}
+
+extend type Query {
+  myPreferences: [UserPreference!]!
+  myPreferencesCount: Int!
+}
+
+extend type Mutation {
+  parsePreference(rawText: String!): PreferenceParseResult!
+  createPreference(input: CreatePreferenceInput!): UserPreference!
+  deletePreference(id: ID!): DeletePreferenceResult!
+  togglePreference(id: ID!): UserPreference!
 }

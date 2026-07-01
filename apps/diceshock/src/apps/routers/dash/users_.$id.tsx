@@ -57,6 +57,13 @@ import dayjs from "@/shared/utils/dayjs-config";
 import { formatPrice } from "@/shared/utils/pricing";
 
 export const Route = createFileRoute("/dash/users_/$id")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    tab: (["basic", "membership", "occupancy"] as const).includes(
+      search.tab as "basic" | "membership" | "occupancy",
+    )
+      ? (search.tab as "basic" | "membership" | "occupancy")
+      : "basic",
+  }),
   component: UserDetailPage,
 });
 
@@ -197,9 +204,9 @@ function UserDetailPage() {
   });
   const rawUser = userQlData?.user ?? null;
 
-  const [activeTab, setActiveTab] = useState<
-    "basic" | "membership" | "occupancy"
-  >("basic");
+  const { tab: activeTab } = Route.useSearch();
+  const setActiveTab = (tab: "basic" | "membership" | "occupancy") =>
+    navigate({ from: Route.fullPath, search: { tab }, replace: true });
 
   const [editForm, setEditForm] = useState({
     name: "",
@@ -1478,6 +1485,7 @@ function UserDetailPage() {
                                   params={{
                                     id: occ.tableId,
                                   }}
+                                  search={{ tab: "basic" }}
                                   className="link link-hover"
                                 >
                                   {occ.table?.name ?? occ.tableId}

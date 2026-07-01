@@ -9,7 +9,7 @@ describe("buildFilter", () => {
       filters: {},
       errors: [],
     };
-    const result = buildFilter(parsed);
+    const result = buildFilter(parsed, []);
     expect(result.search).toBe("hello");
     expect(result.pagination).toEqual({
       cursor: undefined,
@@ -23,7 +23,7 @@ describe("buildFilter", () => {
       filters: { status: { operator: "in", value: ["active", "expired"] } },
       errors: [],
     };
-    const result = buildFilter(parsed);
+    const result = buildFilter(parsed, []);
     expect(result.status).toEqual(["active", "expired"]);
   });
 
@@ -33,7 +33,7 @@ describe("buildFilter", () => {
       filters: { status: { operator: "eq", value: "active" } },
       errors: [],
     };
-    const result = buildFilter(parsed);
+    const result = buildFilter(parsed, []);
     expect(result.status).toEqual(["active"]);
   });
 
@@ -43,7 +43,7 @@ describe("buildFilter", () => {
       filters: { type: { operator: "eq", value: "game" } },
       errors: [],
     };
-    const result = buildFilter(parsed);
+    const result = buildFilter(parsed, []);
     expect(result.type).toBe("game");
   });
 
@@ -53,7 +53,7 @@ describe("buildFilter", () => {
       filters: { creator: { operator: "eq", value: "alice" } },
       errors: [],
     };
-    const result = buildFilter(parsed);
+    const result = buildFilter(parsed, []);
     expect(result.creator).toBe("alice");
   });
 
@@ -63,19 +63,19 @@ describe("buildFilter", () => {
       filters: { store: { operator: "eq", value: "store-123" } },
       errors: [],
     };
-    const result = buildFilter(parsed);
+    const result = buildFilter(parsed, []);
     expect(result.store).toBe("store-123");
   });
 
   it("includes cursor in pagination", () => {
     const parsed: ParsedSearch = { freeText: "", filters: {}, errors: [] };
-    const result = buildFilter(parsed, "abc-123");
+    const result = buildFilter(parsed, [], "abc-123");
     expect(result.pagination).toEqual({ cursor: "abc-123", limit: 20 });
   });
 
   it("returns undefined for empty filter", () => {
     const parsed: ParsedSearch = { freeText: "", filters: {}, errors: [] };
-    const result = buildFilter(parsed);
+    const result = buildFilter(parsed, []);
     expect(result.search).toBeUndefined();
     expect(result.status).toBeUndefined();
     expect(result.type).toBeUndefined();
@@ -94,7 +94,7 @@ describe("buildFilter", () => {
       },
       errors: [],
     };
-    const result = buildFilter(parsed, "cursor-xyz");
+    const result = buildFilter(parsed, [], "cursor-xyz");
     expect(result).toEqual({
       search: "weekly",
       status: ["active"],

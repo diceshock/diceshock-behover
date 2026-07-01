@@ -9,6 +9,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DashTable } from "@/client/components/dash/DashTable";
+import { DateRangeFilter } from "@/client/components/dash/DateRangeFilter";
 import { usePendingSearch } from "@/client/components/dash/SearchBridge";
 import { TableToolbar } from "@/client/components/dash/TableToolbar";
 import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
@@ -368,14 +369,52 @@ function RouteComponent() {
           }}
           storeFilter
           extra={
-            <button
-              type="button"
-              className="btn btn-primary btn-sm gap-1"
-              onClick={handleCreate}
-            >
-              <PlusIcon className="size-4" weight="bold" />
-              {t("dashEvents.createEvent")}
-            </button>
+            <div className="flex items-center gap-2">
+              <DateRangeFilter
+                value={
+                  parsed.filters.date
+                    ? {
+                        from: Array.isArray(parsed.filters.date.value)
+                          ? parsed.filters.date.value[0]
+                          : typeof parsed.filters.date.value === "string"
+                            ? parsed.filters.date.value
+                            : undefined,
+                        to: Array.isArray(parsed.filters.date.value)
+                          ? parsed.filters.date.value[1]
+                          : typeof parsed.filters.date.value === "string"
+                            ? parsed.filters.date.value
+                            : undefined,
+                      }
+                    : undefined
+                }
+                onChange={(range) => {
+                  const nextFilters = { ...parsed.filters };
+                  if (!range) {
+                    delete nextFilters.date;
+                  } else if (range.from && range.to) {
+                    nextFilters.date = { operator: "range", value: [range.from, range.to] };
+                  } else if (range.from) {
+                    nextFilters.date = { operator: "gt", value: range.from };
+                  } else if (range.to) {
+                    nextFilters.date = { operator: "lt", value: range.to };
+                  }
+                  const serialized = serialize(
+                    { ...parsed, filters: nextFilters, errors: [] },
+                    EVENT_SEARCH_GRAMMAR,
+                  );
+                  setSearchInput(serialized);
+                  setSearchParam({ q: serialized, page: 1 });
+                }}
+              />
+              <button
+                type="button"
+                className="btn btn-primary btn-sm gap-1"
+                onClick={handleCreate}
+              >
+                <PlusIcon className="size-4" weight="bold" />
+                {t("dashEvents.createEvent")}
+              </button>
+            </div>
           }
         />
       </div>
@@ -397,7 +436,7 @@ function RouteComponent() {
           }
           sorting={sorting}
           onSortingChange={setSorting}
-          sortableColumns={["createdAt"]}
+          sortableColumns={["title", "isPublished", "createdAt"]}
           enableRowSelection
           selectedRows={selectedIds}
           onSelectedRowsChange={setSelectedIds}

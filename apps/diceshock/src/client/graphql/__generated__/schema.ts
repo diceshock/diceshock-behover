@@ -40,6 +40,8 @@ export enum ActiveDateRange {
 
 export type ActiveFilterInput = {
   creator?: InputMaybe<Scalars['String']['input']>;
+  dateFrom?: InputMaybe<Scalars['String']['input']>;
+  dateTo?: InputMaybe<Scalars['String']['input']>;
   pagination?: InputMaybe<CursorPaginationInput>;
   search?: InputMaybe<Scalars['String']['input']>;
   sortBy?: InputMaybe<Scalars['String']['input']>;
@@ -1995,6 +1997,8 @@ export type UserBadge = {
 };
 
 export type UserFilterInput = {
+  dateFrom?: InputMaybe<Scalars['String']['input']>;
+  dateTo?: InputMaybe<Scalars['String']['input']>;
   pagination?: InputMaybe<PaginationInput>;
   role?: InputMaybe<Array<Scalars['String']['input']>>;
   search?: InputMaybe<Scalars['String']['input']>;

@@ -33,6 +33,7 @@ export const USER_SEARCH_GRAMMAR = {
   role: { type: "enum", values: ["admin", "staff", "authenticated"] },
   store: { type: "string" },
   name: { type: "string" },
+  date: { type: "date" },
 } satisfies SearchGrammar;
 
 export const TABLE_SEARCH_GRAMMAR = {
@@ -47,6 +48,7 @@ export const ACTIVE_SEARCH_GRAMMAR = {
   type: { type: "string" },
   store: { type: "string" },
   creator: { type: "string" },
+  date: { type: "date" },
 } satisfies SearchGrammar;
 
 export const EVENT_SEARCH_GRAMMAR = {

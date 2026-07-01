@@ -264,6 +264,7 @@ function RouteComponent() {
                       key={table.id}
                       to="/dash/tables/$id"
                       params={{ id: table.id }}
+                      search={{ tab: "basic" }}
                       className="flex items-center gap-2 p-2 rounded-lg hover:bg-base-200 transition-colors"
                     >
                       <span className="badge badge-xs badge-success" />
