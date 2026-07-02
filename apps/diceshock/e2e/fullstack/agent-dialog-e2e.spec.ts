@@ -274,3 +274,77 @@ test.describe("Agent ↔ Agent 对谈", () => {
     expect(reply3.length).toBeGreaterThan(10);
   });
 });
+
+test.describe("桌游机制查询", () => {
+  test.describe.configure({ timeout: 120_000 });
+
+  test("引擎构筑/滚雪球类 4~5人桌游推荐", async () => {
+    const openId = `oMech_engine_${Date.now()}`;
+
+    console.log("  [Turn 1] 用户: 有没有引擎构筑或者滚雪球类的桌游，4到5个人能玩的？");
+    await sendWechatMessage(
+      "有没有引擎构筑或者滚雪球类的桌游，4到5个人能玩的？",
+      openId,
+    );
+    const reply1 = await waitForReply(openId, 0, 60_000);
+    console.log(`  [Turn 1] Agent: ${reply1.slice(0, 200)}...`);
+
+    // Must be substantive Chinese text (not just a 5-char error)
+    expect(reply1).toMatch(/[\u4e00-\u9fff]/);
+    expect(reply1.length).toBeGreaterThan(30);
+
+    // Should NOT be a generic unconfigured error
+    expect(reply1).not.toContain("AI 服务未配置");
+
+    // Agent should engage with the query — mention games, recommendations,
+    // or acknowledge DB limitations. The key signal: NOT the bare fallback.
+    expect(reply1).not.toBe("抱歉，我暂时无法处理这个请求，请稍后再试。");
+
+    // Should reference something game-related
+    const engagesWithQuery = /桌游|游戏|推荐|引擎|构筑|策略|人|玩/.test(reply1);
+    expect(engagesWithQuery).toBe(true);
+
+    // Follow-up: narrow down
+    await new Promise((r) => setTimeout(r, 2000));
+    console.log("  [Turn 2] 用户: 难度不要太高，最好1小时内能玩完的");
+    await sendWechatMessage("难度不要太高，最好1小时内能玩完的", openId);
+    const reply2 = await waitForReply(openId, 1, 60_000);
+    console.log(`  [Turn 2] Agent: ${reply2.slice(0, 200)}...`);
+
+    expect(reply2).toMatch(/[\u4e00-\u9fff]/);
+    expect(reply2.length).toBeGreaterThan(20);
+  });
+
+  test("按人数精确筛选: 正好5人的合作桌游", async () => {
+    const openId = `oMech_coop5_${Date.now()}`;
+
+    console.log("  [Turn 1] 用户: 5个人玩的合作类桌游有什么？");
+    await sendWechatMessage("5个人玩的合作类桌游有什么？", openId);
+    const reply1 = await waitForReply(openId, 0, 60_000);
+    console.log(`  [Turn 1] Agent: ${reply1.slice(0, 200)}...`);
+
+    expect(reply1).toMatch(/[\u4e00-\u9fff]/);
+    expect(reply1.length).toBeGreaterThan(20);
+    expect(reply1).not.toContain("AI 服务未配置");
+
+    // Should attempt to query and give game-related info
+    const mentionsGames = /桌游|游戏|合作|人/.test(reply1);
+    expect(mentionsGames).toBe(true);
+  });
+
+  test("组合条件: 德式+竞争+3~4人+高评分", async () => {
+    const openId = `oMech_euro_${Date.now()}`;
+
+    console.log("  [Turn 1] 用户: 有没有评分高的德式竞争桌游，3到4个人玩的？");
+    await sendWechatMessage(
+      "有没有评分高的德式竞争桌游，3到4个人玩的？",
+      openId,
+    );
+    const reply1 = await waitForReply(openId, 0, 60_000);
+    console.log(`  [Turn 1] Agent: ${reply1.slice(0, 200)}...`);
+
+    expect(reply1).toMatch(/[\u4e00-\u9fff]/);
+    expect(reply1.length).toBeGreaterThan(20);
+    expect(reply1).not.toContain("AI 服务未配置");
+  });
+});

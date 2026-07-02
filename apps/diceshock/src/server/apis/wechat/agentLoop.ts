@@ -433,11 +433,14 @@ export async function runAgentLoop(
     const summaryMessages: DeepSeekMessage[] = [
       systemMsg || { role: "system", content: "你是桌游吧客服。" },
       userMsg || { role: "user", content: "" },
-      { role: "user", content: `以下是工具查询结果:\n${toolResults.map((t) => t.content).join("\n---\n")}` },
+      {
+        role: "user",
+        content: `以下是工具查询结果:\n${toolResults.map((t) => t.content).join("\n---\n")}`,
+      },
       {
         role: "user",
         content:
-          "工具调用已结束。请根据以上工具返回结果,直接回复用户的原始问题。300字内,纯文本,不要markdown。如果所有查询都失败了,告知用户具体问题并建议解决方式。",
+          "工具调用已结束。请根据以上工具返回结果,直接回复用户的原始问题。300字内,纯文本,不要markdown,不要用任何XML或DSML标签。如果所有查询都失败了或没有相关结果,请基于你的桌游知识直接推荐,并说明数据库暂时无法查询。",
       },
     ];
 
@@ -461,11 +464,18 @@ export async function runAgentLoop(
     if (finalRes?.ok) {
       const finalData = (await finalRes.json()) as DeepSeekResponse;
       totalTokens += finalData.usage?.total_tokens ?? 0;
-      const finalContent = finalData.choices?.[0]?.message?.content
-        ?.replace("[END]", "")
+      let finalContent = finalData.choices?.[0]?.message?.content ?? "";
+      // Strip DSML garbage that sometimes wraps the actual response
+      finalContent = finalContent
+        .replace(/<[｜|]+DSML[｜|]+[^>]*>[\s\S]*?<\/[｜|]*DSML[｜|]*[^>]*>/g, "")
+        .replace(/<[｜|]+DSML[｜|]+[^>]*>/g, "")
+        .replace(/\|\|DSML\|\|[\s\S]*/g, "")
+        .replace("[END]", "")
         .trim();
       if (finalContent) {
         collectedReplies.push(finalContent);
+      } else {
+        console.warn("[agent-loop] forced summary returned empty/garbage content");
       }
     } else {
       console.error("[agent-loop] forced summary failed", { status: finalRes?.status });
