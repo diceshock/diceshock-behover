@@ -224,6 +224,7 @@ export async function runAgentLoop(
     source: string;
     score: number;
   }> = [];
+  let concludedNaturally = false;
 
   console.log("[agent-loop] start", { openId: params.openId });
 
@@ -278,11 +279,13 @@ export async function runAgentLoop(
     }
 
     if (hasEnd) {
+      concludedNaturally = true;
       console.log(`[agent-loop] [END] at round ${round}`);
       break;
     }
 
     if (!assistantMsg.tool_calls?.length) {
+      concludedNaturally = true;
       console.log(`[agent-loop] round ${round} no tools, treating as final`);
       break;
     }
@@ -393,13 +396,20 @@ export async function runAgentLoop(
     }
   }
 
-  // If no text collected, force a final summarizing call
-  if (collectedReplies.length === 0 && !signal.aborted) {
-    console.log("[agent-loop] forcing final call");
+  // Force a final summarizing call when:
+  // 1. Loop exhausted MAX_ROUNDS without [END] or natural conclusion, OR
+  // 2. No text was collected at all
+  const needsForcedSummary =
+    !concludedNaturally && !signal.aborted;
+
+  if (needsForcedSummary) {
+    console.log("[agent-loop] forcing final call (rounds exhausted)");
+    // Clear intermediate replies (e.g. "帮你查一下") — only final answer matters
+    collectedReplies.length = 0;
     messages.push({
       role: "user",
       content:
-        "工具调用已结束。请根据以上全部工具返回结果直接回复用户。如果所有查询都失败了，告知用户具体问题并建议解决方式。",
+        "工具调用已结束。请根据以上全部工具返回结果,直接回复用户的原始问题。300字内,纯文本,不要markdown。如果所有查询都失败了,告知用户具体问题并建议解决方式。",
     });
 
     const finalRes = await fetchWithTimeout(
