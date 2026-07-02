@@ -23,7 +23,7 @@ const NODES: Record<string, SkillNode> = {
 在架条件: removeDate eq 0
 推荐: 查 gstone_rating gte 6.5 的前20款, 从结果中按 player_num/category 筛选
 链接: https://diceshock.com/inventory/{id}`,
-    children: ["boardgame.search", "boardgame.recommend"],
+    children: ["boardgame.search", "boardgame.recommend", "boardgame.mechanism"],
   },
 
   "boardgame.search": {
@@ -40,7 +40,7 @@ const NODES: Record<string, SkillNode> = {
 
   "boardgame.recommend": {
     id: "boardgame.recommend",
-    keywords: ["推荐", "适合", "好玩", "什么桌游", "引擎", "策略", "合作"],
+    keywords: ["推荐", "适合", "好玩", "什么桌游", "策略"],
     description: "按人数/评分/类型/玩法推荐桌游",
     content:
       () => `执行步骤(严格按顺序,只需1次query):
@@ -54,6 +54,73 @@ const NODES: Record<string, SkillNode> = {
 - player_num是JSON数组如[2,3,4],不能WHERE过滤,从结果中人工筛
 - 禁止逐个游戏名搜索! 一次query拿30款高分游戏,从中筛选
 链接: https://diceshock.com/inventory/{id}`,
+  },
+
+  "boardgame.mechanism": {
+    id: "boardgame.mechanism",
+    keywords: [
+      "引擎构筑", "滚雪球", "工人放置", "区域控制",
+      "卡牌驱动", "成套收集", "轮抽", "甲板构建",
+      "行动点", "网络建设", "拍卖", "手牌管理",
+      "engine building", "snowball", "worker placement",
+      "area control", "deck building", "drafting",
+    ],
+    description: "按桌游机制/玩法推荐(引擎构筑/工人放置/区域控制等)",
+    content: () => `## 机制查询策略
+
+数据库没有mechanism字段! 不要尝试 ilike "%引擎构筑%"。
+正确做法: 一次query高分游戏, 用下方知识从结果中筛选。
+
+查询: { boardGamesTable(where: {removeDate: {eq: 0}, gstone_rating: {gte: 6.5}}, limit: 40) { id sch_name eng_name player_num best_player_num gstone_rating category } }
+
+## 店内库存-机制对照表(在架游戏)
+
+### 引擎构筑 / 滚雪球
+每回合产出递增,前期投资后期爆发:
+- 重塑火星 (Terraforming Mars) — 8.5分, 1-5人
+- 大创造时代 (It's a Wonderful World) — 8.7分, 1-5人
+- 方舟动物园 (Ark Nova) — 8.6分, 1-4人
+- 盖亚计划 (Gaia Project) — 8.7分, 1-4人
+- 历史巨轮 (Through the Ages) — 8.7~9.1分, 2-4人
+- 星空觅迹 (Spaceship Unity) — 8.5分, 1-4人
+- 工业革命：伯明翰 (Brass: Birmingham) — 8.8分, 2-4人
+
+### 工人放置
+有限工人选择行动点位:
+- 方舟动物园 (Ark Nova) — 8.6分, 1-4人
+- 阿纳克遗迹 (Lost Ruins of Arnak) — 8.5~8.6分, 1-4人
+- 看板：电动汽车 (Kanban EV) — 8.4分, 1-4人
+- 大西部开拓者 (Great Western Trail) — 8.4~8.5分, 1-4人
+
+### 区域控制
+占领地图区域争夺积分:
+- 神秘大地 (Terra Mystica) — 8.4~8.7分, 2-5人
+- 镰刀战争 (Scythe) — 8.5分, 1-7人
+- 茂林源记 (Root) — 8.3~8.4分, 2-6人
+- 1817 — 9.0分, 3-7人(重度)
+
+### 卡牌驱动 / 甲板构建
+获取卡牌强化自己的牌库:
+- 沙丘：帝国 (Dune: Imperium) — 8.5~8.7分, 1-4人
+- 诡镇奇谈：卡牌版 (Arkham Horror LCG) — 8.5~8.8分, 1-4人
+- 漫威群英传 (Marvel Champions) — 8.4分, 1-4人
+
+### 合作类(多人一起对抗游戏)
+- 瘟疫危机传承 (Pandemic Legacy S1) — 8.5分, 2-4人
+- 幽港迷城 (Gloomhaven) — 8.4分, 1-4人
+- 诡镇奇谈：卡牌版 — 1-4人合作
+- 阿瑞迪亚 — 8.6~9.0分, 1-4人
+
+### 轮抽 / 成套收集
+从公共牌池选牌组成收藏:
+- 勃根地城堡 (Castles of Burgundy) — 8.5~8.6分, 1-4人
+- 终极铁路 (Ticket to Ride Ultimate) — 8.4分, 1-4人
+
+## 回复格式
+从query结果中匹配上述游戏名,确认在架,再推荐3-5款:
+- 游戏名 — 评分X分, Y人, 机制简介一句话
+- 附链接: https://diceshock.com/inventory/{id}
+如果用户要求的人数/难度与上表不完全匹配,也推荐最接近的并说明`,
   },
 
   active: {
