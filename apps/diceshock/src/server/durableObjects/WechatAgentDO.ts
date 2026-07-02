@@ -41,6 +41,7 @@ export class WechatAgentDO extends DurableObject<Cloudflare.Env> {
    * RPC-style: pass openId + message content.
    */
   async submitMessage(openId: string, userMessage: string): Promise<void> {
+    console.log(`[WechatAgentDO:${openId.slice(-6)}] submitMessage gen=${this.currentGeneration + 1}`);
     this.lastActivityAt = Date.now();
     this.currentGeneration++;
     const gen = this.currentGeneration;
@@ -54,8 +55,12 @@ export class WechatAgentDO extends DurableObject<Cloudflare.Env> {
     // Schedule inactivity alarm
     await this.ctx.storage.setAlarm(Date.now() + ACTIVITY_TIMEOUT_MS);
 
-    // Start processing in background
-    this.ctx.waitUntil(this.processTask(openId, userMessage, gen));
+    // Start processing in background — catch to surface errors in logs
+    this.ctx.waitUntil(
+      this.processTask(openId, userMessage, gen).catch((e) => {
+        console.error(`[WechatAgentDO:${openId.slice(-6)}] uncaught in processTask`, e);
+      }),
+    );
   }
 
   /**
@@ -78,6 +83,7 @@ export class WechatAgentDO extends DurableObject<Cloudflare.Env> {
     userMessage: string,
     generation: number,
   ): Promise<void> {
+    console.log(`[WechatAgentDO:${openId.slice(-6)}] processTask gen=${generation}`);
     if (this.processing) {
       // Previous task should have been aborted above; guard against races
       console.log("[WechatAgentDO] overlapping task detected, waiting for abort...");
