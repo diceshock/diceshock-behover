@@ -247,9 +247,11 @@ export async function runAgentLoop(
         body: JSON.stringify({
           model: "deepseek-v4-flash",
           messages,
-          tools: TOOLS,
-          tool_choice: "auto",
-          max_tokens: 1024,
+          // Last round: no tools, force text-only conclusion
+          ...(round < MAX_ROUNDS
+            ? { tools: TOOLS, tool_choice: "auto" }
+            : {}),
+          max_tokens: round < MAX_ROUNDS ? 1024 : 512,
         }),
       },
       signal,
@@ -416,11 +418,26 @@ export async function runAgentLoop(
     console.log("[agent-loop] forcing final call (rounds exhausted)");
     // Clear intermediate replies (e.g. "帮你查一下") — only final answer matters
     collectedReplies.length = 0;
-    messages.push({
-      role: "user",
-      content:
-        "工具调用已结束。请根据以上全部工具返回结果,直接回复用户的原始问题。300字内,纯文本,不要markdown。如果所有查询都失败了,告知用户具体问题并建议解决方式。",
-    });
+
+    // Build a compact summary request to avoid timeout on huge messages array.
+    // Keep: system prompt + user question + last N tool results
+    const systemMsg = messages.find((m) => m.role === "system");
+    const userMsg = messages.find((m) => m.role === "user");
+    const toolResults = messages
+      .filter((m) => m.role === "tool")
+      .slice(-8) // keep last 8 tool results max
+      .map((m) => ({ role: m.role, content: m.content.slice(0, 1500) }));
+
+    const summaryMessages: DeepSeekMessage[] = [
+      systemMsg || { role: "system", content: "你是桌游吧客服。" },
+      userMsg || { role: "user", content: "" },
+      { role: "user", content: `以下是工具查询结果:\n${toolResults.map((t) => t.content).join("\n---\n")}` },
+      {
+        role: "user",
+        content:
+          "工具调用已结束。请根据以上工具返回结果,直接回复用户的原始问题。300字内,纯文本,不要markdown。如果所有查询都失败了,告知用户具体问题并建议解决方式。",
+      },
+    ];
 
     const finalRes = await fetchWithTimeout(
       `${baseUrl}/chat/completions`,
@@ -432,7 +449,7 @@ export async function runAgentLoop(
         },
         body: JSON.stringify({
           model: "deepseek-v4-flash",
-          messages,
+          messages: summaryMessages,
           max_tokens: 512,
         }),
       },
@@ -448,6 +465,8 @@ export async function runAgentLoop(
       if (finalContent) {
         collectedReplies.push(finalContent);
       }
+    } else {
+      console.error("[agent-loop] forced summary failed", { status: finalRes?.status });
     }
   }
 
