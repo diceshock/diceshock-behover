@@ -164,52 +164,59 @@ export async function dispatchGstoneOcr(env: {
   GSTONE_DB: D1Database;
   GSTONE_OCR_QUEUE: Queue;
 }): Promise<void> {
-  const staleThreshold = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+  const MAX_QUEUE_DEPTH = 400;
+  const TIMEOUT_MS = 30 * 60 * 1000;
+  const COOLDOWN_MS = 60 * 1000; // avoid re-dispatching items still in queue
+  const now = new Date().toISOString();
+  const timeoutThreshold = new Date(Date.now() - TIMEOUT_MS).toISOString();
+  const cooldown = new Date(Date.now() - COOLDOWN_MS).toISOString();
 
-  const staleInflight = await env.GSTONE_DB.prepare(
-    `SELECT document_id, ocr_pages FROM documents
+  // 1. Mark timed-out tasks as errors
+  await env.GSTONE_DB.prepare(
+    `UPDATE documents SET error = 'OCR timeout', updated_at = ?
      WHERE crawled_at IS NOT NULL AND ocr_at IS NULL AND error IS NULL
-       AND ocr_pages IS NOT NULL AND updated_at < ?
-     LIMIT 25`,
+       AND ocr_pages IS NOT NULL AND updated_at < ?`,
   )
-    .bind(staleThreshold)
-    .all<{ document_id: number; ocr_pages: string }>();
+    .bind(now, timeoutThreshold)
+    .run();
 
-  if ((staleInflight.results?.length ?? 0) > 0) {
-    const msgs = (staleInflight.results ?? []).map((d) => {
-      let nextPage = 0;
-      try {
-        const pages = JSON.parse(d.ocr_pages) as (string | null)[];
-        nextPage = pages.findIndex((p) => !p || p.trim().length === 0);
-        if (nextPage === -1) nextPage = pages.length;
-      } catch {}
-      return { body: { document_id: d.document_id, page_index: nextPage } };
-    });
-    for (let i = 0; i < msgs.length; i += 100) {
-      await env.GSTONE_OCR_QUEUE.sendBatch(msgs.slice(i, i + 100));
-    }
-    return;
+  // 2. Dispatch next page for docs that completed their last page (cooldown passed)
+  const ready = await env.GSTONE_DB.prepare(
+    `SELECT document_id, ocr_pages, image_urls FROM documents
+     WHERE crawled_at IS NOT NULL AND ocr_at IS NULL AND error IS NULL
+       AND ocr_pages IS NOT NULL AND updated_at < ? AND updated_at > ?
+     LIMIT ?`,
+  )
+    .bind(cooldown, timeoutThreshold, MAX_QUEUE_DEPTH)
+    .all<{ document_id: number; ocr_pages: string; image_urls: string }>();
+
+  const msgs: { body: { document_id: number; page_index: number } }[] = [];
+
+  for (const d of ready.results ?? []) {
+    try {
+      const pages = JSON.parse(d.ocr_pages) as (string | null)[];
+      const totalPages = JSON.parse(d.image_urls).length;
+      const nextPage = pages.findIndex((p) => !p || p.trim().length === 0);
+      if (nextPage === -1 || nextPage >= totalPages) continue;
+      msgs.push({ body: { document_id: d.document_id, page_index: nextPage } });
+    } catch {}
   }
 
-  const inflight = await env.GSTONE_DB.prepare(
-    `SELECT COUNT(*) as c FROM documents
-     WHERE crawled_at IS NOT NULL AND ocr_at IS NULL AND error IS NULL AND ocr_pages IS NOT NULL`,
-  ).first<{ c: number }>();
+  // 3. Fill remaining slots with new docs (haven't started OCR)
+  const remainingSlots = MAX_QUEUE_DEPTH - msgs.length;
+  if (remainingSlots > 0) {
+    const pending = await env.GSTONE_DB.prepare(
+      `SELECT document_id FROM documents
+       WHERE crawled_at IS NOT NULL AND ocr_at IS NULL AND error IS NULL AND ocr_pages IS NULL
+       LIMIT ?`,
+    )
+      .bind(remainingSlots)
+      .all<{ document_id: number }>();
 
-  if ((inflight?.c ?? 0) > 50) return;
-
-  const pending = await env.GSTONE_DB.prepare(
-    `SELECT document_id FROM documents
-     WHERE crawled_at IS NOT NULL AND ocr_at IS NULL AND error IS NULL AND ocr_pages IS NULL
-     LIMIT 25`,
-  ).all<{ document_id: number }>();
-
-  const docs = pending.results ?? [];
-  if (docs.length === 0) return;
-
-  const msgs = docs.map((d) => ({
-    body: { document_id: d.document_id, page_index: 0 },
-  }));
+    for (const d of pending.results ?? []) {
+      msgs.push({ body: { document_id: d.document_id, page_index: 0 } });
+    }
+  }
 
   for (let i = 0; i < msgs.length; i += 100) {
     await env.GSTONE_OCR_QUEUE.sendBatch(msgs.slice(i, i + 100));

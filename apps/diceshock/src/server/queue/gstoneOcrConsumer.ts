@@ -44,12 +44,7 @@ export async function handleGstoneOcrQueue(
 
       const isLastPage = pageIndex >= doc.image_urls.length - 1;
 
-      if (!isLastPage) {
-        await env.GSTONE_OCR_QUEUE.send({
-          document_id: docId,
-          page_index: pageIndex + 1,
-        });
-      } else {
+      if (isLastPage) {
         const validPages = existingPages.filter(
           (t) => t && t.trim().length > 20,
         );
