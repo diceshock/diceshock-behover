@@ -9,7 +9,6 @@ import db, {
 } from "@lib/db";
 import dayjs from "dayjs";
 import type { Context } from "hono";
-import { createReference } from "@/server/apis/referenceCreate";
 import {
   LOCALES,
   type LocaleCode,
@@ -17,16 +16,9 @@ import {
   type StoreCode,
 } from "@/shared/store-locale";
 import type { HonoCtxEnv } from "@/shared/types";
-import {
-  clearConversationHistory,
-  getRecentHistory,
-  saveMessage,
-} from "./conversationContext";
-import { chatWithAgent } from "./deepseekClient";
-import { generateAndSendMembershipCard } from "./membershipCard";
-import { addMemory, deleteAllMemories, searchMemory } from "./memory";
-import { dispatchMessages, parseAgentOutput } from "./messagePipeline";
-import { checkRateLimit, recordTokenUsage } from "./rateLimit";
+import { clearConversationHistory } from "./conversationContext";
+import { deleteAllMemories } from "./memory";
+import { checkRateLimit } from "./rateLimit";
 import { ERROR_MESSAGES } from "./statusMessages";
 import {
   clearPendingAction,
@@ -88,7 +80,10 @@ export async function handleTextMessage(
   const { allowed, reason } = await checkRateLimit(c, openId);
   if (!allowed) return reason || ERROR_MESSAGES.RATE_LIMITED;
 
-  c.executionCtx.waitUntil(processMessage(c, openId, content));
+  // Delegate to WechatAgentDO — the DO owns the agent loop lifetime
+  const doId = c.env.WECHAT_AGENT.idFromName(openId);
+  const stub = c.env.WECHAT_AGENT.get(doId);
+  c.executionCtx.waitUntil(stub.submitMessage(openId, content));
   return TYPING_REPLY;
 }
 
@@ -114,148 +109,6 @@ async function executeConfirmedAction(
       openId,
       `操作执行失败: ${String(e).slice(0, 100)}`,
     );
-  }
-}
-
-async function processMessage(
-  c: Context<HonoCtxEnv>,
-  openId: string,
-  content: string,
-): Promise<void> {
-  const env = c.env;
-  const t0 = Date.now();
-  const tag = openId.slice(-6);
-
-  try {
-    console.log(`[pipeline:${tag}] start`, { content: content.slice(0, 50) });
-
-    const history = await getRecentHistory(c, openId);
-    console.log(`[pipeline:${tag}] history loaded`, {
-      count: history.length,
-      ms: Date.now() - t0,
-    });
-
-    const memory = await searchMemory(env, openId, content);
-    console.log(`[pipeline:${tag}] memory searched`, {
-      found: !!memory,
-      ms: Date.now() - t0,
-    });
-
-    const ragContext = await searchKnowledgeBase(c, content);
-    console.log(`[pipeline:${tag}] rag done`, {
-      found: !!ragContext,
-      ms: Date.now() - t0,
-    });
-
-    const { rawOutput, tokensUsed, collectedReferences } = await chatWithAgent(
-      c,
-      {
-        userMessage: content,
-        openId,
-        conversationHistory: history,
-        ragContext,
-        memory,
-      },
-    );
-
-    console.log(`[pipeline:${tag}] agent done`, {
-      tokensUsed,
-      rawOutputLen: rawOutput.length,
-      refsCount: collectedReferences.length,
-      ms: Date.now() - t0,
-    });
-
-    if (tokensUsed > 0) {
-      await recordTokenUsage(c, openId, tokensUsed);
-    }
-
-    const messages = parseAgentOutput(rawOutput);
-    console.log(`[pipeline:${tag}] parsed`, {
-      messageCount: messages.length,
-      types: messages.map((m) => m.type),
-    });
-
-    if (messages.length === 0) {
-      messages.push({
-        type: "text",
-        content: "抱歉，我暂时无法生成回复。请稍后再试或换个方式提问。",
-      });
-    }
-
-    if (collectedReferences.length > 0) {
-      const agentReplyText = messages
-        .filter((m) => m.type === "text")
-        .map((m) => m.content)
-        .join("\n");
-
-      try {
-        const { url } = await createReference(env.KV, {
-          userQuery: content,
-          agentReply: agentReplyText,
-          references: collectedReferences,
-        });
-        messages.push({
-          type: "text",
-          content: `📖 查看引用原文: ${url}`,
-        });
-      } catch (refErr) {
-        console.error(`[pipeline:${tag}] reference create failed`, {
-          error: String(refErr),
-        });
-      }
-    }
-
-    await dispatchMessages(env, openId, messages);
-    console.log(`[pipeline:${tag}] dispatched`, { ms: Date.now() - t0 });
-
-    await saveMessage(c, openId, "user", content, "{}");
-    await saveMessage(c, openId, "assistant", rawOutput, "{}");
-
-    addMemory(env, openId, [
-      { role: "user", content },
-      { role: "assistant", content: rawOutput },
-    ]).catch(() => {});
-
-    console.log(`[pipeline:${tag}] complete`, { totalMs: Date.now() - t0 });
-  } catch (e) {
-    console.error(`[pipeline:${tag}] error`, {
-      error: String(e),
-      ms: Date.now() - t0,
-    });
-    try {
-      await sendCustomerTextMessage(env, openId, ERROR_MESSAGES.AI_UNAVAILABLE);
-    } catch {}
-  }
-}
-
-async function searchKnowledgeBase(
-  c: Context<HonoCtxEnv>,
-  query: string,
-): Promise<string | undefined> {
-  const aiSearch = c.env.AI_SEARCH;
-  if (!aiSearch) return undefined;
-
-  try {
-    const results = await aiSearch.search({
-      query,
-      ai_search_options: { retrieval: { max_num_results: 3 } },
-    });
-
-    const chunks: string[] = [];
-
-    if (results?.chunks?.length) {
-      for (const chunk of results.chunks) {
-        const text = chunk.text || "";
-        if (text) chunks.push(text.slice(0, 500));
-      }
-    }
-
-    return chunks.length > 0
-      ? `[参考资料]\n${chunks.join("\n---\n")}`
-      : undefined;
-  } catch (e) {
-    console.error("[AI Search] error:", e);
-    return undefined;
   }
 }
 

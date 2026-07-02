@@ -57,6 +57,10 @@ class_name = "DsSubscriptionDO"
 name = "PUBSUB"
 class_name = "PubSubDO"
 
+[[durable_objects.bindings]]
+name = "WECHAT_AGENT"
+class_name = "WechatAgentDO"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["SeatTimerDO"]
@@ -73,6 +77,10 @@ new_classes = ["PubSubDO"]
 [[migrations]]
 tag = "v4"
 renamed_classes = [{ from = "SocketDO", to = "DsSubscriptionDO" }]
+
+[[migrations]]
+tag = "v5"
+new_classes = ["WechatAgentDO"]
 
 [browser]
 binding = "BROWSER"

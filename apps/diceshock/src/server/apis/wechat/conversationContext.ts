@@ -80,6 +80,51 @@ export async function getRecentHistory(
   return result.reverse();
 }
 
+/**
+ * Same as getRecentHistory but takes raw D1Database instead of Hono Context.
+ * Used by WechatAgentDO which doesn't have a Hono request context.
+ */
+export async function getRecentHistoryRaw(
+  d1: D1Database,
+  openId: string,
+  maxTokens: number = DEFAULT_MAX_TOKENS,
+): Promise<ChatMessage[]> {
+  const d = db(d1);
+  const cutoff = Date.now() - TWELVE_HOURS_MS;
+
+  const rows = await d
+    .select({
+      role: wechatConversationsTable.role,
+      content: wechatConversationsTable.content,
+      metadata: wechatConversationsTable.metadata,
+    })
+    .from(wechatConversationsTable)
+    .where(
+      and(
+        eq(wechatConversationsTable.open_id, openId),
+        gt(wechatConversationsTable.created_at, cutoff),
+      ),
+    )
+    .orderBy(desc(wechatConversationsTable.created_at))
+    .limit(50);
+
+  const result: ChatMessage[] = [];
+  let totalTokens = 0;
+
+  for (const row of rows) {
+    const tokens = estimateTokens(row.content);
+    if (totalTokens + tokens > maxTokens) break;
+    totalTokens += tokens;
+    result.push({
+      role: row.role as ChatMessage["role"],
+      content: row.content,
+      metadata: row.metadata ?? undefined,
+    });
+  }
+
+  return result.reverse();
+}
+
 async function archiveOldMessages(
   c: Context<HonoCtxEnv>,
   openId: string,

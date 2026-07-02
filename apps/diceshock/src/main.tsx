@@ -64,6 +64,7 @@ import { wechatSilentAuth } from "./server/middlewares/wechatSilentAuth";
 
 export { DsSubscriptionDO } from "./server/durableObjects/DsSubscriptionDO";
 export { PubSubDO } from "./server/durableObjects/PubSubDO";
+export { WechatAgentDO } from "./server/durableObjects/WechatAgentDO";
 
 export const app = new Hono<HonoCtxEnv>();
 

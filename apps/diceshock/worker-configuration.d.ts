@@ -23,6 +23,7 @@ interface __BaseEnv_Env {
 	CAPTCHA_SCENE_ID: "1iwji8e9";
 	DS_SUBSCRIPTION: DurableObjectNamespace<import("./src/main").DsSubscriptionDO>;
 	PUBSUB: DurableObjectNamespace<import("./src/main").PubSubDO>;
+	WECHAT_AGENT: DurableObjectNamespace<import("./src/main").WechatAgentDO>;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {
