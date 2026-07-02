@@ -39,6 +39,7 @@ export default defineConfig({
           timeout: 180_000,
           stdout: "pipe",
           stderr: "pipe",
+          env: { SSL_CERT_FILE: "/etc/ssl/certs/ca-certificates.crt" },
         },
       }),
 });

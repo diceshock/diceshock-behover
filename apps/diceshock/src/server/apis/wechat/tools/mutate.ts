@@ -28,6 +28,7 @@ interface MutateEnv {
   GSZ_TOKEN?: string;
   DEV_SMS_CODE?: string;
   DEEPSEEK_API_KEY?: string;
+  DEEPSEEK_BASE_URL?: string;
   CF_ACCOUNT_ID?: string;
   CF_AI_GATEWAY_ID?: string;
 }
@@ -842,9 +843,10 @@ async function parsePreferenceWithDeepSeek(
     return { success: false, error: "AI 服务未配置，请联系管理员" };
   }
 
-  const baseUrl = gatewayId
-    ? `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/deepseek`
-    : "https://api.deepseek.com/v1";
+  const baseUrl = env.DEEPSEEK_BASE_URL
+    || (gatewayId
+      ? `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/deepseek`
+      : "https://api.deepseek.com/v1");
 
   try {
     const response = await fetch(`${baseUrl}/chat/completions`, {

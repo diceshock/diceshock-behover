@@ -42,6 +42,7 @@ export interface AgentEnv {
     }) => Promise<{ chunks?: Array<{ text?: string }> }>;
   };
   DEEPSEEK_API_KEY: string;
+  DEEPSEEK_BASE_URL?: string;
   CF_ACCOUNT_ID?: string;
   CF_AI_GATEWAY_ID?: string;
   WECHAT_MP_APP_ID: string;
@@ -196,9 +197,10 @@ export async function runAgentLoop(
     };
   }
 
-  const baseUrl = gatewayId
-    ? `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/deepseek`
-    : "https://api.deepseek.com/v1";
+  const baseUrl = env.DEEPSEEK_BASE_URL
+    || (gatewayId
+      ? `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/deepseek`
+      : "https://api.deepseek.com/v1");
 
   const identity = await resolveUserIdentity(env.DB, params.openId);
   const systemContent = buildSystemContent(identity, params);
