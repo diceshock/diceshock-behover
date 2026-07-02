@@ -31,23 +31,29 @@ const NODES: Record<string, SkillNode> = {
     keywords: ["搜", "找", "查", "有没有"],
     description: "按名称/主题搜索桌游",
     content: () => `搜索策略:
-- 具体名 → ilike "%名字%"
-- 主题/类型 → 用桌游知识联想经典游戏名逐个搜
-- 先搜 sch_name, 再搜 eng_name
+- 具体游戏名 → ilike "%名字%"
 - 搜不到缩短关键词或换同义词
+- 先搜 sch_name, 再搜 eng_name
 返回字段: id sch_name eng_name player_num best_player_num gstone_rating category
 回复必须附链接: https://diceshock.com/inventory/{id}`,
   },
 
   "boardgame.recommend": {
     id: "boardgame.recommend",
-    keywords: ["推荐", "适合", "好玩", "什么桌游"],
-    description: "按人数/评分/类型推荐桌游",
+    keywords: ["推荐", "适合", "好玩", "什么桌游", "引擎", "策略", "合作"],
+    description: "按人数/评分/类型/玩法推荐桌游",
     content:
-      () => `查询: gstone_rating gte 6.5, removeDate eq 0, orderBy gstone_rating DESC, limit 20
-从结果中筛: player_num 包含目标人数 / category 包含目标类型
-类型值: STRATEGY / PARTY / FAMILY / ABSTRACT / THEMATIC / COOPERATIVE / WARGAME
-推荐3-5款, 附评分和一句简介`,
+      () => `执行步骤(严格按顺序,只需1次query):
+1. 查询: { boardGamesTable(where: {removeDate: {eq: 0}, gstone_rating: {gte: 6}}, orderBy: {gstone_rating: DESC}, limit: 30) { id sch_name eng_name player_num best_player_num gstone_rating category } }
+2. 从结果中筛选: 用你的桌游知识判断哪些符合用户要求的玩法/机制/人数
+3. 推荐3-5款, 附评分+一句话玩法简介+链接
+
+注意:
+- category字段是JSON数组,值为 STRATEGY/PARTY/FAMILY/ABSTRACT/THEMATIC/COOPERATIVE/WARGAME
+- 但category不包含细分机制(如引擎构筑/工人放置/卡牌驱动),需要用你的桌游知识从游戏名判断
+- player_num是JSON数组如[2,3,4],不能WHERE过滤,从结果中人工筛
+- 禁止逐个游戏名搜索! 一次query拿30款高分游戏,从中筛选
+链接: https://diceshock.com/inventory/{id}`,
   },
 
   active: {
