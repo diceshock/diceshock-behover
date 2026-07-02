@@ -73,7 +73,7 @@ type ProgressFn = (status: string) => void;
 // ─── Constants ──────────────────────────────────────────────────────
 
 const MAX_ROUNDS = 3;
-const FETCH_TIMEOUT_MS = 20_000;
+const FETCH_TIMEOUT_MS = 45_000;
 
 const BASE_SYSTEM_PROMPT = `骰子奇兵桌游吧微信客服。
 
