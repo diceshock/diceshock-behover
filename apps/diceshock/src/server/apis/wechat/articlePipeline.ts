@@ -1,5 +1,6 @@
 import type { Context } from "hono";
-import type { ImageProcessMessage, ImageProcessResult } from "../imageProcess";
+import type { ImageProcessMessage } from "../imageProcess";
+import { pollForImageResult } from "../imageProcess";
 import type { HonoCtxEnv } from "@/shared/types";
 import { fetchAsDataUrl, LOGO_URL } from "../ogCards/shared";
 import {
@@ -154,9 +155,8 @@ export async function publishActivityArticle(
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
 async function renderHtmlToImage(
-  env: { KV: KVNamespace; IMAGE_QUEUE: Queue },
+  env: { R2: R2Bucket; IMAGE_QUEUE: Queue },
   html: string,
 ): Promise<string | null> {
   const taskId = crypto.randomUUID().replace(/-/g, "").slice(0, 24);
@@ -171,18 +171,13 @@ async function renderHtmlToImage(
     },
   };
 
-  await env.KV.put(
-    `img-task:${taskId}`,
-    JSON.stringify({ taskId, status: "pending" } satisfies ImageProcessResult),
-    { expirationTtl: 3600 },
-  );
   await env.IMAGE_QUEUE.send(message);
 
-  return pollForResult(env, taskId, 45_000);
+  return pollForImageResult(env, taskId, 45_000);
 }
 
 async function sliceImage(
-  env: { KV: KVNamespace; IMAGE_QUEUE: Queue },
+  env: { R2: R2Bucket; IMAGE_QUEUE: Queue },
   fullImageUrl: string,
   imgHeight: number,
 ): Promise<Uint8Array[] | null> {
@@ -207,17 +202,9 @@ async function sliceImage(
       },
     };
 
-    await env.KV.put(
-      `img-task:${sliceTaskId}`,
-      JSON.stringify({
-        taskId: sliceTaskId,
-        status: "pending",
-      } satisfies ImageProcessResult),
-      { expirationTtl: 3600 },
-    );
     await env.IMAGE_QUEUE.send(sliceMsg);
 
-    const sliceUrl = await pollForResult(env, sliceTaskId, 30_000);
+    const sliceUrl = await pollForImageResult(env, sliceTaskId, 30_000);
     if (!sliceUrl) return null;
 
     const sliceRes = await fetch(sliceUrl);
@@ -227,24 +214,6 @@ async function sliceImage(
   }
 
   return buffers;
-}
-
-async function pollForResult(
-  env: { KV: KVNamespace },
-  taskId: string,
-  timeoutMs: number,
-): Promise<string | null> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const raw = await env.KV.get(`img-task:${taskId}`);
-    if (raw) {
-      const result = JSON.parse(raw) as ImageProcessResult;
-      if (result.status === "done" && result.url) return result.url;
-      if (result.status === "error") return null;
-    }
-    await new Promise((r) => setTimeout(r, 1500));
-  }
-  return null;
 }
 
 function readPngHeight(buf: Uint8Array): number | null {

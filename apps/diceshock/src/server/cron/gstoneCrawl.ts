@@ -227,21 +227,29 @@ export async function dispatchGstoneDocImages(env: {
   GSTONE_DB: D1Database;
   GSTONE_DOC_IMAGE_QUEUE: Queue;
 }): Promise<void> {
-  const MAX_QUEUE_DEPTH = 400;
+  const MAX_QUEUE_DEPTH = 100;
 
   const pending = await env.GSTONE_DB.prepare(
-    `SELECT document_id FROM documents
+    `SELECT document_id, image_urls FROM documents
      WHERE crawled_at IS NOT NULL AND images_synced_at IS NULL AND image_urls IS NOT NULL
-     LIMIT ?`,
+     LIMIT 20`,
   )
-    .bind(MAX_QUEUE_DEPTH)
-    .all<{ document_id: number }>();
+    .all<{ document_id: number; image_urls: string }>();
 
-  const msgs = (pending.results ?? []).map((d) => ({
-    body: { document_id: d.document_id },
-  }));
+  const msgs: { body: { document_id: number; page_index: number; source_url: string } }[] = [];
+
+  for (const d of pending.results ?? []) {
+    try {
+      const urls: string[] = JSON.parse(d.image_urls);
+      for (let i = 0; i < urls.length; i++) {
+        msgs.push({ body: { document_id: d.document_id, page_index: i, source_url: urls[i] } });
+      }
+    } catch {}
+    if (msgs.length >= MAX_QUEUE_DEPTH) break;
+  }
 
   for (let i = 0; i < msgs.length; i += 100) {
     await env.GSTONE_DOC_IMAGE_QUEUE.sendBatch(msgs.slice(i, i + 100));
   }
+
 }

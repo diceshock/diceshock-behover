@@ -36,12 +36,15 @@ export interface ImageProcessMessage {
 
 export interface ImageProcessResult {
   taskId: string;
-  status: "pending" | "processing" | "done" | "error";
+  status: "pending" | "done" | "error";
   url?: string;
   error?: string;
 }
 
 const VALID_TYPES: ImageTaskType[] = ["transcode", "html2image", "qrcode"];
+const CDN_BASE = "https://assets.runespark.fun/";
+const PROCESS_PREFIX = "processed/";
+const ERROR_SUFFIX = ".error";
 
 export async function imageProcessSubmit(c: Context<HonoCtxEnv>) {
   const body = await c.req.json<{
@@ -65,12 +68,6 @@ export async function imageProcessSubmit(c: Context<HonoCtxEnv>) {
     payload: body.payload,
   };
 
-  await c.env.KV.put(
-    `img-task:${taskId}`,
-    JSON.stringify({ taskId, status: "pending" } satisfies ImageProcessResult),
-    { expirationTtl: 3600 },
-  );
-
   await c.env.IMAGE_QUEUE.send(message);
 
   return c.json({ taskId, status: "pending" });
@@ -79,10 +76,59 @@ export async function imageProcessSubmit(c: Context<HonoCtxEnv>) {
 export async function imageProcessStatus(c: Context<HonoCtxEnv>) {
   const taskId = c.req.param("taskId");
 
-  const raw = await c.env.KV.get(`img-task:${taskId}`);
-  if (!raw) {
-    return c.json({ error: "任务不存在或已过期" }, 404);
+  // Check if result exists in R2
+  const formats = ["png", "jpeg", "webp"];
+  for (const fmt of formats) {
+    const key = `${PROCESS_PREFIX}${taskId}.${fmt}`;
+    const obj = await c.env.R2.head(key);
+    if (obj) {
+      return c.json({
+        taskId,
+        status: "done",
+        url: `${CDN_BASE}${key}`,
+      } satisfies ImageProcessResult);
+    }
   }
 
-  return c.json(JSON.parse(raw) as ImageProcessResult);
+  // Check if error marker exists
+  const errorObj = await c.env.R2.get(`${PROCESS_PREFIX}${taskId}${ERROR_SUFFIX}`);
+  if (errorObj) {
+    const error = await errorObj.text();
+    return c.json({
+      taskId,
+      status: "error",
+      error,
+    } satisfies ImageProcessResult);
+  }
+
+  return c.json({ taskId, status: "pending" } satisfies ImageProcessResult);
+}
+
+/**
+ * Poll R2 for image task completion. Used by internal callers (wechat article, membership card).
+ */
+export async function pollForImageResult(
+  env: { R2: R2Bucket },
+  taskId: string,
+  timeoutMs: number,
+): Promise<string | null> {
+  const deadline = Date.now() + timeoutMs;
+  const formats = ["png", "jpeg", "webp"];
+
+  while (Date.now() < deadline) {
+    for (const fmt of formats) {
+      const key = `${PROCESS_PREFIX}${taskId}.${fmt}`;
+      const obj = await env.R2.head(key);
+      if (obj) return `${CDN_BASE}${key}`;
+    }
+
+    // Check error marker
+    const errorObj = await env.R2.head(`${PROCESS_PREFIX}${taskId}${ERROR_SUFFIX}`);
+    if (errorObj) return null;
+
+    const { promise, resolve } = Promise.withResolvers<void>();
+    setTimeout(resolve, 1500);
+    await promise;
+  }
+  return null;
 }

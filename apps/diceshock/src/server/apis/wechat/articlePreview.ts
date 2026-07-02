@@ -1,5 +1,6 @@
 import type { Context } from "hono";
-import type { ImageProcessMessage, ImageProcessResult } from "../imageProcess";
+import type { ImageProcessMessage } from "../imageProcess";
+import { pollForImageResult } from "../imageProcess";
 import type { HonoCtxEnv } from "@/shared/types";
 import { fetchAsDataUrl, LOGO_URL } from "../ogCards/shared";
 import {
@@ -68,43 +69,26 @@ export async function articlePreview(c: Context<HonoCtxEnv>) {
       format: "png",
     },
   };
-
-  await env.KV.put(
-    `img-task:${taskId}`,
-    JSON.stringify({ taskId, status: "pending" } satisfies ImageProcessResult),
-    { expirationTtl: 3600 },
-  );
   await env.IMAGE_QUEUE.send(message);
 
   // Poll for result
-  const deadline = Date.now() + 45_000;
-  while (Date.now() < deadline) {
-    const raw = await env.KV.get(`img-task:${taskId}`);
-    if (raw) {
-      const result = JSON.parse(raw) as ImageProcessResult;
-      if (result.status === "done" && result.url) {
-        // Fetch and cache to R2
-        const imgRes = await fetch(result.url);
-        if (imgRes.ok) {
-          const bytes = new Uint8Array(await imgRes.arrayBuffer());
-          await env.R2.put(r2Key, bytes, {
-            httpMetadata: { contentType: "image/png" },
-          });
-          return new Response(bytes, {
-            headers: {
-              "content-type": "image/png",
-              "cache-control": "no-cache",
-            },
-          });
-        }
-        return c.json({ error: "fetch_rendered_failed" }, 500);
-      }
-      if (result.status === "error") {
-        return c.json({ error: "render_failed", detail: result.error }, 500);
-      }
-    }
-    await new Promise((r) => setTimeout(r, 1500));
+  const imageUrl = await pollForImageResult(env, taskId, 45_000);
+  if (!imageUrl) {
+    return c.json({ error: "render_timeout" }, 504);
   }
-
-  return c.json({ error: "render_timeout" }, 504);
+  // Fetch and cache to R2
+  const imgRes = await fetch(imageUrl);
+  if (imgRes.ok) {
+    const bytes = new Uint8Array(await imgRes.arrayBuffer());
+    await env.R2.put(r2Key, bytes, {
+      httpMetadata: { contentType: "image/png" },
+    });
+    return new Response(bytes, {
+      headers: {
+        "content-type": "image/png",
+        "cache-control": "no-cache",
+      },
+    });
+  }
+  return c.json({ error: "fetch_rendered_failed" }, 500);
 }

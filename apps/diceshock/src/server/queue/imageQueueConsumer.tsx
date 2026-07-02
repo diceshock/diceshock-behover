@@ -2,13 +2,13 @@ import puppeteer from "@cloudflare/puppeteer";
 import type {
   Html2ImagePayload,
   ImageProcessMessage,
-  ImageProcessResult,
   QrCodePayload,
   TranscodePayload,
 } from "@/server/apis/imageProcess";
+import { renderToString } from "react-dom/server";
 
-const CDN_BASE = "https://assets.runespark.fun/";
 const PROCESS_PREFIX = "processed/";
+const ERROR_SUFFIX = ".error";
 
 type QueueEnv = Cloudflare.Env;
 
@@ -18,15 +18,6 @@ export async function handleImageQueue(
 ): Promise<void> {
   for (const msg of batch.messages) {
     const { taskId, type, payload } = msg.body;
-
-    await env.KV.put(
-      `img-task:${taskId}`,
-      JSON.stringify({
-        taskId,
-        status: "processing",
-      } satisfies ImageProcessResult),
-      { expirationTtl: 3600 },
-    );
 
     try {
       let buffer: Uint8Array;
@@ -60,29 +51,21 @@ export async function handleImageQueue(
         httpMetadata: { contentType: `image/${format}` },
       });
 
-      await env.KV.put(
-        `img-task:${taskId}`,
-        JSON.stringify({
-          taskId,
-          status: "done",
-          url: `${CDN_BASE}${key}`,
-        } satisfies ImageProcessResult),
-        { expirationTtl: 3600 },
-      );
-
       msg.ack();
     } catch (e) {
-      await env.KV.put(
-        `img-task:${taskId}`,
-        JSON.stringify({
-          taskId,
-          status: "error",
-          error: e instanceof Error ? e.message : String(e),
-        } satisfies ImageProcessResult),
-        { expirationTtl: 3600 },
-      );
+      const errMsg = e instanceof Error ? e.message : String(e);
 
-      msg.retry();
+      // On final retry, write error marker to R2 so callers stop waiting
+      if (msg.attempts >= 2) {
+        await env.R2.put(
+          `${PROCESS_PREFIX}${taskId}${ERROR_SUFFIX}`,
+          errMsg,
+          { httpMetadata: { contentType: "text/plain" } },
+        );
+        msg.ack(); // stop retrying
+      } else {
+        msg.retry();
+      }
     }
   }
 }
@@ -105,9 +88,7 @@ async function processTranscode(
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.waitForFunction(
       () => (window as { __ready?: boolean }).__ready === true,
-      {
-        timeout: 15000,
-      },
+      { timeout: 15000 },
     );
 
     const dataUrl = await page.evaluate(
@@ -168,7 +149,7 @@ async function processQrCode(
 ): Promise<{ buffer: Uint8Array; format: string }> {
   const {
     data,
-    size = 512,
+    size = 256,
     foreground = "#000000",
     background = "#ffffff",
     logoUrl,
@@ -184,9 +165,7 @@ async function processQrCode(
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.waitForFunction(
       () => (window as { __ready?: boolean }).__ready === true,
-      {
-        timeout: 15000,
-      },
+      { timeout: 15000 },
     );
 
     const dataUrl = await page.evaluate((fmt: string) => {
@@ -200,8 +179,6 @@ async function processQrCode(
   }
 }
 
-import { renderToString } from "react-dom/server";
-
 function TranscodeView({
   sourceUrl,
   w,
@@ -211,26 +188,26 @@ function TranscodeView({
   w: number;
   h: number;
 }) {
-  const script = `(async () => {
-  const canvas = document.getElementById("canvas");
-  const ctx = canvas.getContext("2d");
-  const img = new Image();
-  img.crossOrigin = "anonymous";
-  img.onload = () => {
-    canvas.width = ${w || "img.naturalWidth"};
-    canvas.height = ${h || "img.naturalHeight"};
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    window.__ready = true;
-  };
-  img.onerror = () => { window.__ready = true; };
-  img.src = ${JSON.stringify(sourceUrl)};
-})();`;
-
   return (
     <html>
-      <body>
+      <body style={{ margin: 0, background: "transparent" }}>
         <canvas id="canvas" width={w} height={h} />
-        <script dangerouslySetInnerHTML={{ __html: script }} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              const img = new Image();
+              img.crossOrigin = 'anonymous';
+              img.onload = () => {
+                const canvas = document.getElementById('canvas');
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, ${w}, ${h});
+                window.__ready = true;
+              };
+              img.onerror = () => { window.__ready = true; };
+              img.src = '${sourceUrl.replace(/'/g, "\\'")}';
+            `,
+          }}
+        />
       </body>
     </html>
   );
@@ -253,53 +230,47 @@ function QrCodeView({
   bg: string;
   logoUrl?: string;
 }) {
-  const logoScript = logoUrl
-    ? `
-    const logo = new Image();
-    logo.crossOrigin = "anonymous";
-    logo.onload = () => {
-      const logoSize = size * 0.25;
-      const x = (size - logoSize) / 2;
-      const y = (size - logoSize) / 2;
-      ctx.fillStyle = ${JSON.stringify(bg)};
-      ctx.fillRect(x - 4, y - 4, logoSize + 8, logoSize + 8);
-      ctx.drawImage(logo, x, y, logoSize, logoSize);
-      window.__ready = true;
-    };
-    logo.onerror = () => { window.__ready = true; };
-    logo.src = ${JSON.stringify(logoUrl)};`
-    : "window.__ready = true;";
-
-  const script = `(function() {
-  const size = ${size};
-  const canvas = document.getElementById("canvas");
-  const ctx = canvas.getContext("2d");
-  const qr = qrcode(0, "M");
-  qr.addData(${JSON.stringify(data)});
-  qr.make();
-  const modules = qr.getModuleCount();
-  const cellSize = size / modules;
-  ctx.fillStyle = ${JSON.stringify(bg)};
-  ctx.fillRect(0, 0, size, size);
-  ctx.fillStyle = ${JSON.stringify(fg)};
-  for (let row = 0; row < modules; row++) {
-    for (let col = 0; col < modules; col++) {
-      if (qr.isDark(row, col)) {
-        ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
-      }
-    }
-  }
-  ${logoScript}
-})();`;
-
   return (
     <html>
       <head>
-        <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js" />
+        <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js" />
       </head>
-      <body>
+      <body style={{ margin: 0, background: "transparent" }}>
         <canvas id="canvas" width={size} height={size} />
-        <script dangerouslySetInnerHTML={{ __html: script }} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (async () => {
+                const canvas = document.getElementById('canvas');
+                await QRCode.toCanvas(canvas, ${JSON.stringify(data)}, {
+                  width: ${size},
+                  color: { dark: '${fg}', light: '${bg}' },
+                  margin: 1,
+                  errorCorrectionLevel: 'H'
+                });
+                ${
+                  logoUrl
+                    ? `
+                  const ctx = canvas.getContext('2d');
+                  const logo = new Image();
+                  logo.crossOrigin = 'anonymous';
+                  logo.onload = () => {
+                    const logoSize = ${size} * 0.22;
+                    const x = (${size} - logoSize) / 2;
+                    ctx.fillStyle = '${bg}';
+                    ctx.fillRect(x - 4, x - 4, logoSize + 8, logoSize + 8);
+                    ctx.drawImage(logo, x, x, logoSize, logoSize);
+                    window.__ready = true;
+                  };
+                  logo.onerror = () => { window.__ready = true; };
+                  logo.src = '${logoUrl.replace(/'/g, "\\'")}';
+                `
+                    : "window.__ready = true;"
+                }
+              })();
+            `,
+          }}
+        />
       </body>
     </html>
   );
@@ -317,10 +288,11 @@ function buildQrCodeHtml(
 
 function dataUrlToUint8Array(dataUrl: string): Uint8Array {
   const base64 = dataUrl.split(",")[1];
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
+  if (!base64) throw new Error("Invalid data URL");
+  const binaryString = atob(base64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
   }
   return bytes;
 }

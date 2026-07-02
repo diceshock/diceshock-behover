@@ -1,5 +1,6 @@
 import type { Context } from "hono";
-import type { ImageProcessMessage, ImageProcessResult } from "../imageProcess";
+import type { ImageProcessMessage } from "../imageProcess";
+import { pollForImageResult } from "../imageProcess";
 import type { HonoCtxEnv } from "@/shared/types";
 import { fetchAsDataUrl, LOGO_URL } from "../ogCards/shared";
 import {
@@ -62,15 +63,10 @@ export async function renderAndSendArticle(
     },
   };
 
-  await env.KV.put(
-    `img-task:${taskId}`,
-    JSON.stringify({ taskId, status: "pending" } satisfies ImageProcessResult),
-    { expirationTtl: 3600 },
-  );
   await env.IMAGE_QUEUE.send(message);
 
   // 4. Poll for result
-  const fullImageUrl = await pollForResult(env, taskId, 45_000);
+  const fullImageUrl = await pollForImageResult(env, taskId, 45_000);
   if (!fullImageUrl) {
     return { success: false, slices: 0, error: "render_timeout" };
   }
@@ -127,17 +123,9 @@ export async function renderAndSendArticle(
       },
     };
 
-    await env.KV.put(
-      `img-task:${sliceTaskId}`,
-      JSON.stringify({
-        taskId: sliceTaskId,
-        status: "pending",
-      } satisfies ImageProcessResult),
-      { expirationTtl: 3600 },
-    );
     await env.IMAGE_QUEUE.send(sliceMsg);
 
-    const sliceUrl = await pollForResult(env, sliceTaskId, 30_000);
+    const sliceUrl = await pollForImageResult(env, sliceTaskId, 30_000);
     if (!sliceUrl) {
       return {
         success: false,
@@ -196,14 +184,9 @@ export async function renderArticleToR2(
     },
   };
 
-  await env.KV.put(
-    `img-task:${taskId}`,
-    JSON.stringify({ taskId, status: "pending" } satisfies ImageProcessResult),
-    { expirationTtl: 3600 },
-  );
   await env.IMAGE_QUEUE.send(message);
 
-  const fullImageUrl = await pollForResult(env, taskId, 45_000);
+  const fullImageUrl = await pollForImageResult(env, taskId, 45_000);
   if (!fullImageUrl) return { keys: [], error: "render_timeout" };
 
   // Store full image in R2
@@ -243,17 +226,9 @@ export async function renderArticleToR2(
       },
     };
 
-    await env.KV.put(
-      `img-task:${sliceTaskId}`,
-      JSON.stringify({
-        taskId: sliceTaskId,
-        status: "pending",
-      } satisfies ImageProcessResult),
-      { expirationTtl: 3600 },
-    );
     await env.IMAGE_QUEUE.send(sliceMsg);
 
-    const sliceUrl = await pollForResult(env, sliceTaskId, 30_000);
+    const sliceUrl = await pollForImageResult(env, sliceTaskId, 30_000);
     if (!sliceUrl) return { keys, error: `slice_${i}_timeout` };
 
     const sliceRes = await fetch(sliceUrl);
@@ -270,24 +245,6 @@ export async function renderArticleToR2(
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-async function pollForResult(
-  env: { KV: KVNamespace },
-  taskId: string,
-  timeoutMs: number,
-): Promise<string | null> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const raw = await env.KV.get(`img-task:${taskId}`);
-    if (raw) {
-      const result = JSON.parse(raw) as ImageProcessResult;
-      if (result.status === "done" && result.url) return result.url;
-      if (result.status === "error") return null;
-    }
-    await new Promise((r) => setTimeout(r, 1500));
-  }
-  return null;
-}
 
 /** Read PNG height from IHDR chunk (bytes 20-23, big-endian u32) */
 function readPngHeight(buf: Uint8Array): number | null {

@@ -7,10 +7,8 @@ import db, {
 import dayjs from "dayjs";
 import type { Context } from "hono";
 import { renderToString } from "react-dom/server";
-import type {
-  ImageProcessMessage,
-  ImageProcessResult,
-} from "@/server/apis/imageProcess";
+import type { ImageProcessMessage } from "@/server/apis/imageProcess";
+import { pollForImageResult } from "../imageProcess";
 import type { HonoCtxEnv } from "@/shared/types";
 import {
   sendCustomerImageMessage,
@@ -97,14 +95,9 @@ export async function generateAndSendMembershipCard(
     },
   };
 
-  await env.KV.put(
-    `img-task:${taskId}`,
-    JSON.stringify({ taskId, status: "pending" } satisfies ImageProcessResult),
-    { expirationTtl: 3600 },
-  );
   await env.IMAGE_QUEUE.send(message);
 
-  const imageUrl = await pollForResult(env, taskId, 30_000);
+  const imageUrl = await pollForImageResult(env, taskId, 30_000);
   if (!imageUrl) {
     await sendCustomerTextMessage(
       env,
@@ -123,25 +116,6 @@ export async function generateAndSendMembershipCard(
   await sendCustomerImageMessage(env, openId, mediaId);
 }
 
-async function pollForResult(
-  env: { KV: KVNamespace },
-  taskId: string,
-  timeoutMs: number,
-): Promise<string | null> {
-  const start = Date.now();
-  const interval = 2000;
-
-  while (Date.now() - start < timeoutMs) {
-    const raw = await env.KV.get(`img-task:${taskId}`);
-    if (raw) {
-      const result = JSON.parse(raw) as ImageProcessResult;
-      if (result.status === "done" && result.url) return result.url;
-      if (result.status === "error") return null;
-    }
-    await new Promise((r) => setTimeout(r, interval));
-  }
-  return null;
-}
 
 function planTypeLabel(type: string): string {
   switch (type) {
