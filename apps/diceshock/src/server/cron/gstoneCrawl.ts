@@ -222,3 +222,26 @@ export async function dispatchGstoneOcr(env: {
     await env.GSTONE_OCR_QUEUE.sendBatch(msgs.slice(i, i + 100));
   }
 }
+
+export async function dispatchGstoneDocImages(env: {
+  GSTONE_DB: D1Database;
+  GSTONE_DOC_IMAGE_QUEUE: Queue;
+}): Promise<void> {
+  const MAX_QUEUE_DEPTH = 400;
+
+  const pending = await env.GSTONE_DB.prepare(
+    `SELECT document_id FROM documents
+     WHERE crawled_at IS NOT NULL AND images_synced_at IS NULL AND image_urls IS NOT NULL
+     LIMIT ?`,
+  )
+    .bind(MAX_QUEUE_DEPTH)
+    .all<{ document_id: number }>();
+
+  const msgs = (pending.results ?? []).map((d) => ({
+    body: { document_id: d.document_id },
+  }));
+
+  for (let i = 0; i < msgs.length; i += 100) {
+    await env.GSTONE_DOC_IMAGE_QUEUE.sendBatch(msgs.slice(i, i + 100));
+  }
+}
