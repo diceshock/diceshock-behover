@@ -44,7 +44,7 @@ const NODES: Record<string, SkillNode> = {
     description: "按人数/评分/类型/玩法推荐桌游",
     content:
       () => `执行步骤(严格按顺序,只需1次query):
-1. 查询: { boardGamesTable(where: {removeDate: {eq: "1970-01-01T00:00:00.000Z"}, gstone_rating: {gte: 6}}, limit: 30) { id sch_name eng_name player_num best_player_num gstone_rating category } }
+1. 查询: { boardGamesTable(where: {removeDate: {eq: "1970-01-01T00:00:00.000Z"}, gstone_rating: {gte: 6}}, orderBy: {gstone_rating: {direction: desc, priority: 1}}, limit: 30) { id sch_name eng_name player_num best_player_num gstone_rating category } }
 2. 从结果中筛选: 用你的桌游知识判断哪些符合用户要求的玩法/机制/人数
 3. 推荐3-5款, 附评分+一句话玩法简介+链接
 
@@ -72,7 +72,7 @@ const NODES: Record<string, SkillNode> = {
 
 ### 正确查询方法
 1. 先查高分在架游戏:
-   { boardGamesTable(where: {removeDate: {eq: "1970-01-01T00:00:00.000Z"}, gstone_rating: {gte: 6.0}}, limit: 50) { id sch_name eng_name player_num best_player_num gstone_rating category } }
+   { boardGamesTable(where: {removeDate: {eq: "1970-01-01T00:00:00.000Z"}, gstone_rating: {gte: 6.0}}, orderBy: {gstone_rating: {direction: desc, priority: 1}}, limit: 50) { id sch_name eng_name player_num best_player_num gstone_rating category } }
 2. 从返回结果中，用你自己的桌游知识判断哪些属于用户要求的机制
 3. 按用户的人数、难度等条件进一步筛选
 4. 推荐3-5款并说明为什么它属于该机制
