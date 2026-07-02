@@ -2,6 +2,7 @@
   "name": "diceshock-beholder",
   "version": "1.0.0",
   "type": "module",
+  "packageManager": "pnpm@11.8.0",
   "scripts": {
     "dev": "./target/release/ty-jk --dev",
     "x": "./x.sh",
