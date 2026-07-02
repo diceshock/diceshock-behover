@@ -68,59 +68,34 @@ const NODES: Record<string, SkillNode> = {
     description: "按桌游机制/玩法推荐(引擎构筑/工人放置/区域控制等)",
     content: () => `## 机制查询策略
 
-数据库没有mechanism字段! 不要尝试 ilike "%引擎构筑%"。
-正确做法: 一次query高分游戏, 用下方知识从结果中筛选。
+数据库board_games_table没有mechanism字段！不要尝试 ilike "%引擎构筑%" 或类似写法。
 
-查询: { boardGamesTable(where: {removeDate: {eq: 0}, gstone_rating: {gte: 6.5}}, limit: 40) { id sch_name eng_name player_num best_player_num gstone_rating category } }
+### 正确查询方法
+1. 先查高分在架游戏（removeDate=0表示在架）:
+   { boardGamesTable(where: {removeDate: {eq: 0}, gstone_rating: {gte: 6.0}}, limit: 50) { id sch_name eng_name player_num best_player_num gstone_rating category } }
+2. 从返回结果中，用你自己的桌游知识判断哪些属于用户要求的机制
+3. 按用户的人数、难度等条件进一步筛选
+4. 推荐3-5款并说明为什么它属于该机制
 
-## 店内库存-机制对照表(在架游戏)
+### player_num字段说明
+player_num是JSON数组，索引0代表1人，索引1代表2人...以此类推。
+例如 [0,1,2,3] 表示支持1-4人。筛选时注意换算。
 
-### 引擎构筑 / 滚雪球
-每回合产出递增,前期投资后期爆发:
-- 重塑火星 (Terraforming Mars) — 8.5分, 1-5人
-- 大创造时代 (It's a Wonderful World) — 8.7分, 1-5人
-- 方舟动物园 (Ark Nova) — 8.6分, 1-4人
-- 盖亚计划 (Gaia Project) — 8.7分, 1-4人
-- 历史巨轮 (Through the Ages) — 8.7~9.1分, 2-4人
-- 星空觅迹 (Spaceship Unity) — 8.5分, 1-4人
-- 工业革命：伯明翰 (Brass: Birmingham) — 8.8分, 2-4人
+### 常见机制关键词对照（辅助你从结果中筛选）
+- 引擎构筑/滚雪球: 每回合产出递增，前期投资后期爆发
+- 工人放置: 有限工人占据行动点位
+- 区域控制: 占领地图区域争夺积分
+- 卡牌驱动/甲板构建: 获取卡牌强化牌库
+- 轮抽/成套收集: 从公共池选取组成收藏
+- 合作: 多人一起对抗游戏机制
+- 行动点: 每回合有限行动点分配
+- 网络建设: 构建连接网络获益
+- 拍卖: 竞价获取资源
 
-### 工人放置
-有限工人选择行动点位:
-- 方舟动物园 (Ark Nova) — 8.6分, 1-4人
-- 阿纳克遗迹 (Lost Ruins of Arnak) — 8.5~8.6分, 1-4人
-- 看板：电动汽车 (Kanban EV) — 8.4分, 1-4人
-- 大西部开拓者 (Great Western Trail) — 8.4~8.5分, 1-4人
-
-### 区域控制
-占领地图区域争夺积分:
-- 神秘大地 (Terra Mystica) — 8.4~8.7分, 2-5人
-- 镰刀战争 (Scythe) — 8.5分, 1-7人
-- 茂林源记 (Root) — 8.3~8.4分, 2-6人
-- 1817 — 9.0分, 3-7人(重度)
-
-### 卡牌驱动 / 甲板构建
-获取卡牌强化自己的牌库:
-- 沙丘：帝国 (Dune: Imperium) — 8.5~8.7分, 1-4人
-- 诡镇奇谈：卡牌版 (Arkham Horror LCG) — 8.5~8.8分, 1-4人
-- 漫威群英传 (Marvel Champions) — 8.4分, 1-4人
-
-### 合作类(多人一起对抗游戏)
-- 瘟疫危机传承 (Pandemic Legacy S1) — 8.5分, 2-4人
-- 幽港迷城 (Gloomhaven) — 8.4分, 1-4人
-- 诡镇奇谈：卡牌版 — 1-4人合作
-- 阿瑞迪亚 — 8.6~9.0分, 1-4人
-
-### 轮抽 / 成套收集
-从公共牌池选牌组成收藏:
-- 勃根地城堡 (Castles of Burgundy) — 8.5~8.6分, 1-4人
-- 终极铁路 (Ticket to Ride Ultimate) — 8.4分, 1-4人
-
-## 回复格式
-从query结果中匹配上述游戏名,确认在架,再推荐3-5款:
-- 游戏名 — 评分X分, Y人, 机制简介一句话
+### 回复格式
+- 游戏名 — 评分X分, Y人, 为什么属于该机制（一句话）
 - 附链接: https://diceshock.com/inventory/{id}
-如果用户要求的人数/难度与上表不完全匹配,也推荐最接近的并说明`,
+- 如果查询结果里没找到足够匹配的，也可以基于你的知识补充推荐并注明"根据桌游知识推荐，店内可能有货"`,
   },
 
   active: {
