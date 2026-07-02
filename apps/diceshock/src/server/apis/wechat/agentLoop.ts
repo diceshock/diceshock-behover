@@ -132,6 +132,7 @@ type DeepSeekMessage = {
 
 interface DeepSeekResponse {
   choices?: Array<{
+    finish_reason?: "stop" | "length" | "tool_calls" | null;
     message: {
       content: string | null;
       tool_calls?: Array<{
@@ -253,7 +254,7 @@ export async function runAgentLoop(
           ...(round < MAX_ROUNDS
             ? { tools: TOOLS, tool_choice: "auto" }
             : {}),
-          max_tokens: round < MAX_ROUNDS ? 1024 : 512,
+          max_tokens: 1024,
         }),
       },
       signal,
@@ -284,7 +285,13 @@ export async function runAgentLoop(
       : content.replace("[END]", "").trim();
 
     if (cleanContent) {
-      collectedReplies.push(cleanContent);
+      // Detect truncation: finish_reason "length" means max_tokens hit mid-sentence
+      const truncated = choice.finish_reason === "length" && !assistantMsg.tool_calls?.length;
+      if (truncated && /[,，、\-—]$/.test(cleanContent)) {
+        collectedReplies.push(cleanContent + "\n\n（以上为部分结果，如需更多推荐请追问）");
+      } else {
+        collectedReplies.push(cleanContent);
+      }
     }
 
     if (hasEnd && !isDsmlGarbage) {
@@ -455,7 +462,7 @@ export async function runAgentLoop(
         body: JSON.stringify({
           model: "deepseek-v4-flash",
           messages: summaryMessages,
-          max_tokens: 512,
+          max_tokens: 1024,
         }),
       },
       signal,
@@ -473,6 +480,11 @@ export async function runAgentLoop(
         .replace("[END]", "")
         .trim();
       if (finalContent) {
+        // Detect truncation in forced summary
+        const wasTruncated = finalData.choices?.[0]?.finish_reason === "length";
+        if (wasTruncated && /[,，、\-—]$/.test(finalContent)) {
+          finalContent += "\n\n（以上为部分结果，如需更多推荐请追问）";
+        }
         collectedReplies.push(finalContent);
       } else {
         console.warn("[agent-loop] forced summary returned empty/garbage content");
