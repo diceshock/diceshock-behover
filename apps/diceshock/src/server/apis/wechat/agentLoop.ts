@@ -254,7 +254,6 @@ export async function runAgentLoop(
           ...(round < MAX_ROUNDS
             ? { tools: TOOLS, tool_choice: "auto" }
             : {}),
-          max_tokens: 1024,
         }),
       },
       signal,
@@ -462,7 +461,6 @@ export async function runAgentLoop(
         body: JSON.stringify({
           model: "deepseek-v4-flash",
           messages: summaryMessages,
-          max_tokens: 1024,
         }),
       },
       signal,
