@@ -42,6 +42,10 @@ export const QUERY_TOOL_DEFINITION = {
           description:
             'GraphQL查询。示例: { boardGamesTable(where: {sch_name: {ilike: "%卡坦%"}}, limit: 10) { id sch_name gstone_rating } }',
         },
+        message: {
+          type: "string",
+          description: "给用户看的进度说明，如：正在帮你查卡坦岛的信息...",
+        },
       },
       required: ["graphql"],
     },

@@ -13,6 +13,10 @@ export const SEARCH_RULES_TOOL_DEFINITION = {
           type: "string",
           description: "搜索内容，如：火球术、野蛮人狂暴、隐匿检定",
         },
+        message: {
+          type: "string",
+          description: "给用户看的进度说明，如：正在查找火球术的规则...",
+        },
       },
       required: ["query"],
     },

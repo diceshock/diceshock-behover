@@ -221,6 +221,10 @@ export const MUTATE_TOOL_DEFINITION = {
           type: "string",
           description: "操作描述",
         },
+        message: {
+          type: "string",
+          description: "给用户看的进度说明，如：正在帮你创建约局...",
+        },
       },
       required: ["action", "params", "description"],
     },

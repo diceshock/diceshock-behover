@@ -145,6 +145,10 @@ export const QUERY_PARTICIPANTS_TOOL_DEFINITION = {
           type: "string",
           description: "约局ID",
         },
+        message: {
+          type: "string",
+          description: "给用户看的进度说明，如：正在查看参与者信息...",
+        },
       },
       required: ["active_id"],
     },

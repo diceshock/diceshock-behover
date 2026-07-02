@@ -71,7 +71,12 @@ export const TOTP_TOOL_DEFINITION = {
     description: "生成活动签到验证码。返回验证码和对应的二维码数据。",
     parameters: {
       type: "object",
-      properties: {},
+      properties: {
+        message: {
+          type: "string",
+          description: "给用户看的进度说明，如：正在生成签到码...",
+        },
+      },
       required: [],
     },
   },
