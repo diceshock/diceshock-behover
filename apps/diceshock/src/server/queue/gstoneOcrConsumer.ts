@@ -18,7 +18,13 @@ export async function handleGstoneOcrQueue(
         .where(eq(gstoneDocumentsTable.document_id, docId))
         .limit(1);
 
-      if (!doc || !doc.image_urls || doc.image_urls.length === 0) {
+      // Guard: doc missing, already done, errored, or reset
+      if (!doc || doc.ocr_at || doc.error || !doc.ocr_pages) {
+        msg.ack();
+        continue;
+      }
+
+      if (!doc.image_urls || doc.image_urls.length === 0) {
         msg.ack();
         continue;
       }
@@ -29,23 +35,48 @@ export async function handleGstoneOcrQueue(
         continue;
       }
 
+      // Guard: page already filled (duplicate message)
+      const existingPages: string[] = doc.ocr_pages ?? [];
+      if (existingPages[pageIndex] && existingPages[pageIndex].trim().length > 0) {
+        msg.ack();
+        continue;
+      }
+
       const pageText = await ocrImage(env, imageUrl);
       const verifiedText = await verifyOcr(env, imageUrl, pageText);
 
-      const existingPages: string[] = doc.ocr_pages ?? [];
-      existingPages[pageIndex] = verifiedText;
+      // Re-check state before write: fetch fresh doc
+      const fresh = await env.GSTONE_DB.prepare(
+        "SELECT ocr_at, error, ocr_pages FROM documents WHERE document_id = ?",
+      )
+        .bind(docId)
+        .first<{ ocr_at: string | null; error: string | null; ocr_pages: string | null }>();
 
+      // Guard: state changed during execution — discard result
+      if (!fresh || fresh.ocr_at || fresh.error || !fresh.ocr_pages) {
+        msg.ack();
+        continue;
+      }
+
+      const freshPages: string[] = JSON.parse(fresh.ocr_pages);
+      // Guard: someone else already wrote this page
+      if (freshPages[pageIndex] && freshPages[pageIndex].trim().length > 0) {
+        msg.ack();
+        continue;
+      }
+
+      freshPages[pageIndex] = verifiedText;
       const now = new Date().toISOString();
       await env.GSTONE_DB.prepare(
         "UPDATE documents SET ocr_pages = ?, updated_at = ? WHERE document_id = ?",
       )
-        .bind(JSON.stringify(existingPages), now, docId)
+        .bind(JSON.stringify(freshPages), now, docId)
         .run();
 
       const isLastPage = pageIndex >= doc.image_urls.length - 1;
 
       if (isLastPage) {
-        const validPages = existingPages.filter(
+        const validPages = freshPages.filter(
           (t) => t && t.trim().length > 20,
         );
 
@@ -61,7 +92,7 @@ export async function handleGstoneOcrQueue(
 
         const correctedPages = await correctOcr(
           env,
-          existingPages,
+          freshPages,
           doc.title ?? "Untitled",
         );
 
