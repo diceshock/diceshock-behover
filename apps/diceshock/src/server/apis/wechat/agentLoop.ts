@@ -271,20 +271,30 @@ export async function runAgentLoop(
 
     const assistantMsg = choice.message;
     const content = assistantMsg.content || "";
+
+    // DeepSeek sometimes leaks internal DSML markup into content
+    const isDsmlGarbage = /\|\|DSML\|\|/.test(content) || /invoke>/.test(content);
     const hasEnd = content.includes("[END]");
-    const cleanContent = content.replace("[END]", "").trim();
+    const cleanContent = isDsmlGarbage
+      ? ""
+      : content.replace("[END]", "").trim();
 
     if (cleanContent) {
       collectedReplies.push(cleanContent);
     }
 
-    if (hasEnd) {
+    if (hasEnd && !isDsmlGarbage) {
       concludedNaturally = true;
       console.log(`[agent-loop] [END] at round ${round}`);
       break;
     }
 
     if (!assistantMsg.tool_calls?.length) {
+      if (isDsmlGarbage) {
+        // Garbage output — don't treat as conclusion, force summary later
+        console.log(`[agent-loop] round ${round} DSML garbage detected, skipping`);
+        break;
+      }
       concludedNaturally = true;
       console.log(`[agent-loop] round ${round} no tools, treating as final`);
       break;
