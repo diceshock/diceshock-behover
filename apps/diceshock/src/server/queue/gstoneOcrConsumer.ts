@@ -1,4 +1,4 @@
-import { gstoneDb, gstoneDocumentsTable, gstoneGamesTable } from "@lib/db";
+import { gstoneDb, gstoneDocumentsTable } from "@lib/db";
 import { eq } from "drizzle-orm";
 import type { GstoneOcrMessage } from "./gstoneDocCrawlConsumer";
 
@@ -24,15 +24,30 @@ export async function handleGstoneOcrQueue(
         continue;
       }
 
-      if (!doc.image_urls || doc.image_urls.length === 0) {
-        msg.ack();
-        continue;
-      }
+      // Prefer R2 local image; fall back to external URL if not synced yet
+      const r2Key = `gstone-doc-pages/${docId}/${pageIndex}.jpg`;
+      const r2Obj = await env.R2.get(r2Key);
 
-      const imageUrl = doc.image_urls[pageIndex];
-      if (!imageUrl) {
-        msg.ack();
-        continue;
+      let imageBytes: Uint8Array;
+      if (r2Obj) {
+        imageBytes = new Uint8Array(await r2Obj.arrayBuffer());
+      } else {
+        // Fallback: fetch from external if R2 image not yet synced
+        if (!doc.image_urls || doc.image_urls.length === 0) {
+          msg.ack();
+          continue;
+        }
+        const imageUrl = doc.image_urls[pageIndex];
+        if (!imageUrl) {
+          msg.ack();
+          continue;
+        }
+        const resizedUrl = imageUrl.includes("?")
+          ? imageUrl
+          : `${imageUrl}?x-oss-process=image/auto-orient,1/resize,m_lfit,w_800/quality,q_80`;
+        const resp = await fetch(resizedUrl);
+        if (!resp.ok) throw new Error(`Image fetch failed: ${resp.status}`);
+        imageBytes = new Uint8Array(await resp.arrayBuffer());
       }
 
       // Guard: page already filled (duplicate message)
@@ -42,8 +57,8 @@ export async function handleGstoneOcrQueue(
         continue;
       }
 
-      const pageText = await ocrImage(env, imageUrl);
-      const verifiedText = await verifyOcr(env, imageUrl, pageText);
+      const pageText = await ocrImage(env, imageBytes);
+      const verifiedText = await verifyOcr(env, imageBytes, pageText);
 
       // Re-check state before write: fetch fresh doc
       const fresh = await env.GSTONE_DB.prepare(
@@ -73,7 +88,7 @@ export async function handleGstoneOcrQueue(
         .bind(JSON.stringify(freshPages), now, docId)
         .run();
 
-      const isLastPage = pageIndex >= doc.image_urls.length - 1;
+      const isLastPage = pageIndex >= (doc.image_urls?.length ?? 0) - 1;
 
       if (isLastPage) {
         const validPages = freshPages.filter(
@@ -96,11 +111,15 @@ export async function handleGstoneOcrQueue(
           doc.title ?? "Untitled",
         );
 
+        const localImageUrls = (doc.image_urls ?? []).map((_: string, i: number) =>
+          `${CDN_BASE}gstone-doc-pages/${docId}/${i}.jpg`,
+        );
+
         const markdown = buildMarkdown({
           gameId: doc.game_id,
           documentId: docId,
           documentTitle: doc.title ?? "Untitled",
-          imageUrls: doc.image_urls,
+          imageUrls: localImageUrls,
           pages: correctedPages,
         });
 
@@ -128,22 +147,15 @@ export async function handleGstoneOcrQueue(
   }
 }
 
+const CDN_BASE = "https://assets.runespark.fun/";
+
 async function ocrImage(
   env: Cloudflare.Env,
-  imageUrl: string,
+  imageBytes: Uint8Array,
 ): Promise<string> {
-  const resizedUrl = imageUrl.includes("?")
-    ? imageUrl
-    : `${imageUrl}?x-oss-process=image/auto-orient,1/resize,m_lfit,w_800/quality,q_80`;
-
-  const imageResp = await fetch(resizedUrl);
-  if (!imageResp.ok) throw new Error(`Image fetch failed: ${imageResp.status}`);
-
-  const imageData = await imageResp.arrayBuffer();
-  const bytes = new Uint8Array(imageData);
   let binary = "";
-  for (let i = 0; i < bytes.length; i += 8192) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+  for (let i = 0; i < imageBytes.length; i += 8192) {
+    binary += String.fromCharCode(...imageBytes.subarray(i, i + 8192));
   }
   const base64 = btoa(binary);
 
@@ -172,23 +184,14 @@ async function ocrImage(
 
 async function verifyOcr(
   env: Cloudflare.Env,
-  imageUrl: string,
+  imageBytes: Uint8Array,
   ocrText: string,
 ): Promise<string> {
   if (!ocrText || ocrText.trim().length < 20) return ocrText;
 
-  const resizedUrl = imageUrl.includes("?")
-    ? imageUrl
-    : `${imageUrl}?x-oss-process=image/auto-orient,1/resize,m_lfit,w_800/quality,q_80`;
-
-  const imageResp = await fetch(resizedUrl);
-  if (!imageResp.ok) return ocrText;
-
-  const imageData = await imageResp.arrayBuffer();
-  const bytes = new Uint8Array(imageData);
   let binary = "";
-  for (let i = 0; i < bytes.length; i += 8192) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+  for (let i = 0; i < imageBytes.length; i += 8192) {
+    binary += String.fromCharCode(...imageBytes.subarray(i, i + 8192));
   }
   const base64 = btoa(binary);
 
