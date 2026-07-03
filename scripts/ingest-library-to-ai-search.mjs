@@ -63,11 +63,12 @@ async function listLibraryKeys(prefix) {
 
     if (!data.success) throw new Error(`List failed: ${JSON.stringify(data.errors)}`);
 
-    for (const obj of data.result?.objects || []) {
-      if (obj.key.endsWith(".md")) keys.push(obj.key);
+    for (const obj of data.result || []) {
+      if (obj.key?.endsWith(".md")) keys.push(obj.key);
     }
 
-    cursor = data.result?.truncated ? data.result_info?.cursor || "" : "";
+    const pageItems = data.result || [];
+    cursor = pageItems.length >= 1000 ? (data.result_info?.cursor || "") : "";
   } while (cursor);
 
   return keys;
