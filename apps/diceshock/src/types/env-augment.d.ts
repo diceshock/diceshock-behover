@@ -5,6 +5,8 @@
 interface __BaseEnv_CloudflareBindings {
   KV: KVNamespace;
   R2: R2Bucket;
+  RAW_FEED: R2Bucket;
+  LIBRARY: R2Bucket;
   DB: D1Database;
   GSTONE_DB: D1Database;
   AI_SEARCH: AiSearchInstance;

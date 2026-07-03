@@ -133,6 +133,13 @@ export async function handleGstoneOcrQueue(
         )
           .bind(r2Key, now, now, docId)
           .run();
+
+        // Consolidate to library bucket (best-effort, don't block ack)
+        try {
+          await consolidateToLibrary(env, doc.game_id, docId, doc.title ?? "Untitled", correctedPages);
+        } catch (e) {
+          console.error(`Library consolidation failed for doc ${docId}:`, e);
+        }
       }
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
@@ -294,4 +301,85 @@ function buildMarkdown(opts: {
     .join("\n\n");
 
   return header + body + "\n";
+}
+
+
+const LIBRARY_CLEAN_PROMPT = `你是一个桌游规则书整理专家。把 OCR 扫描得到的规则书原始文本整理成干净、结构化的 markdown。
+要求:
+1. 去掉 "## Page N" 标记
+2. 修正标题层级（规则书标题 # ，章节 ## ，小节 ###）
+3. 清理 OCR 噪音（乱码、重复段落）
+4. 保持规则完整性
+5. 如果是纯目录/封面/无实质内容，返回: [NO_CONTENT]
+6. 保持原文语言
+输出纯净 markdown 正文。`;
+
+async function consolidateToLibrary(
+  env: Cloudflare.Env,
+  gameId: number,
+  docId: number,
+  docTitle: string,
+  pages: string[],
+): Promise<void> {
+  const apiKey = env.DEEPSEEK_API_KEY;
+  if (!apiKey) return;
+
+  const accountId = "3244c8f91cd34317ce18652158e5853a";
+  const gatewayId = (env as unknown as { CF_AI_GATEWAY_ID?: string }).CF_AI_GATEWAY_ID;
+  const baseUrl = gatewayId
+    ? `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/deepseek`
+    : "https://api.deepseek.com/v1";
+
+  const rawText = pages
+    .map((t, i) => `## Page ${i + 1}\n\n${(t ?? "").trim()}`)
+    .join("\n\n");
+
+  if (rawText.length < 100) return;
+
+  const res = await fetch(`${baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "deepseek-chat",
+      messages: [
+        { role: "system", content: LIBRARY_CLEAN_PROMPT },
+        { role: "user", content: `桌游规则书「${docTitle}」的 OCR 文本：\n\n${rawText}` },
+      ],
+      max_tokens: 16384,
+      temperature: 0.1,
+    }),
+  });
+
+  if (!res.ok) return;
+
+  const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  const cleaned = data.choices?.[0]?.message?.content?.trim() ?? "";
+
+  if (cleaned === "[NO_CONTENT]" || cleaned.length < 50) return;
+
+  // Build library-format frontmatter
+  const slug = docTitle
+    .toLowerCase()
+    .replace(/[^a-z0-9\u4e00-\u9fff]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 80) || "rulebook";
+
+  const frontmatter = [
+    "---",
+    `game_id: ${gameId}`,
+    `book_title: "${docTitle.replace(/"/g, '\\"')}"`,
+    `source_documents:`,
+    `  - id: ${docId}`,
+    `    source_image_prefix: "${CDN_BASE}gstone-doc-pages/${docId}/"`,
+    `consolidated_at: "${new Date().toISOString()}"`,
+    "---",
+  ].join("\n");
+
+  const outputKey = `boardgames/${gameId}/${slug}.md`;
+  await env.LIBRARY.put(outputKey, `${frontmatter}\n\n${cleaned}\n`, {
+    httpMetadata: { contentType: "text/markdown; charset=utf-8" },
+  });
 }

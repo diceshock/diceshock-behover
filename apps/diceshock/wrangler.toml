@@ -49,6 +49,10 @@ preview_bucket_name = "diceshock-preview"
 binding = "RAW_FEED"
 bucket_name = "ds-raw-feed"
 
+[[r2_buckets]]
+binding = "LIBRARY"
+bucket_name = "ds-library"
+
 [[durable_objects.bindings]]
 name = "DS_SUBSCRIPTION"
 class_name = "DsSubscriptionDO"
