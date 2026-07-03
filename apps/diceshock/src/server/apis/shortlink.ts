@@ -21,6 +21,7 @@ export interface ReferencePageData {
   references: Array<{
     text: string;
     source: string;
+    originalUrl?: string | null;
     score: number;
   }>;
   createdAt: number;

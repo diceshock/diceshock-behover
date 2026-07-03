@@ -66,7 +66,12 @@ export interface AgentLoopParams {
 export interface AgentResult {
   rawOutput: string;
   tokensUsed: number;
-  collectedReferences: Array<{ text: string; source: string; score: number }>;
+  collectedReferences: Array<{
+    text: string;
+    source: string;
+    originalUrl?: string | null;
+    score: number;
+  }>;
 }
 
 type ProgressFn = (status: string) => void;
@@ -225,6 +230,7 @@ export async function runAgentLoop(
   const collectedReferences: Array<{
     text: string;
     source: string;
+    originalUrl?: string | null;
     score: number;
   }> = [];
   let concludedNaturally = false;
@@ -387,6 +393,7 @@ export async function runAgentLoop(
                 collectedReferences.push({
                   text: chunk.text || "",
                   source: chunk.source || "",
+                  originalUrl: chunk.originalUrl || null,
                   score: chunk.score || 0,
                 });
               }

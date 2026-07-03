@@ -21,6 +21,7 @@ import {
 import { generateTOTP, getRemainingSeconds } from "@/shared/utils/totp";
 import { executeGraphQL, type GraphQLContext } from "../wechat/graphql";
 import { normalizeQuery } from "../wechat/graphql/normalize";
+import { resolveSourceUrl } from "@/server/utils/rulesSourceUrl";
 import type { Role } from "../wechat/graphql/permissions";
 import { validateQueryString } from "../wechat/graphql/queryValidation";
 
@@ -320,18 +321,27 @@ export async function executeSearchRules(
     }>;
   };
 
-  const chunks: Array<{ text: string; source: string; score: number }> = [];
+  const chunks: Array<{
+    text: string;
+    source: string;
+    originalUrl: string | null;
+    score: number;
+  }> = [];
   for (const chunk of results?.chunks ?? []) {
+    const source = chunk.item?.key ?? "";
     chunks.push({
       text: (chunk.text ?? "").slice(0, 800),
-      source: chunk.item?.key ?? "",
+      source,
+      originalUrl: resolveSourceUrl(source),
       score: chunk.score ?? 0,
     });
   }
   for (const item of results?.data ?? []) {
+    const source = item.filename ?? item.item?.key ?? "";
     chunks.push({
       text: (item.text ?? item.content ?? "").slice(0, 800),
-      source: item.filename ?? item.item?.key ?? "",
+      source,
+      originalUrl: resolveSourceUrl(source),
       score: item.score ?? 0,
     });
   }

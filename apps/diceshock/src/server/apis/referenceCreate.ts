@@ -10,6 +10,7 @@ export interface CreateReferenceParams {
   references: Array<{
     text: string;
     source: string;
+    originalUrl?: string | null;
     score: number;
   }>;
   slug?: string;

@@ -1,8 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import ReactMarkdown from "react-markdown";
-import rehypeRaw from "rehype-raw";
-import remarkGfm from "remark-gfm";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReferencePageData } from "@/server/apis/shortlink";
 
 export const Route = createFileRoute("/x/$id")({
@@ -114,28 +111,7 @@ function ReferenceContent({ data }: { data: ReferencePageData }) {
       <section className="flex flex-col gap-6">
         <h2 className="text-lg font-bold">参考资料</h2>
         {data.references.map((ref, i) => (
-          <article
-            key={i}
-            id={`ref-${i}`}
-            className="border border-base-300 rounded-xl p-5 scroll-mt-4"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-mono text-base-content/50">
-                {ref.source || `来源 ${i + 1}`}
-              </span>
-              <span className="badge badge-xs badge-outline">
-                相关度 {Math.round(ref.score * 100)}%
-              </span>
-            </div>
-            <div className="prose prose-sm max-w-none">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeRaw]}
-              >
-                {ref.text}
-              </ReactMarkdown>
-            </div>
-          </article>
+          <ReferenceCard key={i} ref_={ref} index={i} />
         ))}
       </section>
 
@@ -149,6 +125,81 @@ function ReferenceContent({ data }: { data: ReferencePageData }) {
 
 function buildToc(data: ReferencePageData): string[] {
   return data.references.map((ref, i) => ref.source || `参考资料 ${i + 1}`);
+}
+
+type ReferenceRef = ReferencePageData["references"][number];
+
+function ReferenceCard({
+  ref_,
+  index,
+}: {
+  ref_: ReferenceRef;
+  index: number;
+}) {
+  const [expanded, setExpanded] = useState(true);
+  const hasIframe = !!ref_.originalUrl;
+  const label = ref_.source || `来源 ${index + 1}`;
+
+  const toggleExpanded = useCallback(() => setExpanded((v) => !v), []);
+
+  return (
+    <article
+      id={`ref-${index}`}
+      className="border border-base-300 rounded-xl overflow-hidden scroll-mt-4"
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 bg-base-200/50">
+        <span className="text-xs font-mono text-base-content/50 truncate">
+          {label}
+        </span>
+        <div className="flex items-center gap-2">
+          <span className="badge badge-xs badge-outline">
+            相关度 {Math.round(ref_.score * 100)}%
+          </span>
+          {hasIframe && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-xs"
+              onClick={toggleExpanded}
+            >
+              {expanded ? "收起" : "展开"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Body: iframe or fallback text */}
+      {hasIframe ? (
+        <>
+          {expanded && (
+            <div className="w-full h-[70vh] min-h-[400px]">
+              <iframe
+                src={ref_.originalUrl!}
+                className="w-full h-full border-0"
+                sandbox="allow-scripts allow-same-origin"
+                loading="lazy"
+                title={label}
+              />
+            </div>
+          )}
+          <div className="px-4 py-3 border-t border-base-300 bg-base-200/30">
+            <a
+              href={ref_.originalUrl!}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-primary btn-sm btn-outline gap-1"
+            >
+              在原站查看 ↗
+            </a>
+          </div>
+        </>
+      ) : (
+        <div className="p-4 text-sm whitespace-pre-wrap text-base-content/80">
+          {ref_.text}
+        </div>
+      )}
+    </article>
+  );
 }
 
 function ExpiredView() {

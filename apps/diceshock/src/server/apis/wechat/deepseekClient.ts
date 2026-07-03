@@ -92,7 +92,12 @@ interface ChatWithAgentParams {
 interface AgentResult {
   rawOutput: string;
   tokensUsed: number;
-  collectedReferences: Array<{ text: string; source: string; score: number }>;
+  collectedReferences: Array<{
+    text: string;
+    source: string;
+    originalUrl?: string | null;
+    score: number;
+  }>;
 }
 
 type DeepSeekMessage = {
@@ -405,6 +410,7 @@ export async function chatWithAgent(
   const collectedReferences: Array<{
     text: string;
     source: string;
+    originalUrl?: string | null;
     score: number;
   }> = [];
 
@@ -563,6 +569,7 @@ export async function chatWithAgent(
                 collectedReferences.push({
                   text: chunk.text || "",
                   source: chunk.source || "",
+                  originalUrl: chunk.originalUrl || null,
                   score: chunk.score || 0,
                 });
               }

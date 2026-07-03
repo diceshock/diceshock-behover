@@ -75,7 +75,13 @@ function TotpDisplay({
 
 function SearchRulesCard({ result }: { result: unknown }) {
   const [expanded, setExpanded] = useState(false);
-  const data = result as { results?: Array<{ text: string; source: string }> };
+  const data = result as {
+    results?: Array<{
+      text: string;
+      source: string;
+      originalUrl?: string | null;
+    }>;
+  };
 
   if (!data?.results?.length) {
     return <div className="text-xs text-base-content/50">未找到相关规则</div>;
@@ -101,7 +107,19 @@ function SearchRulesCard({ result }: { result: unknown }) {
             key={`${chunk.source}-${i}`}
             className="mt-2 text-xs bg-base-200 p-2 rounded"
           >
-            <p className="text-base-content/50 mb-1">{chunk.source}</p>
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-base-content/50">{chunk.source}</p>
+              {chunk.originalUrl && (
+                <a
+                  href={`/rules?url=${encodeURIComponent(chunk.originalUrl)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary text-[10px] hover:underline"
+                >
+                  查看原文 ↗
+                </a>
+              )}
+            </div>
             <p className="whitespace-pre-wrap">{chunk.text}</p>
           </div>
         ))}

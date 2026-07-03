@@ -309,7 +309,9 @@ describe("chat tools", () => {
       }),
     );
     expect(result).toEqual({
-      results: [{ text: "规则内容", source: "dnd.md", score: 0.9 }],
+      results: [
+        { text: "规则内容", source: "dnd.md", originalUrl: null, score: 0.9 },
+      ],
     });
   });
 

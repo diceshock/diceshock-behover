@@ -1,3 +1,4 @@
+import { resolveSourceUrl } from "@/server/utils/rulesSourceUrl";
 import type { ToolContext } from "./query";
 
 export const SEARCH_RULES_TOOL_DEFINITION = {
@@ -39,21 +40,30 @@ export async function executeSearchRules(
       max_num_results: 5,
     });
 
-    const chunks: Array<{ text: string; source: string; score: number }> = [];
+    const chunks: Array<{
+      text: string;
+      source: string;
+      originalUrl: string | null;
+      score: number;
+    }> = [];
 
     if (results?.chunks?.length) {
       for (const chunk of results.chunks) {
+        const source = chunk.item?.key || "";
         chunks.push({
           text: (chunk.text || "").slice(0, 800),
-          source: chunk.item?.key || "",
+          source,
+          originalUrl: resolveSourceUrl(source),
           score: chunk.score || 0,
         });
       }
     } else if (results?.data?.length) {
       for (const d of results.data) {
+        const source = d.filename || d.item?.key || "";
         chunks.push({
           text: (d.text || d.content || "").slice(0, 800),
-          source: d.filename || d.item?.key || "",
+          source,
+          originalUrl: resolveSourceUrl(source),
           score: d.score || 0,
         });
       }
