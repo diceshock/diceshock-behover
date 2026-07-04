@@ -49,6 +49,7 @@ export default function GszRegistrationModal({
 
   const {
     countdown: smsCooldown,
+    verifying: smsVerifying,
     getSmsCode: handleSendSms,
     error: smsError,
     reset: resetSms,
@@ -194,11 +195,17 @@ export default function GszRegistrationModal({
                 <button
                   id="gsz-sms-btn"
                   type="button"
-                  className="btn btn-outline shrink-0"
-                  disabled={!phone.trim() || smsCooldown > 0}
+                  className="btn btn-outline shrink-0 w-28"
+                  disabled={!phone.trim() || smsVerifying || smsCooldown > 0}
                   onClick={handleSendSms}
                 >
-                  {smsCooldown > 0 ? `${smsCooldown}s` : "发送验证码"}
+                  {smsVerifying ? (
+                    <><span className="loading loading-spinner loading-xs" />验证中</>
+                  ) : smsCooldown > 0 ? (
+                    <><span className="loading loading-ring loading-xs" />{smsCooldown}s</>
+                  ) : (
+                    "发送验证码"
+                  )}
                 </button>
               </div>
               <div id="gsz-captcha-container" className="flex justify-center" />

@@ -95,6 +95,7 @@ export default function useSmsCode({
   const _theme = useAtomValue(themeA);
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
+  const [verifying, setVerifying] = useState(false);
 
   const captchaInstanceRef = useRef<AliyunCaptchaInstance | null>(null);
   const countdownTimerRef = useRef<number | null>(null);
@@ -154,11 +155,13 @@ export default function useSmsCode({
     }
 
     setError(null);
+    setVerifying(true);
 
     // 非生产环境或验证码未启用 → 直接发送
     if (!import.meta.env.PROD || !enabled) {
       console.log("[useSmsCode:getSmsCode] direct send (non-prod or disabled)");
       await sendSmsDirect(phone);
+      setVerifying(false);
       return;
     }
 
@@ -166,6 +169,7 @@ export default function useSmsCode({
     if (!window.initAliyunCaptcha) {
       console.warn("[useSmsCode:getSmsCode] SDK not loaded, fallback direct send");
       await sendSmsDirect(phone);
+      setVerifying(false);
       return;
     }
 
@@ -214,11 +218,11 @@ export default function useSmsCode({
         },
         onBizResultCallback: (bizResult) => {
           console.log("[useSmsCode:onBizResultCallback] bizResult:", bizResult);
+          setVerifying(false);
           if (bizResult) {
             setCountdown(20);
             setError(null);
           } else {
-            // captchaVerifyCallback 里可能已经设了具体错误
             setError((prev) => prev || "验证码发送失败：业务校验未通过，请重试");
           }
         },
@@ -242,6 +246,7 @@ export default function useSmsCode({
       console.error("[useSmsCode:getSmsCode] captcha init failed, fallback:", err);
       setError("人机验证初始化失败，正在跳过验证直接发送...");
       await sendSmsDirect(phone);
+      setVerifying(false);
     }
   }, [phone, countdown, enabled, containerId, buttonId, captchaPrefix, captchaSceneId]);
 
@@ -303,6 +308,7 @@ export default function useSmsCode({
     error,
     setError,
     countdown,
+    verifying,
     getSmsCode,
     reset,
   };

@@ -366,6 +366,7 @@ function RouteComponent() {
     error: smsError,
     setError: setSmsError,
     countdown,
+    verifying,
     getSmsCode,
     reset: resetSms,
   } = useSmsCode({
@@ -1034,11 +1035,17 @@ function RouteComponent() {
                 <button
                   id="me-sms-btn"
                   type="button"
-                  className="btn btn-sm shrink-0"
+                  className="btn btn-sm shrink-0 w-28"
                   onClick={getSmsCode}
-                  disabled={countdown > 0 || isLoadingPhone}
+                  disabled={verifying || countdown > 0 || isLoadingPhone}
                 >
-                  {countdown > 0 ? `${countdown}s` : t("me.getCode")}
+                  {verifying ? (
+                    <><span className="loading loading-spinner loading-xs" />验证中</>
+                  ) : countdown > 0 ? (
+                    <><span className="loading loading-ring loading-xs" />{countdown}s</>
+                  ) : (
+                    t("me.getCode")
+                  )}
                 </button>
               </div>
             </label>

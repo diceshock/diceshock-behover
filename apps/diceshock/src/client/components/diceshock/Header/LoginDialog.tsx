@@ -138,6 +138,7 @@ export default function LoginDialog({
     error,
     setError,
     countdown,
+    verifying,
     getSmsCode,
     reset: resetSms,
   } = useSmsCode({
@@ -381,13 +382,17 @@ export default function LoginDialog({
               <button
                 id="login-sms-btn"
                 type="button"
-                className="btn btn-sm"
+                className="btn btn-sm w-28"
                 onClick={getSmsCode}
-                disabled={countdown > 0}
+                disabled={verifying || countdown > 0}
               >
-                {countdown > 0
-                  ? formatMessage(t("login.retryIn"), { countdown })
-                  : t("login.getCode")}
+                {verifying ? (
+                  <><span className="loading loading-spinner loading-xs" />验证中</>
+                ) : countdown > 0 ? (
+                  <><span className="loading loading-ring loading-xs" />{countdown}s</>
+                ) : (
+                  t("login.getCode")
+                )}
               </button>
             </label>
 
