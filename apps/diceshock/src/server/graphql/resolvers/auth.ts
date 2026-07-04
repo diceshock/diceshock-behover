@@ -51,7 +51,7 @@ type AliyunClient = {
   sendSmsWithOptions: (
     request: unknown,
     runtime: Record<string, unknown>,
-  ) => Promise<{ body?: { code?: string } }>;
+  ) => Promise<{ body?: { code?: string; message?: string } }>;
 };
 
 function getAliyunClient(ctx: GQLContext): AliyunClient | null {
