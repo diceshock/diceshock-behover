@@ -140,7 +140,6 @@ export default function useSmsCode({
       prefix: captchaPrefix,
       mode: "popup",
       element: containerId,
-      button: "",
       captchaVerifyCallback: async (captchaVerifyParam) => {
         if (destroyed) return { captchaResult: false, bizResult: false };
 
@@ -200,7 +199,13 @@ export default function useSmsCode({
 
   // ========== getSmsCode: 校验 → show() 或直接发 ==========
   const getSmsCode = useCallback(async () => {
-    console.log("[useSmsCode:getSmsCode] called", { countdown, phone, enabled });
+    console.log("[useSmsCode:getSmsCode] called", {
+      countdown,
+      phone,
+      enabled,
+      hasInstance: !!captchaInstanceRef.current,
+      hasShow: !!captchaInstanceRef.current?.show,
+    });
 
     if (countdown > 0) return;
 
@@ -212,16 +217,23 @@ export default function useSmsCode({
     setError(null);
     setVerifying(true);
 
-    // 生产环境 + captcha 实例存在 → 调用 show() 触发验证弹窗
+    // 生产环境 + captcha 实例就绪 → show() 弹出验证
     if (import.meta.env.PROD && enabled && captchaInstanceRef.current?.show) {
       console.log("[useSmsCode:getSmsCode] calling instance.show()");
       captchaInstanceRef.current.show();
-      // SDK 验证完成后回调 captchaVerifyCallback → onBizResultCallback
       return;
     }
 
-    // fallback: 非生产 / SDK 未就绪 → 直接发短信
-    console.log("[useSmsCode:getSmsCode] fallback direct send");
+    // 生产环境但实例未就绪 → 提示而非 fallback（避免缺 botcheck 被拒）
+    if (import.meta.env.PROD && enabled) {
+      console.warn("[useSmsCode:getSmsCode] instance not ready, prod+enabled");
+      setError("验证组件加载中，请稍后再试");
+      setVerifying(false);
+      return;
+    }
+
+    // 非生产环境 → 直接发（dev 不需要验证码）
+    console.log("[useSmsCode:getSmsCode] dev direct send");
     try {
       const { data } = await apolloClient.mutate({
         mutation: RequestSmsCodeDocument,
