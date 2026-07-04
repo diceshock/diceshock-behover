@@ -86,6 +86,7 @@ async function mergeUsersInto(
   let runningPoints = targetInfo?.points ?? 0;
 
   for (const sourceUserId of sourceUserIds) {
+    console.log("[mergeUsersInto] merging", sourceUserId, "→", targetUserId);
     // Get source user role
     const sourceUser = await d.query.users.findFirst({
       where: (u, { eq }) => eq(u.id, sourceUserId),
@@ -100,7 +101,49 @@ async function mergeUsersInto(
       }
     }
 
-    // a. Move all accounts → targetUserId
+    // a. Move accounts → targetUserId (handle PK conflicts)
+    // PK is (provider, providerAccountId), so delete source duplicates first
+    const targetAccounts = await d
+      .select({
+        provider: accounts.provider,
+        providerAccountId: accounts.providerAccountId,
+      })
+      .from(accounts)
+      .where(eq(accounts.userId, targetUserId));
+
+    const sourceAccts = await d
+      .select({
+        provider: accounts.provider,
+        providerAccountId: accounts.providerAccountId,
+      })
+      .from(accounts)
+      .where(eq(accounts.userId, sourceUserId));
+
+    // Find conflicting accounts (same provider+providerAccountId on both users)
+    const targetKeys = new Set(
+      targetAccounts.map((a) => `${a.provider}:${a.providerAccountId}`),
+    );
+    const conflicting = sourceAccts.filter((a) =>
+      targetKeys.has(`${a.provider}:${a.providerAccountId}`),
+    );
+
+    // Delete source accounts that would conflict (target already has them)
+    for (const c of conflicting) {
+      await d
+        .delete(accounts)
+        .where(
+          and(
+            eq(accounts.userId, sourceUserId),
+            eq(accounts.provider, c.provider),
+            eq(accounts.providerAccountId, c.providerAccountId),
+          ),
+        );
+    }
+    if (conflicting.length > 0) {
+      console.log("[mergeUsersInto] resolved PK conflicts:", conflicting);
+    }
+
+    // Now safely move remaining source accounts to target
     await d
       .update(accounts)
       .set({ userId: targetUserId })
