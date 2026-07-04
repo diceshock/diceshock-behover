@@ -1073,9 +1073,30 @@ async function handleSendSmsCode(
   const phone = params.phone as string;
   const kv = env.KV;
 
+  // ── 30s cooldown via KV timestamp ──
+  const cooldownKey = `sms_cooldown:${phone}`;
+  const lastSentRaw = await kv.get(cooldownKey);
+  if (lastSentRaw) {
+    const lastSent = Number(lastSentRaw);
+    const elapsed = Date.now() - lastSent;
+    const remaining = 30_000 - elapsed;
+    if (remaining > 0) {
+      const availableAt = new Date(lastSent + 30_000);
+      const shanghaiTime = availableAt.toLocaleString("zh-CN", {
+        timeZone: "Asia/Shanghai",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      });
+      return `操作过于频繁，请等待 ${Math.ceil(remaining / 1000)} 秒后再试。预计可发送时间: ${shanghaiTime} (上海时间)`;
+    }
+  }
+
   // Dev mode shortcut
   if (env.DEV_SMS_CODE) {
     await kv.put(`sms_code:${phone}`, env.DEV_SMS_CODE, { expirationTtl: 300 });
+    await kv.put(cooldownKey, String(Date.now()), { expirationTtl: 30 });
     return `[通知] 验证码已发送到 ${phone.slice(0, 3)}****${phone.slice(-4)}\n5分钟内回复验证码完成绑定`;
   }
 
@@ -1115,6 +1136,7 @@ async function handleSendSmsCode(
     }
 
     await kv.put(`sms_code:${phone}`, code, { expirationTtl: 300 });
+    await kv.put(cooldownKey, String(Date.now()), { expirationTtl: 30 });
 
     return `[通知] 验证码已发送到 ${phone.slice(0, 3)}****${phone.slice(-4)}\n5分钟内回复验证码完成绑定`;
   } catch (e) {
