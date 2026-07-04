@@ -162,36 +162,54 @@ export default function useSmsCode({
 
     // 生产环境 → 销毁旧实例，重新初始化 captcha（无 button 绑定，SDK 自动做无感验证）
     if (captchaInstanceRef.current?.destroy) {
+      console.log("[useSmsCode] destroying old captcha instance");
       captchaInstanceRef.current.destroy();
       captchaInstanceRef.current = null;
     }
 
     if (!window.initAliyunCaptcha) {
-      console.warn("[useSmsCode:getSmsCode] SDK not loaded");
+      console.warn("[useSmsCode] SDK not loaded - window.initAliyunCaptcha is", typeof window.initAliyunCaptcha);
       setError("验证组件未加载，请刷新页面");
       setVerifying(false);
       return;
     }
 
-    console.log("[useSmsCode:getSmsCode] initializing fresh captcha");
+    // 检查 DOM 容器
+    const containerEl = document.querySelector(containerId);
+    console.log("[useSmsCode] container check:", {
+      containerId,
+      exists: !!containerEl,
+      visible: containerEl ? getComputedStyle(containerEl).display !== "none" : false,
+      parentVisible: containerEl?.parentElement ? getComputedStyle(containerEl.parentElement).display !== "none" : false,
+      dimensions: containerEl ? { w: (containerEl as HTMLElement).offsetWidth, h: (containerEl as HTMLElement).offsetHeight } : null,
+    });
+
+    const captchaConfig = {
+      SceneId: captchaSceneId,
+      prefix: captchaPrefix,
+      mode: "popup" as const,
+      element: containerId,
+    };
+    console.log("[useSmsCode] initAliyunCaptcha config:", captchaConfig);
 
     // 超时保护：15 秒内回调未触发则重置
     const timeoutId = setTimeout(() => {
-      console.warn("[useSmsCode] captcha timeout - no callback in 15s");
+      console.warn("[useSmsCode] captcha timeout - no callback in 15s", {
+        instanceExists: !!captchaInstanceRef.current,
+        instanceHasShow: !!captchaInstanceRef.current?.show,
+        containerNow: !!document.querySelector(containerId),
+      });
       setVerifying(false);
       setError("验证超时，请重试");
     }, 15_000);
 
     try {
-      const inst = await window.initAliyunCaptcha({
-        SceneId: captchaSceneId,
-        prefix: captchaPrefix,
-        mode: "popup",
-        element: containerId,
-        // 不传 button：SDK 在 init 期间自动做无感验证，直接触发 captchaVerifyCallback
+      console.log("[useSmsCode] calling initAliyunCaptcha...");
+      const initPromise = window.initAliyunCaptcha({
+        ...captchaConfig,
         captchaVerifyCallback: async (captchaVerifyParam) => {
           clearTimeout(timeoutId);
-          console.log("[useSmsCode] captchaVerifyCallback fired");
+          console.log("[useSmsCode] captchaVerifyCallback fired, param length:", captchaVerifyParam?.length);
           const currentPhone = phoneRef.current;
           if (!phoneSchema.safeParse(currentPhone).success) {
             setError("请输入正确的手机号码");
@@ -208,6 +226,7 @@ export default function useSmsCode({
             });
 
             if (data?.requestSmsCode?.success) {
+              console.log("[useSmsCode] SMS sent successfully");
               return { captchaResult: true, bizResult: true };
             }
 
@@ -215,7 +234,7 @@ export default function useSmsCode({
             setError(msg ? `发送失败：${msg}` : "发送失败，请稍后重试");
             return { captchaResult: true, bizResult: false };
           } catch (err) {
-            console.error("[useSmsCode] captchaVerifyCallback error:", err);
+            console.error("[useSmsCode] captchaVerifyCallback mutation error:", err);
             setError("网络异常，请检查网络后重试");
             return { captchaResult: true, bizResult: false };
           }
@@ -231,19 +250,43 @@ export default function useSmsCode({
         },
         getInstance: (inst) => {
           captchaInstanceRef.current = inst;
-          console.log("[useSmsCode] getInstance:", !!inst?.show);
+          console.log("[useSmsCode] getInstance called:", {
+            hasShow: !!inst?.show,
+            hasRefresh: !!inst?.refresh,
+            hasDestroy: !!inst?.destroy,
+            keys: inst ? Object.keys(inst) : [],
+          });
         },
         slideStyle: { width: 360, height: 40 },
         language: "cn",
       });
 
+      console.log("[useSmsCode] initAliyunCaptcha promise type:", typeof initPromise);
+      const inst = await initPromise;
+      console.log("[useSmsCode] initAliyunCaptcha resolved:", {
+        returnType: typeof inst,
+        isNull: inst === null,
+        isUndefined: inst === undefined,
+        keys: inst && typeof inst === "object" ? Object.keys(inst) : [],
+        captchaInstanceRefSet: !!captchaInstanceRef.current,
+      });
+
       // 有些版本 initAliyunCaptcha 直接返回实例
       if (inst && !captchaInstanceRef.current) {
         captchaInstanceRef.current = inst;
+        console.log("[useSmsCode] set instance from return value");
+      }
+
+      // 如果 getInstance 已返回实例但 callback 未触发，尝试手动 show()
+      if (captchaInstanceRef.current?.show) {
+        console.log("[useSmsCode] instance has show(), calling it manually as fallback");
+        captchaInstanceRef.current.show();
+      } else {
+        console.log("[useSmsCode] instance does NOT have show() - waiting for auto-verify callback");
       }
     } catch (err) {
       clearTimeout(timeoutId);
-      console.error("[useSmsCode] initAliyunCaptcha error:", err);
+      console.error("[useSmsCode] initAliyunCaptcha threw:", err);
       setError("验证初始化失败，请刷新页面重试");
       setVerifying(false);
     }
