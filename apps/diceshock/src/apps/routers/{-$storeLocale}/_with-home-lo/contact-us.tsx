@@ -95,13 +95,6 @@ function RouteComponent() {
                 </p>
 
                 {<CopyItem tx={other.wechat} />}
-
-                <br />
-                <p>
-                  <b>{t("contact.hostHygge")}</b>
-                </p>
-
-                {<CopyItem tx="GahonTian" />}
               </div>
             </div>
           </div>
