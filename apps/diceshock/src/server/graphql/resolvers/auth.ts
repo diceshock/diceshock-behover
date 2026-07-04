@@ -602,5 +602,103 @@ export const authResolvers = {
 
       return updated;
     },
+
+    async updateMyUserInfo(
+      _source: unknown,
+      args: { input: unknown },
+      ctx: GQLContext,
+    ) {
+      requireAuth(ctx);
+      const schema = z.object({
+        nickname: z.string().trim().min(1).max(30).nullish(),
+        phone: z.string().regex(/^1[3-9]\d{9}$/).nullish(),
+        code: z.string().regex(/^\d{6}$/).nullish(),
+      });
+      const input = zodToGraphQLError(schema, args.input);
+
+      const tdb = dbFactory(ctx.env.DB);
+
+      // Update nickname if provided
+      if (input.nickname) {
+        await tdb
+          .update(userInfoTable)
+          .set({ nickname: input.nickname })
+          .where(drizzle.eq(userInfoTable.id, ctx.userId));
+      }
+
+      // Update phone if provided (requires valid SMS code)
+      if (input.phone) {
+        if (!input.code) {
+          throw validationError("code", "SMS code is required when updating phone");
+        }
+        const kvKey = getSmsTmpCodeKey(input.phone);
+        const storedCode = await ctx.env.KV.get(kvKey);
+        if (!storedCode || storedCode !== input.code) {
+          throw validationError("code", "SMS code is invalid or expired");
+        }
+
+        // Update phone on user info
+        await tdb
+          .update(userInfoTable)
+          .set({ phone: input.phone })
+          .where(drizzle.eq(userInfoTable.id, ctx.userId));
+
+        // Merge any other accounts with the same phone
+        await mergeByPhone(ctx.env.DB, ctx.env.KV, ctx.userId, input.phone);
+
+        // Ensure exactly one SMS account with the new phone
+        const smsWithNewPhone = await tdb.query.accounts.findFirst({
+          where: (account, { and, eq }) =>
+            and(
+              eq(account.userId, ctx.userId),
+              eq(account.provider, "SMS"),
+              eq(account.providerAccountId, input.phone!),
+            ),
+        });
+
+        if (smsWithNewPhone) {
+          await tdb
+            .delete(accounts)
+            .where(
+              drizzle.and(
+                drizzle.eq(accounts.userId, ctx.userId),
+                drizzle.eq(accounts.provider, "SMS"),
+                drizzle.ne(accounts.providerAccountId, input.phone!),
+              ),
+            );
+        } else {
+          const anySms = await tdb.query.accounts.findFirst({
+            where: (account, { and, eq }) =>
+              and(eq(account.userId, ctx.userId), eq(account.provider, "SMS")),
+          });
+          if (anySms) {
+            await tdb
+              .update(accounts)
+              .set({ providerAccountId: input.phone })
+              .where(
+                drizzle.and(
+                  drizzle.eq(accounts.userId, ctx.userId),
+                  drizzle.eq(accounts.provider, "SMS"),
+                  drizzle.eq(accounts.providerAccountId, anySms.providerAccountId),
+                ),
+              );
+          } else {
+            await tdb
+              .insert(accounts)
+              .values({
+                userId: ctx.userId,
+                type: "credentials" as AdapterAccountType,
+                provider: "SMS",
+                providerAccountId: input.phone,
+              })
+              .onConflictDoNothing();
+          }
+        }
+
+        await ctx.env.KV.delete(kvKey);
+      }
+
+      return { success: true, user: await getUserProfile(ctx, ctx.userId) };
+    },
   },
 };

@@ -992,7 +992,7 @@ function RouteComponent() {
               </div>
             )}
 
-            <label className="flex flex-col sm:flex-row gap-2">
+            <label className="flex flex-row gap-2">
               <span className="label text-sm min-w-20">
                 {t("me.phoneLabel")}
               </span>
@@ -1012,42 +1012,40 @@ function RouteComponent() {
               />
             </label>
 
-            <label className="flex flex-col sm:flex-row gap-2">
+            <label className="flex flex-row gap-2">
               <span className="label text-sm min-w-20">
                 {t("me.verificationCode")}
               </span>
-              <div className="flex gap-2 flex-1">
-                <input
-                  type="text"
-                  placeholder={t("me.codePlaceholder")}
-                  className="input input-sm flex-1"
-                  value={smsForm.code}
-                  onChange={(e) => {
-                    dispatchSmsForm({
-                      type: "SET_CODE",
-                      payload: e.target.value,
-                    });
-                    setSmsError(null);
-                  }}
-                  maxLength={6}
-                  disabled={isLoadingPhone}
-                />
-                <button
-                  id="me-sms-btn"
-                  type="button"
-                  className="btn btn-sm shrink-0 w-28"
-                  onClick={getSmsCode}
-                  disabled={verifying || countdown > 0 || isLoadingPhone}
-                >
-                  {verifying ? (
-                    <><span className="loading loading-spinner loading-xs" />验证中</>
-                  ) : countdown > 0 ? (
-                    <><span className="loading loading-ring loading-xs" />{countdown}s</>
-                  ) : (
-                    t("me.getCode")
-                  )}
-                </button>
-              </div>
+              <input
+                type="text"
+                placeholder={t("me.codePlaceholder")}
+                className="input input-sm flex-1"
+                value={smsForm.code}
+                onChange={(e) => {
+                  dispatchSmsForm({
+                    type: "SET_CODE",
+                    payload: e.target.value,
+                  });
+                  setSmsError(null);
+                }}
+                maxLength={6}
+                disabled={isLoadingPhone}
+              />
+              <button
+                id="me-sms-btn"
+                type="button"
+                className="btn btn-sm w-28"
+                onClick={getSmsCode}
+                disabled={verifying || countdown > 0 || isLoadingPhone}
+              >
+                {verifying ? (
+                  <><span className="loading loading-spinner loading-xs" />验证中</>
+                ) : countdown > 0 ? (
+                  <><span className="loading loading-ring loading-xs" />{countdown}s</>
+                ) : (
+                  t("me.getCode")
+                )}
+              </button>
             </label>
 
             {import.meta.env.PROD && captchaEnabled && (

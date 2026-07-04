@@ -350,7 +350,7 @@ export default function LoginDialog({
                 inputMode="numeric"
                 autoComplete="tel"
                 name="phone"
-                className="input input-sm"
+                className="input input-sm flex-1"
                 value={phone}
                 onChange={(e) => {
                   setPhone(e.target.value);

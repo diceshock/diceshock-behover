@@ -170,24 +170,25 @@ export default function GszRegistrationModal({
               <p className="text-sm text-base-content/60">
                 参加公式战需要绑定手机号
               </p>
-              <label className="form-control">
-                <div className="label">
-                  <span className="label-text text-sm">手机号</span>
-                </div>
+              <label className="flex flex-row gap-2">
+                <span className="label text-sm min-w-20">手机号</span>
                 <input
                   type="tel"
-                  className="input input-bordered w-full"
+                  inputMode="numeric"
+                  autoComplete="tel"
+                  className="input input-sm flex-1"
                   placeholder="请输入手机号"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   maxLength={11}
                 />
               </label>
-              <div className="flex gap-2">
+              <label className="flex flex-row gap-2">
+                <span className="label text-sm min-w-20">验证码</span>
                 <input
                   type="text"
-                  className="input input-bordered flex-1"
-                  placeholder="验证码"
+                  className="input input-sm flex-1"
+                  placeholder="请输入验证码"
                   value={smsCode}
                   onChange={(e) => setSmsCode(e.target.value)}
                   maxLength={6}
@@ -195,7 +196,7 @@ export default function GszRegistrationModal({
                 <button
                   id="gsz-sms-btn"
                   type="button"
-                  className="btn btn-outline shrink-0 w-28"
+                  className="btn btn-sm w-28"
                   disabled={!phone.trim() || smsVerifying || smsCooldown > 0}
                   onClick={handleSendSms}
                 >
@@ -207,7 +208,7 @@ export default function GszRegistrationModal({
                     "发送验证码"
                   )}
                 </button>
-              </div>
+              </label>
               <div id="gsz-captcha-container" className="flex justify-center" />
               <button
                 type="button"
