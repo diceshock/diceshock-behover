@@ -95,13 +95,17 @@ export async function graphqlHandler(
       let body: { query?: string; variables?: Record<string, unknown> };
       try {
         body = await c.req.json();
-      } catch {
+      } catch (err) {
+        console.error("[graphql] invalid JSON body:", err);
         return c.json({ errors: ["Invalid JSON body"] }, 400);
       }
 
       if (!body.query || typeof body.query !== "string") {
         return c.json({ errors: ["Missing or invalid 'query' field"] }, 400);
       }
+
+      const operationName = body.query.match(/(?:mutation|query)\s+(\w+)/)?.[1] ?? "anonymous";
+      console.log("[graphql] POST", operationName, "role:", role, "userId:", userId, "hasAliyunClient:", !!c.get("AliyunClient"));
 
       const database = db(c.env.DB);
 
@@ -116,6 +120,9 @@ export async function graphqlHandler(
       };
 
       const result = await executeGraphQL(body.query, body.variables, context);
+      if (result.errors?.length) {
+        console.error("[graphql] errors in", operationName, ":", JSON.stringify(result.errors));
+      }
       return c.json(result);
     }
 

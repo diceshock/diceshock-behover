@@ -142,7 +142,7 @@ export default function LoginDialog({
     reset: resetSms,
   } = useSmsCode({
     phone,
-    containerId: "#turnstileIns-container",
+    containerId: "#captcha-element",
     enabled:
       isOpen &&
       activeTab === "phonenumber" &&
