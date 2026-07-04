@@ -134,7 +134,7 @@ function RouteComponent() {
   const actives = (data?.managedActives ?? []) as ActiveItem[];
   const clearSelectedIds = useCallback(() => setSelectedIds(new Set()), []);
   useSelectedTableData({
-    entityType: "约局",
+    entityType: "活动",
     rows: actives,
     selectedIds,
     getRowId: (active) => active.id,
@@ -222,7 +222,7 @@ function RouteComponent() {
       }
     }
     if (failCount === 0) {
-      msg.success(`${successCount} 条约局已${autoPublish ? "发布" : "创建草稿"}`);
+      msg.success(`${successCount} 条活动已${autoPublish ? "发布" : "创建草稿"}`);
     } else {
       msg.error(`成功 ${successCount} 条，失败 ${failCount} 条`);
     }
@@ -736,7 +736,7 @@ function RouteComponent() {
           <div className="modal-box">
             <h3 className="font-bold text-lg mb-4">发布到微信服务号</h3>
             <p className="text-sm text-base-content/70 mb-2">
-              将约局「{publishTarget.title}」渲染为图片文章并同步到微信。
+              将活动「{publishTarget.title}」渲染为图片文章并同步到微信。
             </p>
             <div className="modal-action mt-6">
               <button
@@ -775,7 +775,7 @@ function RouteComponent() {
         <div className="modal-box">
           <h3 className="font-bold text-lg mb-4">批量发布到微信</h3>
           <p className="text-sm text-base-content/70">
-            将选中的 <strong>{selectedIds.size}</strong> 条约局逐一渲染并同步到微信服务号。
+            将选中的 <strong>{selectedIds.size}</strong> 条活动逐一渲染并同步到微信服务号。
           </p>
           <p className="text-sm text-base-content/70 mt-2">
             批量发布可能耗时较长，请耐心等待。

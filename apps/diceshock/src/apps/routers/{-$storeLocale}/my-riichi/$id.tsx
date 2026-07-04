@@ -589,7 +589,7 @@ function MyGszProfile() {
           setMatchCursor(data.pageInfo.nextCursor);
           setHasMoreMatches(!!data.pageInfo.nextCursor);
         }
-      } catch {}
+      } catch (e) { console.error("[my-riichi] fetchMatches error", e); }
     },
     [profileUserId, buildFilterParams, fetchMore],
   );
@@ -606,7 +606,7 @@ function MyGszProfile() {
                 ppStatsData.myPPStats.categories,
               ) as PPStat[];
               setPpStats(parsed);
-            } catch {}
+            } catch (e) { console.error("[my-riichi] ppStats parse error", e); }
           }
         }),
         Promise.resolve().then(() => {
@@ -617,7 +617,7 @@ function MyGszProfile() {
                 number
               >;
               setHeatmap(parsed);
-            } catch {}
+            } catch (e) { console.error("[my-riichi] heatmap parse error", e); }
           }
         }),
         Promise.resolve().then(() => {

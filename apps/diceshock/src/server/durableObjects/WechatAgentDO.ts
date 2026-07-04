@@ -152,7 +152,7 @@ export class WechatAgentDO extends DurableObject<Cloudflare.Env> {
             references: result.collectedReferences,
           });
           messages.push({ type: "text", content: `📖 查看引用原文: ${url}` });
-        } catch {}
+        } catch (e) { console.error("[WechatAgentDO] createReference error", e); }
       }
 
       if (this.isStale(generation)) return;
@@ -178,7 +178,7 @@ export class WechatAgentDO extends DurableObject<Cloudflare.Env> {
       console.error(`[WechatAgentDO:${openId.slice(-6)}] error`, e);
       try {
         await sendCustomerTextMessage(env, openId, "处理失败，请稍后重试。");
-      } catch {}
+      } catch (e) { console.error("[WechatAgentDO] sendCustomerTextMessage error", e); }
     } finally {
       if (this.currentGeneration === generation) {
         this.processing = false;

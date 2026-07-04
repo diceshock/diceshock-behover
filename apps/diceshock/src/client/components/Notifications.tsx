@@ -28,15 +28,15 @@ function getLastSeenTimestamp(): number {
 function setLastSeenTimestamp(ts: number): void {
   try {
     localStorage.setItem(LAST_SEEN_KEY, String(ts));
-  } catch {}
+  } catch (e) { console.error("[Notifications] setLastSeenTimestamp error", e); }
 }
 
 function formatNotificationText(n: NotificationItem): string {
   switch (n.type) {
     case "active_reminder":
-      return `约局提醒: ${n.title ?? ""} 即将开始`;
+      return `活动提醒: ${n.title ?? ""} 即将开始`;
     case "participant_joined":
-      return `${n.body ?? ""} 加入了你的约局`;
+      return `${n.body ?? ""} 加入了你的活动`;
     case "system_announcement":
       return n.body ?? "";
     default:

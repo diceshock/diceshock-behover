@@ -70,7 +70,7 @@ export default function useAuth() {
           }
         }
       }
-    } catch {}
+    } catch (e) { console.error("[useAuth] pre-signout cleanup error", e); }
 
     await signOutAuthJs({ callbackUrl: "/" });
   }, [session, client]);

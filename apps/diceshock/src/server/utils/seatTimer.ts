@@ -63,7 +63,7 @@ export async function fetchTableStateForDO(
             columns: { nickname: true },
           });
           nickname = tempInfo?.nickname ?? nickname;
-        } catch {}
+        } catch (e) { console.error("[seatTimer] tempIdentity lookup error", e); }
         uid = `temp:${occ.temp_id}`;
       }
 

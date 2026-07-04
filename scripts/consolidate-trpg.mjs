@@ -70,7 +70,7 @@ function getCfApiToken() {
     );
     const match = toml.match(/oauth_token\s*=\s*"([^"]+)"/);
     if (match) return match[1];
-  } catch {}
+  } catch (e) { console.error("[consolidate-trpg] wrangler config read error", e); }
   throw new Error("Missing CLOUDFLARE_API_TOKEN");
 }
 
@@ -281,7 +281,7 @@ async function process5e() {
                 `### ${page.title || "Untitled"}\n\n${body.trim()}`,
               );
             }
-          } catch {}
+          } catch (e) { console.error("[consolidate-trpg] page read error", e); }
         }
 
         if (texts.length === 0) {
@@ -423,7 +423,7 @@ async function processAonSystem(prefix, systemSlug, systemName) {
             if (body.trim().length > 30) {
               texts.push(body.trim());
             }
-          } catch {}
+          } catch (e) { console.error("[consolidate-trpg] key read error", e); }
         }
 
         if (texts.length === 0) {

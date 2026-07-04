@@ -51,8 +51,8 @@ export function getOgMeta(pathname: string): OgMeta {
 
   if (pathname === "/actives") {
     return {
-      title: `约局 & 活动 - ${SITE_NAME}`,
-      description: "查看约局和活动，加入桌游社区",
+      title: `活动 - ${SITE_NAME}`,
+      description: "查看活动，加入桌游社区",
       image: `${SITE_URL}/edge/media/card/actives`,
       url: `${SITE_URL}/actives`,
     };
@@ -61,8 +61,8 @@ export function getOgMeta(pathname: string): OgMeta {
   const activesIdMatch = pathname.match(/^\/actives\/(.+)$/);
   if (activesIdMatch) {
     return {
-      title: `约局详情 - ${SITE_NAME}`,
-      description: "查看约局详情，加入桌游社区",
+      title: `活动详情 - ${SITE_NAME}`,
+      description: "查看活动详情，加入桌游社区",
       image: `${SITE_URL}/edge/media/card/active/${activesIdMatch[1]}`,
       url: `${SITE_URL}${pathname}`,
     };

@@ -83,7 +83,7 @@ function StoreLocaleDropdown({ isOpen, onClose }: StoreLocaleDropdownProps) {
               },
             },
           });
-        } catch {}
+        } catch (e) { console.error("[StoreLocaleDropdown] updateMyPreferences error", e); }
       }
 
       window.location.href = target;

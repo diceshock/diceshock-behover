@@ -1045,7 +1045,7 @@ function PricingPage() {
                 let parsedPlans: Record<string, unknown>[] = [];
                 try {
                   parsedPlans = JSON.parse(detailSnapshot.data.plans);
-                } catch {}
+                } catch (e) { console.error("[pricing] plans parse error", e); }
                 return parsedPlans.map((plan, i) => {
                   const p = plan as Record<string, unknown>;
                   const cond = (p.conditions as Conditions) ?? null;
@@ -1181,7 +1181,7 @@ function PricingPage() {
                 let parsedPlans: Record<string, unknown>[] = [];
                 try {
                   parsedPlans = JSON.parse(detailSnapshot.data.plans);
-                } catch {}
+                } catch (e) { console.error("[pricing] plans parse error", e); }
                 if (parsedPlans.length === 0)
                   return (
                     <div className="py-6 text-center text-base-content/50">

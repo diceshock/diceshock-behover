@@ -27,13 +27,13 @@ const SITE_URL = "https://origin.runespark.fun";
 export const Route = createFileRoute("/{-$storeLocale}/_with-home-lo/actives")({
   head: () => ({
     meta: [
-      { title: "约局 & 活动 - DiceShock 骰子奇兵" },
+      { title: "活动 - DiceShock 骰子奇兵" },
       {
         name: "description",
-        content: "查看 DiceShock 骰子奇兵的约局和活动信息",
+        content: "查看 DiceShock 骰子奇兵的活动信息",
       },
-      { property: "og:title", content: "约局 & 活动 - DiceShock 骰子奇兵" },
-      { property: "og:description", content: "查看约局和活动，加入桌游社区" },
+      { property: "og:title", content: "活动 - DiceShock 骰子奇兵" },
+      { property: "og:description", content: "查看活动，加入桌游社区" },
       { property: "og:image", content: `${SITE_URL}/edge/media/card/actives` },
       { property: "og:url", content: `${SITE_URL}/actives` },
     ],
@@ -268,6 +268,7 @@ function ActivesPage() {
 
           <ClientOnly>
             <div className="flex items-center gap-2">
+              {/* // RESUME: 约局创建按钮暂时关闭
               {userInfo && (
                 <Link
                   to="/{-$storeLocale}/actives/new"
@@ -277,6 +278,7 @@ function ActivesPage() {
                   {t("actives.createButton")}
                 </Link>
               )}
+              */}
             </div>
           </ClientOnly>
         </div>

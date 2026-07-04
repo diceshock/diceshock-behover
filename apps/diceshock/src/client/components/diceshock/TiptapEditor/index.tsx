@@ -34,7 +34,7 @@ type MarkdownEditorProps = {
 export default function MarkdownEditor({
   content,
   onChange,
-  placeholder = "描述你的约局...",
+  placeholder = "描述你的活动...",
 }: MarkdownEditorProps) {
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;

@@ -166,7 +166,7 @@ function AccountSettingsModal({
             },
           },
         });
-      } catch {}
+      } catch (e) { console.error("[DashNavMenu] updateLocalePreference error", e); }
     },
     [preferredStore, updateMyPreferences],
   );
@@ -182,7 +182,7 @@ function AccountSettingsModal({
             },
           },
         });
-      } catch {}
+      } catch (e) { console.error("[DashNavMenu] updateStorePreference error", e); }
     },
     [preferredLocale, updateMyPreferences],
   );

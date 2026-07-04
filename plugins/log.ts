@@ -27,7 +27,7 @@ function timestamp(): string {
 function moveToTrash(filePath: string, fileName: string) {
   try {
     renameSync(filePath, resolve(trashDir, fileName));
-  } catch {}
+  } catch (e) { console.error("[log] moveToTrash error", e); }
 }
 
 function pruneTrash() {
@@ -43,9 +43,9 @@ function pruneTrash() {
     for (const f of files.slice(MAX_TRASH)) {
       try {
         unlinkSync(resolve(trashDir, f.name));
-      } catch {}
+      } catch (e) { console.error("[log] pruneTrash unlink error", e); }
     }
-  } catch {}
+  } catch (e) { console.error("[log] pruneTrash error", e); }
 }
 
 export class RotatingLog {
@@ -97,7 +97,7 @@ export class RotatingLog {
       for (const f of files) {
         moveToTrash(resolve(agentsDir, f), f);
       }
-    } catch {}
+    } catch (e) { console.error("[log] archiveExisting error", e); }
   }
 
   private flushPending() {
@@ -137,7 +137,7 @@ export class RotatingLog {
     const newPath = resolve(agentsDir, newName);
     try {
       renameSync(oldPath, newPath);
-    } catch {}
+    } catch (e) { console.error("[log] finalizeFileName error", e); }
   }
 
   private rotate() {

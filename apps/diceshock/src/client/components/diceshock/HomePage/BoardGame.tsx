@@ -99,7 +99,7 @@ const BoardGame = () => {
 
             <h3 className="text-3xl my-2 text-base-content">
               大学包围,
-              <br /> 即刻约局
+              <br /> 即刻开局
             </h3>
 
             <p className="w-56 text-base-content/70 text-xl">

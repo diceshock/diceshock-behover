@@ -56,7 +56,9 @@ function getAliyunClient(ctx: GQLContext): AliyunClient | null {
     aliyunClient?: unknown;
     AliyunClient?: unknown;
   };
-  return (env.aliyunClient ?? env.AliyunClient ?? null) as AliyunClient | null;
+  const client = (env.aliyunClient ?? env.AliyunClient ?? null) as AliyunClient | null;
+  console.log("[getAliyunClient] aliyunClient?", !!env.aliyunClient, "AliyunClient?", !!env.AliyunClient, "result?", !!client);
+  return client;
 }
 
 function toIsoString(value: Date | number | string | null | undefined) {
@@ -107,8 +109,10 @@ async function getUserProfile(ctx: GQLContext, userId: string) {
 }
 
 async function sendSms(phone: string, code: string, ctx: GQLContext) {
+  console.log("[sendSms] getting aliyun client...");
   const client = getAliyunClient(ctx);
   if (!client) {
+    console.error("[sendSms] ERROR: aliyunClient is null, SMS service not configured");
     throw internalError("SMS service is not configured");
   }
 
@@ -120,8 +124,10 @@ async function sendSms(phone: string, code: string, ctx: GQLContext) {
     templateParam: JSON.stringify({ code }),
   });
 
+  console.log("[sendSms] calling sendSmsWithOptions for", phone);
   const response = await client.sendSmsWithOptions(request, {});
   const responseCode = response.body?.code;
+  console.log("[sendSms] response code:", responseCode, "message:", response.body?.message);
   if (responseCode === "OK") return;
   if (responseCode === "isv.MOBILE_NUMBER_ILLEGAL") {
     throw validationError("phone", "Invalid phone number format");
@@ -220,19 +226,26 @@ export const authResolvers = {
       args: { input: unknown },
       ctx: GQLContext,
     ) {
+      console.log("[sendSmsCode] called, input:", JSON.stringify(args.input));
       requireAuth(ctx);
+      console.log("[sendSmsCode] auth passed, userId:", ctx.userId);
       const input = zodToGraphQLError(smsCodeSchema, args.input);
+      console.log("[sendSmsCode] validated phone:", input.phone);
       const expirationTtl = 60 * 5;
       const devSmsCode = (ctx.env as { DEV_SMS_CODE?: string }).DEV_SMS_CODE;
       const verificationCode = devSmsCode || customAlphabet("0123456789", 6)();
+      console.log("[sendSmsCode] devSmsCode?", !!devSmsCode, "code generated");
 
       if (!devSmsCode) {
+        console.log("[sendSmsCode] sending real SMS to", input.phone);
         await sendSms(input.phone, verificationCode, ctx);
+        console.log("[sendSmsCode] SMS sent successfully");
       }
 
       await ctx.env.KV.put(getSmsTmpCodeKey(input.phone), verificationCode, {
         expirationTtl,
       });
+      console.log("[sendSmsCode] code stored in KV, returning success");
 
       return { success: true, expiresInMs: expirationTtl * 1000 };
     },
@@ -242,19 +255,25 @@ export const authResolvers = {
       args: { input: unknown },
       ctx: GQLContext,
     ) {
+      console.log("[requestSmsCode] called, input:", JSON.stringify(args.input));
       // No auth required — used during login before user is authenticated
       const input = zodToGraphQLError(smsCodeSchema, args.input);
+      console.log("[requestSmsCode] validated phone:", input.phone);
       const expirationTtl = 60 * 5;
       const devSmsCode = (ctx.env as { DEV_SMS_CODE?: string }).DEV_SMS_CODE;
       const verificationCode = devSmsCode || customAlphabet("0123456789", 6)();
+      console.log("[requestSmsCode] devSmsCode?", !!devSmsCode, "code generated");
 
       if (!devSmsCode) {
+        console.log("[requestSmsCode] sending real SMS to", input.phone);
         await sendSms(input.phone, verificationCode, ctx);
+        console.log("[requestSmsCode] SMS sent successfully");
       }
 
       await ctx.env.KV.put(getSmsTmpCodeKey(input.phone), verificationCode, {
         expirationTtl,
       });
+      console.log("[requestSmsCode] code stored in KV, returning success");
 
       return { success: true, expiresInMs: expirationTtl * 1000 };
     },

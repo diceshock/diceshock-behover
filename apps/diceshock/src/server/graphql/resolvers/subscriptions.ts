@@ -65,7 +65,7 @@ export async function* createPubSubIterator(
         if (!chunk.startsWith("data: ")) continue;
         try {
           yield JSON.parse(chunk.slice(6)) as PubSubEvent;
-        } catch {}
+        } catch (e) { console.error("[subscriptions] SSE chunk parse error", e); }
       }
     }
   } finally {

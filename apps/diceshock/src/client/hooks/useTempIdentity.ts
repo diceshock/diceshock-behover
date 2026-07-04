@@ -26,20 +26,20 @@ function loadFromStorage(): TempIdentityData | null {
     ) {
       return parsed as TempIdentityData;
     }
-  } catch {}
+  } catch (e) { console.error("[useTempIdentity] loadFromStorage error", e); }
   return null;
 }
 
 function saveToStorage(data: TempIdentityData) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch {}
+  } catch (e) { console.error("[useTempIdentity] saveToStorage error", e); }
 }
 
 export function clearTempIdentityStorage() {
   try {
     localStorage.removeItem(STORAGE_KEY);
-  } catch {}
+  } catch (e) { console.error("[useTempIdentity] clearStorage error", e); }
 }
 
 const tempIdentityAtom = atom<TempIdentityData | null>(null);

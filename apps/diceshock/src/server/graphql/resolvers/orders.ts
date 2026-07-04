@@ -459,7 +459,7 @@ async function publishOrderEvent(
       method: "POST",
       body: JSON.stringify({ type, payload, timestamp: Date.now() }),
     });
-  } catch {}
+  } catch (e) { console.error("[orders] publishOrderEvent error", e); }
 }
 
 async function fetchOrder(

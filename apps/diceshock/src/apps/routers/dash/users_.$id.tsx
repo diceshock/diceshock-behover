@@ -551,14 +551,14 @@ function UserDetailPage() {
         if (Array.isArray((inner as Record<string, unknown>).conflictIds))
           return (inner as Record<string, unknown>).conflictIds as string[];
       }
-    } catch {}
+    } catch (e) { console.error("[users] conflictIds parse error", e); }
     try {
       const match = err.message.match(/\{.*"conflictIds".*\}/);
       if (match) {
         const inner = JSON.parse(match[0]);
         if (Array.isArray(inner.conflictIds)) return inner.conflictIds;
       }
-    } catch {}
+    } catch (e) { console.error("[users] conflictIds regex parse error", e); }
     return [];
   }
 

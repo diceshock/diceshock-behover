@@ -64,7 +64,7 @@ function getCfApiToken() {
     const toml = readFileSync(homedir() + "/.wrangler/config/default.toml", "utf8");
     const match = toml.match(/oauth_token\s*=\s*"([^"]+)"/);
     if (match) return match[1];
-  } catch {}
+  } catch (e) { console.error("[consolidate-gstone] wrangler config read error", e); }
   throw new Error("Missing CLOUDFLARE_API_TOKEN (set env or login via wrangler)");
 }
 

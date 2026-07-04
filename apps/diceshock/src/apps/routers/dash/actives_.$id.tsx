@@ -68,7 +68,7 @@ function ActiveEditorPage() {
       );
     },
     onError: (err) => {
-      msg.error(err.message || "加载约局失败");
+      msg.error(err.message || "加载活动失败");
     },
   });
 
@@ -139,7 +139,7 @@ function ActiveEditorPage() {
             },
           },
         });
-        msg.success("约局已保存");
+        msg.success("活动已保存");
         navigate({ to: "/dash/actives", search: { q: "" } });
       } catch (err) {
         msg.error(err instanceof Error ? err.message : "保存失败");
@@ -191,7 +191,7 @@ function ActiveEditorPage() {
 
         <div className="mx-auto w-full max-w-2xl px-4 pb-20">
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold">约局详情</h1>
+            <h1 className="text-2xl font-bold">活动详情</h1>
             <button
               type="button"
               className={clsx("btn btn-sm btn-primary gap-1", publishing && "loading")}
@@ -228,7 +228,7 @@ function ActiveEditorPage() {
                 <span className="label text-sm font-semibold">标题</span>
                 <input
                   type="text"
-                  placeholder="约局标题"
+                  placeholder="活动标题"
                   className="input input-bordered w-full"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
@@ -305,7 +305,7 @@ function ActiveEditorPage() {
                 <TiptapEditor
                   content={content}
                   onChange={setContent}
-                  placeholder="约局详情..."
+                  placeholder="活动详情..."
                 />
               </div>
 
@@ -411,7 +411,7 @@ function ActiveEditorPage() {
         <div className="modal-box">
           <h3 className="font-bold text-lg mb-4">发布到微信服务号</h3>
           <p className="text-sm text-base-content/70 mb-2">
-            将此约局渲染为图片文章并同步到微信服务号。
+            将此活动渲染为图片文章并同步到微信服务号。
           </p>
           <p className="text-sm text-base-content/70">
             「创建草稿」仅创建草稿，需要在微信公众平台手动发布；「立即发布」将直接发布到服务号。

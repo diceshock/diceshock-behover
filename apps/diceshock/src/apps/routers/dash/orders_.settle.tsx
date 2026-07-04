@@ -39,7 +39,7 @@ export const Route = createFileRoute("/dash/orders_/settle")({
                 (v): v is string => typeof v === "string" && v.length > 0,
               ),
             };
-        } catch {}
+        } catch (e) { console.error("[orders.settle] search param parse error", e); }
       }
       return { ids: raw.split(",").filter(Boolean) };
     }

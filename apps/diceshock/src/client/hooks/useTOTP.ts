@@ -17,21 +17,21 @@ function getCachedSecret(): string | null {
 function setCachedSecret(secret: string) {
   try {
     localStorage.setItem(TOTP_SECRET_KEY, secret);
-  } catch {}
+  } catch (e) { console.error("[useTOTP] setCachedSecret error", e); }
 }
 
 export function getLoginTime(): number {
   try {
     const stored = localStorage.getItem(TOTP_LOGIN_TIME_KEY);
     if (stored) return Number(stored);
-  } catch {}
+  } catch (e) { console.error("[useTOTP] getLoginTime error", e); }
   return 0;
 }
 
 export function setLoginTime(time: number) {
   try {
     localStorage.setItem(TOTP_LOGIN_TIME_KEY, String(time));
-  } catch {}
+  } catch (e) { console.error("[useTOTP] setLoginTime error", e); }
 }
 
 interface TOTPState {

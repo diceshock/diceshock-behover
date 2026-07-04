@@ -162,7 +162,7 @@ async function enrichOccupancyWithUserInfo(
         columns: { nickname: true },
       });
       nickname = tempInfo?.nickname ?? null;
-    } catch {}
+    } catch (e) { console.error("[tables] tempIdentity lookup error", e); }
     uid = occ.temp_id ? `temp:${occ.temp_id}` : null;
   }
 
@@ -217,7 +217,7 @@ async function publishSeatEvent(
         timestamp: Date.now(),
       }),
     });
-  } catch {}
+  } catch (e) { console.error("[tables] publishSeatEvent error", e); }
 }
 
 // ─── DsSubscription Helpers ──────────────────────────────────────────────────────
@@ -233,7 +233,7 @@ async function notifyDsSubscriptionFromTable(
     if (fresh) {
       await notifyDsSubscription(ctx.env, code, fresh.table, fresh.occupancies);
     }
-  } catch {}
+  } catch (e) { console.error("[tables] notifyDsSubscription error", e); }
 }
 
 // ─── Zod Schemas ───────────────────────────────────────────────────────────

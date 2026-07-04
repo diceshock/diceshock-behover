@@ -133,7 +133,7 @@ export class DsSubscriptionDO extends DurableObject<Cloudflare.Env> {
         this.tableInfo = state.table as TableInfo;
         this.occupancies = state.occupancies as OccupancyInfo[];
       }
-    } catch {}
+    } catch (e) { console.error("[DsSubscriptionDO] hydrate error", e); }
   }
 
   async fetch(request: Request): Promise<Response> {

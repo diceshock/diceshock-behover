@@ -86,7 +86,7 @@ function parseMenuData(raw: string | null | undefined): WechatMenuData | null {
   try {
     const parsed = JSON.parse(raw);
     if (parsed && Array.isArray(parsed.buttons)) return parsed as WechatMenuData;
-  } catch {}
+  } catch (e) { console.error("[wechat-menu] parseMenuData error", e); }
   return null;
 }
 

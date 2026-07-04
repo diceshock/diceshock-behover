@@ -199,7 +199,7 @@ export async function dispatchGstoneOcr(env: {
       const nextPage = pages.findIndex((p) => !p || p.trim().length === 0);
       if (nextPage === -1 || nextPage >= totalPages) continue;
       msgs.push({ body: { document_id: d.document_id, page_index: nextPage } });
-    } catch {}
+    } catch (e) { console.error("[gstoneCrawl] dispatchOcr parse error", e); }
   }
 
   // 3. Fill remaining slots with new docs (haven't started OCR)
@@ -244,7 +244,7 @@ export async function dispatchGstoneDocImages(env: {
       for (let i = 0; i < urls.length; i++) {
         msgs.push({ body: { document_id: d.document_id, page_index: i, source_url: urls[i] } });
       }
-    } catch {}
+    } catch (e) { console.error("[gstoneCrawl] dispatchDocImages parse error", e); }
     if (msgs.length >= MAX_QUEUE_DEPTH) break;
   }
 

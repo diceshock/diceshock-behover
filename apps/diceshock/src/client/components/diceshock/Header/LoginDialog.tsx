@@ -193,7 +193,7 @@ export default function LoginDialog({
                 localStorage.removeItem("diceshock_temp_identity");
               }
             }
-          } catch {}
+          } catch (e) { console.error("[LoginDialog] post-login seat claim error", e); }
         }
         return window.location.reload();
       }

@@ -751,11 +751,11 @@ function RouteComponent() {
                 <BellIcon className="size-5 text-primary" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-bold">约局偏好</p>
+                <p className="text-sm font-bold">活动偏好</p>
                 <p className="text-xs text-base-content/50">
                   {prefCount > 0
                     ? `${prefCount} 条偏好已设置`
-                    : "添加偏好, 系统自动为你匹配约局"}
+                    : "添加偏好, 系统自动为你匹配活动"}
                 </p>
               </div>
               {prefCount > 0 && (

@@ -147,7 +147,7 @@ export default function BusinessCardModal({
         </h3>
 
         <p className="text-xs text-base-content/50 px-7 pb-2">
-          参与或围观约局时，你的名片会展示给活动组织者
+          参与或围观活动时，你的名片会展示给活动组织者
         </p>
 
         <form

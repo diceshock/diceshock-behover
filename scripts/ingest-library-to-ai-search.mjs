@@ -37,7 +37,7 @@ function getCfApiToken() {
     );
     const match = toml.match(/oauth_token\s*=\s*"([^"]+)"/);
     if (match) return match[1];
-  } catch {}
+  } catch (e) { console.error("[ingest-library] wrangler config read error", e); }
   throw new Error("Missing CLOUDFLARE_API_TOKEN");
 }
 

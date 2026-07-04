@@ -111,9 +111,9 @@ function PreferencesPage() {
   return (
     <main className="min-h-[calc(100vh-8rem)] w-full px-4 pt-6 pb-12">
       <div className="mx-auto w-full max-w-md">
-        <h1 className="text-xl font-bold mb-4">约局偏好</h1>
+        <h1 className="text-xl font-bold mb-4">活动偏好</h1>
         <p className="text-sm text-base-content/60 mb-6">
-          描述你的约局时间和类型偏好, 系统会自动为你匹配合适的约局
+          描述你的活动时间和类型偏好, 系统会自动为你匹配合适的活动
         </p>
 
         <div className="sticky top-16 z-10 bg-base-100 pb-3">

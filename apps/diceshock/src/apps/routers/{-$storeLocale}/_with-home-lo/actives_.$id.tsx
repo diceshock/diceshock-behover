@@ -39,10 +39,10 @@ export const Route = createFileRoute(
 )({
   head: ({ params }) => ({
     meta: [
-      { title: "约局详情 - DiceShock 骰子奇兵" },
-      { name: "description", content: "查看约局详情，加入桌游社区" },
-      { property: "og:title", content: "约局详情 - DiceShock 骰子奇兵" },
-      { property: "og:description", content: "查看约局详情，加入桌游社区" },
+      { title: "活动详情 - DiceShock 骰子奇兵" },
+      { name: "description", content: "查看活动详情，加入桌游社区" },
+      { property: "og:title", content: "活动详情 - DiceShock 骰子奇兵" },
+      { property: "og:description", content: "查看活动详情，加入桌游社区" },
       {
         property: "og:image",
         content: `${SITE_URL}/edge/media/card/active/${params.id}`,
@@ -292,7 +292,7 @@ function ActiveDetailPage() {
             {active.isSystemRecommended && (
               <div className="alert alert-info alert-soft">
                 <span className="text-xs">
-                  这是系统根据多位用户的偏好自动推荐的约局
+                  这是系统根据多位用户的偏好自动推荐的活动
                 </span>
               </div>
             )}
@@ -332,6 +332,7 @@ function ActiveDetailPage() {
               </div>
             )}
 
+            {/* // RESUME: 约局加入/观望/退出按钮暂时关闭
             {!isExpired && !isCreator && (
               <div className="flex flex-wrap gap-3">
                 {!userId ? (
@@ -401,6 +402,7 @@ function ActiveDetailPage() {
                 )}
               </div>
             )}
+            */}
 
             <div className="card bg-base-200 border border-base-content/10">
               <div className="card-body p-4 sm:p-6">
