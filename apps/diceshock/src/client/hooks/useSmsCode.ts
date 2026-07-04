@@ -157,7 +157,7 @@ export default function useSmsCode({
       .safeParse(phone);
 
     if (!phoneResult.success) {
-      setError("手机号格式错误");
+      setError("手机号校验失败：请输入正确的手机号码");
       return;
     }
 
@@ -214,11 +214,11 @@ export default function useSmsCode({
             }
 
             const msg = data?.requestSmsCode?.message;
-            if (msg) setError(msg);
+            setError(msg ? `发送验证码失败：${msg}` : "发送验证码失败：服务端拒绝，请稍后重试");
             return { captchaResult: true, bizResult: false };
           } catch (err) {
             console.error("[useSmsCode:captchaVerifyCallback] error:", err);
-            setError("网络错误，请稍后重试");
+            setError("发送验证码失败：网络请求异常，请检查网络后重试");
             return { captchaResult: true, bizResult: false };
           }
         },
@@ -227,6 +227,9 @@ export default function useSmsCode({
           if (bizResult) {
             setCountdown(20);
             setError(null);
+          } else {
+            // captchaVerifyCallback 里可能已经设了具体错误
+            setError((prev) => prev || "验证码发送失败：业务校验未通过，请重试");
           }
         },
         getInstance: (inst) => {
@@ -247,7 +250,7 @@ export default function useSmsCode({
       }
     } catch (err) {
       console.error("[useSmsCode:getSmsCode] captcha init failed, fallback:", err);
-      // captcha 失败 → fallback 直接发送
+      setError("人机验证初始化失败，正在跳过验证直接发送...");
       await sendSmsDirect(phone);
     }
   }, [phone, countdown, enabled, containerId, captchaPrefix, captchaSceneId]);
@@ -269,13 +272,13 @@ export default function useSmsCode({
           return;
         }
         if (data?.requestSmsCode?.message) {
-          setError(data.requestSmsCode.message);
+          setError(`发送验证码失败：${data.requestSmsCode.message}`);
           return;
         }
-        setError("发送失败，请稍后重试");
+        setError("发送验证码失败：服务端未返回结果，请稍后重试");
       } catch (err) {
         console.error("[useSmsCode:sendSmsDirect] error:", err);
-        setError("网络错误，请稍后重试");
+        setError("发送验证码失败：网络连接异常，请检查网络后重试");
       }
     },
     [],

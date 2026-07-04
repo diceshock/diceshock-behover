@@ -1,6 +1,5 @@
 import { useSession } from "@hono/auth-js/react";
 import {
-  CopyIcon,
   DotsThreeVerticalIcon,
   EyeIcon,
   UserMinusIcon,
@@ -162,17 +161,6 @@ function RouteComponent() {
   const [pendingDisable, setPendingDisable] = useState<UserItem | null>(null);
   const [disablePending, setDisablePending] = useState(false);
 
-  const handleCopy = useCallback(
-    (text: string) => {
-      try {
-        navigator.clipboard.writeText(text);
-        msg.success(t("dashUsers.copied"));
-      } catch {
-        msg.error(t("dashUsers.clipboardDenied"));
-      }
-    },
-    [t, msg],
-  );
 
   const openDisableDialog = (user: UserItem) => {
     setPendingDisable(user);
@@ -215,30 +203,6 @@ function RouteComponent() {
   const columns = useMemo<ColumnDef<UserItem, unknown>[]>(
     () => [
       {
-        accessorKey: "id",
-        header: "ID",
-        cell: ({ row }) => (
-          <div className="relative group flex items-center gap-1">
-            <span className="font-mono cursor-default">
-              {row.original.id.slice(0, 5)}
-            </span>
-            <button
-              type="button"
-              className="btn btn-xs btn-ghost btn-square shrink-0"
-              onClick={() => handleCopy(row.original.id)}
-              title={t("dashUsers.copyUserId")}
-            >
-              <CopyIcon className="size-3.5" />
-            </button>
-            <div className="absolute right-0 top-full z-30 hidden group-hover:block pt-1">
-              <div className="bg-base-200 shadow-lg rounded-lg px-3 py-1.5 text-xs font-mono whitespace-nowrap">
-                {row.original.id}
-              </div>
-            </div>
-          </div>
-        ),
-      },
-      {
         accessorKey: "image",
         header: "",
         cell: ({ row }) =>
@@ -250,7 +214,7 @@ function RouteComponent() {
             />
           ) : (
             <div className="w-8 h-8 rounded-full bg-base-300 flex items-center justify-center text-sm">
-              {(row.original.name || row.original.nickname || "?")
+              {(row.original.nickname || row.original.name || "?")
                 .charAt(0)
                 .toUpperCase()}
             </div>
@@ -261,15 +225,17 @@ function RouteComponent() {
         header: t("dashUsers.nickname"),
         cell: ({ row }) => (
           <span className="whitespace-nowrap">
-            {row.original.nickname || "—"}
+            {row.original.nickname || row.original.name || "—"}
           </span>
         ),
       },
       {
-        accessorKey: "name",
-        header: t("dashUsers.name"),
+        accessorKey: "uid",
+        header: "UID",
         cell: ({ row }) => (
-          <span className="whitespace-nowrap">{row.original.name || "—"}</span>
+          <span className="font-mono whitespace-nowrap">
+            {row.original.uid || "—"}
+          </span>
         ),
       },
       {
@@ -362,26 +328,6 @@ function RouteComponent() {
         ),
       },
       {
-        accessorKey: "preferredStoreId",
-        header: t("dashUsers.store"),
-        cell: ({ row }) => (
-          <span className="font-mono text-xs whitespace-nowrap">
-            {row.original.preferredStoreId
-              ? row.original.preferredStoreId.slice(0, 8)
-              : "—"}
-          </span>
-        ),
-      },
-      {
-        accessorKey: "uid",
-        header: "UID",
-        cell: ({ row }) => (
-          <span className="font-mono whitespace-nowrap">
-            {row.original.uid || "—"}
-          </span>
-        ),
-      },
-      {
         accessorKey: "createdAt",
         header: t("dashUsers.createdAt"),
         cell: ({ row }) =>
@@ -390,7 +336,7 @@ function RouteComponent() {
             : "—",
       },
     ],
-    [t, handleCopy, isAdmin, mapRawPlan],
+    [t, isAdmin, mapRawPlan],
   );
 
   const users = (data?.managedUsers?.items ?? []) as UserItem[];
@@ -525,7 +471,7 @@ function RouteComponent() {
           }
           sorting={sorting}
           onSortingChange={setSorting}
-          sortableColumns={["nickname", "name", "role", "points", "createdAt"]}
+          sortableColumns={["nickname", "role", "points", "createdAt"]}
           enableRowSelection
           selectedRows={selectedIds}
           onSelectedRowsChange={setSelectedIds}
