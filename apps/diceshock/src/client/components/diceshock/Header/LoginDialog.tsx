@@ -143,6 +143,7 @@ export default function LoginDialog({
   } = useSmsCode({
     phone,
     containerId: "#captcha-element",
+    buttonId: "#login-sms-btn",
     enabled:
       isOpen &&
       activeTab === "phonenumber" &&
@@ -378,7 +379,7 @@ export default function LoginDialog({
               />
 
               <button
-                id="sms-code-btn"
+                id="login-sms-btn"
                 type="button"
                 className="btn btn-sm"
                 onClick={getSmsCode}

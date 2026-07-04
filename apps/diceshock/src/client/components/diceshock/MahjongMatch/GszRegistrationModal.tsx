@@ -3,10 +3,8 @@ import { Link } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import Modal from "@/client/components/modal";
-import {
-  RegisterMahjongDocument,
-  RequestSmsCodeDocument,
-} from "@/client/graphql/__generated__";
+import { RegisterMahjongDocument } from "@/client/graphql/__generated__";
+import useSmsCode from "@/client/hooks/useSmsCode";
 
 interface GszRegistrationModalProps {
   isOpen: boolean;
@@ -47,9 +45,23 @@ export default function GszRegistrationModal({
     gszSynced: boolean;
     nicknameSynced: boolean;
   } | null>(null);
-  const [smsSending, setSmsSending] = useState(false);
-  const [smsCooldown, setSmsCooldown] = useState(0);
   const client = useApolloClient();
+
+  const {
+    countdown: smsCooldown,
+    getSmsCode: handleSendSms,
+    error: smsError,
+    reset: resetSms,
+  } = useSmsCode({
+    phone: phone.trim(),
+    containerId: "#gsz-captcha-container",
+    buttonId: "#gsz-sms-btn",
+    enabled: isOpen && step === "phone_verify" && needsPhone,
+  });
+
+  useEffect(() => {
+    if (smsError) setError(smsError);
+  }, [smsError]);
 
   useEffect(() => {
     if (isOpen) {
@@ -62,40 +74,9 @@ export default function GszRegistrationModal({
       setWarning(null);
       setPendingRegistration(null);
       setLoading(false);
+      resetSms();
     }
-  }, [isOpen, needsPhone, existingPhone, nickname]);
-
-  useEffect(() => {
-    if (smsCooldown <= 0) return;
-    const timer = setInterval(() => setSmsCooldown((c) => c - 1), 1000);
-    return () => clearInterval(timer);
-  }, [smsCooldown]);
-
-  const handleSendSms = useCallback(async () => {
-    if (!phone.trim() || smsSending) return;
-    setSmsSending(true);
-    setError(null);
-    try {
-      const { data } = await client.mutate({
-        mutation: RequestSmsCodeDocument,
-        variables: {
-          input: {
-            phone: phone.trim(),
-            botcheck: null,
-          },
-        },
-      });
-      if (!data.requestSmsCode.success) {
-        setError(data.requestSmsCode.message ?? "发送失败");
-        return;
-      }
-      setSmsCooldown(60);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "发送验证码失败");
-    } finally {
-      setSmsSending(false);
-    }
-  }, [phone, smsSending, client]);
+  }, [isOpen, needsPhone, existingPhone, nickname, resetSms]);
 
   const handlePhoneVerified = useCallback(() => {
     if (!phone.trim() || !smsCode.trim()) return;
@@ -211,20 +192,16 @@ export default function GszRegistrationModal({
                   maxLength={6}
                 />
                 <button
+                  id="gsz-sms-btn"
                   type="button"
                   className="btn btn-outline shrink-0"
-                  disabled={!phone.trim() || smsSending || smsCooldown > 0}
+                  disabled={!phone.trim() || smsCooldown > 0}
                   onClick={handleSendSms}
                 >
-                  {smsSending ? (
-                    <span className="loading loading-spinner loading-xs" />
-                  ) : smsCooldown > 0 ? (
-                    `${smsCooldown}s`
-                  ) : (
-                    "发送验证码"
-                  )}
+                  {smsCooldown > 0 ? `${smsCooldown}s` : "发送验证码"}
                 </button>
               </div>
+              <div id="gsz-captcha-container" className="flex justify-center" />
               <button
                 type="button"
                 className="btn btn-primary w-full"
