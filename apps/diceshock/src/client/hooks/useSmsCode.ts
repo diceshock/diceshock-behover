@@ -2,7 +2,7 @@ import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { z } from "zod/v4";
 import { themeA } from "@/client/components/ThemeSwap";
-import { RequestSmsCodeDocument } from "@/client/graphql/__generated__";
+import { RequestSmsCodeDocument, SendSmsCodeDocument } from "@/client/graphql/__generated__";
 import { apolloClient } from "@/client/graphql/client";
 
 /**
@@ -85,12 +85,15 @@ export default function useSmsCode({
   phone,
   containerId = "#captcha-element",
   enabled = true,
+  skipCaptcha = false,
   captchaPrefix = DEFAULT_CAPTCHA_PREFIX,
   captchaSceneId = DEFAULT_CAPTCHA_SCENE_ID,
 }: {
   phone: string;
   containerId?: string;
   enabled?: boolean;
+  /** 已登录用户跳过验证码，直接调用 sendSmsCode (需 auth) */
+  skipCaptcha?: boolean;
   captchaPrefix?: string;
   captchaSceneId?: string;
 }) {
@@ -137,18 +140,21 @@ export default function useSmsCode({
     setError(null);
     setVerifying(true);
 
-    // 非生产环境 → 跳过 captcha 直发
-    if (!import.meta.env.PROD || !enabled) {
-      console.log("[useSmsCode:getSmsCode] dev direct send");
+    // 跳过验证码：已登录用户直接调用 sendSmsCode，或非生产环境用 requestSmsCode
+    if (skipCaptcha || !import.meta.env.PROD || !enabled) {
+      const mutation = skipCaptcha ? SendSmsCodeDocument : RequestSmsCodeDocument;
+      const mutationName = skipCaptcha ? "sendSmsCode" : "requestSmsCode";
+      console.log(`[useSmsCode:getSmsCode] direct send via ${mutationName}`);
       try {
         const { data } = await apolloClient.mutate({
-          mutation: RequestSmsCodeDocument,
+          mutation,
           variables: { input: { botcheck: null, phone } },
         });
-        if (data?.requestSmsCode?.success) {
+        const result = data?.[mutationName];
+        if (result?.success) {
           setCountdown(20);
         } else {
-          const msg = data?.requestSmsCode?.message;
+          const msg = result?.message;
           setError(msg ? `发送失败：${msg}` : "发送失败，请稍后重试");
         }
       } catch (err) {
@@ -290,7 +296,7 @@ export default function useSmsCode({
       setError("验证初始化失败，请刷新页面重试");
       setVerifying(false);
     }
-  }, [phone, countdown, enabled, containerId, captchaPrefix, captchaSceneId]);
+  }, [phone, countdown, enabled, skipCaptcha, containerId, captchaPrefix, captchaSceneId]);
 
   // ========== 倒计时 ==========
   useEffect(() => {

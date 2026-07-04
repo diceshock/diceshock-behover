@@ -56,6 +56,7 @@ export default function GszRegistrationModal({
   } = useSmsCode({
     phone: phone.trim(),
     containerId: "#gsz-captcha-container",
+    skipCaptcha: true,
     enabled: isOpen && step === "phone_verify" && needsPhone,
   });
 

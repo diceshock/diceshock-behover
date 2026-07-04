@@ -115,6 +115,14 @@ mutation RequestSmsCode($input: RequestSmsCodeInput!) {
   }
 }
 
+mutation SendSmsCode($input: SendSmsCodeInput!) {
+  sendSmsCode(input: $input) {
+    success
+    message
+    expiresInMs
+  }
+}
+
 query GetTotpSecret {
   getTotpSecret {
     success

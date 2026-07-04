@@ -372,6 +372,7 @@ function RouteComponent() {
   } = useSmsCode({
     phone,
     containerId: "#phone-captcha-container",
+    skipCaptcha: true,
     enabled: isEditingPhone && import.meta.env.PROD && captchaEnabled,
     captchaPrefix,
     captchaSceneId,

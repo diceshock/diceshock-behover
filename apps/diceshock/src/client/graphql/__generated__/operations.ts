@@ -312,6 +312,11 @@ export type SaveWechatMenuSnapshotInput = {
   storeId?: string | number | null | undefined;
 };
 
+export type SendSmsCodeInput = {
+  botcheck?: string | null | undefined;
+  phone: string;
+};
+
 export type SettleOrderInput = {
   deductFromStoredValue?: boolean | null | undefined;
   id: string | number;
@@ -1363,6 +1368,13 @@ export type RequestSmsCodeMutationVariables = Exact<{
 
 
 export type RequestSmsCodeMutation = { requestSmsCode: { success: boolean, message: string | null, expiresInMs: number | null } };
+
+export type SendSmsCodeMutationVariables = Exact<{
+  input: Types.SendSmsCodeInput;
+}>;
+
+
+export type SendSmsCodeMutation = { sendSmsCode: { success: boolean, message: string | null, expiresInMs: number | null } };
 
 export type GetTotpSecretQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -7545,6 +7557,41 @@ export function useRequestSmsCodeMutation(baseOptions?: Apollo.MutationHookOptio
 export type RequestSmsCodeMutationHookResult = ReturnType<typeof useRequestSmsCodeMutation>;
 export type RequestSmsCodeMutationResult = Apollo.MutationResult<Types.RequestSmsCodeMutation>;
 export type RequestSmsCodeMutationOptions = Apollo.BaseMutationOptions<Types.RequestSmsCodeMutation, Types.RequestSmsCodeMutationVariables>;
+export const SendSmsCodeDocument = gql`
+    mutation SendSmsCode($input: SendSmsCodeInput!) {
+  sendSmsCode(input: $input) {
+    success
+    message
+    expiresInMs
+  }
+}
+    `;
+export type SendSmsCodeMutationFn = Apollo.MutationFunction<Types.SendSmsCodeMutation, Types.SendSmsCodeMutationVariables>;
+
+/**
+ * __useSendSmsCodeMutation__
+ *
+ * To run a mutation, you first call `useSendSmsCodeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSendSmsCodeMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [sendSmsCodeMutation, { data, loading, error }] = useSendSmsCodeMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useSendSmsCodeMutation(baseOptions?: Apollo.MutationHookOptions<Types.SendSmsCodeMutation, Types.SendSmsCodeMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<Types.SendSmsCodeMutation, Types.SendSmsCodeMutationVariables>(SendSmsCodeDocument, options);
+      }
+export type SendSmsCodeMutationHookResult = ReturnType<typeof useSendSmsCodeMutation>;
+export type SendSmsCodeMutationResult = Apollo.MutationResult<Types.SendSmsCodeMutation>;
+export type SendSmsCodeMutationOptions = Apollo.BaseMutationOptions<Types.SendSmsCodeMutation, Types.SendSmsCodeMutationVariables>;
 export const GetTotpSecretDocument = gql`
     query GetTotpSecret {
   getTotpSecret {
