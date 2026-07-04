@@ -330,8 +330,6 @@
   "agents": {
     "agentStoredValue": "Tisch AGENT Guthabenkarte",
     "agentStoredValueDesc": "Aufladevorteile, Zahlungsrabatte.",
-    "ccPass": "CC Tisch-Pass",
-    "ccPassDesc": "Super günstig, 20 Werktage unbegrenzt spielen.",
     "tablePass": "Tisch-Pass",
     "tablePassDesc": "30 Tage unbegrenzt spielen!",
     "ltsPass": "Tisch-Pass LTS",

@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import AgentLogo from "@/client/assets/svg/agent-logo.svg?react";
 import TableAgent from "@/client/assets/svg/agents/DiceshockItems_table-agent-icon.svg?react";
-import TablePassCC from "@/client/assets/svg/agents/DiceshockItems_table-pass-cc-icon.svg?react";
 import TablePass from "@/client/assets/svg/agents/DiceshockItems_table-pass-icon.svg?react";
 import TablePassLTS from "@/client/assets/svg/agents/DiceshockItems_table-pass-lts-icon.svg?react";
 import AgentsChannel from "@/client/assets/svg/agents_channel.svg?react";
@@ -18,11 +17,6 @@ const PLANS = [
     icon: TableAgent,
     nameKey: "agents.agentStoredValue" as const,
     descKey: "agents.agentStoredValueDesc" as const,
-  },
-  {
-    icon: TablePassCC,
-    nameKey: "agents.ccPass" as const,
-    descKey: "agents.ccPassDesc" as const,
   },
   {
     icon: TablePass,

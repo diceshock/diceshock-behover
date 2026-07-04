@@ -330,8 +330,6 @@
   "agents": {
     "agentStoredValue": "Table AGENT プリペイドカード",
     "agentStoredValueDesc": "チャージ特典、支払い割引。",
-    "ccPass": "CCテーブルパス",
-    "ccPassDesc": "超低価格、20営業日遊び放題。",
     "tablePass": "テーブルパス",
     "tablePassDesc": "30日間遊び放題！",
     "ltsPass": "テーブルパス LTS",

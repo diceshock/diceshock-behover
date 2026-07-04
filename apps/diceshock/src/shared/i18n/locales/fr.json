@@ -330,8 +330,6 @@
   "agents": {
     "agentStoredValue": "Carte prépayée Table AGENT",
     "agentStoredValueDesc": "Avantages de recharge, réductions sur les paiements.",
-    "ccPass": "CC Table Pass",
-    "ccPassDesc": "Prix super bas, 20 jours ouvrés de jeu illimité.",
     "tablePass": "Table Pass",
     "tablePassDesc": "30 jours de jeu illimité !",
     "ltsPass": "Table Pass LTS",

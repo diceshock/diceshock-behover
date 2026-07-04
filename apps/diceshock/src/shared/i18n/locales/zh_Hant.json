@@ -330,8 +330,6 @@
   "agents": {
     "agentStoredValue": "Table AGENT 儲值卡",
     "agentStoredValueDesc": "儲值福利, 付費折扣.",
-    "ccPass": "CC桌面通行證",
-    "ccPassDesc": "超低廉價格, 辦理20個工作日暢玩.",
     "tablePass": "桌面通行證",
     "tablePassDesc": "辦理30天暢玩無限!",
     "ltsPass": "桌面通行證 LTS",

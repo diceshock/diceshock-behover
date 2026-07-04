@@ -330,8 +330,6 @@
   "agents": {
     "agentStoredValue": "Table AGENT Stored Value Card",
     "agentStoredValueDesc": "Top-up benefits, payment discounts.",
-    "ccPass": "CC Table Pass",
-    "ccPassDesc": "Super low price, 20 business days of unlimited play.",
     "tablePass": "Table Pass",
     "tablePassDesc": "30 days of unlimited play!",
     "ltsPass": "Table Pass LTS",

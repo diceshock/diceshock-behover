@@ -330,8 +330,6 @@
   "agents": {
     "agentStoredValue": "Карта AGENT",
     "agentStoredValueDesc": "Бонусы за пополнение, скидки на оплату.",
-    "ccPass": "CC Абонемент",
-    "ccPassDesc": "Супер низкая цена, 20 рабочих дней безлимитной игры.",
     "tablePass": "Абонемент на стол",
     "tablePassDesc": "30 дней безлимитной игры!",
     "ltsPass": "Абонемент LTS",

@@ -330,8 +330,6 @@
   "agents": {
     "agentStoredValue": "Cartão de Valor Armazenado Table AGENT",
     "agentStoredValueDesc": "Benefícios de recarga, descontos em pagamentos.",
-    "ccPass": "Passe de Mesa CC",
-    "ccPassDesc": "Preço super baixo, 20 dias úteis de jogo ilimitado.",
     "tablePass": "Passe de Mesa",
     "tablePassDesc": "30 dias de jogo ilimitado!",
     "ltsPass": "Passe de Mesa LTS",
