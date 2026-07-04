@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import QRCode from "qrcode";
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import HookHole from "@/client/assets/svg/hook-hole.svg?react";
 import QQ from "@/client/assets/svg/tencent-qq.svg?react";
 import Wechat from "@/client/assets/svg/wechat.svg?react";
@@ -27,14 +27,13 @@ function RouteComponent() {
   const { storeCode } = useStoreContext();
   const current = STORE_CONTACTS[storeCode] ?? STORE_CONTACTS.gg;
   const other = storeCode === "jdk" ? STORE_CONTACTS.gg : STORE_CONTACTS.jdk;
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [qrSrc, setQrSrc] = useState<string>("");
 
   useEffect(() => {
-    if (!canvasRef.current) return;
-    QRCode.toCanvas(canvasRef.current, WECHAT_OA_URL, {
+    QRCode.toDataURL(WECHAT_OA_URL, {
       width: 180,
       margin: 1,
-    }).catch(() => {});
+    }).then(setQrSrc).catch(() => {});
   }, []);
 
   return (
@@ -118,7 +117,7 @@ function RouteComponent() {
             <div className="card-body items-center">
               <h2 className="card-title">{t("contact.officialAccount")}</h2>
               <p className="text-sm opacity-70">DiceShockDS</p>
-              <canvas ref={canvasRef} className="mt-2" />
+              {qrSrc && <img src={qrSrc} alt="DiceShockDS" width={180} height={180} />}
             </div>
           </div>
         </Swing>
