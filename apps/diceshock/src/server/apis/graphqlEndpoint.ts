@@ -110,7 +110,7 @@ export async function graphqlHandler(
         userId,
         openId: "",
         auth: { role, userId },
-        env: c.env,
+        env: { ...c.env, aliyunClient: c.get("AliyunClient") } as GraphQLContext["env"],
         role,
         preferredStoreId,
       };

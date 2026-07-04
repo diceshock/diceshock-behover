@@ -237,6 +237,28 @@ export const authResolvers = {
       return { success: true, expiresInMs: expirationTtl * 1000 };
     },
 
+    async requestSmsCode(
+      _source: unknown,
+      args: { input: unknown },
+      ctx: GQLContext,
+    ) {
+      // No auth required — used during login before user is authenticated
+      const input = zodToGraphQLError(smsCodeSchema, args.input);
+      const expirationTtl = 60 * 5;
+      const devSmsCode = (ctx.env as { DEV_SMS_CODE?: string }).DEV_SMS_CODE;
+      const verificationCode = devSmsCode || customAlphabet("0123456789", 6)();
+
+      if (!devSmsCode) {
+        await sendSms(input.phone, verificationCode, ctx);
+      }
+
+      await ctx.env.KV.put(getSmsTmpCodeKey(input.phone), verificationCode, {
+        expirationTtl,
+      });
+
+      return { success: true, expiresInMs: expirationTtl * 1000 };
+    },
+
     async verifyPhone(
       _source: unknown,
       args: { input: unknown },
