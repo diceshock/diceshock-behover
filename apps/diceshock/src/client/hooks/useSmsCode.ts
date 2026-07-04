@@ -6,9 +6,19 @@ import { RequestSmsCodeDocument } from "@/client/graphql/__generated__";
 import { apolloClient } from "@/client/graphql/client";
 
 /**
- * 阿里云验证码 2.0 (CAPTCHA 2.0) — 无痕/智能验证
- * SDK 绑定到按钮，用户点击按钮时 SDK 拦截并执行验证（一点就过），
- * 验证通过后触发 captchaVerifyCallback 发送短信。
+ * 阿里云验证码 2.0 (CAPTCHA 2.0) — 无痕验证 popup 模式
+ *
+ * 策略：不预初始化。用户每次点击"获取验证码"时：
+ * 1. 销毁旧实例
+ * 2. 创建新实例 (initAliyunCaptcha)
+ * 3. SDK 自动执行无痕验证 → captchaVerifyCallback 触发
+ * 4. 在 callback 中发送短信
+ * 5. onBizResultCallback 报告结果
+ *
+ * 这样避免了：
+ * - 预初始化消耗验证次数
+ * - 按钮绑定与 React DOM 时序冲突
+ * - 缓存实例导致 show() 无效
  */
 
 const DEFAULT_CAPTCHA_PREFIX = "1bqoki";
@@ -78,13 +88,13 @@ const INITIAL_SMS_FORM_STATE: SmsFormState = {
 export default function useSmsCode({
   phone,
   containerId = "#captcha-element",
-  buttonId = "#sms-code-btn",
   enabled = true,
   captchaPrefix = DEFAULT_CAPTCHA_PREFIX,
   captchaSceneId = DEFAULT_CAPTCHA_SCENE_ID,
 }: {
   phone: string;
   containerId?: string;
+  /** @deprecated no longer used — kept for API compat */
   buttonId?: string;
   enabled?: boolean;
   captchaPrefix?: string;
@@ -98,8 +108,6 @@ export default function useSmsCode({
   const countdownTimerRef = useRef<number | null>(null);
   const phoneRef = useRef(phone);
   phoneRef.current = phone;
-  const initializingRef = useRef(false);
-  const captchaFailedRef = useRef(false);
 
   const [smsForm, dispatchSmsForm] = useReducer(
     smsFormReducer,
@@ -110,147 +118,12 @@ export default function useSmsCode({
     dispatchSmsForm({ type: "RESET" });
     setCountdown(0);
     setError(null);
+    // 销毁现有实例
+    if (captchaInstanceRef.current?.destroy) {
+      captchaInstanceRef.current.destroy();
+      captchaInstanceRef.current = null;
+    }
   }, []);
-
-  const initCaptchaInstance = useCallback(async () => {
-    console.log("[useSmsCode:initCaptcha] start", {
-      hasCurrent: !!captchaInstanceRef.current,
-      failed: captchaFailedRef.current,
-      initializing: initializingRef.current,
-      hasSDK: !!window.initAliyunCaptcha,
-    });
-    if (captchaInstanceRef.current) return;
-    if (captchaFailedRef.current) return;
-    if (initializingRef.current) return;
-    if (!window.initAliyunCaptcha) {
-      console.warn("[useSmsCode:initCaptcha] window.initAliyunCaptcha not found");
-      return;
-    }
-
-    initializingRef.current = true;
-
-    try {
-      console.log("[useSmsCode:initCaptcha] calling initAliyunCaptcha", {
-        captchaSceneId,
-        captchaPrefix,
-        containerId,
-        buttonId,
-      });
-      const initPromise = window.initAliyunCaptcha({
-        SceneId: captchaSceneId,
-        prefix: captchaPrefix,
-        mode: "popup",
-        element: containerId,
-        // 绑定到真实按钮 — SDK 拦截按钮点击自动做验证
-        button: buttonId,
-        captchaVerifyCallback: async (captchaVerifyParam) => {
-          console.log("[useSmsCode:captchaVerifyCallback] triggered, phone:", phoneRef.current);
-
-          // 校验手机号
-          const phoneResult = z
-            .string()
-            .min(6)
-            .max(20)
-            .regex(/^[0-9]*$/)
-            .safeParse(phoneRef.current);
-
-          if (!phoneResult.success) {
-            console.warn("[useSmsCode:captchaVerifyCallback] invalid phone");
-            setError("手机号格式错误");
-            return { captchaResult: true, bizResult: false };
-          }
-
-          try {
-            console.log("[useSmsCode:captchaVerifyCallback] sending requestSmsCode mutation");
-            const { data } = await apolloClient.mutate({
-              mutation: RequestSmsCodeDocument,
-              variables: {
-                input: {
-                  botcheck: captchaVerifyParam,
-                  phone: phoneRef.current,
-                },
-              },
-            });
-            console.log("[useSmsCode:captchaVerifyCallback] mutation result:", JSON.stringify(data));
-
-            if (data?.requestSmsCode?.success) {
-              return { captchaResult: true, bizResult: true };
-            }
-
-            const msg = data?.requestSmsCode?.message;
-            if (msg) setError(msg);
-            return { captchaResult: true, bizResult: false };
-          } catch (err) {
-            console.error("[useSmsCode:captchaVerifyCallback] mutation error:", err);
-            setError("网络错误，请稍后重试");
-            return { captchaResult: true, bizResult: false };
-          }
-        },
-        onBizResultCallback: (bizResult) => {
-          console.log("[useSmsCode:onBizResultCallback] bizResult:", bizResult);
-          if (bizResult) {
-            setCountdown(20);
-            setError(null);
-          } else {
-            // error already set in captchaVerifyCallback if applicable
-            if (!error) setError("发送失败，请稍后重试");
-          }
-        },
-        getInstance: (inst) => {
-          console.log("[useSmsCode:getInstance] received instance:", !!inst);
-          captchaInstanceRef.current = inst;
-        },
-        slideStyle: { width: 360, height: 40 },
-        language: "cn",
-      });
-
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Captcha init timeout")), 8000),
-      );
-
-      await Promise.race([initPromise, timeoutPromise]);
-      console.log("[useSmsCode:initCaptcha] init resolved, instance:", !!captchaInstanceRef.current);
-    } catch (err) {
-      console.error("[useSmsCode:initCaptcha] FAILED:", err);
-      captchaFailedRef.current = true;
-    } finally {
-      initializingRef.current = false;
-    }
-  }, [containerId, buttonId, captchaPrefix, captchaSceneId, error]);
-
-  // 等待 SDK 加载并初始化
-  useEffect(() => {
-    if (typeof window === "undefined" || !enabled) {
-      console.log("[useSmsCode:effect] skipped, enabled:", enabled);
-      return;
-    }
-
-    // SDK 已加载则尝试初始化
-    if (window.initAliyunCaptcha) {
-      console.log("[useSmsCode:effect] SDK already loaded, initializing");
-      initCaptchaInstance();
-      return;
-    }
-
-    console.log("[useSmsCode:effect] SDK not loaded, polling...");
-    const poll = setInterval(() => {
-      if (window.initAliyunCaptcha) {
-        console.log("[useSmsCode:effect] SDK loaded via poll, initializing");
-        clearInterval(poll);
-        initCaptchaInstance();
-      }
-    }, 300);
-
-    const timeout = setTimeout(() => {
-      console.warn("[useSmsCode:effect] SDK poll timed out after 10s");
-      clearInterval(poll);
-    }, 10000);
-
-    return () => {
-      clearInterval(poll);
-      clearTimeout(timeout);
-    };
-  }, [enabled, initCaptchaInstance]);
 
   // 清理
   useEffect(() => {
@@ -262,9 +135,18 @@ export default function useSmsCode({
     };
   }, []);
 
-  // getSmsCode 现在只用于非生产/captcha禁用的 fallback
+  /**
+   * 核心：每次点击时 fresh init captcha → 自动验证 → callback 发短信
+   */
   const getSmsCode = useCallback(async () => {
-    console.log("[useSmsCode:getSmsCode] called", { countdown, phone, enabled, prod: import.meta.env.PROD });
+    console.log("[useSmsCode:getSmsCode] called", {
+      countdown,
+      phone,
+      enabled,
+      prod: import.meta.env.PROD,
+      hasSDK: !!window.initAliyunCaptcha,
+    });
+
     if (countdown > 0) return;
 
     const phoneResult = z
@@ -274,55 +156,130 @@ export default function useSmsCode({
       .regex(/^[0-9]*$/)
       .safeParse(phone);
 
-    if (!phoneResult.success) return setError("手机号格式错误");
-
-    setError(null);
-
-    // 生产环境 + captcha 启用 → SDK 自动拦截按钮点击处理，这里不需要做任何事
-    if (import.meta.env.PROD && enabled) {
-      // 如果 captcha 初始化失败了，fallback 直接发
-      if (captchaFailedRef.current) {
-        console.warn("[useSmsCode:getSmsCode] captcha failed, fallback direct send");
-        try {
-          const { data } = await apolloClient.mutate({
-            mutation: RequestSmsCodeDocument,
-            variables: {
-              input: { botcheck: null, phone },
-            },
-          });
-          console.log("[useSmsCode:getSmsCode] fallback result:", JSON.stringify(data));
-
-          if (data?.requestSmsCode?.success) return setCountdown(20);
-          if (data?.requestSmsCode?.message) return setError(data.requestSmsCode.message);
-          setError("发送失败，请稍后重试");
-        } catch (err) {
-          console.error("[useSmsCode:getSmsCode] fallback error:", err);
-          setError("网络错误，请稍后重试");
-        }
-      }
-      // 正常情况下 SDK 拦截按钮点击，不需要这里处理
+    if (!phoneResult.success) {
+      setError("手机号格式错误");
       return;
     }
 
-    // 非生产环境或验证码未启用时直接发送
-    console.log("[useSmsCode:getSmsCode] direct send (non-prod or captcha disabled)");
-    try {
-      const { data } = await apolloClient.mutate({
-        mutation: RequestSmsCodeDocument,
-        variables: {
-          input: { botcheck: null, phone },
-        },
-      });
-      console.log("[useSmsCode:getSmsCode] direct send result:", JSON.stringify(data));
+    setError(null);
 
-      if (data?.requestSmsCode?.success) return setCountdown(20);
-      if (data?.requestSmsCode?.message) return setError(data.requestSmsCode.message);
-      setError("发送失败，请稍后重试");
-    } catch (err) {
-      console.error("[useSmsCode:getSmsCode] direct send error:", err);
-      setError("网络错误，请稍后重试");
+    // 非生产环境或验证码未启用 → 直接发送
+    if (!import.meta.env.PROD || !enabled) {
+      console.log("[useSmsCode:getSmsCode] direct send (non-prod or disabled)");
+      await sendSmsDirect(phone);
+      return;
     }
-  }, [phone, countdown, enabled]);
+
+    // 生产环境 — 使用验证码
+    if (!window.initAliyunCaptcha) {
+      console.warn("[useSmsCode:getSmsCode] SDK not loaded, fallback direct send");
+      await sendSmsDirect(phone);
+      return;
+    }
+
+    // 销毁旧实例，确保全新开始
+    if (captchaInstanceRef.current?.destroy) {
+      console.log("[useSmsCode:getSmsCode] destroying old instance");
+      captchaInstanceRef.current.destroy();
+      captchaInstanceRef.current = null;
+    }
+
+    console.log("[useSmsCode:getSmsCode] creating fresh captcha instance");
+
+    try {
+      await window.initAliyunCaptcha({
+        SceneId: captchaSceneId,
+        prefix: captchaPrefix,
+        mode: "popup",
+        element: containerId,
+        // 不绑定按钮 — 我们通过 fresh init 触发自动验证
+        button: "#__captcha_auto_trigger__",
+        captchaVerifyCallback: async (captchaVerifyParam) => {
+          console.log("[useSmsCode:captchaVerifyCallback] triggered, phone:", phoneRef.current);
+
+          try {
+            const { data } = await apolloClient.mutate({
+              mutation: RequestSmsCodeDocument,
+              variables: {
+                input: {
+                  botcheck: captchaVerifyParam,
+                  phone: phoneRef.current,
+                },
+              },
+            });
+            console.log("[useSmsCode:captchaVerifyCallback] result:", JSON.stringify(data));
+
+            if (data?.requestSmsCode?.success) {
+              return { captchaResult: true, bizResult: true };
+            }
+
+            const msg = data?.requestSmsCode?.message;
+            if (msg) setError(msg);
+            return { captchaResult: true, bizResult: false };
+          } catch (err) {
+            console.error("[useSmsCode:captchaVerifyCallback] error:", err);
+            setError("网络错误，请稍后重试");
+            return { captchaResult: true, bizResult: false };
+          }
+        },
+        onBizResultCallback: (bizResult) => {
+          console.log("[useSmsCode:onBizResultCallback] bizResult:", bizResult);
+          if (bizResult) {
+            setCountdown(20);
+            setError(null);
+          }
+        },
+        getInstance: (inst) => {
+          console.log("[useSmsCode:getInstance] received");
+          captchaInstanceRef.current = inst;
+        },
+        slideStyle: { width: 360, height: 40 },
+        language: "cn",
+      });
+
+      console.log("[useSmsCode:getSmsCode] initAliyunCaptcha resolved");
+
+      // init 完成后 SDK 应该已经自动做了无痕验证并触发了 captchaVerifyCallback
+      // 如果 SDK 没有自动触发（某些情况下需要 show），尝试 show
+      if (captchaInstanceRef.current?.show) {
+        console.log("[useSmsCode:getSmsCode] calling show() as backup");
+        captchaInstanceRef.current.show();
+      }
+    } catch (err) {
+      console.error("[useSmsCode:getSmsCode] captcha init failed, fallback:", err);
+      // captcha 失败 → fallback 直接发送
+      await sendSmsDirect(phone);
+    }
+  }, [phone, countdown, enabled, containerId, captchaPrefix, captchaSceneId]);
+
+  // 直接发送短信（无验证码）
+  const sendSmsDirect = useCallback(
+    async (phoneNumber: string) => {
+      try {
+        const { data } = await apolloClient.mutate({
+          mutation: RequestSmsCodeDocument,
+          variables: {
+            input: { botcheck: null, phone: phoneNumber },
+          },
+        });
+        console.log("[useSmsCode:sendSmsDirect] result:", JSON.stringify(data));
+
+        if (data?.requestSmsCode?.success) {
+          setCountdown(20);
+          return;
+        }
+        if (data?.requestSmsCode?.message) {
+          setError(data.requestSmsCode.message);
+          return;
+        }
+        setError("发送失败，请稍后重试");
+      } catch (err) {
+        console.error("[useSmsCode:sendSmsDirect] error:", err);
+        setError("网络错误，请稍后重试");
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (countdown > 0) {

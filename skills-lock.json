@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "alibabacloud-find-skills": {
+      "source": "aliyun/alibabacloud-aiops-skills",
+      "sourceType": "github",
+      "skillPath": "skills/developertools/solutions/alibabacloud-find-skills/SKILL.md",
+      "computedHash": "a9729c756e7b1ebaef66d406c017ef77ccb75ff08d6536ae740d1702ead929dc"
+    }
+  }
+}
