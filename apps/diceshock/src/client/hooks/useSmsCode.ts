@@ -84,14 +84,12 @@ const phoneSchema = z.string().min(6).max(20).regex(/^[0-9]*$/);
 export default function useSmsCode({
   phone,
   containerId = "#captcha-element",
-  buttonId = "#captcha-btn",
   enabled = true,
   captchaPrefix = DEFAULT_CAPTCHA_PREFIX,
   captchaSceneId = DEFAULT_CAPTCHA_SCENE_ID,
 }: {
   phone: string;
   containerId?: string;
-  buttonId?: string;
   enabled?: boolean;
   captchaPrefix?: string;
   captchaSceneId?: string;
@@ -162,7 +160,7 @@ export default function useSmsCode({
       return;
     }
 
-    // 生产环境 → 销毁旧实例，重新初始化 captcha（SDK 自动做无感验证并触发回调）
+    // 生产环境 → 销毁旧实例，重新初始化 captcha（无 button 绑定，SDK 自动做无感验证）
     if (captchaInstanceRef.current?.destroy) {
       captchaInstanceRef.current.destroy();
       captchaInstanceRef.current = null;
@@ -177,14 +175,22 @@ export default function useSmsCode({
 
     console.log("[useSmsCode:getSmsCode] initializing fresh captcha");
 
+    // 超时保护：15 秒内回调未触发则重置
+    const timeoutId = setTimeout(() => {
+      console.warn("[useSmsCode] captcha timeout - no callback in 15s");
+      setVerifying(false);
+      setError("验证超时，请重试");
+    }, 15_000);
+
     try {
       const inst = await window.initAliyunCaptcha({
         SceneId: captchaSceneId,
         prefix: captchaPrefix,
         mode: "popup",
         element: containerId,
-        button: buttonId,
+        // 不传 button：SDK 在 init 期间自动做无感验证，直接触发 captchaVerifyCallback
         captchaVerifyCallback: async (captchaVerifyParam) => {
+          clearTimeout(timeoutId);
           console.log("[useSmsCode] captchaVerifyCallback fired");
           const currentPhone = phoneRef.current;
           if (!phoneSchema.safeParse(currentPhone).success) {
@@ -215,6 +221,7 @@ export default function useSmsCode({
           }
         },
         onBizResultCallback: (bizResult) => {
+          clearTimeout(timeoutId);
           console.log("[useSmsCode] onBizResultCallback:", bizResult);
           setVerifying(false);
           if (bizResult) {
@@ -235,11 +242,12 @@ export default function useSmsCode({
         captchaInstanceRef.current = inst;
       }
     } catch (err) {
+      clearTimeout(timeoutId);
       console.error("[useSmsCode] initAliyunCaptcha error:", err);
       setError("验证初始化失败，请刷新页面重试");
       setVerifying(false);
     }
-  }, [phone, countdown, enabled, containerId, buttonId, captchaPrefix, captchaSceneId]);
+  }, [phone, countdown, enabled, containerId, captchaPrefix, captchaSceneId]);
 
   // ========== 倒计时 ==========
   useEffect(() => {
