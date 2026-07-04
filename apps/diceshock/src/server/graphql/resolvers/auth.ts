@@ -59,9 +59,7 @@ function getAliyunClient(ctx: GQLContext): AliyunClient | null {
     aliyunClient?: unknown;
     AliyunClient?: unknown;
   };
-  const client = (env.aliyunClient ?? env.AliyunClient ?? null) as AliyunClient | null;
-  console.log("[getAliyunClient] aliyunClient?", !!env.aliyunClient, "AliyunClient?", !!env.AliyunClient, "result?", !!client);
-  return client;
+  return (env.aliyunClient ?? env.AliyunClient ?? null) as AliyunClient | null;
 }
 
 function toIsoString(value: Date | number | string | null | undefined) {
@@ -112,10 +110,8 @@ async function getUserProfile(ctx: GQLContext, userId: string) {
 }
 
 async function sendSms(phone: string, code: string, ctx: GQLContext) {
-  console.log("[sendSms] getting aliyun client...");
   const client = getAliyunClient(ctx);
   if (!client) {
-    console.error("[sendSms] ERROR: aliyunClient is null, SMS service not configured");
     throw internalError("SMS service is not configured");
   }
 
@@ -127,10 +123,8 @@ async function sendSms(phone: string, code: string, ctx: GQLContext) {
     templateParam: JSON.stringify({ code }),
   });
 
-  console.log("[sendSms] calling sendSmsWithOptions for", phone);
   const response = await client.sendSmsWithOptions(request, {});
   const responseCode = response.body?.code;
-  console.log("[sendSms] response code:", responseCode, "message:", response.body?.message);
   if (responseCode === "OK") return;
   if (responseCode === "isv.MOBILE_NUMBER_ILLEGAL") {
     throw validationError("phone", "Invalid phone number format");
@@ -158,7 +152,6 @@ async function verifyCaptchaToken(
       | undefined;
 
     if (!accessKeyId || !accessKeySecret) {
-      console.error("[verifyCaptchaToken] missing ALIBABA_CLOUD credentials, skipping verify");
       // 如果没配置凭据则放行（避免阻塞 SMS）
       return true;
     }
@@ -182,18 +175,10 @@ async function verifyCaptchaToken(
       sceneId,
     });
 
-    console.log("[verifyCaptchaToken] calling VerifyIntelligentCaptcha");
     const response = await client.verifyIntelligentCaptcha(request);
     const result = response.body?.result;
-    console.log("[verifyCaptchaToken] response:", {
-      success: response.body?.success,
-      code: response.body?.code,
-      verifyResult: result?.verifyResult,
-    });
-
     return result?.verifyResult === true;
   } catch (err) {
-    console.error("[verifyCaptchaToken] error:", err);
     // 验证服务异常时放行，避免阻塞用户
     return true;
   }
@@ -287,26 +272,19 @@ export const authResolvers = {
       args: { input: unknown },
       ctx: GQLContext,
     ) {
-      console.log("[sendSmsCode] called, input:", JSON.stringify(args.input));
       requireAuth(ctx);
-      console.log("[sendSmsCode] auth passed, userId:", ctx.userId);
       const input = zodToGraphQLError(smsCodeSchema, args.input);
-      console.log("[sendSmsCode] validated phone:", input.phone);
       const expirationTtl = 60 * 5;
       const devSmsCode = (ctx.env as { DEV_SMS_CODE?: string }).DEV_SMS_CODE;
       const verificationCode = devSmsCode || customAlphabet("0123456789", 6)();
-      console.log("[sendSmsCode] devSmsCode?", !!devSmsCode, "code generated");
 
       if (!devSmsCode) {
-        console.log("[sendSmsCode] sending real SMS to", input.phone);
         await sendSms(input.phone, verificationCode, ctx);
-        console.log("[sendSmsCode] SMS sent successfully");
       }
 
       await ctx.env.KV.put(getSmsTmpCodeKey(input.phone), verificationCode, {
         expirationTtl,
       });
-      console.log("[sendSmsCode] code stored in KV, returning success");
 
       return { success: true, expiresInMs: expirationTtl * 1000 };
     },
@@ -316,31 +294,24 @@ export const authResolvers = {
       args: { input: unknown },
       ctx: GQLContext,
     ) {
-      console.log("[requestSmsCode] called, input:", JSON.stringify(args.input));
       // No auth required — used during login before user is authenticated
       const input = zodToGraphQLError(smsCodeSchema, args.input);
-      console.log("[requestSmsCode] validated phone:", input.phone);
 
       // 服务端验证码二次校验 — 生产环境必须通过
       const captchaSceneId = (ctx.env as unknown as Record<string, unknown>)
         .CAPTCHA_SCENE_ID as string | undefined;
       if (input.botcheck && captchaSceneId) {
-        console.log("[requestSmsCode] verifying captcha token server-side");
         const verified = await verifyCaptchaToken(
           ctx,
           input.botcheck,
           captchaSceneId,
         );
         if (!verified) {
-          console.warn("[requestSmsCode] captcha verification FAILED");
           return { success: false, message: "人机验证失败，请重试" };
         }
-        console.log("[requestSmsCode] captcha verified OK");
       } else if (!input.botcheck && import.meta.env.PROD) {
-        // 生产环境没有 botcheck — 仅在开发环境或有 DEV_SMS_CODE 时允许跳过
         const devSmsCode = (ctx.env as { DEV_SMS_CODE?: string }).DEV_SMS_CODE;
         if (!devSmsCode) {
-          console.warn("[requestSmsCode] no botcheck in production, rejecting");
           return { success: false, message: "缺少人机验证，请刷新页面重试" };
         }
       }
@@ -348,18 +319,14 @@ export const authResolvers = {
       const expirationTtl = 60 * 5;
       const devSmsCode = (ctx.env as { DEV_SMS_CODE?: string }).DEV_SMS_CODE;
       const verificationCode = devSmsCode || customAlphabet("0123456789", 6)();
-      console.log("[requestSmsCode] devSmsCode?", !!devSmsCode, "code generated");
 
       if (!devSmsCode) {
-        console.log("[requestSmsCode] sending real SMS to", input.phone);
         await sendSms(input.phone, verificationCode, ctx);
-        console.log("[requestSmsCode] SMS sent successfully");
       }
 
       await ctx.env.KV.put(getSmsTmpCodeKey(input.phone), verificationCode, {
         expirationTtl,
       });
-      console.log("[requestSmsCode] code stored in KV, returning success");
 
       return { success: true, expiresInMs: expirationTtl * 1000 };
     },

@@ -105,7 +105,6 @@ export async function graphqlHandler(
       }
 
       const operationName = body.query.match(/(?:mutation|query)\s+(\w+)/)?.[1] ?? "anonymous";
-      console.log("[graphql] POST", operationName, "role:", role, "userId:", userId, "hasAliyunClient:", !!c.get("AliyunClient"));
 
       const database = db(c.env.DB);
 

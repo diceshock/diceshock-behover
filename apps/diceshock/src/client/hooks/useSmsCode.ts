@@ -173,12 +173,6 @@ export default function useSmsCode({
         return;
       }
 
-      console.log("[useSmsCode:init] initializing captcha", {
-        buttonId,
-        containerId,
-        captchaSceneId,
-      });
-
       void window.initAliyunCaptcha!({
         SceneId: captchaSceneId,
         prefix: captchaPrefix,
@@ -188,7 +182,6 @@ export default function useSmsCode({
         captchaVerifyCallback: async (captchaVerifyParam) => {
           if (destroyed) return { captchaResult: false, bizResult: false };
 
-          console.log("[useSmsCode] captchaVerifyCallback fired");
           setVerifying(true);
           setError(null);
 
@@ -215,7 +208,6 @@ export default function useSmsCode({
             });
 
             if (data?.requestSmsCode?.success) {
-              console.log("[useSmsCode] SMS sent successfully");
               return { captchaResult: true, bizResult: true };
             }
 
@@ -223,13 +215,11 @@ export default function useSmsCode({
             setError(msg ? `发送失败：${msg}` : "发送失败，请稍后重试");
             return { captchaResult: true, bizResult: false };
           } catch (err) {
-            console.error("[useSmsCode] captchaVerifyCallback error:", err);
             setError("网络异常，请检查网络后重试");
             return { captchaResult: true, bizResult: false };
           }
         },
         onBizResultCallback: (bizResult) => {
-          console.log("[useSmsCode] onBizResultCallback:", bizResult);
           setVerifying(false);
           if (bizResult) {
             setCountdown(20);
@@ -239,10 +229,6 @@ export default function useSmsCode({
         getInstance: (inst) => {
           if (destroyed) return;
           captchaInstanceRef.current = inst;
-          console.log("[useSmsCode:init] instance ready", {
-            hasShow: !!inst?.show,
-            hasDestroy: !!inst?.destroy,
-          });
         },
         slideStyle: { width: 360, height: 40 },
         language: "cn",
@@ -290,7 +276,6 @@ export default function useSmsCode({
 
     const mutation = skipCaptcha ? SendSmsCodeDocument : RequestSmsCodeDocument;
     const mutationName = skipCaptcha ? "sendSmsCode" : "requestSmsCode";
-    console.log(`[useSmsCode:getSmsCode] direct send via ${mutationName}`);
 
     try {
       const { data } = await apolloClient.mutate({
@@ -305,7 +290,6 @@ export default function useSmsCode({
         setError(msg ? `发送失败：${msg}` : "发送失败，请稍后重试");
       }
     } catch (err) {
-      console.error("[useSmsCode] direct send error:", err);
       setError("网络异常，请检查网络后重试");
     } finally {
       setVerifying(false);
