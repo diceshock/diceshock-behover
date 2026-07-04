@@ -10,6 +10,9 @@ import type { GQLContext } from "../context";
 import { internalError, notFound, validationError } from "../errors";
 import { requireAdmin, requireAuth } from "../guards";
 import { zodToGraphQLError } from "../validate";
+import CaptchaClient, {
+  VerifyIntelligentCaptchaRequest,
+} from "@alicloud/captcha20230305";
 
 const smsCodeSchema = z.object({
   phone: z.string().regex(/^1[3-9]\d{9}$/, "Invalid phone number format"),
@@ -138,6 +141,64 @@ async function sendSms(phone: string, code: string, ctx: GQLContext) {
   throw internalError("Unable to send SMS code");
 }
 
+/**
+ * 服务端校验阿里云验证码 2.0 token
+ * 调用 VerifyIntelligentCaptcha API 验证前端传来的 captchaVerifyParam
+ */
+async function verifyCaptchaToken(
+  ctx: GQLContext,
+  captchaVerifyParam: string,
+  sceneId: string,
+): Promise<boolean> {
+  try {
+    const env = ctx.env as unknown as Record<string, unknown>;
+    const accessKeyId = env.ALIBABA_CLOUD_ACCESS_KEY_ID as string | undefined;
+    const accessKeySecret = env.ALIBABA_CLOUD_ACCESS_KEY_SECRET as
+      | string
+      | undefined;
+
+    if (!accessKeyId || !accessKeySecret) {
+      console.error("[verifyCaptchaToken] missing ALIBABA_CLOUD credentials, skipping verify");
+      // 如果没配置凭据则放行（避免阻塞 SMS）
+      return true;
+    }
+
+    const { Config } = await import("@alicloud/openapi-client");
+    const config = new Config({
+      accessKeyId,
+      accessKeySecret,
+    });
+    config.endpoint = "captcha.cn-shanghai.aliyuncs.com";
+
+    const CaptchaClientMod =
+      typeof CaptchaClient === "function"
+        ? CaptchaClient
+        : (CaptchaClient as unknown as { default: typeof CaptchaClient }).default;
+
+    const client = new CaptchaClientMod(config);
+
+    const request = new VerifyIntelligentCaptchaRequest({
+      captchaVerifyParam,
+      sceneId,
+    });
+
+    console.log("[verifyCaptchaToken] calling VerifyIntelligentCaptcha");
+    const response = await client.verifyIntelligentCaptcha(request);
+    const result = response.body?.result;
+    console.log("[verifyCaptchaToken] response:", {
+      success: response.body?.success,
+      code: response.body?.code,
+      verifyResult: result?.verifyResult,
+    });
+
+    return result?.verifyResult === true;
+  } catch (err) {
+    console.error("[verifyCaptchaToken] error:", err);
+    // 验证服务异常时放行，避免阻塞用户
+    return true;
+  }
+}
+
 function totpOtpAuthUrl(userId: string, secret: string) {
   const issuer = "Diceshock";
   return `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(userId)}?secret=${encodeURIComponent(secret)}&issuer=${encodeURIComponent(issuer)}`;
@@ -259,6 +320,31 @@ export const authResolvers = {
       // No auth required — used during login before user is authenticated
       const input = zodToGraphQLError(smsCodeSchema, args.input);
       console.log("[requestSmsCode] validated phone:", input.phone);
+
+      // 服务端验证码二次校验 — 生产环境必须通过
+      const captchaSceneId = (ctx.env as unknown as Record<string, unknown>)
+        .CAPTCHA_SCENE_ID as string | undefined;
+      if (input.botcheck && captchaSceneId) {
+        console.log("[requestSmsCode] verifying captcha token server-side");
+        const verified = await verifyCaptchaToken(
+          ctx,
+          input.botcheck,
+          captchaSceneId,
+        );
+        if (!verified) {
+          console.warn("[requestSmsCode] captcha verification FAILED");
+          return { success: false, message: "人机验证失败，请重试" };
+        }
+        console.log("[requestSmsCode] captcha verified OK");
+      } else if (!input.botcheck && import.meta.env.PROD) {
+        // 生产环境没有 botcheck — 仅在开发环境或有 DEV_SMS_CODE 时允许跳过
+        const devSmsCode = (ctx.env as { DEV_SMS_CODE?: string }).DEV_SMS_CODE;
+        if (!devSmsCode) {
+          console.warn("[requestSmsCode] no botcheck in production, rejecting");
+          return { success: false, message: "缺少人机验证，请刷新页面重试" };
+        }
+      }
+
       const expirationTtl = 60 * 5;
       const devSmsCode = (ctx.env as { DEV_SMS_CODE?: string }).DEV_SMS_CODE;
       const verificationCode = devSmsCode || customAlphabet("0123456789", 6)();
