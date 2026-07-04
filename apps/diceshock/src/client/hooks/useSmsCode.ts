@@ -8,17 +8,9 @@ import { apolloClient } from "@/client/graphql/client";
 /**
  * 阿里云验证码 2.0 (CAPTCHA 2.0) — 无痕验证 popup 模式
  *
- * 策略：不预初始化。用户每次点击"获取验证码"时：
- * 1. 销毁旧实例
- * 2. 创建新实例 (initAliyunCaptcha)
- * 3. SDK 自动执行无痕验证 → captchaVerifyCallback 触发
- * 4. 在 callback 中发送短信
- * 5. onBizResultCallback 报告结果
- *
- * 这样避免了：
- * - 预初始化消耗验证次数
- * - 按钮绑定与 React DOM 时序冲突
- * - 缓存实例导致 show() 无效
+ * SDK 正统用法：initAliyunCaptcha 绑定真实按钮，SDK 拦截按钮点击触发验证。
+ * 由于 React 组件挂载时序，我们在 enabled 变为 true 且 DOM 就绪时初始化一次。
+ * 用户点击按钮 → SDK 自动触发验证 → captchaVerifyCallback → 发送短信。
  */
 
 const DEFAULT_CAPTCHA_PREFIX = "1bqoki";
@@ -88,13 +80,13 @@ const INITIAL_SMS_FORM_STATE: SmsFormState = {
 export default function useSmsCode({
   phone,
   containerId = "#captcha-element",
+  buttonId = "#captcha-btn",
   enabled = true,
   captchaPrefix = DEFAULT_CAPTCHA_PREFIX,
   captchaSceneId = DEFAULT_CAPTCHA_SCENE_ID,
 }: {
   phone: string;
   containerId?: string;
-  /** @deprecated no longer used — kept for API compat */
   buttonId?: string;
   enabled?: boolean;
   captchaPrefix?: string;
@@ -185,15 +177,13 @@ export default function useSmsCode({
     }
 
     console.log("[useSmsCode:getSmsCode] creating fresh captcha instance");
-
     try {
       await window.initAliyunCaptcha({
         SceneId: captchaSceneId,
         prefix: captchaPrefix,
         mode: "popup",
         element: containerId,
-        // 不绑定按钮 — 我们通过 fresh init 触发自动验证
-        button: "#__captcha_auto_trigger__",
+        button: buttonId,
         captchaVerifyCallback: async (captchaVerifyParam) => {
           console.log("[useSmsCode:captchaVerifyCallback] triggered, phone:", phoneRef.current);
 
@@ -253,7 +243,7 @@ export default function useSmsCode({
       setError("人机验证初始化失败，正在跳过验证直接发送...");
       await sendSmsDirect(phone);
     }
-  }, [phone, countdown, enabled, containerId, captchaPrefix, captchaSceneId]);
+  }, [phone, countdown, enabled, containerId, buttonId, captchaPrefix, captchaSceneId]);
 
   // 直接发送短信（无验证码）
   const sendSmsDirect = useCallback(
