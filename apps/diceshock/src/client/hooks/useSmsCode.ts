@@ -2,17 +2,27 @@ import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { z } from "zod/v4";
 import { themeA } from "@/client/components/ThemeSwap";
-import { RequestSmsCodeDocument, SendSmsCodeDocument } from "@/client/graphql/__generated__";
+import {
+  RequestSmsCodeDocument,
+  SendSmsCodeDocument,
+} from "@/client/graphql/__generated__";
 import { apolloClient } from "@/client/graphql/client";
 
 /**
- * 阿里云验证码 2.0 — 每次点击时初始化 captcha，SDK 自动完成无感验证
+ * 阿里云验证码 2.0 — 正确接入方式
+ *
+ * 关键：SDK 必须绑定到真实的 button DOM 元素。
+ * SDK 拦截按钮点击 → 内部验证(无感/弹窗) → captchaVerifyCallback 触发。
  *
  * 流程：
- * 1. 用户点击发送按钮 → React onClick 调用 getSmsCode
- * 2. getSmsCode 校验手机号 → 销毁旧实例 → 调用 initAliyunCaptcha
- * 3. SDK 初始化时自动做无感/弹窗验证 → captchaVerifyCallback 触发 → 发短信
- * 4. onBizResultCallback 更新 UI 状态（倒计时/错误）
+ * 1. useEffect 在 enabled=true 时初始化 captcha，传 button 指向实际按钮
+ * 2. SDK 在该按钮上绑定 onclick 处理器
+ * 3. 用户点击按钮 → SDK 拦截 → 验证 → captchaVerifyCallback
+ * 4. captchaVerifyCallback 中校验手机号 + 发短信
+ * 5. onBizResultCallback 更新 UI 状态
+ *
+ * 注意：按钮不再需要 React onClick={getSmsCode}，SDK 直接拦截。
+ * 但为了向后兼容和 skipCaptcha 模式，保留 getSmsCode 供外部调用。
  */
 
 const DEFAULT_CAPTCHA_PREFIX = "1bqoki";
@@ -84,13 +94,17 @@ const phoneSchema = z.string().min(6).max(20).regex(/^[0-9]*$/);
 export default function useSmsCode({
   phone,
   containerId = "#captcha-element",
+  buttonId = "#login-sms-btn",
   enabled = true,
   skipCaptcha = false,
   captchaPrefix = DEFAULT_CAPTCHA_PREFIX,
   captchaSceneId = DEFAULT_CAPTCHA_SCENE_ID,
 }: {
   phone: string;
+  /** CSS 选择器: 验证码渲染容器 */
   containerId?: string;
+  /** CSS 选择器: 发送验证码按钮（SDK 绑定 onclick） */
+  buttonId?: string;
   enabled?: boolean;
   /** 已登录用户跳过验证码，直接调用 sendSmsCode (需 auth) */
   skipCaptcha?: boolean;
@@ -125,100 +139,69 @@ export default function useSmsCode({
     }
   }, []);
 
-  // ========== getSmsCode: 每次点击时初始化 captcha 触发验证 ==========
-  const getSmsCode = useCallback(async () => {
-    console.log("[useSmsCode:getSmsCode] called", { countdown, phone, enabled });
-
-    if (countdown > 0) return;
-
-    const phoneResult = phoneSchema.safeParse(phone);
-    if (!phoneResult.success) {
-      setError("请输入正确的手机号码");
-      return;
-    }
-
-    setError(null);
-    setVerifying(true);
-
-    // 跳过验证码：已登录用户直接调用 sendSmsCode，或非生产环境用 requestSmsCode
-    if (skipCaptcha || !import.meta.env.PROD || !enabled) {
-      const mutation = skipCaptcha ? SendSmsCodeDocument : RequestSmsCodeDocument;
-      const mutationName = skipCaptcha ? "sendSmsCode" : "requestSmsCode";
-      console.log(`[useSmsCode:getSmsCode] direct send via ${mutationName}`);
-      try {
-        const { data } = await apolloClient.mutate({
-          mutation,
-          variables: { input: { botcheck: null, phone } },
-        });
-        const result = data?.[mutationName];
-        if (result?.success) {
-          setCountdown(20);
-        } else {
-          const msg = result?.message;
-          setError(msg ? `发送失败：${msg}` : "发送失败，请稍后重试");
-        }
-      } catch (err) {
-        console.error("[useSmsCode] direct send error:", err);
-        setError("网络异常，请检查网络后重试");
-      } finally {
-        setVerifying(false);
-      }
-      return;
-    }
-
-    // 生产环境 → 销毁旧实例，重新初始化 captcha（无 button 绑定，SDK 自动做无感验证）
-    if (captchaInstanceRef.current?.destroy) {
-      console.log("[useSmsCode] destroying old captcha instance");
-      captchaInstanceRef.current.destroy();
-      captchaInstanceRef.current = null;
-    }
-
+  // ========== Captcha 初始化：SDK 绑定按钮，拦截点击 ==========
+  useEffect(() => {
+    // skipCaptcha 模式或非生产环境不初始化 SDK
+    if (skipCaptcha || !import.meta.env.PROD || !enabled) return;
     if (!window.initAliyunCaptcha) {
-      console.warn("[useSmsCode] SDK not loaded - window.initAliyunCaptcha is", typeof window.initAliyunCaptcha);
-      setError("验证组件未加载，请刷新页面");
-      setVerifying(false);
+      console.warn("[useSmsCode] SDK not loaded");
       return;
     }
 
-    // 检查 DOM 容器
-    const containerEl = document.querySelector(containerId);
-    console.log("[useSmsCode] container check:", {
-      containerId,
-      exists: !!containerEl,
-      visible: containerEl ? getComputedStyle(containerEl).display !== "none" : false,
-      parentVisible: containerEl?.parentElement ? getComputedStyle(containerEl.parentElement).display !== "none" : false,
-      dimensions: containerEl ? { w: (containerEl as HTMLElement).offsetWidth, h: (containerEl as HTMLElement).offsetHeight } : null,
-    });
+    // 等待按钮和容器就绪（可能在 modal 动画后）
+    let destroyed = false;
+    let retryTimer: number | undefined;
+    let retryCount = 0;
 
-    const captchaConfig = {
-      SceneId: captchaSceneId,
-      prefix: captchaPrefix,
-      mode: "popup" as const,
-      element: containerId,
-    };
-    console.log("[useSmsCode] initAliyunCaptcha config:", captchaConfig);
+    function tryInit() {
+      if (destroyed) return;
 
-    // 超时保护：15 秒内回调未触发则重置
-    const timeoutId = setTimeout(() => {
-      console.warn("[useSmsCode] captcha timeout - no callback in 15s", {
-        instanceExists: !!captchaInstanceRef.current,
-        instanceHasShow: !!captchaInstanceRef.current?.show,
-        containerNow: !!document.querySelector(containerId),
+      const buttonEl = document.querySelector(buttonId);
+      const containerEl = document.querySelector(containerId);
+
+      if (!buttonEl || !containerEl) {
+        retryCount++;
+        if (retryCount < 20) {
+          // 等 DOM 就绪（modal 可能还在渲染），每 100ms 重试
+          retryTimer = window.setTimeout(tryInit, 100);
+        } else {
+          console.warn("[useSmsCode] button/container not found after retries", {
+            buttonId,
+            containerId,
+          });
+        }
+        return;
+      }
+
+      console.log("[useSmsCode:init] initializing captcha", {
+        buttonId,
+        containerId,
+        captchaSceneId,
       });
-      setVerifying(false);
-      setError("验证超时，请重试");
-    }, 15_000);
 
-    try {
-      console.log("[useSmsCode] calling initAliyunCaptcha...");
-      const initPromise = window.initAliyunCaptcha({
-        ...captchaConfig,
+      void window.initAliyunCaptcha!({
+        SceneId: captchaSceneId,
+        prefix: captchaPrefix,
+        mode: "popup",
+        element: containerId,
+        button: buttonId,
         captchaVerifyCallback: async (captchaVerifyParam) => {
-          clearTimeout(timeoutId);
-          console.log("[useSmsCode] captchaVerifyCallback fired, param length:", captchaVerifyParam?.length);
+          if (destroyed) return { captchaResult: false, bizResult: false };
+
+          console.log("[useSmsCode] captchaVerifyCallback fired");
+          setVerifying(true);
+          setError(null);
+
+          // 手机号校验
           const currentPhone = phoneRef.current;
           if (!phoneSchema.safeParse(currentPhone).success) {
             setError("请输入正确的手机号码");
+            setVerifying(false);
+            return { captchaResult: true, bizResult: false };
+          }
+
+          // 倒计时检查
+          if (countdownRef.current > 0) {
             setVerifying(false);
             return { captchaResult: true, bizResult: false };
           }
@@ -240,13 +223,12 @@ export default function useSmsCode({
             setError(msg ? `发送失败：${msg}` : "发送失败，请稍后重试");
             return { captchaResult: true, bizResult: false };
           } catch (err) {
-            console.error("[useSmsCode] captchaVerifyCallback mutation error:", err);
+            console.error("[useSmsCode] captchaVerifyCallback error:", err);
             setError("网络异常，请检查网络后重试");
             return { captchaResult: true, bizResult: false };
           }
         },
         onBizResultCallback: (bizResult) => {
-          clearTimeout(timeoutId);
           console.log("[useSmsCode] onBizResultCallback:", bizResult);
           setVerifying(false);
           if (bizResult) {
@@ -255,48 +237,80 @@ export default function useSmsCode({
           }
         },
         getInstance: (inst) => {
+          if (destroyed) return;
           captchaInstanceRef.current = inst;
-          console.log("[useSmsCode] getInstance called:", {
+          console.log("[useSmsCode:init] instance ready", {
             hasShow: !!inst?.show,
-            hasRefresh: !!inst?.refresh,
             hasDestroy: !!inst?.destroy,
-            keys: inst ? Object.keys(inst) : [],
           });
         },
         slideStyle: { width: 360, height: 40 },
         language: "cn",
       });
+    }
 
-      console.log("[useSmsCode] initAliyunCaptcha promise type:", typeof initPromise);
-      const inst = await initPromise;
-      console.log("[useSmsCode] initAliyunCaptcha resolved:", {
-        returnType: typeof inst,
-        isNull: inst === null,
-        isUndefined: inst === undefined,
-        keys: inst && typeof inst === "object" ? Object.keys(inst) : [],
-        captchaInstanceRefSet: !!captchaInstanceRef.current,
-      });
+    tryInit();
 
-      // 有些版本 initAliyunCaptcha 直接返回实例
-      if (inst && !captchaInstanceRef.current) {
-        captchaInstanceRef.current = inst;
-        console.log("[useSmsCode] set instance from return value");
+    return () => {
+      destroyed = true;
+      if (retryTimer) clearTimeout(retryTimer);
+      if (captchaInstanceRef.current?.destroy) {
+        captchaInstanceRef.current.destroy();
+        captchaInstanceRef.current = null;
       }
+    };
+  }, [enabled, skipCaptcha, buttonId, containerId, captchaPrefix, captchaSceneId]);
 
-      // 如果 getInstance 已返回实例但 callback 未触发，尝试手动 show()
-      if (captchaInstanceRef.current?.show) {
-        console.log("[useSmsCode] instance has show(), calling it manually as fallback");
-        captchaInstanceRef.current.show();
+  // ========== getSmsCode: 仅用于 skipCaptcha / 非生产模式的直接发送 ==========
+  const getSmsCode = useCallback(async () => {
+    // 在 captcha 模式下（生产 + enabled + !skipCaptcha），SDK 拦截按钮点击,
+    // 这个函数不应该被调用。但为了安全起见保留兼容逻辑。
+    if (import.meta.env.PROD && enabled && !skipCaptcha) {
+      // SDK 已绑定按钮，不需要手动触发。
+      // 如果 SDK 没正确初始化，给出提示。
+      if (!captchaInstanceRef.current) {
+        console.warn("[useSmsCode:getSmsCode] captcha not initialized, fallback direct send");
       } else {
-        console.log("[useSmsCode] instance does NOT have show() - waiting for auto-verify callback");
+        // SDK 已初始化并绑定了按钮，点击已被 SDK 处理
+        // 这里可能是因为 disabled 按钮被移除后触发的
+        return;
+      }
+    }
+
+    if (countdown > 0) return;
+
+    const phoneResult = phoneSchema.safeParse(phone);
+    if (!phoneResult.success) {
+      setError("请输入正确的手机号码");
+      return;
+    }
+
+    setError(null);
+    setVerifying(true);
+
+    const mutation = skipCaptcha ? SendSmsCodeDocument : RequestSmsCodeDocument;
+    const mutationName = skipCaptcha ? "sendSmsCode" : "requestSmsCode";
+    console.log(`[useSmsCode:getSmsCode] direct send via ${mutationName}`);
+
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation,
+        variables: { input: { botcheck: null, phone } },
+      });
+      const result = data?.[mutationName];
+      if (result?.success) {
+        setCountdown(20);
+      } else {
+        const msg = result?.message;
+        setError(msg ? `发送失败：${msg}` : "发送失败，请稍后重试");
       }
     } catch (err) {
-      clearTimeout(timeoutId);
-      console.error("[useSmsCode] initAliyunCaptcha threw:", err);
-      setError("验证初始化失败，请刷新页面重试");
+      console.error("[useSmsCode] direct send error:", err);
+      setError("网络异常，请检查网络后重试");
+    } finally {
       setVerifying(false);
     }
-  }, [phone, countdown, enabled, skipCaptcha, containerId, captchaPrefix, captchaSceneId]);
+  }, [phone, countdown, enabled, skipCaptcha]);
 
   // ========== 倒计时 ==========
   useEffect(() => {
