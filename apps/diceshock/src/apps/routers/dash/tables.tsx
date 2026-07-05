@@ -3,7 +3,6 @@ import {
   PencilSimpleIcon,
   PlusIcon,
   PowerIcon,
-  QrCodeIcon,
   TrashIcon,
   XIcon,
 } from "@phosphor-icons/react/dist/ssr";
@@ -166,6 +165,7 @@ function RouteComponent() {
 
   const [createTableMutation] = useCreateTableMutation({
     refetchQueries: ["ManagedTables"],
+    awaitRefetchQueries: true,
   });
   const [toggleTableStatusMutation] = useToggleTableStatusMutation({
     refetchQueries: ["ManagedTables"],
@@ -510,12 +510,6 @@ function RouteComponent() {
                 >
                   <li>
                     <Link to="/dash/tables/$id" params={{ id: row.id }} search={{ tab: "basic" }}>
-                      <QrCodeIcon className="size-4" />
-                      {t("dashTables.viewQr") ?? "QR Code"}
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/dash/tables/$id" params={{ id: row.id }} search={{ tab: "basic" }}>
                       <PencilSimpleIcon className="size-4" />
                       {t("dashTables.details")}
                     </Link>
@@ -545,15 +539,6 @@ function RouteComponent() {
               </div>
             ) : (
               <div className="flex items-center gap-1">
-                <Link
-                  to="/dash/tables/$id"
-                  params={{ id: row.id }}
-                  search={{ tab: "basic" }}
-                  className="btn btn-xs btn-ghost"
-                  title={t("dashTables.viewQr") ?? "QR Code"}
-                >
-                  <QrCodeIcon className="size-4" />
-                </Link>
                 <Link
                   to="/dash/tables/$id"
                   params={{ id: row.id }}

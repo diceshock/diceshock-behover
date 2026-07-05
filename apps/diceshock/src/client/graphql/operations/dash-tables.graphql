@@ -61,6 +61,15 @@ mutation CreateTable($input: CreateTableInput!) {
     status
     capacity
     code
+    occupancies {
+      id
+      tableId
+      userId
+      nickname
+      uid
+      seats
+      status
+    }
   }
 }
 

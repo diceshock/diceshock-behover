@@ -705,6 +705,7 @@ export type Mutation = {
   deductStoredValue: MembershipDeductionResult;
   deletePreference: DeletePreferenceResult;
   disableUser: UserProfile;
+  enableUser: UserProfile;
   endOrder: TableOccupancy;
   gszRegister: GszCustomer;
   gszScoreAdd: MahjongMatch;
@@ -905,6 +906,11 @@ export type MutationDeletePreferenceArgs = {
 
 
 export type MutationDisableUserArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type MutationEnableUserArgs = {
   id: Scalars['ID']['input'];
 };
 
@@ -2269,6 +2275,7 @@ export type UserProfile = {
   __typename?: 'UserProfile';
   avatarUrl?: Maybe<Scalars['String']['output']>;
   createdAt?: Maybe<Scalars['String']['output']>;
+  disabled?: Maybe<Scalars['Boolean']['output']>;
   email?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   image?: Maybe<Scalars['String']['output']>;

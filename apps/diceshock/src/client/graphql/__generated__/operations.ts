@@ -919,7 +919,7 @@ export type CreateTableMutationVariables = Exact<{
 }>;
 
 
-export type CreateTableMutation = { createTable: { id: string, name: string, type: Types.TableType, scope: Types.TableScope, status: Types.TableStatus, capacity: number, code: string } };
+export type CreateTableMutation = { createTable: { id: string, name: string, type: Types.TableType, scope: Types.TableScope, status: Types.TableStatus, capacity: number, code: string, occupancies: Array<{ id: string, tableId: string, userId: string | null, nickname: string | null, uid: string | null, seats: number, status: Types.OrderStatus }> } };
 
 export type UpdateTableMutationVariables = Exact<{
   input: Types.UpdateTableInput;
@@ -961,21 +961,28 @@ export type UsersQueryVariables = Exact<{
 }>;
 
 
-export type UsersQuery = { managedUsers: { items: Array<{ id: string, uid: string | null, name: string | null, email: string | null, image: string | null, role: Types.UserRole, nickname: string | null, phone: string | null, points: number | null, preferredLocale: string | null, preferredStoreId: string | null, meta: string | null, createdAt: string | null, membershipPlans: Array<{ id: string, userId: string, planType: Types.MembershipPlanType, amount: number | null, note: string | null, startDate: string, endDate: string | null, createdAt: string | null, updatedAt: string | null }> }>, pageInfo: { offset: number, limit: number, total: number | null, nextCursor: string | null, hasMore: boolean } } };
+export type UsersQuery = { managedUsers: { items: Array<{ id: string, uid: string | null, name: string | null, email: string | null, image: string | null, role: Types.UserRole, disabled: boolean | null, nickname: string | null, phone: string | null, points: number | null, preferredLocale: string | null, preferredStoreId: string | null, meta: string | null, createdAt: string | null, membershipPlans: Array<{ id: string, userId: string, planType: Types.MembershipPlanType, amount: number | null, note: string | null, startDate: string, endDate: string | null, createdAt: string | null, updatedAt: string | null }> }>, pageInfo: { offset: number, limit: number, total: number | null, nextCursor: string | null, hasMore: boolean } } };
 
 export type UserQueryVariables = Exact<{
   id: string | number;
 }>;
 
 
-export type UserQuery = { user: { id: string, uid: string | null, name: string | null, email: string | null, image: string | null, role: Types.UserRole, nickname: string | null, phone: string | null, points: number | null, preferredLocale: string | null, preferredStoreId: string | null, meta: string | null, createdAt: string | null, membershipPlans: Array<{ id: string, userId: string, planType: Types.MembershipPlanType, amount: number | null, note: string | null, startDate: string, endDate: string | null, createdAt: string | null, updatedAt: string | null }> } | null };
+export type UserQuery = { user: { id: string, uid: string | null, name: string | null, email: string | null, image: string | null, role: Types.UserRole, disabled: boolean | null, nickname: string | null, phone: string | null, points: number | null, preferredLocale: string | null, preferredStoreId: string | null, meta: string | null, createdAt: string | null, membershipPlans: Array<{ id: string, userId: string, planType: Types.MembershipPlanType, amount: number | null, note: string | null, startDate: string, endDate: string | null, createdAt: string | null, updatedAt: string | null }> } | null };
 
 export type DisableUserMutationVariables = Exact<{
   id: string | number;
 }>;
 
 
-export type DisableUserMutation = { disableUser: { id: string, role: Types.UserRole } };
+export type DisableUserMutation = { disableUser: { id: string, role: Types.UserRole, disabled: boolean | null } };
+
+export type EnableUserMutationVariables = Exact<{
+  id: string | number;
+}>;
+
+
+export type EnableUserMutation = { enableUser: { id: string, role: Types.UserRole, disabled: boolean | null } };
 
 export type UpdateUserMutationVariables = Exact<{
   input: Types.UpdateManagedUserInput;
@@ -4592,6 +4599,15 @@ export const CreateTableDocument = gql`
     status
     capacity
     code
+    occupancies {
+      id
+      tableId
+      userId
+      nickname
+      uid
+      seats
+      status
+    }
   }
 }
     `;
@@ -4809,6 +4825,7 @@ export const UsersDocument = gql`
       email
       image
       role
+      disabled
       nickname
       phone
       points
@@ -4883,6 +4900,7 @@ export const UserDocument = gql`
     email
     image
     role
+    disabled
     nickname
     phone
     points
@@ -4945,6 +4963,7 @@ export const DisableUserDocument = gql`
   disableUser(id: $id) {
     id
     role
+    disabled
   }
 }
     `;
@@ -4974,6 +4993,41 @@ export function useDisableUserMutation(baseOptions?: Apollo.MutationHookOptions<
 export type DisableUserMutationHookResult = ReturnType<typeof useDisableUserMutation>;
 export type DisableUserMutationResult = Apollo.MutationResult<Types.DisableUserMutation>;
 export type DisableUserMutationOptions = Apollo.BaseMutationOptions<Types.DisableUserMutation, Types.DisableUserMutationVariables>;
+export const EnableUserDocument = gql`
+    mutation EnableUser($id: ID!) {
+  enableUser(id: $id) {
+    id
+    role
+    disabled
+  }
+}
+    `;
+export type EnableUserMutationFn = Apollo.MutationFunction<Types.EnableUserMutation, Types.EnableUserMutationVariables>;
+
+/**
+ * __useEnableUserMutation__
+ *
+ * To run a mutation, you first call `useEnableUserMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useEnableUserMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [enableUserMutation, { data, loading, error }] = useEnableUserMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useEnableUserMutation(baseOptions?: Apollo.MutationHookOptions<Types.EnableUserMutation, Types.EnableUserMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<Types.EnableUserMutation, Types.EnableUserMutationVariables>(EnableUserDocument, options);
+      }
+export type EnableUserMutationHookResult = ReturnType<typeof useEnableUserMutation>;
+export type EnableUserMutationResult = Apollo.MutationResult<Types.EnableUserMutation>;
+export type EnableUserMutationOptions = Apollo.BaseMutationOptions<Types.EnableUserMutation, Types.EnableUserMutationVariables>;
 export const UpdateUserDocument = gql`
     mutation UpdateUser($input: UpdateManagedUserInput!) {
   updateUser(input: $input) {
