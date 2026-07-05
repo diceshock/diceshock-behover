@@ -676,7 +676,19 @@
     "cancel": "取消",
     "disabling": "关停中...",
     "confirmDisable": "确认关停",
-    "exportCsv": "导出 CSV"
+    "exportCsv": "导出 CSV",
+    "restore": "恢复",
+    "restoreSuccess": "已恢复用户",
+    "restoreFailed": "恢复失败"
+  },
+  "dashDateFilter": {
+    "selectRange": "日期范围",
+    "today": "今天",
+    "7d": "近7天",
+    "30d": "近30天",
+    "90d": "近90天",
+    "cancel": "取消",
+    "apply": "确定"
   },
   "dashIndex": {
     "scan": "扫码",
@@ -701,8 +713,8 @@
     "mediaLibrary": "媒体库",
     "mediaLibraryDesc": "上传和管理媒体文件",
     "systemSettings": "系统设置",
-    "turnstileCheck": "人机校验 (Turnstile)",
-    "turnstileEnabledDesc": "已开启，发送短信验证码前需通过人机校验",
+    "turnstileCheck": "人机校验 (阿里云)",
+    "turnstileEnabledDesc": "已开启，发送短信验证码前需通过阿里云人机校验",
     "turnstileDisabledDesc": "已关闭，跳过人机校验直接发送短信验证码",
     "autoRestoreAfter": "{time} 后自动恢复",
     "recentOrders": "最近订单",

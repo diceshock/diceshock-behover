@@ -675,7 +675,19 @@
     "cancel": "取消",
     "disabling": "關停中...",
     "confirmDisable": "確認關停",
-    "exportCsv": "匯出 CSV"
+    "exportCsv": "匯出 CSV",
+    "restore": "恢復",
+    "restoreSuccess": "已恢復用戶",
+    "restoreFailed": "恢復失敗"
+  },
+  "dashDateFilter": {
+    "selectRange": "日期範圍",
+    "today": "今天",
+    "7d": "近7天",
+    "30d": "近30天",
+    "90d": "近90天",
+    "cancel": "取消",
+    "apply": "確定"
   },
   "dashIndex": {
     "scan": "掃碼",
@@ -700,8 +712,8 @@
     "mediaLibrary": "媒體庫",
     "mediaLibraryDesc": "上傳和管理媒體檔案",
     "systemSettings": "系統設定",
-    "turnstileCheck": "人機校驗 (Turnstile)",
-    "turnstileEnabledDesc": "已開啟，發送簡訊驗證碼前需通過人機校驗",
+    "turnstileCheck": "人機校驗 (阿里雲)",
+    "turnstileEnabledDesc": "已開啟，發送簡訊驗證碼前需通過阿里雲人機校驗",
     "turnstileDisabledDesc": "已關閉，跳過人機校驗直接發送簡訊驗證碼",
     "autoRestoreAfter": "{time} 後自動恢復",
     "recentOrders": "最近訂單",

@@ -65,6 +65,7 @@ type UserProfile {
   image: String
   avatarUrl: String
   role: UserRole!
+  disabled: Boolean
   nickname: String
   phone: String
   points: Int
@@ -767,6 +768,7 @@ extend type Query {
 extend type Mutation {
   updateUser(input: UpdateManagedUserInput!): UserProfile! # @auth(role: STAFF)
   disableUser(id: ID!): UserProfile! # @auth(role: STAFF)
+  enableUser(id: ID!): UserProfile! # @auth(role: STAFF)
   updateUserRole(input: UpdateRoleInput!): UserProfile! # @auth(role: ADMIN)
   updateMyPreferences(input: UpdatePreferencesInput!): UserProfile! # @auth(role: CUSTOMER)
 }

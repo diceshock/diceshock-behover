@@ -7,6 +7,7 @@ query Users($filter: UserFilterInput) {
       email
       image
       role
+      disabled
       nickname
       phone
       points
@@ -44,6 +45,7 @@ query User($id: ID!) {
     email
     image
     role
+    disabled
     nickname
     phone
     points
@@ -69,6 +71,15 @@ mutation DisableUser($id: ID!) {
   disableUser(id: $id) {
     id
     role
+    disabled
+  }
+}
+
+mutation EnableUser($id: ID!) {
+  enableUser(id: $id) {
+    id
+    role
+    disabled
   }
 }
 

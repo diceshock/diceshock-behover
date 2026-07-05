@@ -10,20 +10,10 @@ export interface ImageTransformOptions {
 
 export function cfImageUrl(
   rawUrl: string,
-  opts: ImageTransformOptions = {},
+  _opts: ImageTransformOptions = {},
 ): string {
-  const { width, height, fit = "cover", quality = 80, format = "webp" } = opts;
-
-  const parts: string[] = [
-    `format=${format}`,
-    `quality=${quality}`,
-    `fit=${fit}`,
-  ];
-  if (width) parts.push(`width=${width}`);
-  if (height) parts.push(`height=${height}`);
-
-  const origin = rawUrl.startsWith(CDN_BASE) ? rawUrl : `${CDN_BASE}${rawUrl}`;
-  return `${CDN_BASE}cdn-cgi/image/${parts.join(",")}/${origin}`;
+  // cdn-cgi/image/ transform is unavailable on this zone — pass through raw URL
+  return rawUrl.startsWith(CDN_BASE) ? rawUrl : `${CDN_BASE}${rawUrl}`;
 }
 
 export function cfAvatarUrl(rawUrl: string, size = 256): string {

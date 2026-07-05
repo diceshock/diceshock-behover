@@ -675,7 +675,19 @@
     "cancel": "Отмена",
     "disabling": "Отключение...",
     "confirmDisable": "Подтвердить отключение",
-    "exportCsv": "Экспорт CSV"
+    "exportCsv": "Экспорт CSV",
+    "restore": "Восстановить",
+    "restoreSuccess": "Пользователь восстановлен",
+    "restoreFailed": "Не удалось восстановить"
+  },
+  "dashDateFilter": {
+    "selectRange": "Диапазон дат",
+    "today": "Сегодня",
+    "7d": "Последние 7 дней",
+    "30d": "Последние 30 дней",
+    "90d": "Последние 90 дней",
+    "cancel": "Отмена",
+    "apply": "Применить"
   },
   "dashIndex": {
     "scan": "Сканировать",
@@ -700,9 +712,9 @@
     "mediaLibrary": "Медиатека",
     "mediaLibraryDesc": "Загрузка и управление медиафайлами",
     "systemSettings": "Системные настройки",
-    "turnstileCheck": "Проверка человека (Turnstile)",
-    "turnstileEnabledDesc": "Включено. Перед отправкой SMS-кода требуется проверка человека",
-    "turnstileDisabledDesc": "Отключено. SMS-коды отправляются напрямую без проверки человека",
+    "turnstileCheck": "Проверка человека (Aliyun CAPTCHA)",
+    "turnstileEnabledDesc": "Включено. Перед отправкой SMS-кода требуется проверка Aliyun CAPTCHA",
+    "turnstileDisabledDesc": "Отключено. SMS-коды отправляются напрямую без проверки CAPTCHA",
     "autoRestoreAfter": "Автоматически восстановится через {time}",
     "recentOrders": "Последние заказы",
     "viewAll": "Показать все",

@@ -39,6 +39,7 @@ async function getUserProfile(ctx: GQLContext, userId: string) {
     email: user.email,
     image: user.image,
     role: user.role.toUpperCase(),
+    disabled: !!user.disabled,
     nickname: user.userInfo.nickname,
     phone: user.userInfo.phone,
     points: user.userInfo.points ?? 0,
@@ -854,9 +855,22 @@ export const usersResolvers = {
       const userProfile = await getUserProfile(ctx, input.id);
       if (!userProfile) throw notFound("User not found");
 
+      // Mark user as disabled
+      await tdb.update(users).set({ disabled: true }).where(drizzle.eq(users.id, input.id));
+
       // Disable by deleting all active sessions
       await tdb.delete(sessions).where(drizzle.eq(sessions.userId, input.id));
 
+      return { ...userProfile, disabled: true };
+    },
+
+    async enableUser(_source: unknown, args: { id: string }, ctx: GQLContext) {
+      requireStaff(ctx);
+      const input = zodToGraphQLError(disableUserSchema, args);
+      const tdb = dbFactory(ctx.env.DB);
+      await tdb.update(users).set({ disabled: false }).where(drizzle.eq(users.id, input.id));
+      const userProfile = await getUserProfile(ctx, input.id);
+      if (!userProfile) throw notFound("User not found");
       return userProfile;
     },
 

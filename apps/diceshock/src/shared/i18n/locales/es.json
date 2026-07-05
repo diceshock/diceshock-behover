@@ -675,7 +675,19 @@
     "cancel": "Cancelar",
     "disabling": "Deshabilitando...",
     "confirmDisable": "Confirmar deshabilitación",
-    "exportCsv": "Exportar CSV"
+    "exportCsv": "Exportar CSV",
+    "restore": "Restaurar",
+    "restoreSuccess": "Usuario restaurado",
+    "restoreFailed": "Error al restaurar"
+  },
+  "dashDateFilter": {
+    "selectRange": "Rango de fechas",
+    "today": "Hoy",
+    "7d": "Últimos 7 días",
+    "30d": "Últimos 30 días",
+    "90d": "Últimos 90 días",
+    "cancel": "Cancelar",
+    "apply": "Aplicar"
   },
   "dashIndex": {
     "scan": "Escanear",
@@ -700,9 +712,9 @@
     "mediaLibrary": "Biblioteca de medios",
     "mediaLibraryDesc": "Subir y gestionar archivos multimedia",
     "systemSettings": "Configuración del sistema",
-    "turnstileCheck": "Verificación humana (Turnstile)",
-    "turnstileEnabledDesc": "Activada. Se requiere verificación humana antes de enviar códigos SMS",
-    "turnstileDisabledDesc": "Desactivada. Los códigos SMS se envían directamente sin verificación humana",
+    "turnstileCheck": "Verificación humana (Aliyun CAPTCHA)",
+    "turnstileEnabledDesc": "Activada. Se requiere verificación CAPTCHA de Aliyun antes de enviar códigos SMS",
+    "turnstileDisabledDesc": "Desactivada. Los códigos SMS se envían directamente sin verificación CAPTCHA",
     "autoRestoreAfter": "Se restaurará automáticamente en {time}",
     "recentOrders": "Pedidos recientes",
     "viewAll": "Ver todo",

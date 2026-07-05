@@ -82,6 +82,7 @@ export const users = sqlite.sqliteTable("user", {
   emailVerified: sqlite.integer("emailVerified", { mode: "timestamp_ms" }),
   image: sqlite.text("image"),
   role: sqlite.text("role", { enum: userRoles }).notNull().default("customer"),
+  disabled: sqlite.integer("disabled", { mode: "boolean" }).notNull().default(false),
 });
 
 export const userInfoTable = sqlite.sqliteTable("user_info", {

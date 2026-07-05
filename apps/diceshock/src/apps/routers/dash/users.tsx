@@ -26,6 +26,7 @@ import {
   MembershipPlanType,
   SortOrder,
   useDisableUserMutation,
+  useEnableUserMutation,
   useUsersQuery,
 } from "@/client/graphql/__generated__";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
@@ -156,6 +157,18 @@ function RouteComponent() {
   const [disableUser] = useDisableUserMutation({
     refetchQueries: ["Users"],
   });
+  const [enableUser] = useEnableUserMutation({ refetchQueries: ["Users"] });
+
+  const confirmEnable = async (userId: string) => {
+    try {
+      await enableUser({ variables: { id: userId } });
+      msg.success(t("dashUsers.restoreSuccess"));
+    } catch (err) {
+      msg.error(
+        err instanceof Error ? err.message : t("dashUsers.restoreFailed"),
+      );
+    }
+  };
 
   const disableDialogRef = useRef<HTMLDialogElement>(null);
   const [pendingDisable, setPendingDisable] = useState<UserItem | null>(null);
@@ -497,14 +510,25 @@ function RouteComponent() {
                     </Link>
                   </li>
                   <li>
-                    <button
-                      type="button"
-                      className="text-error"
-                      onClick={() => openDisableDialog(row)}
-                    >
-                      <UserMinusIcon className="size-4" />
-                      {t("dashUsers.disable")}
-                    </button>
+                    {row.disabled ? (
+                      <button
+                        type="button"
+                        className="text-success"
+                        onClick={() => confirmEnable(row.id)}
+                      >
+                        <UserMinusIcon className="size-4" />
+                        {t("dashUsers.restore")}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="text-error"
+                        onClick={() => openDisableDialog(row)}
+                      >
+                        <UserMinusIcon className="size-4" />
+                        {t("dashUsers.disable")}
+                      </button>
+                    )}
                   </li>
                 </ul>
               </div>
@@ -519,14 +543,25 @@ function RouteComponent() {
                   {t("dashUsers.details")}
                   <EyeIcon />
                 </Link>
-                <button
-                  type="button"
-                  className="btn btn-xs btn-ghost btn-error"
-                  onClick={() => openDisableDialog(row)}
-                >
-                  {t("dashUsers.disable")}
-                  <UserMinusIcon />
-                </button>
+                {row.disabled ? (
+                  <button
+                    type="button"
+                    className="btn btn-xs btn-ghost btn-success"
+                    onClick={() => confirmEnable(row.id)}
+                  >
+                    {t("dashUsers.restore")}
+                    <UserMinusIcon />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-xs btn-ghost btn-error"
+                    onClick={() => openDisableDialog(row)}
+                  >
+                    {t("dashUsers.disable")}
+                    <UserMinusIcon />
+                  </button>
+                )}
               </div>
             )
           }

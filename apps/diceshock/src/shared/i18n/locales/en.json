@@ -675,7 +675,19 @@
     "cancel": "Cancel",
     "disabling": "Disabling...",
     "confirmDisable": "Confirm Disable",
-    "exportCsv": "Export CSV"
+    "exportCsv": "Export CSV",
+    "restore": "Restore",
+    "restoreSuccess": "User restored",
+    "restoreFailed": "Restore failed"
+  },
+  "dashDateFilter": {
+    "selectRange": "Date range",
+    "today": "Today",
+    "7d": "Last 7 days",
+    "30d": "Last 30 days",
+    "90d": "Last 90 days",
+    "cancel": "Cancel",
+    "apply": "Apply"
   },
   "dashIndex": {
     "scan": "Scan",
@@ -700,9 +712,9 @@
     "mediaLibrary": "Media Library",
     "mediaLibraryDesc": "Upload and manage media files",
     "systemSettings": "System Settings",
-    "turnstileCheck": "Human Verification (Turnstile)",
-    "turnstileEnabledDesc": "Enabled. Human verification is required before SMS codes are sent",
-    "turnstileDisabledDesc": "Disabled. SMS codes are sent directly without human verification",
+    "turnstileCheck": "Human Verification (Aliyun CAPTCHA)",
+    "turnstileEnabledDesc": "Enabled. Aliyun CAPTCHA verification is required before SMS codes are sent",
+    "turnstileDisabledDesc": "Disabled. SMS codes are sent directly without CAPTCHA verification",
     "autoRestoreAfter": "Automatically restores after {time}",
     "recentOrders": "Recent Orders",
     "viewAll": "View All",
