@@ -290,12 +290,12 @@ function WechatMenuPage() {
                 className={`card bg-base-100 shadow-sm transition-all ${dragOverIdx === idx ? "ring-2 ring-primary" : ""}`}
                 style={{ opacity: dragOverIdx === idx ? 0.6 : 1 }}
               >
-                <div className="card-body p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="cursor-grab active:cursor-grabbing text-base-content/40 hover:text-base-content/70">
+                <div className="card-body p-0">
+                  <div className="flex items-stretch">
+                    <div className="flex items-center px-2 cursor-grab active:cursor-grabbing text-base-content/40 hover:text-base-content/70 border-r border-base-200">
                       <DotsSixVerticalIcon className="size-5" />
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 p-4">
                       {isCategory(entry) ? (
                         <CategoryEditor
                           category={entry}
@@ -316,12 +316,13 @@ function WechatMenuPage() {
                         />
                       )}
                     </div>
-                    <div className="flex flex-col gap-0.5 mt-0.5">
+                    <div className="flex flex-col justify-center gap-1 px-2 border-l border-base-200 bg-base-200/30">
                       <button
                         type="button"
                         className="btn btn-ghost btn-square btn-xs"
                         disabled={idx === 0}
                         onClick={() => moveButton(idx, -1)}
+                        title={t("dashWechatMenu.moveUp")}
                       >
                         <CaretUpIcon className="size-3.5" />
                       </button>
@@ -330,13 +331,16 @@ function WechatMenuPage() {
                         className="btn btn-ghost btn-square btn-xs"
                         disabled={idx === data.buttons.length - 1}
                         onClick={() => moveButton(idx, 1)}
+                        title={t("dashWechatMenu.moveDown")}
                       >
                         <CaretDownIcon className="size-3.5" />
                       </button>
+                      <div className="divider my-0 h-px" />
                       <button
                         type="button"
                         className="btn btn-ghost btn-square btn-xs text-error"
                         onClick={() => openDeleteDialog(idx)}
+                        title={t("dashWechatMenu.confirmDelete")}
                       >
                         <TrashIcon className="size-3.5" />
                       </button>
@@ -721,8 +725,8 @@ function CategoryEditor({
       ) : (
         <div className="flex flex-col gap-2 pl-4 border-l-2 border-base-300">
           {category.items.map((item, idx) => (
-            <div key={item.id} className="flex items-start gap-2">
-              <div className="flex-1">
+            <div key={item.id} className="flex items-stretch rounded-lg border border-base-200 overflow-hidden">
+              <div className="flex-1 min-w-0 p-2.5">
                 <ItemEditor
                   item={item}
                   onChange={(updated) => updateSubItem(idx, updated)}
@@ -732,7 +736,7 @@ function CategoryEditor({
                   msg={msg}
                 />
               </div>
-              <div className="flex flex-col gap-0.5 mt-0.5">
+              <div className="flex flex-col justify-center gap-0.5 px-1.5 border-l border-base-200 bg-base-200/30">
                 <button
                   type="button"
                   className="btn btn-ghost btn-square btn-xs"
@@ -749,6 +753,7 @@ function CategoryEditor({
                 >
                   <CaretDownIcon className="size-3" />
                 </button>
+                <div className="divider my-0 h-px" />
                 <button
                   type="button"
                   className="btn btn-ghost btn-square btn-xs text-error"

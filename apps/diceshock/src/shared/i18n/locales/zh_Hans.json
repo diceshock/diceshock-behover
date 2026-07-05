@@ -990,6 +990,8 @@
     "noDraftToPublish": "没有可发布的草稿",
     "noItems": "还没有菜单项，点击上方按钮添加",
     "confirmDelete": "确定要删除此项吗？",
+    "moveUp": "上移",
+    "moveDown": "下移",
     "publishError": "发布失败",
     "untitled": "未命名菜单",
     "snapshotName": "版本名称",
