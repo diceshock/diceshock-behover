@@ -159,96 +159,101 @@ export function InfiniteTable<TData>({
 
   return (
     <div ref={containerRef} className="flex-1 overflow-auto min-h-0">
-      <table className="table table-sm table-pin-rows w-full h-full">
-        <thead>
-          {table.getHeaderGroups().map((hg) => (
-            <tr key={hg.id} className="bg-base-200/60">
-              {hg.headers.map((header) => {
-                const canSort = isSortable(header.id);
-                const sorted = sorting.find((s) => s.id === header.id);
-                return (
-                  <th
-                    key={header.id}
-                    className={clsx(
-                      "text-xs font-medium text-base-content/70",
-                      canSort && "cursor-pointer select-none hover:bg-base-300/40",
-                      header.id === "__actions" && "sticky right-0 bg-base-200/95 backdrop-blur-sm z-10 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.06)]",
-                    )}
-                    style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
-                    onClick={() => handleSort(header.id)}
-                  >
-                    <div className="flex items-center gap-1">
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
-                      {canSort && (
-                        <span className="size-3.5 inline-flex items-center justify-center">
-                          {sorted ? (
-                            sorted.desc ? (
-                              <ArrowDownIcon className="size-3" />
-                            ) : (
-                              <ArrowUpIcon className="size-3" />
-                            )
-                          ) : (
-                            <ArrowsDownUpIcon className="size-3 opacity-30" />
-                          )}
-                        </span>
+      <div className="min-h-full flex flex-col">
+        <table className="table table-sm table-pin-rows w-full">
+          <thead>
+            {table.getHeaderGroups().map((hg) => (
+              <tr key={hg.id} className="bg-base-200/60">
+                {hg.headers.map((header) => {
+                  const canSort = isSortable(header.id);
+                  const sorted = sorting.find((s) => s.id === header.id);
+                  return (
+                    <th
+                      key={header.id}
+                      className={clsx(
+                        "text-xs font-medium text-base-content/70",
+                        canSort && "cursor-pointer select-none hover:bg-base-300/40",
+                        header.id === "__actions" && "sticky right-0 bg-base-200/95 backdrop-blur-sm z-10 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.06)]",
                       )}
-                    </div>
-                  </th>
-                );
-              })}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.map((row) => (
-            <tr
-              key={row.id}
-              className={clsx(
-                "hover:bg-base-200/40 transition-colors",
-                selectedRows.has(row.id) && "bg-primary/5",
-              )}
-            >
-              {row.getVisibleCells().map((cell) => (
-                <td
-                  key={cell.id}
-                  className={clsx(
-                    "text-sm",
-                    cell.column.id === "__actions" && "sticky right-0 bg-base-100 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.06)] has-[:focus]:z-50",
-                  )}
-                >
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                      style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
+                      onClick={() => handleSort(header.id)}
+                    >
+                      <div className="flex items-center gap-1">
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(header.column.columnDef.header, header.getContext())}
+                        {canSort && (
+                          <span className="size-3.5 inline-flex items-center justify-center">
+                            {sorted ? (
+                              sorted.desc ? (
+                                <ArrowDownIcon className="size-3" />
+                              ) : (
+                                <ArrowUpIcon className="size-3" />
+                              )
+                            ) : (
+                              <ArrowsDownUpIcon className="size-3 opacity-30" />
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    </th>
+                  );
+                })}
+              </tr>
+            ))}
+          </thead>
+          <tbody>
+            {table.getRowModel().rows.map((row) => (
+              <tr
+                key={row.id}
+                className={clsx(
+                  "hover:bg-base-200/40 transition-colors",
+                  selectedRows.has(row.id) && "bg-primary/5",
+                )}
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <td
+                    key={cell.id}
+                    className={clsx(
+                      "text-sm",
+                      cell.column.id === "__actions" && "sticky right-0 bg-base-100 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.06)] has-[:focus]:z-50",
+                    )}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
 
-      {/* Loading indicator */}
-      {loading && (
-        <div className="flex justify-center py-4">
-          <span className="loading loading-dots loading-sm text-primary" />
-        </div>
-      )}
+        {/* Loading indicator */}
+        {loading && (
+          <div className="flex justify-center py-4">
+            <span className="loading loading-dots loading-sm text-primary" />
+          </div>
+        )}
 
-      {/* Empty state */}
-      {!loading && data.length === 0 && (
-        <div className="flex justify-center py-12 text-base-content/40 text-sm">
-          {emptyMessage}
-        </div>
-      )}
+        {/* Empty state */}
+        {!loading && data.length === 0 && (
+          <div className="flex justify-center py-12 text-base-content/40 text-sm">
+            {emptyMessage}
+          </div>
+        )}
 
-      {/* Infinite scroll sentinel */}
-      {hasMore && <div ref={sentinelRef} className="h-1" />}
+        {/* Infinite scroll sentinel */}
+        {hasMore && <div ref={sentinelRef} className="h-1" />}
 
-      {/* End of list */}
-      {!hasMore && data.length > 0 && !loading && (
-        <div className="flex justify-center py-3 text-base-content/30 text-xs">
-          已加载全部 {data.length} 条
-        </div>
-      )}
+        {/* Spacer pushes footer to bottom */}
+        <div className="flex-1" />
+
+        {/* End of list - pinned to bottom */}
+        {!hasMore && data.length > 0 && !loading && (
+          <div className="py-3 text-center text-base-content/30 text-xs">
+            已加载全部 {data.length} 条
+          </div>
+        )}
+      </div>
     </div>
   );
 }
