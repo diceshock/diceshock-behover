@@ -160,7 +160,7 @@ export function InfiniteTable<TData>({
   return (
     <div ref={containerRef} className="flex-1 overflow-auto min-h-0">
       <div className="min-h-full flex flex-col">
-        <table className="table table-sm table-pin-rows w-full">
+        <table className="table table-sm table-pin-rows w-full flex-none">
           <thead>
             {table.getHeaderGroups().map((hg) => (
               <tr key={hg.id} className="bg-base-200/60">
