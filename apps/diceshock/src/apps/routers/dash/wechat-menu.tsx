@@ -390,7 +390,7 @@ function WechatMenuPage() {
       </div>
 
       {/* Fixed bottom action bar */}
-      <div className="fixed bottom-0 right-0 left-0 lg:left-20 bg-base-100 border-t border-base-200 px-4 py-2 flex items-center justify-end gap-2 z-40">
+      <div className="fixed bottom-0 right-0 left-0 lg:left-16 bg-base-100 border-t border-base-200 px-4 py-2 flex items-center justify-end gap-2 z-30">
         {hasChanges && (
           <span className="text-xs text-warning mr-auto">{t("dashWechatMenu.unsavedChanges")}</span>
         )}
