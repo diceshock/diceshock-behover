@@ -486,6 +486,36 @@ export const authResolvers = {
       return getUserProfile(ctx, ctx.userId);
     },
 
+    async updateMyPreferences(
+      _source: unknown,
+      args: { input: unknown },
+      ctx: GQLContext,
+    ) {
+      requireAuth(ctx);
+      const input = zodToGraphQLError(updatePreferencesSchema, args.input);
+      const tdb = dbFactory(ctx.env.DB);
+
+      const setFields: Record<string, unknown> = {};
+      if ("preferredLocale" in input)
+        setFields.preferred_locale = input.preferredLocale ?? null;
+      if ("preferredStoreId" in input)
+        setFields.preferred_store_id = input.preferredStoreId ?? null;
+      if ("preferredTheme" in input)
+        setFields.preferred_theme = input.preferredTheme ?? null;
+
+      const [updated] = await tdb
+        .update(userInfoTable)
+        .set(setFields)
+        .where(drizzle.eq(userInfoTable.id, ctx.userId))
+        .returning();
+
+      if (!updated) {
+        throw notFound("User profile not found");
+      }
+
+      return getUserProfile(ctx, ctx.userId);
+    },
+
     async verifyTotp(
       _source: unknown,
       args: { input: unknown },
