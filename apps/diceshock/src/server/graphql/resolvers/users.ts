@@ -45,6 +45,7 @@ async function getUserProfile(ctx: GQLContext, userId: string) {
     points: user.userInfo.points ?? 0,
     preferredLocale: user.userInfo.preferred_locale,
     preferredStoreId: user.userInfo.preferred_store_id,
+    preferredTheme: user.userInfo.preferred_theme,
     meta: user.userInfo.meta ? JSON.stringify(user.userInfo.meta) : null,
     createdAt: toIsoString(user.userInfo.create_at),
     membershipPlans: (user.membershipPlans ?? []).map((plan) => ({

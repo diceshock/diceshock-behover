@@ -71,6 +71,7 @@ type UserProfile {
   points: Int
   preferredLocale: String
   preferredStoreId: ID
+  preferredTheme: String
   meta: String
   createdAt: String
   membershipPlans: [MembershipPlan!]!
@@ -758,6 +759,7 @@ input UpdateRoleInput {
 input UpdatePreferencesInput {
   preferredLocale: String
   preferredStoreId: ID
+  preferredTheme: String
 }
 
 extend type Query {

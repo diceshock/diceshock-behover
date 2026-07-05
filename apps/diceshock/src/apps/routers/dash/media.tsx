@@ -326,7 +326,7 @@ function RouteComponent() {
   }, [pendingDelete, client, fetchItems, msg, t]);
 
   return (
-    <main className="size-full flex flex-col">
+    <main className="flex-1 min-h-0 flex flex-col">
       <div className="px-4 pt-4 flex items-center justify-between">
         <DashBackButton />
         <button

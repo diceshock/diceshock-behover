@@ -105,6 +105,7 @@ export const userInfoTable = sqlite.sqliteTable("user_info", {
     .text("preferred_store_id")
     .references(() => storesTable.id),
   preferred_locale: sqlite.text("preferred_locale"),
+  preferred_theme: sqlite.text("preferred_theme"),
 });
 
 export const userBusinessCardTable = sqlite.sqliteTable("user_business_card", {

@@ -2183,6 +2183,7 @@ export type UpdateMyUserInfoInput = {
 export type UpdatePreferencesInput = {
   preferredLocale?: InputMaybe<Scalars['String']['input']>;
   preferredStoreId?: InputMaybe<Scalars['ID']['input']>;
+  preferredTheme?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type UpdateProfileInput = {
@@ -2287,6 +2288,7 @@ export type UserProfile = {
   points?: Maybe<Scalars['Int']['output']>;
   preferredLocale?: Maybe<Scalars['String']['output']>;
   preferredStoreId?: Maybe<Scalars['ID']['output']>;
+  preferredTheme?: Maybe<Scalars['String']['output']>;
   role: UserRole;
   uid?: Maybe<Scalars['String']['output']>;
 };

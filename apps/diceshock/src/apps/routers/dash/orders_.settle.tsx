@@ -322,14 +322,22 @@ function BatchSettlePage() {
 
         <div className="mx-auto w-full max-w-3xl px-4 pb-20">
           <div className="flex items-center gap-3 mb-6">
-            <h1 className="text-2xl font-bold">批量结算</h1>
-            <span className="badge badge-warning">{ids.length} 个订单</span>
+            <h1 className="text-2xl font-bold">
+              {ids.length === 1 ? "订单详情" : "批量结算"}
+            </h1>
+            {ids.length > 1 && (
+              <span className="badge badge-warning">{ids.length} 个订单</span>
+            )}
+            {allEnded && (
+              <span className="badge badge-success">已结算</span>
+            )}
           </div>
 
           <OrderCardsGrid
             previews={data.previews}
             cancelIds={cancelIds}
             onToggle={toggleCancelId}
+            readonly={allEnded}
           />
 
           <CombinedPriceSection
@@ -351,18 +359,20 @@ function BatchSettlePage() {
 
           <BatchPricingPlansSection previews={data.previews} />
 
-          <div className="bg-base-200 rounded-xl p-5 mb-4">
-            <h3 className="font-semibold text-sm text-base-content/60 mb-3">
-              结算备注
-            </h3>
-            <textarea
-              className="textarea textarea-bordered w-full"
-              placeholder="填写结算备注（可选）"
-              rows={2}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
-          </div>
+          {!allEnded && (
+            <div className="bg-base-200 rounded-xl p-5 mb-4">
+              <h3 className="font-semibold text-sm text-base-content/60 mb-3">
+                结算备注
+              </h3>
+              <textarea
+                className="textarea textarea-bordered w-full"
+                placeholder="填写结算备注（可选）"
+                rows={2}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </div>
+          )}
         </div>
 
         {!allEnded && (
@@ -417,10 +427,12 @@ function OrderCardsGrid({
   previews,
   cancelIds,
   onToggle,
+  readonly,
 }: {
   previews: SettlementPreviewItem[];
   cancelIds: Set<string>;
   onToggle: (id: string) => void;
+  readonly: boolean;
 }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
@@ -436,12 +448,14 @@ function OrderCardsGrid({
           >
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  className="checkbox checkbox-sm"
-                  checked={!cancelled}
-                  onChange={() => onToggle(preview.order.id)}
-                />
+                {!readonly && (
+                  <input
+                    type="checkbox"
+                    className="checkbox checkbox-sm"
+                    checked={!cancelled}
+                    onChange={() => onToggle(preview.order.id)}
+                  />
+                )}
                 <span className="font-semibold">
                   {preview.order.table?.name ?? "—"}
                 </span>

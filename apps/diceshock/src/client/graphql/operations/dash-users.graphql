@@ -13,6 +13,7 @@ query Users($filter: UserFilterInput) {
       points
       preferredLocale
       preferredStoreId
+      preferredTheme
       meta
       createdAt
       membershipPlans {
@@ -51,6 +52,7 @@ query User($id: ID!) {
     points
     preferredLocale
     preferredStoreId
+    preferredTheme
     meta
     createdAt
     membershipPlans {

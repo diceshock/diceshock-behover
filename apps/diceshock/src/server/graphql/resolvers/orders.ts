@@ -978,7 +978,7 @@ export const ordersResolvers = {
         throw validationError("tableId", "Table is inactive");
       const existing = await tdb.query.tableOccupancyTable.findFirst({
         where: (o, { and, eq, ne }) =>
-          and(eq(o.table_id, input.tableId), ne(o.status, "ended")),
+          and(eq(o.table_id, input.tableId), ne(o.status, "ended"), ne(o.status, "settled")),
       });
       if (existing)
         throw validationError("tableId", "Table already has an active order");

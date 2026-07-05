@@ -33,8 +33,8 @@ export default function BatchActionBar({
   const selectedUnit = unit ?? t("dashBatch.defaultUnit");
 
   return (
-    <div className="sticky bottom-0 z-30 border-t border-base-content/10 backdrop-blur-md bg-base-100/90 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] px-4 py-3">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="sticky bottom-0 z-30 border-t border-base-content/10 backdrop-blur-md bg-base-100/90 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] px-4 py-3 w-full min-w-full">
+      <div className="flex items-center gap-2 w-full">
         <span className="text-sm font-semibold shrink-0 mr-1">
           {formatMessage(t("dashBatch.selectedCount"), {
             count,
@@ -55,7 +55,7 @@ export default function BatchActionBar({
         ))}
         <button
           type="button"
-          className="btn btn-sm btn-ghost btn-square"
+          className="btn btn-sm btn-ghost btn-square ml-auto shrink-0"
           onClick={onClear}
           title={t("dashBatch.clearSelection")}
         >

@@ -62,6 +62,7 @@ mutation UpdateMyUserInfo($input: UpdateMyUserInfoInput!) {
       phone
       preferredLocale
       preferredStoreId
+      preferredTheme
       meta
       createdAt
       membershipPlans {
@@ -91,6 +92,7 @@ mutation UpdateMyPreferences($input: UpdatePreferencesInput!) {
     phone
     preferredLocale
     preferredStoreId
+    preferredTheme
     meta
     createdAt
     membershipPlans {

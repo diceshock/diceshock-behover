@@ -529,7 +529,7 @@ function RouteComponent() {
     !parsed.freeText && Object.keys(parsed.filters).length === 0;
 
   return (
-    <main className="size-full flex flex-col">
+    <main className="flex-1 min-h-0 flex flex-col">
       <div className="px-4 pt-4 flex flex-col gap-3">
         <div className="flex items-center gap-3">
           <DashBackButton />

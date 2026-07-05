@@ -38,7 +38,7 @@ export async function fetchTableStateForDO(
     where: (t, { eq }) => eq(t.id, tableId),
     with: {
       occupancies: {
-        where: (o, { ne }) => ne(o.status, "ended"),
+        where: (o, { and, ne }) => and(ne(o.status, "ended"), ne(o.status, "settled")),
       },
     },
   });

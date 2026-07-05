@@ -27,6 +27,7 @@ const seatRedirect = FACTORY.createMiddleware(async (c, next) => {
           eq(o.user_id, userId),
           eq(o.table_id, table.id),
           ne(o.status, "ended"),
+          ne(o.status, "settled"),
         ),
     });
 

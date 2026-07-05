@@ -143,17 +143,35 @@ function AccountSettingsModal({
   const preferredLocale =
     typeof userInfo?.preferred_locale === "string"
       ? userInfo.preferred_locale
-      : "";
+      : DEFAULT_LOCALE;
   const preferredStore =
     typeof userInfo?.preferred_store_id === "string"
       ? userInfo.preferred_store_id
-      : "";
+      : DEFAULT_STORE;
+  const preferredTheme =
+    typeof (userInfo as Record<string, unknown> | null)?.preferred_theme === "string"
+      ? ((userInfo as Record<string, unknown>).preferred_theme as string)
+      : (theme ?? "light");
 
-  const [updateMyPreferences] = useUpdateMyPreferencesMutation({
-    onCompleted: () => {
-      window.location.reload();
+  const [updateMyPreferences] = useUpdateMyPreferencesMutation();
+
+  const handleThemeSelect = useCallback(
+    async (t: "light" | "dark") => {
+      setTheme(t);
+      try {
+        await updateMyPreferences({
+          variables: {
+            input: {
+              preferredLocale: preferredLocale || null,
+              preferredStoreId: preferredStore || null,
+              preferredTheme: t,
+            },
+          },
+        });
+      } catch (e) { console.error("[DashNavMenu] updateThemePreference error", e); }
     },
-  });
+    [preferredLocale, preferredStore, setTheme, updateMyPreferences],
+  );
 
   const handleLocaleSelect = useCallback(
     async (loc: string) => {
@@ -163,12 +181,14 @@ function AccountSettingsModal({
             input: {
               preferredLocale: loc || null,
               preferredStoreId: preferredStore || null,
+              preferredTheme: preferredTheme || null,
             },
           },
         });
+        window.location.reload();
       } catch (e) { console.error("[DashNavMenu] updateLocalePreference error", e); }
     },
-    [preferredStore, updateMyPreferences],
+    [preferredStore, preferredTheme, updateMyPreferences],
   );
 
   const handleStoreSelect = useCallback(
@@ -179,12 +199,14 @@ function AccountSettingsModal({
             input: {
               preferredLocale: preferredLocale || null,
               preferredStoreId: store || null,
+              preferredTheme: preferredTheme || null,
             },
           },
         });
+        window.location.reload();
       } catch (e) { console.error("[DashNavMenu] updateStorePreference error", e); }
     },
-    [preferredLocale, updateMyPreferences],
+    [preferredLocale, preferredTheme, updateMyPreferences],
   );
 
   const menuItems: Array<{
@@ -198,23 +220,19 @@ function AccountSettingsModal({
       key: "theme",
       icon: theme === "dark" ? MoonIcon : SunIcon,
       label: t("dashNav.theme"),
-      sublabel: theme === "dark" ? "深色" : "浅色",
+      sublabel: (theme ?? preferredTheme) === "dark" ? "深色" : "浅色",
     },
     {
       key: "language",
       icon: TranslateIcon,
       label: t("me.preferredLang"),
-      sublabel: preferredLocale
-        ? (LOCALES[preferredLocale as LocaleCode]?.name ?? "默认")
-        : "默认",
+      sublabel: LOCALES[preferredLocale as LocaleCode]?.name ?? "简体中文",
     },
     {
       key: "store",
       icon: StorefrontIcon,
       label: t("me.preferredStore"),
-      sublabel: preferredStore
-        ? (STORES[preferredStore as StoreCode]?.shortName ?? "未选择")
-        : "未选择",
+      sublabel: STORES[preferredStore as StoreCode]?.shortName ?? "光谷店",
     },
   ];
 
@@ -308,7 +326,7 @@ function AccountSettingsModal({
                     <button
                       key={t}
                       type="button"
-                      onClick={() => setTheme(t)}
+                      onClick={() => handleThemeSelect(t)}
                       className={clsx(
                         "flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-sm transition-colors text-left",
                         isActive

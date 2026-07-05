@@ -402,6 +402,7 @@ export type UpdateMyUserInfoInput = {
 export type UpdatePreferencesInput = {
   preferredLocale?: string | null | undefined;
   preferredStoreId?: string | number | null | undefined;
+  preferredTheme?: string | null | undefined;
 };
 
 export type UpdateRoleInput = {
@@ -961,14 +962,14 @@ export type UsersQueryVariables = Exact<{
 }>;
 
 
-export type UsersQuery = { managedUsers: { items: Array<{ id: string, uid: string | null, name: string | null, email: string | null, image: string | null, role: Types.UserRole, disabled: boolean | null, nickname: string | null, phone: string | null, points: number | null, preferredLocale: string | null, preferredStoreId: string | null, meta: string | null, createdAt: string | null, membershipPlans: Array<{ id: string, userId: string, planType: Types.MembershipPlanType, amount: number | null, note: string | null, startDate: string, endDate: string | null, createdAt: string | null, updatedAt: string | null }> }>, pageInfo: { offset: number, limit: number, total: number | null, nextCursor: string | null, hasMore: boolean } } };
+export type UsersQuery = { managedUsers: { items: Array<{ id: string, uid: string | null, name: string | null, email: string | null, image: string | null, role: Types.UserRole, disabled: boolean | null, nickname: string | null, phone: string | null, points: number | null, preferredLocale: string | null, preferredStoreId: string | null, preferredTheme: string | null, meta: string | null, createdAt: string | null, membershipPlans: Array<{ id: string, userId: string, planType: Types.MembershipPlanType, amount: number | null, note: string | null, startDate: string, endDate: string | null, createdAt: string | null, updatedAt: string | null }> }>, pageInfo: { offset: number, limit: number, total: number | null, nextCursor: string | null, hasMore: boolean } } };
 
 export type UserQueryVariables = Exact<{
   id: string | number;
 }>;
 
 
-export type UserQuery = { user: { id: string, uid: string | null, name: string | null, email: string | null, image: string | null, role: Types.UserRole, disabled: boolean | null, nickname: string | null, phone: string | null, points: number | null, preferredLocale: string | null, preferredStoreId: string | null, meta: string | null, createdAt: string | null, membershipPlans: Array<{ id: string, userId: string, planType: Types.MembershipPlanType, amount: number | null, note: string | null, startDate: string, endDate: string | null, createdAt: string | null, updatedAt: string | null }> } | null };
+export type UserQuery = { user: { id: string, uid: string | null, name: string | null, email: string | null, image: string | null, role: Types.UserRole, disabled: boolean | null, nickname: string | null, phone: string | null, points: number | null, preferredLocale: string | null, preferredStoreId: string | null, preferredTheme: string | null, meta: string | null, createdAt: string | null, membershipPlans: Array<{ id: string, userId: string, planType: Types.MembershipPlanType, amount: number | null, note: string | null, startDate: string, endDate: string | null, createdAt: string | null, updatedAt: string | null }> } | null };
 
 export type DisableUserMutationVariables = Exact<{
   id: string | number;
@@ -1360,14 +1361,14 @@ export type UpdateMyUserInfoMutationVariables = Exact<{
 }>;
 
 
-export type UpdateMyUserInfoMutation = { updateMyUserInfo: { success: boolean, message: string | null, user: { id: string, uid: string | null, name: string | null, email: string | null, image: string | null, avatarUrl: string | null, role: Types.UserRole, nickname: string | null, phone: string | null, preferredLocale: string | null, preferredStoreId: string | null, meta: string | null, createdAt: string | null, membershipPlans: Array<{ id: string, userId: string, planType: Types.MembershipPlanType, amount: number | null, note: string | null, startDate: string, endDate: string | null, createdAt: string | null, updatedAt: string | null }> } | null } };
+export type UpdateMyUserInfoMutation = { updateMyUserInfo: { success: boolean, message: string | null, user: { id: string, uid: string | null, name: string | null, email: string | null, image: string | null, avatarUrl: string | null, role: Types.UserRole, nickname: string | null, phone: string | null, preferredLocale: string | null, preferredStoreId: string | null, preferredTheme: string | null, meta: string | null, createdAt: string | null, membershipPlans: Array<{ id: string, userId: string, planType: Types.MembershipPlanType, amount: number | null, note: string | null, startDate: string, endDate: string | null, createdAt: string | null, updatedAt: string | null }> } | null } };
 
 export type UpdateMyPreferencesMutationVariables = Exact<{
   input: Types.UpdatePreferencesInput;
 }>;
 
 
-export type UpdateMyPreferencesMutation = { updateMyPreferences: { id: string, uid: string | null, name: string | null, email: string | null, image: string | null, role: Types.UserRole, nickname: string | null, phone: string | null, preferredLocale: string | null, preferredStoreId: string | null, meta: string | null, createdAt: string | null, membershipPlans: Array<{ id: string, userId: string, planType: Types.MembershipPlanType, amount: number | null, note: string | null, startDate: string, endDate: string | null, createdAt: string | null, updatedAt: string | null }> } };
+export type UpdateMyPreferencesMutation = { updateMyPreferences: { id: string, uid: string | null, name: string | null, email: string | null, image: string | null, role: Types.UserRole, nickname: string | null, phone: string | null, preferredLocale: string | null, preferredStoreId: string | null, preferredTheme: string | null, meta: string | null, createdAt: string | null, membershipPlans: Array<{ id: string, userId: string, planType: Types.MembershipPlanType, amount: number | null, note: string | null, startDate: string, endDate: string | null, createdAt: string | null, updatedAt: string | null }> } };
 
 export type RequestSmsCodeMutationVariables = Exact<{
   input: Types.RequestSmsCodeInput;
@@ -4831,6 +4832,7 @@ export const UsersDocument = gql`
       points
       preferredLocale
       preferredStoreId
+      preferredTheme
       meta
       createdAt
       membershipPlans {
@@ -4906,6 +4908,7 @@ export const UserDocument = gql`
     points
     preferredLocale
     preferredStoreId
+    preferredTheme
     meta
     createdAt
     membershipPlans {
@@ -7478,6 +7481,7 @@ export const UpdateMyUserInfoDocument = gql`
       phone
       preferredLocale
       preferredStoreId
+      preferredTheme
       meta
       createdAt
       membershipPlans {
@@ -7534,6 +7538,7 @@ export const UpdateMyPreferencesDocument = gql`
     phone
     preferredLocale
     preferredStoreId
+    preferredTheme
     meta
     createdAt
     membershipPlans {

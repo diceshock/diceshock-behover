@@ -171,7 +171,7 @@ async function fetchTableWithOccupancies(
     where: (t, { eq }) => eq(t.code, code),
     with: {
       occupancies: {
-        where: (o, { ne }) => ne(o.status, "ended"),
+        where: (o, { and, ne }) => and(ne(o.status, "ended"), ne(o.status, "settled")),
         with: {
           user: { columns: { id: true, name: true } },
         },
@@ -515,7 +515,7 @@ export const tablesResolvers = {
 
       const occs = await tdb.query.tableOccupancyTable.findMany({
         where: (o, { eq, ne, and }) =>
-          and(eq(o.user_id, ctx.userId), ne(o.status, "ended")),
+          and(eq(o.user_id, ctx.userId), ne(o.status, "ended"), ne(o.status, "settled")),
         with: {
           table: { columns: { code: true, name: true, store_id: true } },
         },
@@ -594,7 +594,7 @@ export const tablesResolvers = {
 
       const occs = await tdb.query.tableOccupancyTable.findMany({
         where: (o, { eq, ne, and }) =>
-          and(eq(o.temp_id, tempId), ne(o.status, "ended")),
+          and(eq(o.temp_id, tempId), ne(o.status, "ended"), ne(o.status, "settled")),
         with: { table: { columns: { code: true, name: true } } },
       });
 
@@ -635,7 +635,7 @@ export const tablesResolvers = {
           orderBy: (t, { desc }) => desc(t.create_at),
           with: {
             occupancies: {
-              where: (o, { ne }) => ne(o.status, "ended"),
+              where: (o, { and, ne }) => and(ne(o.status, "ended"), ne(o.status, "settled")),
               columns: {
                 id: true,
                 user_id: true,
@@ -750,7 +750,7 @@ export const tablesResolvers = {
           ),
         with: {
           occupancies: {
-            where: (o, { ne }) => ne(o.status, "ended"),
+            where: (o, { and, ne }) => and(ne(o.status, "ended"), ne(o.status, "settled")),
             columns: {
               id: true,
               user_id: true,
@@ -889,7 +889,7 @@ export const tablesResolvers = {
 
       const existingOccupancy = await tdb.query.tableOccupancyTable.findFirst({
         where: (o, { eq, ne, and }) =>
-          and(eq(o.user_id, ctx.userId), ne(o.status, "ended")),
+          and(eq(o.user_id, ctx.userId), ne(o.status, "ended"), ne(o.status, "settled")),
         with: {
           table: { columns: { code: true, name: true, id: true } },
         },
@@ -912,7 +912,7 @@ export const tablesResolvers = {
         where: (t, { eq }) => eq(t.code, code),
         with: {
           occupancies: {
-            where: (o, { ne }) => ne(o.status, "ended"),
+            where: (o, { and, ne }) => and(ne(o.status, "ended"), ne(o.status, "settled")),
             columns: { id: true },
           },
         },
@@ -1114,7 +1114,7 @@ export const tablesResolvers = {
         where: (t, { eq }) => eq(t.id, id),
         with: {
           occupancies: {
-            where: (o, { ne }) => ne(o.status, "ended"),
+            where: (o, { and, ne }) => and(ne(o.status, "ended"), ne(o.status, "settled")),
           },
         },
       });
@@ -1157,7 +1157,7 @@ export const tablesResolvers = {
         where: (t, { eq }) => eq(t.id, id),
         with: {
           occupancies: {
-            where: (o, { ne }) => ne(o.status, "ended"),
+            where: (o, { and, ne }) => and(ne(o.status, "ended"), ne(o.status, "settled")),
           },
         },
       });
@@ -1191,7 +1191,7 @@ export const tablesResolvers = {
         where: (t, { eq }) => eq(t.id, input.id),
         with: {
           occupancies: {
-            where: (o, { ne }) => ne(o.status, "ended"),
+            where: (o, { and, ne }) => and(ne(o.status, "ended"), ne(o.status, "settled")),
           },
         },
       });
@@ -1210,7 +1210,7 @@ export const tablesResolvers = {
         where: (t, { eq }) => eq(t.id, input.id),
         with: {
           occupancies: {
-            where: (o, { ne }) => ne(o.status, "ended"),
+            where: (o, { and, ne }) => and(ne(o.status, "ended"), ne(o.status, "settled")),
           },
         },
       });
@@ -1260,7 +1260,7 @@ export const tablesResolvers = {
         where: (t, { eq }) => eq(t.id, input.id),
         with: {
           occupancies: {
-            where: (o, { ne }) => ne(o.status, "ended"),
+            where: (o, { and, ne }) => and(ne(o.status, "ended"), ne(o.status, "settled")),
           },
         },
       });
@@ -1408,7 +1408,7 @@ export const tablesResolvers = {
 
       const existingOccupancy = await tdb.query.tableOccupancyTable.findFirst({
         where: (o, { eq, ne, and }) =>
-          and(eq(o.temp_id, input.tempId), ne(o.status, "ended")),
+          and(eq(o.temp_id, input.tempId), ne(o.status, "ended"), ne(o.status, "settled")),
         with: { table: { columns: { code: true, name: true, id: true } } },
       });
 
@@ -1430,7 +1430,7 @@ export const tablesResolvers = {
         where: (t, { eq }) => eq(t.code, input.code),
         with: {
           occupancies: {
-            where: (o, { ne }) => ne(o.status, "ended"),
+            where: (o, { and, ne }) => and(ne(o.status, "ended"), ne(o.status, "settled")),
             columns: { id: true },
           },
         },
@@ -1558,7 +1558,7 @@ export const tablesResolvers = {
 
       const activeOccupancy = await tdb.query.tableOccupancyTable.findFirst({
         where: (o, { eq, ne, and }) =>
-          and(eq(o.temp_id, input.tempId), ne(o.status, "ended")),
+          and(eq(o.temp_id, input.tempId), ne(o.status, "ended"), ne(o.status, "settled")),
         with: { table: { columns: { code: true, id: true } } },
       });
 

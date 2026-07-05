@@ -446,6 +446,7 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
             meta: userInfo.meta ?? null,
             preferred_store_id: userInfo.preferred_store_id ?? null,
             preferred_locale: userInfo.preferred_locale ?? null,
+            preferred_theme: userInfo.preferred_theme ?? null,
             avatar_url: userInfo.avatar_url ?? null,
           },
         });
@@ -471,6 +472,7 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
               meta: userInfo.meta ?? null,
               preferred_store_id: userInfo.preferred_store_id ?? null,
               preferred_locale: userInfo.preferred_locale ?? null,
+              preferred_theme: userInfo.preferred_theme ?? null,
               avatar_url: userInfo.avatar_url ?? null,
             },
           });
@@ -557,6 +559,9 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
           uid: userInfo.uid,
           nickname: userInfo.nickname,
           meta: userInfo.meta ?? null,
+          preferred_store_id: userInfo.preferred_store_id ?? null,
+          preferred_locale: userInfo.preferred_locale ?? null,
+          preferred_theme: userInfo.preferred_theme ?? null,
           avatar_url: null,
         },
       });
@@ -599,6 +604,7 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
       meta: userInfoRaw.meta ?? null,
       preferred_store_id: userInfoRaw.preferred_store_id ?? null,
       preferred_locale: userInfoRaw.preferred_locale ?? null,
+      preferred_theme: userInfoRaw.preferred_theme ?? null,
       avatar_url: userInfoRaw.avatar_url ?? null,
     },
   });

@@ -39,6 +39,10 @@ const updatePreferencesSchema = z.object({
     .nullable()
     .optional()
     .refine((value) => value == null || value in STORES, "Invalid store"),
+  preferredTheme: z
+    .enum(["light", "dark"])
+    .nullable()
+    .optional(),
 });
 
 const verifyTotpSchema = z.object({
@@ -93,6 +97,7 @@ async function getUserProfile(ctx: GQLContext, userId: string) {
     points: user.userInfo.points ?? 0,
     preferredLocale: user.userInfo.preferred_locale,
     preferredStoreId: user.userInfo.preferred_store_id,
+    preferredTheme: user.userInfo.preferred_theme,
     meta: user.userInfo.meta ? JSON.stringify(user.userInfo.meta) : null,
     createdAt: toIsoString(user.userInfo.create_at),
     membershipPlans: (user.membershipPlans ?? []).map((plan) => ({
@@ -464,6 +469,7 @@ export const authResolvers = {
         .set({
           preferred_locale: input.preferredLocale ?? null,
           preferred_store_id: input.preferredStoreId ?? null,
+          preferred_theme: input.preferredTheme ?? null,
         })
         .where(drizzle.eq(userInfoTable.id, ctx.userId))
         .returning();
