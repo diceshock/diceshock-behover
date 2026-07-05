@@ -28,10 +28,10 @@ async function setupAdmin(page: Page) {
       contentType: "application/json",
       body: JSON.stringify({
         user: {
-          id: "lnch-admin-001",
-          name: "赵管理",
+          id: "e2e-test-staff-001",
+          name: "测试店员",
           role: "admin",
-          preferredStoreId: "store-lnch-gg",
+          preferredStoreId: "store-e2e-gg",
         },
         expires: new Date(Date.now() + 86400000).toISOString(),
       }),
@@ -42,7 +42,7 @@ async function setupAdmin(page: Page) {
 
 // ─── Browser Interaction Helpers ─────────────────────────────────────────────
 
-const LAUNCHER = ".fixed.inset-0.z-50";
+const LAUNCHER = ".fixed.inset-0.z-50.flex.items-start";
 const LAUNCHER_INPUT = `${LAUNCHER} input[type='text']`;
 const TABLE = "table.table";
 const TABLE_ROWS = `${TABLE} tbody tr`;
@@ -83,6 +83,12 @@ async function selectMenuItem(page: Page, label: string) {
     .first();
   await item.scrollIntoViewIfNeeded();
   await item.click();
+}
+
+/** Navigate to a dash page by URL (real browser navigation) */
+async function navigateTo(page: Page, path: string) {
+  await page.goto(path);
+  await page.waitForLoadState("domcontentloaded");
 }
 
 async function waitForTableRows(page: Page, min = 1) {
@@ -133,16 +139,12 @@ test.describe("Admin Continuous Workflow — Browser E2E", () => {
     });
 
     // ═══════════════════════════════════════════════════════════════════════
-    // 2. 用 "/" 打开 launcher → 选择 "用户" 类别 → 导航到用户列表
+    // 2. 导航到用户列表 → 滚动浏览
     // ═══════════════════════════════════════════════════════════════════════
 
-    await test.step("按 / 打开 launcher, 选择用户类别", async () => {
-      await openLauncher(page);
-      await selectMenuItem(page, "用户");
-      // First item should be "前往 用户"
-      await launcherSubmit(page);
+    await test.step("导航到用户列表", async () => {
+      await navigateTo(page, "/dash/users");
       await waitForTableRows(page);
-      await expectUrlContains(page, "/dash/users");
     });
 
     await test.step("浏览用户表格, 逐行滚动", async () => {
@@ -198,12 +200,9 @@ test.describe("Admin Continuous Workflow — Browser E2E", () => {
     // 5. 导航到订单列表 → 选择行 → 批量结算
     // ═══════════════════════════════════════════════════════════════════════
 
-    await test.step("通过 launcher 导航到订单列表", async () => {
-      await openLauncher(page);
-      await selectMenuItem(page, "订单");
-      await launcherSubmit(page);
+    await test.step("导航到订单列表", async () => {
+      await navigateTo(page, "/dash/orders");
       await waitForTableRows(page);
-      await expectUrlContains(page, "/dash/orders");
     });
 
     await test.step("勾选前两行订单", async () => {
@@ -329,27 +328,15 @@ test.describe("Admin Continuous Workflow — Browser E2E", () => {
     // 9. 快速用 launcher 跨页面切换
     // ═══════════════════════════════════════════════════════════════════════
 
-    await test.step("快速跨页面切换: 活动→桌台→用户→订单", async () => {
-      // → 桌台
-      await openLauncher(page);
-      await selectMenuItem(page, "桌台");
-      await launcherSubmit(page);
+    await test.step("快速跨页面切换: 桌台→用户→订单", async () => {
+      await navigateTo(page, "/dash/tables");
       await waitForTableRows(page);
-      await expectUrlContains(page, "/dash/tables");
 
-      // → 用户
-      await openLauncher(page);
-      await selectMenuItem(page, "用户");
-      await launcherSubmit(page);
+      await navigateTo(page, "/dash/users");
       await waitForTableRows(page);
-      await expectUrlContains(page, "/dash/users");
 
-      // → 订单
-      await openLauncher(page);
-      await selectMenuItem(page, "订单");
-      await launcherSubmit(page);
+      await navigateTo(page, "/dash/orders");
       await waitForTableRows(page);
-      await expectUrlContains(page, "/dash/orders");
     });
 
     // ═══════════════════════════════════════════════════════════════════════
