@@ -577,7 +577,7 @@ export default function DashNavDrawer({
       </div>
 
       <div
-        className="lg:pl-16 h-screen overflow-hidden transition-[padding-right] duration-200"
+        className="lg:pl-16 h-screen overflow-hidden flex flex-col transition-[padding-right] duration-200"
         style={{ paddingRight: isChatOpen ? chatPanelWidth : 0 }}
       >
         {children}
