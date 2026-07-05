@@ -60,7 +60,7 @@ function buildMenuSummary(data: WechatMenuData | null): string {
 
 const DEFAULT_MENU: WechatMenuData = {
   buttons: [
-    { id: "default01", type: "click", name: "会员中心", key: "MEMBERSHIP_PLAN" },
+    { id: "default01", type: "click", name: "会员中心", key: "MEMBERSHIP_PLAN", notification: { message: "{{user_nickname}}，您好！您当前是{{user_membership}}会员，余额{{user_balance}}元，积分{{user_points}}。到期时间：{{user_membership_expiry}}", translations: {} } },
     {
       id: "default02",
       name: "快捷功能",
@@ -74,7 +74,7 @@ const DEFAULT_MENU: WechatMenuData = {
       id: "default06",
       name: "使用帮助",
       items: [
-        { id: "default07", type: "click", name: "如何对话", key: "HELP_GUIDE" },
+        { id: "default07", type: "click", name: "如何对话", key: "HELP_GUIDE", notification: { message: "您好{{user_nickname}}！直接在对话框输入文字即可与我交流。您可以查询桌游库存、预约座位、了解会员权益等。今日有{{active_count}}场约局开放中。", translations: {} } },
         { id: "default08", type: "view", name: "进入店铺", link_target: "/" },
         { id: "default09", type: "view", name: "联系我们", link_target: "/contact-us" },
         { id: "default10", type: "view", name: "个人信息", link_target: "/me" },

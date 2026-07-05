@@ -992,6 +992,7 @@
     "confirmDelete": "确定要删除此项吗？",
     "moveUp": "上移",
     "moveDown": "下移",
+    "delete": "删除",
     "publishError": "发布失败",
     "untitled": "未命名菜单",
     "snapshotName": "版本名称",

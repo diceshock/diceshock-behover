@@ -291,60 +291,63 @@ function WechatMenuPage() {
                 style={{ opacity: dragOverIdx === idx ? 0.6 : 1 }}
               >
                 <div className="card-body p-0">
-                  <div className="flex items-stretch">
-                    <div className="flex items-center px-2 cursor-grab active:cursor-grabbing text-base-content/40 hover:text-base-content/70 border-r border-base-200">
-                      <DotsSixVerticalIcon className="size-5" />
+                  <div className="flex items-center px-3 py-2 gap-2 border-b border-base-200 bg-base-200/30">
+                    <div className="cursor-grab active:cursor-grabbing text-base-content/40 hover:text-base-content/70">
+                      <DotsSixVerticalIcon className="size-4" />
                     </div>
-                    <div className="flex-1 min-w-0 p-4">
-                      {isCategory(entry) ? (
-                        <CategoryEditor
-                          category={entry}
-                          onChange={(updated) => updateButton(idx, updated)}
-                          variables={variables}
-                          translateText={translateText}
-                          t={t}
-                          msg={msg}
-                        />
-                      ) : (
-                        <ItemEditor
-                          item={entry}
-                          onChange={(updated) => updateButton(idx, updated)}
-                          variables={variables}
-                          translateText={translateText}
-                          t={t}
-                          msg={msg}
-                        />
-                      )}
-                    </div>
-                    <div className="flex flex-col justify-center gap-1 px-2 border-l border-base-200 bg-base-200/30">
+                    <div className="flex items-center gap-1 ml-auto">
                       <button
                         type="button"
-                        className="btn btn-ghost btn-square btn-xs"
+                        className="btn btn-ghost btn-xs gap-1"
                         disabled={idx === 0}
                         onClick={() => moveButton(idx, -1)}
                         title={t("dashWechatMenu.moveUp")}
                       >
                         <CaretUpIcon className="size-3.5" />
+                        {t("dashWechatMenu.moveUp")}
                       </button>
                       <button
                         type="button"
-                        className="btn btn-ghost btn-square btn-xs"
+                        className="btn btn-ghost btn-xs gap-1"
                         disabled={idx === data.buttons.length - 1}
                         onClick={() => moveButton(idx, 1)}
                         title={t("dashWechatMenu.moveDown")}
                       >
                         <CaretDownIcon className="size-3.5" />
+                        {t("dashWechatMenu.moveDown")}
                       </button>
-                      <div className="divider my-0 h-px" />
+                      <div className="divider divider-horizontal mx-0.5 h-4" />
                       <button
                         type="button"
-                        className="btn btn-ghost btn-square btn-xs text-error"
+                        className="btn btn-ghost btn-xs gap-1 text-error"
                         onClick={() => openDeleteDialog(idx)}
                         title={t("dashWechatMenu.confirmDelete")}
                       >
                         <TrashIcon className="size-3.5" />
+                        {t("dashWechatMenu.delete")}
                       </button>
                     </div>
+                  </div>
+                  <div className="p-4">
+                    {isCategory(entry) ? (
+                      <CategoryEditor
+                        category={entry}
+                        onChange={(updated) => updateButton(idx, updated)}
+                        variables={variables}
+                        translateText={translateText}
+                        t={t}
+                        msg={msg}
+                      />
+                    ) : (
+                      <ItemEditor
+                        item={entry}
+                        onChange={(updated) => updateButton(idx, updated)}
+                        variables={variables}
+                        translateText={translateText}
+                        t={t}
+                        msg={msg}
+                      />
+                    )}
                   </div>
                 </div>
               </div>
@@ -725,8 +728,8 @@ function CategoryEditor({
       ) : (
         <div className="flex flex-col gap-2 pl-4 border-l-2 border-base-300">
           {category.items.map((item, idx) => (
-            <div key={item.id} className="flex items-stretch rounded-lg border border-base-200 overflow-hidden">
-              <div className="flex-1 min-w-0 p-2.5">
+            <div key={item.id} className="rounded-lg border border-base-200 overflow-hidden">
+              <div className="p-2.5">
                 <ItemEditor
                   item={item}
                   onChange={(updated) => updateSubItem(idx, updated)}
@@ -736,30 +739,33 @@ function CategoryEditor({
                   msg={msg}
                 />
               </div>
-              <div className="flex flex-col justify-center gap-0.5 px-1.5 border-l border-base-200 bg-base-200/30">
+              <div className="flex items-center gap-1 px-2 py-1.5 border-t border-base-200 bg-base-200/30">
                 <button
                   type="button"
-                  className="btn btn-ghost btn-square btn-xs"
+                  className="btn btn-ghost btn-xs gap-1"
                   disabled={idx === 0}
                   onClick={() => moveSubItem(idx, -1)}
                 >
                   <CaretUpIcon className="size-3" />
+                  {t("dashWechatMenu.moveUp")}
                 </button>
                 <button
                   type="button"
-                  className="btn btn-ghost btn-square btn-xs"
+                  className="btn btn-ghost btn-xs gap-1"
                   disabled={idx === category.items.length - 1}
                   onClick={() => moveSubItem(idx, 1)}
                 >
                   <CaretDownIcon className="size-3" />
+                  {t("dashWechatMenu.moveDown")}
                 </button>
-                <div className="divider my-0 h-px" />
+                <div className="divider divider-horizontal mx-0.5 h-3" />
                 <button
                   type="button"
-                  className="btn btn-ghost btn-square btn-xs text-error"
+                  className="btn btn-ghost btn-xs gap-1 text-error"
                   onClick={() => removeSubItem(idx)}
                 >
                   <TrashIcon className="size-3" />
+                  {t("dashWechatMenu.delete")}
                 </button>
               </div>
             </div>
@@ -829,48 +835,46 @@ function VariablePickerDialog({
       onClose={handleClose}
       onClick={(e) => { if (e.target === dialogRef.current) handleClose(); }}
     >
-      <div className="modal-box max-w-2xl p-0 flex flex-col h-[28rem]">
+      <div className="modal-box max-w-2xl w-[95vw] p-0 flex flex-col max-h-[80vh] sm:max-h-[28rem]">
         <div className="flex items-center justify-between px-4 py-3 border-b border-base-200">
           <h3 className="font-bold text-base">{t("dashWechatMenu.variablePicker.title")}</h3>
           <button type="button" className="btn btn-ghost btn-sm btn-square" onClick={handleClose}>✕</button>
         </div>
-        <div className="flex flex-1 min-h-0">
-          {/* Left: category nav */}
-          <nav className="w-36 shrink-0 border-r border-base-200 overflow-y-auto bg-base-200/50 py-2">
+        {/* Category tabs - horizontal on mobile, vertical nav on sm+ */}
+        <div className="flex flex-col sm:flex-row flex-1 min-h-0">
+          <nav className="flex sm:flex-col sm:w-28 shrink-0 border-b sm:border-b-0 sm:border-r border-base-200 overflow-x-auto sm:overflow-y-auto bg-base-200/50 sm:py-2">
             {VARIABLE_CATEGORIES.map((cat) => (
               <button
                 key={cat.key}
                 type="button"
-                className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                className={`whitespace-nowrap px-3 py-2 sm:px-4 text-sm transition-colors ${
                   activeCategory === cat.key
-                    ? "bg-primary/10 text-primary font-semibold border-r-2 border-primary"
+                    ? "bg-primary/10 text-primary font-semibold border-b-2 sm:border-b-0 sm:border-r-2 border-primary"
                     : "hover:bg-base-200"
-                }`}
+                } sm:w-full sm:text-left`}
                 onClick={() => setActiveCategory(cat.key)}
               >
                 {t(cat.labelKey)}
               </button>
             ))}
           </nav>
-          {/* Right: variable list */}
+          {/* Variable list */}
           <div className="flex-1 overflow-y-auto p-3 space-y-2">
             {(grouped[activeCategory] ?? []).map((v) => (
-              <div key={v.id} className="rounded-lg border border-base-200 p-3 flex items-start gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <code className="text-xs font-mono bg-base-200 px-1.5 py-0.5 rounded">{`{{${v.id}}}`}</code>
-                    <span className="text-sm font-medium">{v.label}</span>
-                  </div>
-                  {v.description && (
-                    <p className="text-xs text-base-content/60 mt-1">{v.description}</p>
-                  )}
-                  {v.example && (
-                    <p className="text-xs text-base-content/40 mt-0.5">
-                      {t("dashWechatMenu.variablePicker.example")}: {v.example}
-                    </p>
-                  )}
+              <div key={v.id} className="rounded-lg border border-base-200 p-3 space-y-2">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <code className="text-xs font-mono bg-base-200 px-1.5 py-0.5 rounded">{`{{${v.id}}}`}</code>
+                  <span className="text-sm font-medium">{v.label}</span>
                 </div>
-                <div className="flex gap-1 shrink-0">
+                {v.description && (
+                  <p className="text-xs text-base-content/60">{v.description}</p>
+                )}
+                {v.example && (
+                  <p className="text-xs text-base-content/40">
+                    {t("dashWechatMenu.variablePicker.example")}: <code className="bg-base-200 px-1 rounded">{v.example}</code>
+                  </p>
+                )}
+                <div className="flex flex-wrap gap-1 pt-1 border-t border-base-200">
                   <button
                     type="button"
                     className="btn btn-xs btn-ghost gap-1"
