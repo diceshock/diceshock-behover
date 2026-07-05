@@ -23,15 +23,15 @@ export const Route = createFileRoute("/{-$storeLocale}/ready/$code")({
 });
 
 const TYPE_LABEL_KEYS: Record<string, string> = {
-  fixed: "seat.fixedTable",
-  solo: "seat.soloTable",
+  FIXED: "seat.fixedTable",
+  SOLO: "seat.soloTable",
 };
 
 const SCOPE_LABEL_KEYS: Record<string, string> = {
-  trpg: "seat.scopeTrpg",
-  boardgame: "seat.scopeBoardgame",
-  console: "seat.scopeConsole",
-  mahjong: "seat.scopeMahjong",
+  TRPG: "seat.scopeTrpg",
+  BOARDGAME: "seat.scopeBoardgame",
+  CONSOLE: "seat.scopeConsole",
+  MAHJONG: "seat.scopeMahjong",
 };
 
 function useSeatIdentity(): SeatIdentity | null {

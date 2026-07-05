@@ -35,7 +35,8 @@ export function setTranslations(
   TRANSLATIONS[locale] = dict;
 }
 
-function resolvePath(dict: TranslationDict, key: string): string | undefined {
+function resolvePath(dict: TranslationDict, key: string | undefined): string | undefined {
+  if (!key) return undefined;
   let current: string | TranslationDict | undefined = dict;
 
   for (const segment of key.split(".")) {

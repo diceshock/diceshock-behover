@@ -92,15 +92,15 @@ function AuthGate() {
 const pricingCache = { snapshot: null as SnapshotData | null };
 
 const TYPE_LABEL_KEYS: Record<string, string> = {
-  fixed: "seat.fixedTable",
-  solo: "seat.soloTable",
+  FIXED: "seat.fixedTable",
+  SOLO: "seat.soloTable",
 };
 
 const SCOPE_LABEL_KEYS: Record<string, string> = {
-  trpg: "seat.scopeTrpg",
-  boardgame: "seat.scopeBoardgame",
-  console: "seat.scopeConsole",
-  mahjong: "seat.scopeMahjong",
+  TRPG: "seat.scopeTrpg",
+  BOARDGAME: "seat.scopeBoardgame",
+  CONSOLE: "seat.scopeConsole",
+  MAHJONG: "seat.scopeMahjong",
 };
 
 const TOTP_TIME_STEP = 30;
