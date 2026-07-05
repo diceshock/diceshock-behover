@@ -1,366 +1,317 @@
 /**
- * Order Billing E2E — Full Lifecycle with Pricing Plan Changes & Settlement
+ * Order Billing E2E — Pricing Calculation Correctness
  *
- * Tests the billing system end-to-end:
- * 1. Seed table + users + pricing plan A via DB
- * 2. Start orders for multiple customers via GQL API
- * 3. Verify orders appear on /dash/orders
- * 4. Switch pricing plan (B is more expensive) → verify recalculation
- * 5. Navigate to user detail, add stored value → browser back
- * 6. Batch settle with stored value deduction
- * 7. Verify settled orders show correct amounts
+ * Asserts EXACT billing amounts displayed on the page.
  *
- * All setup is done via D1 + GQL to isolate billing logic from unrelated UI.
+ * Strategy:
+ *   1. Create orders via GQL (addTableOccupancy) — proven to work
+ *   2. Backdate start_at in D1 to get deterministic elapsed time
+ *   3. Navigate to orders page and assert exact ¥ amounts
+ *   4. Switch pricing plan → assert recalculated amounts
+ *   5. Settle and verify settlement amounts
+ *
+ * Pricing logic (shared/utils/pricing.ts):
+ *   FREE_PERIOD = 30 min
+ *   pricePerHalfHour = Math.round(plan.price / 2)  // plan.price = cents/hour
+ *   billableHalfHours = ceil((elapsed - free) / 30min)
+ *   finalPrice = min(pricePerHalfHour * billableHalfHours, cap)
+ *
+ * With 3h elapsed:
+ *   billable = 3h - 30min = 150min → ceil(150/30) = 5 half-hours
+ *   Plan A (¥8/h): 400 × 5 = 2000 → "¥20.00"
+ *   Plan B (¥12/h): 600 × 5 = 3000 → "¥30.00"
  */
-import { expect, type Page, test } from "@playwright/test";
-import {
-  clickVisible,
-  setupStaffAuth,
-  clickTab,
-  waitForGql,
-} from "../helpers/interactions";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { expect, type Page, test } from "@playwright/test";
+import { clickTab, setupStaffAuth, waitForGql } from "../helpers/interactions";
 
 const execFileAsync = promisify(execFile);
-const CWD = process.cwd();
 
-/** Local waitForMainContent — dash has nested <main> elements */
-async function waitForPage(page: Page) {
-  await expect(page.locator("main").first()).toBeVisible({ timeout: 15000 });
-}
-
-// ─── DB helpers ───────────────────────────────────────────────────────────────
-
-async function execD1(command: string): Promise<void> {
-  await execFileAsync("pnpm", [
-    "exec", "wrangler", "d1", "execute", "diceshock", "--local",
-    "--command", command,
-  ], { cwd: CWD });
-}
-
-// ─── Test constants ───────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const TABLE_ID = "e2e-billing-table-001";
 const TABLE_CODE = "BILL01";
-const TABLE_NAME = "计费测试桌";
-const STORE_ID = "store-e2e-gg";
 
-interface TestUser {
-  id: string;
-  nickname: string;
-  phone: string;
+// 2h45m elapsed → billable = 165-30(free) = 135min → ceil(135/30) = 5 half-hours
+// Using 2h45m instead of exactly 3h gives 15min slack before next boundary
+const BACKDATE_MS = (2 * 60 + 45) * 60 * 1000;
+
+const PLAN_A_EXPECTED = "¥20.00"; // 400 × 5 = 2000
+const PLAN_B_EXPECTED = "¥30.00"; // 600 × 5 = 3000
+const TOTAL_3_PLAN_B = "¥90.00"; // 3000 × 3
+
+const USERS = [
+  { id: "e2e-bill-p1", nickname: "计费甲" },
+  { id: "e2e-bill-p2", nickname: "计费乙" },
+  { id: "e2e-bill-p3", nickname: "计费丙" },
+];
+
+// ─── D1 Helpers ───────────────────────────────────────────────────────────────
+
+async function execD1(command: string): Promise<string> {
+  const { stdout } = await execFileAsync(
+    "pnpm",
+    ["exec", "wrangler", "d1", "execute", "diceshock", "--local", "--command", command],
+    { cwd: process.cwd() },
+  );
+  return stdout;
 }
 
-const MEMBER_USERS: TestUser[] = [
-  { id: "e2e-bill-m1", nickname: "小明", phone: "13900001001" },
-  { id: "e2e-bill-m2", nickname: "小红", phone: "13900001002" },
-];
-const GUEST_USERS: TestUser[] = [
-  { id: "e2e-bill-g1", nickname: "访客A", phone: "13900001003" },
-  { id: "e2e-bill-g2", nickname: "访客B", phone: "13900001004" },
-];
-const ALL_USERS = [...MEMBER_USERS, ...GUEST_USERS];
+function planData(priceHourly: number): string {
+  return JSON.stringify({
+    config: { daytime_start: "10:00", daytime_end: "22:00" },
+    plans: [
+      {
+        plan_type: "fallback",
+        name: "E2E计费",
+        sort_order: 0,
+        enabled: true,
+        conditions: null,
+        billing_type: "hourly",
+        price: priceHourly,
+        cap_enabled: true,
+        cap_unit: "per_day",
+        cap_price: 9600,
+        cap_price_day: null,
+        cap_price_night: null,
+      },
+    ],
+  }).replace(/'/g, "''");
+}
 
-// Plan A: ¥8/half-hour, cap ¥48/day
-const PLAN_A_DATA = JSON.stringify({
-  config: { daytime_start: "10:00", daytime_end: "22:00" },
-  plans: [{
-    plan_type: "fallback", name: "A计划", sort_order: 0, enabled: true,
-    conditions: null, billing_type: "hourly", price: 800,
-    cap_enabled: true, cap_unit: "per_day", cap_price: 4800,
-    cap_price_day: null, cap_price_night: null,
-  }],
-}).replace(/'/g, "''");
+// ─── GQL Helpers ──────────────────────────────────────────────────────────────
 
-// Plan B: ¥12/half-hour, cap ¥60/day
-const PLAN_B_DATA = JSON.stringify({
-  config: { daytime_start: "10:00", daytime_end: "22:00" },
-  plans: [{
-    plan_type: "fallback", name: "B计划-高峰", sort_order: 0, enabled: true,
-    conditions: null, billing_type: "hourly", price: 1200,
-    cap_enabled: true, cap_unit: "per_day", cap_price: 6000,
-    cap_price_day: null, cap_price_night: null,
-  }],
-}).replace(/'/g, "''");
+async function gql(page: Page, query: string, variables?: Record<string, unknown>) {
+  const resp = await page.request.post("/graphql", {
+    headers: { "Content-Type": "application/json", "X-Test-Role": "staff" },
+    data: JSON.stringify({ query, variables }),
+  });
+  const json = await resp.json();
+  if (json.errors) throw new Error(`GQL: ${JSON.stringify(json.errors)}`);
+  return json.data;
+}
 
-// ─── Setup ────────────────────────────────────────────────────────────────────
+// ─── Setup & Teardown ─────────────────────────────────────────────────────────
 
-async function seedAll(): Promise<void> {
+async function cleanup(): Promise<void> {
+  // Remove ALL occupancies on the test table AND any with our user IDs
+  const userIds = USERS.map((u) => `'${u.id}'`).join(",");
+  await execD1(
+    `DELETE FROM table_occupancy WHERE table_id = '${TABLE_ID}' OR user_id IN (${userIds});`,
+  );
+}
+
+async function ensureUsersExist(): Promise<void> {
   const now = Date.now();
-  const twoHoursAgo = now - 2 * 60 * 60 * 1000;
-
-  const stmts: string[] = [];
-
-  // Table
-  stmts.push(
-    `INSERT OR REPLACE INTO tables (id, name, type, status, capacity, code, create_at, scope, store_id) VALUES ('${TABLE_ID}', '${TABLE_NAME}', 'fixed', 'active', 8, '${TABLE_CODE}', ${now}, 'boardgame', '${STORE_ID}');`,
-  );
-
-  // Users + user_info
-  for (const u of ALL_USERS) {
-    stmts.push(
-      `INSERT OR REPLACE INTO "user" (id, name, email, role) VALUES ('${u.id}', '${u.nickname}', '${u.id}@e2e.local', 'customer');`,
-      `INSERT OR REPLACE INTO user_info (id, uid, create_at, nickname, phone) VALUES ('${u.id}', 'uid-${u.id}', ${now}, '${u.nickname}', '${u.phone}');`,
-    );
-  }
-
-  // Members: 小红 has ¥100 stored value
-  stmts.push(
-    `INSERT OR REPLACE INTO user_membership_plans (id, user_id, plan_type, amount, note, start_date) VALUES ('sv-e2e-bill-m2', 'e2e-bill-m2', 'stored_value', 10000, '测试储值', ${now});`,
-  );
-
-  // Pricing snapshot (Plan A) — published
-  stmts.push(
-    `INSERT OR REPLACE INTO pricing_snapshots (id, name, data, status, created_at, published_at) VALUES ('snap-e2e-planA', 'E2E-A', '${PLAN_A_DATA}', 'published', ${twoHoursAgo}, ${twoHoursAgo});`,
-  );
-
-  // Active orders — started 2 hours ago (so billing = 4 half-hours × ¥8 = ¥32)
-  for (let i = 0; i < ALL_USERS.length; i++) {
-    const u = ALL_USERS[i];
-    const orderId = `e2e-bill-order-${i + 1}`;
-    stmts.push(
-      `INSERT OR REPLACE INTO table_occupancy (id, table_id, user_id, seats, status, start_at, pricing_snapshot_id) VALUES ('${orderId}', '${TABLE_ID}', '${u.id}', 1, 'active', ${twoHoursAgo}, 'snap-e2e-planA');`,
-    );
-  }
-
+  const stmts = USERS.flatMap((u) => [
+    `INSERT OR REPLACE INTO "user" (id, name, email, role) VALUES ('${u.id}', '${u.nickname}', '${u.id}@e2e.local', 'customer');`,
+    `INSERT OR REPLACE INTO user_info (id, uid, create_at, nickname, phone, meta) VALUES ('${u.id}', 'uid-${u.id}', ${now}, '${u.nickname}', '1380000${u.id.slice(-2)}01', '{}');`,
+  ]);
   await execD1(stmts.join("\n"));
 }
 
-async function switchToPlanB(): Promise<void> {
-  const now = Date.now();
-  await execD1([
-    `UPDATE pricing_snapshots SET status = 'archived' WHERE id = 'snap-e2e-planA';`,
-    `INSERT OR REPLACE INTO pricing_snapshots (id, name, data, status, created_at, published_at) VALUES ('snap-e2e-planB', 'E2E-B', '${PLAN_B_DATA}', 'published', ${now}, ${now});`,
-  ].join("\n"));
-}
-
-async function addStoredValue(userId: string, amount: number): Promise<void> {
+async function publishPlan(priceHourly: number): Promise<void> {
+  const data = planData(priceHourly);
   const now = Date.now();
   await execD1(
-    `INSERT INTO user_membership_plans (id, user_id, plan_type, amount, note, start_date) VALUES ('topup-${userId}-${now}', '${userId}', 'stored_value', ${amount}, 'E2E充值', ${now});`,
+    `INSERT OR REPLACE INTO pricing_snapshots (id, name, store_id, data, status, created_at, published_at) VALUES ('snap-e2e-billing', 'E2E计费', 'store-e2e-gg', '${data}', 'published', ${now}, ${now});`,
   );
 }
 
-async function setupStaffPage(page: Page): Promise<void> {
+async function backdateOrders(): Promise<void> {
+  const startAt = Date.now() - BACKDATE_MS;
+  const userIds = USERS.map((u) => `'${u.id}'`).join(",");
+  await execD1(
+    `UPDATE table_occupancy SET start_at = ${startAt} WHERE user_id IN (${userIds}) AND status = 'active';`,
+  );
+}
+
+async function addStoredValue(userId: string, amountCents: number): Promise<void> {
+  const now = Date.now();
+  await execD1(
+    `INSERT OR REPLACE INTO user_membership_plans (id, user_id, plan_type, amount, note, start_date, create_at, update_at) VALUES ('plan-sv-${userId}', '${userId}', 'stored_value', ${amountCents}, 'E2E储值', ${now}, ${now}, ${now});`,
+  );
+}
+
+// ─── Page Helpers ─────────────────────────────────────────────────────────────
+
+async function setupPage(page: Page): Promise<void> {
   await setupStaffAuth(page);
+}
+
+/** Extract text from all .font-mono cells in the table body */
+async function getMonoCellTexts(page: Page): Promise<string[]> {
+  const cells = page.locator("table.table tbody td .font-mono");
+  const count = await cells.count();
+  const texts: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const t = await cells.nth(i).textContent();
+    if (t) texts.push(t.trim());
+  }
+  return texts;
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
-test.describe.serial("Order Billing — Full E2E", () => {
+test.describe.serial("Order Billing — Exact Price Assertions", () => {
+  const orderIds: string[] = [];
+
   test.beforeAll(async () => {
-    await seedAll();
+    await cleanup();
+    await ensureUsersExist();
+    await publishPlan(800); // Plan A: ¥8/h
   });
 
-  test("Step 1: 订单列表正确显示 — 4笔活跃订单", async ({ page }) => {
-    await setupStaffPage(page);
-    await page.goto("/dash/orders");
-    await waitForPage(page);
+  test("Step 1: 通过 GQL 创建3笔订单", async ({ page }) => {
+    await setupPage(page);
 
-    // Wait for table data to load
-    const rows = page.locator("table.table tbody tr");
-    await expect(rows.first()).toBeVisible({ timeout: 15000 });
-
-    // Should show at least 4 rows for our test orders
-    const count = await rows.count();
-    expect(count).toBeGreaterThanOrEqual(ALL_USERS.length);
-  });
-
-  test("Step 2: 计费金额正确 (Plan A: 2h × ¥8/30m = ¥32)", async ({ page }) => {
-    await setupStaffPage(page);
-    await page.goto("/dash/orders");
-    await waitForPage(page);
-
-    const rows = page.locator("table.table tbody tr");
-    await expect(rows.first()).toBeVisible({ timeout: 15000 });
-
-    // Check that at least one row shows the expected amount
-    // Plan A: 2 hours = 4 half-hours × ¥8 = ¥32
-    const pageContent = await page.locator("table.table tbody").textContent();
-    // The amount ¥32 should appear (in format like "¥32" or "32.00")
-    expect(pageContent).toMatch(/32/);
-  });
-
-  test("Step 3: 切换计价方案 B → 金额重新计算 (¥48)", async ({ page }) => {
-    // Switch pricing plan via DB
-    await switchToPlanB();
-
-    await setupStaffPage(page);
-    await page.goto("/dash/orders");
-    await waitForPage(page);
-
-    const rows = page.locator("table.table tbody tr");
-    await expect(rows.first()).toBeVisible({ timeout: 15000 });
-
-    // Plan B: 2h = 4 half-hours × ¥12 = ¥48
-    // Frontend recalculates using the currently published plan
-    const pageContent = await page.locator("table.table tbody").textContent();
-    expect(pageContent).toMatch(/48/);
-  });
-
-  test("Step 4: 跳转用户详情 → 充值 → 浏览器返回", async ({ page }) => {
-    await setupStaffPage(page);
-    await page.goto("/dash/orders");
-    await waitForPage(page);
-
-    const rows = page.locator("table.table tbody tr");
-    await expect(rows.first()).toBeVisible({ timeout: 15000 });
-
-    // Click on a user link (小明)
-    const userLink = page.locator("a[href*='/dash/users/']").first();
-    if (await userLink.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await userLink.click();
-      await expect(page).toHaveURL(/\/dash\/users\//, { timeout: 10000 });
-      await waitForPage(page);
-
-      // Add stored value for 小明 via DB (simulating admin action on this page)
-      await addStoredValue("e2e-bill-m1", 20000); // ¥200
-
-      // Browser back
-      await page.goBack();
-      await expect(page).toHaveURL(/\/dash\/orders/, { timeout: 10000 });
-    } else {
-      // If no user link visible (orders don't show clickable user), just add via DB
-      await addStoredValue("e2e-bill-m1", 20000);
+    for (const user of USERS) {
+      const data = await gql(
+        page,
+        `mutation($input: AddOccupancyInput!) { addTableOccupancy(input: $input) { id startAt status } }`,
+        { input: { tableId: TABLE_ID, userId: user.id } },
+      );
+      const id = data.addTableOccupancy.id;
+      expect(id, `Order created for ${user.nickname}`).toBeTruthy();
+      orderIds.push(id);
     }
 
-    // Page should still show data after back
-    const rowsAfter = page.locator("table.table tbody tr");
-    await expect(rowsAfter.first()).toBeVisible({ timeout: 10000 });
+    expect(orderIds).toHaveLength(USERS.length);
   });
 
-  test("Step 5: 选择订单进入批量结算页面", async ({ page }) => {
-    await setupStaffPage(page);
+  test("Step 2: 回溯3小时 → 订单列表显示 ~¥20.00 (Plan A)", async ({ page }) => {
+    await backdateOrders();
+
+    await setupPage(page);
     await page.goto("/dash/orders");
-    await waitForPage(page);
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("table.table tbody tr").first()).toBeVisible({ timeout: 15000 });
 
-    const rows = page.locator("table.table tbody tr");
-    await expect(rows.first()).toBeVisible({ timeout: 15000 });
+    const texts = await getMonoCellTexts(page);
 
-    // Check first 2 orders (members)
-    const checkboxes = page.locator("table.table tbody input[type='checkbox']");
-    const cbCount = await checkboxes.count();
-    expect(cbCount).toBeGreaterThanOrEqual(2);
-
-    await checkboxes.nth(0).check();
-    await checkboxes.nth(1).check();
-
-    // Click batch settle button
-    const settleBtn = page.locator("button", { hasText: /批量结算/ });
-    await settleBtn.scrollIntoViewIfNeeded();
-    await expect(settleBtn).toBeVisible({ timeout: 5000 });
-    await settleBtn.click();
-
-    // Should navigate to settlement page
-    await expect(page).toHaveURL(/\/dash\/orders.*settle/, { timeout: 10000 });
-    await waitForPage(page);
-
-    // Settlement page should show the order cards
-    const heading = page.locator("h1", { hasText: /结算/ });
-    await expect(heading).toBeVisible({ timeout: 10000 });
+    // Active orders render as "~¥20.00" — look for "20.00" in text
+    const matches = texts.filter((t) => t.includes("20.00"));
+    expect(
+      matches.length,
+      `Expected ≥3 cells with ¥20.00, got: ${JSON.stringify(texts.slice(0, 20))}`,
+    ).toBeGreaterThanOrEqual(USERS.length);
   });
 
-  test("Step 6: 结算页面显示金额并支持储值划扣", async ({ page }) => {
-    await setupStaffPage(page);
+  test("Step 3: 切换 Plan B (¥12/h) → 金额变为 ~¥30.00", async ({ page }) => {
+    await publishPlan(1200); // Plan B: ¥12/h
 
-    // Navigate directly to settle page with our order IDs
-    const orderIds = ["e2e-bill-order-1", "e2e-bill-order-2"];
-    const url = `/dash/orders/settle?ids=${JSON.stringify(orderIds)}`;
-    await page.goto(url);
-    await waitForPage(page);
+    await setupPage(page);
+    await page.goto("/dash/orders");
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("table.table tbody tr").first()).toBeVisible({ timeout: 15000 });
 
-    // Should show settlement heading
-    const heading = page.locator("h1", { hasText: /结算/ });
+    const texts = await getMonoCellTexts(page);
+
+    const matches = texts.filter((t) => t.includes("30.00"));
+    expect(
+      matches.length,
+      `Expected ≥3 cells with ¥30.00, got: ${JSON.stringify(texts.slice(0, 20))}`,
+    ).toBeGreaterThanOrEqual(USERS.length);
+  });
+
+  test("Step 4: 进入结算页 → 每人¥30.00, 总计¥90.00", async ({ page }) => {
+    await setupPage(page);
+
+    // Navigate to settle page directly with our order IDs
+    const idsParam = encodeURIComponent(JSON.stringify(orderIds));
+    await page.goto(`/dash/orders/settle?ids=${idsParam}`);
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 15000 });
+
+    // Wait for settlement preview heading
+    const heading = page.locator("h1", { hasText: "批量结算" });
     await expect(heading).toBeVisible({ timeout: 15000 });
 
-    // Should show a badge with order count
-    const badge = page.locator(".badge", { hasText: /2/ });
+    // Badge shows order count
+    const badge = page.locator(".badge", { hasText: `${USERS.length} 个订单` });
     await expect(badge).toBeVisible({ timeout: 5000 });
 
-    // Look for stored value toggle
-    const deductLabel = page.locator("label", { hasText: /储值|扣费|余额/ });
-    if (await deductLabel.isVisible({ timeout: 3000 }).catch(() => false)) {
-      const toggle = deductLabel.locator("input[type='checkbox']");
-      if (await toggle.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await toggle.check();
-        // After enabling, deduction info should appear
-        await page.waitForTimeout(500);
-      }
+    // Each order card: large price = ¥30.00
+    const cardPrices = page.locator(".font-mono.font-bold.text-primary.text-lg");
+    await expect(cardPrices).toHaveCount(USERS.length, { timeout: 10000 });
+    for (let i = 0; i < USERS.length; i++) {
+      await expect(cardPrices.nth(i)).toHaveText(PLAN_B_EXPECTED);
     }
 
-    // Should show the settle action button
-    const actionBtn = page.locator("button", { hasText: /确认结算|结算/ }).last();
-    await expect(actionBtn).toBeVisible({ timeout: 5000 });
+    // Total line: ¥90.00
+    const totalEl = page.locator(".text-2xl.font-bold.text-primary");
+    await expect(totalEl).toHaveText(TOTAL_3_PLAN_B);
   });
 
-  test("Step 7: 执行结算 — 订单状态变为已结算", async ({ page }) => {
-    await setupStaffPage(page);
+  test("Step 5: 启用储值划扣 → 底栏显示划扣金额", async ({ page }) => {
+    // Give user 1 a ¥100 stored value
+    await addStoredValue(USERS[0].id, 10000);
 
-    // Use 2 member orders for settlement
-    const orderIds = ["e2e-bill-order-1", "e2e-bill-order-2"];
-    const url = `/dash/orders/settle?ids=${JSON.stringify(orderIds)}`;
-    await page.goto(url);
-    await waitForPage(page);
+    await setupPage(page);
+    const idsParam = encodeURIComponent(JSON.stringify(orderIds));
+    await page.goto(`/dash/orders/settle?ids=${idsParam}`);
 
-    const heading = page.locator("h1", { hasText: /结算/ });
+    const heading = page.locator("h1", { hasText: "批量结算" });
     await expect(heading).toBeVisible({ timeout: 15000 });
 
-    // Click the main settle button
-    const settleBtn = page.locator("button", { hasText: /确认结算/ }).last();
-    if (await settleBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await settleBtn.click();
-      // Wait for settlement to complete (should redirect or show success)
-      await page.waitForTimeout(2000);
+    // Find the stored value toggle in the membership section
+    const toggleLabel = page.locator("label", { hasText: /储值划扣|启用划扣/ });
+    if (await toggleLabel.isVisible({ timeout: 5000 }).catch(() => false)) {
+      const checkbox = toggleLabel.locator("input[type='checkbox']");
+      await checkbox.check();
+
+      // Bottom bar should show deduction info
+      // User1: min(balance ¥100, price ¥30) = ¥30 deducted
+      const bottomBar = page.locator(".fixed.bottom-0");
+      await expect(bottomBar).toBeVisible({ timeout: 5000 });
+      await expect(bottomBar).toContainText("30.00", { timeout: 5000 });
     }
   });
 
-  test("Step 8: 已结算订单在列表中显示正确金额", async ({ page }) => {
-    await setupStaffPage(page);
+  test("Step 6: 确认结算 → 订单变为已结束", async ({ page }) => {
+    await setupPage(page);
+    const idsParam = encodeURIComponent(JSON.stringify(orderIds));
+    await page.goto(`/dash/orders/settle?ids=${idsParam}`);
+
+    const heading = page.locator("h1", { hasText: "批量结算" });
+    await expect(heading).toBeVisible({ timeout: 15000 });
+
+    // Click confirm
+    const confirmBtn = page.locator("button", { hasText: /确认结算/ });
+    await expect(confirmBtn).toBeEnabled({ timeout: 15000 });
+    await confirmBtn.click();
+
+    // After settlement: confirm button disappears, badges show 已结束
+    await expect(confirmBtn).toBeHidden({ timeout: 15000 });
+    const settledBadges = page.locator(".badge", { hasText: "已结束" });
+    await expect(settledBadges).toHaveCount(USERS.length, { timeout: 10000 });
+  });
+
+  test("Step 7: 结算后列表 — 金额列=¥30.00 (无~前缀)", async ({ page }) => {
+    await setupPage(page);
     await page.goto("/dash/orders");
-    await waitForPage(page);
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("table.table tbody tr").first()).toBeVisible({ timeout: 15000 });
 
-    const rows = page.locator("table.table tbody tr");
-    await expect(rows.first()).toBeVisible({ timeout: 15000 });
+    const texts = await getMonoCellTexts(page);
 
-    // Look for settled status badge
-    const settledBadges = page.locator(".badge", { hasText: /已结算|结束/ });
-    const settledCount = await settledBadges.count();
-
-    // At least some should be settled (from step 7, or from this run if previous succeeded)
-    // The key assertion is that the page renders without error
-    const pageContent = await page.locator("table.table").textContent();
-    expect(pageContent).toBeTruthy();
-    expect(pageContent!.length).toBeGreaterThan(0);
+    // Settled orders show exact "¥30.00" (no ~ prefix)
+    const exact = texts.filter((t) => t === "¥30.00");
+    expect(
+      exact.length,
+      `Expected ≥3 exact "¥30.00" (settled), got: ${JSON.stringify(texts.slice(0, 20))}`,
+    ).toBeGreaterThanOrEqual(USERS.length);
   });
 
-  test("Step 9: 顾客扫码页面显示计时", async ({ page }) => {
-    // Simulate customer scanning QR code
-    await page.goto(`/zh/t/${TABLE_CODE}`);
-
-    // The QR scan page should load and show some content
-    await expect(page.locator("body")).not.toContainText(/500|Internal/i, { timeout: 10000 });
-
-    // Should show the table/timer info
-    const main = page.locator("main").first();
-    await expect(main).toBeVisible({ timeout: 15000 });
-  });
-
-  test("Step 10: 桌台详情页显示订单状态", async ({ page }) => {
-    await setupStaffPage(page);
+  test("Step 8: 桌台详情 — 已结束, 无 checkbox", async ({ page }) => {
+    await setupPage(page);
     await page.goto(`/dash/tables/${TABLE_ID}`);
-    await waitForPage(page);
+    await clickTab(page, /订单/);
 
-    // Navigate to orders tab
-    const ordersTab = page.locator("button[role='tab']", { hasText: /订单|使用/ });
-    if (await ordersTab.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await ordersTab.click();
-      await page.waitForTimeout(1000);
-    }
+    const settledBadges = page.locator(".badge", { hasText: "已结束" });
+    await expect(settledBadges).toHaveCount(USERS.length, { timeout: 10000 });
 
-    // Should show orders on this table
-    const pageContent = await page.locator("main").first().textContent();
-    // At least the table name or some order data should be present
-    expect(pageContent).toBeTruthy();
+    const checkboxes = page.locator("table.table tbody input[type='checkbox']");
+    await expect(checkboxes).toHaveCount(0, { timeout: 5000 });
   });
 });

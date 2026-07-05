@@ -32,7 +32,7 @@ import { useIsMobile } from "@/client/hooks/useIsMobile";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import dayjs from "@/shared/utils/dayjs-config";
 
-const BATCH_SIZE = 200;
+const BATCH_SIZE = 100
 
 const TYPE_LABEL_KEYS: Record<string, string> = {
   FIXED: "dashTables.fixedTable",

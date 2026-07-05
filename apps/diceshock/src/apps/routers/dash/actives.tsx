@@ -31,7 +31,7 @@ import { useTranslation } from "@/client/hooks/useTranslation";
 import { formatMessage } from "@/shared/i18n";
 import dayjs from "@/shared/utils/dayjs-config";
 
-const BATCH_SIZE = 200;
+const BATCH_SIZE = 100
 
 function formatCreateAt(val: unknown): string {
   if (!val) return "—";

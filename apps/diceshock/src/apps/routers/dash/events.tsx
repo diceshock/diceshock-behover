@@ -32,7 +32,7 @@ import {
 import { useTranslation } from "@/client/hooks/useTranslation";
 import dayjs from "@/shared/utils/dayjs-config";
 
-const BATCH_SIZE = 200;
+const BATCH_SIZE = 100
 
 /** Extracted from generated query (codegen owns the shape). */
 type EventsList = NonNullable<

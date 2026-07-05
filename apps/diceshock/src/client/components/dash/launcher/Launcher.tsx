@@ -374,11 +374,50 @@ export function Launcher() {
           "max-h-[70vh]",
         )}
       >
-        {/* Active filters chips */}
-        {filters.length > 0 && (
+        {/* Active category + filters chips above input */}
+        {(activeCategory || filters.length > 0) && (
           <div className="flex flex-wrap gap-1.5 px-3 pt-3 pb-1">
+            {activeCategory && (
+              <span className="inline-flex items-center gap-1 h-5 pl-2 pr-1 rounded bg-accent/15 text-accent text-[11px] font-semibold">
+                <span className="truncate max-w-24">{activeCategory.label}</span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCategoryId(null);
+                    setFilters([]);
+                    setMode({ type: "search" });
+                    setQuery("");
+                  }}
+                  className="size-3.5 flex items-center justify-center rounded-full hover:bg-accent/20"
+                >
+                  <XIcon className="size-2.5" weight="bold" />
+                </button>
+              </span>
+            )}
             {filters.map((f) => (
-              <FilterChip key={f.key} filter={f} onRemove={() => removeFilter(f.key)} />
+              <FilterChip
+                key={f.key}
+                filter={f}
+                category={activeCategory}
+                onRemove={() => removeFilter(f.key)}
+                onEdit={() => {
+                  if (!activeCategory) return;
+                  const def = activeCategory.filters.find((d) => d.key === f.key);
+                  if (!def) return;
+                  if (def.kind === "kv") {
+                    setMode({ type: "kv-input", filter: def });
+                    setQuery(f.kind === "kv" ? f.value : "");
+                  } else if (def.kind === "option") {
+                    setMode({ type: "option-select", filter: def });
+                  } else if (def.kind === "date") {
+                    setMode({ type: "date-pick", filter: def });
+                  } else if (def.kind === "number") {
+                    setMode({ type: "number-input", filter: def });
+                  }
+                  setFocusIndex(0);
+                }}
+              />
             ))}
           </div>
         )}
@@ -584,15 +623,27 @@ function MenuItem({
 
 function FilterChip({
   filter,
+  category,
   onRemove,
+  onEdit,
 }: {
   filter: FilterValue;
+  category: CategoryDef | undefined;
   onRemove: () => void;
+  onEdit: () => void;
 }) {
-  const label = formatFilterLabel(filter);
+  const def = category?.filters.find((d) => d.key === filter.key);
+  const label = formatFilterLabel(filter, def);
+  const editable = def && (def.kind === "kv" || def.kind === "option" || def.kind === "date" || def.kind === "number");
   return (
     <span className="inline-flex items-center gap-1 h-5 pl-2 pr-1 rounded bg-primary/10 text-primary text-[11px]">
-      <span className="truncate max-w-24">{label}</span>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); if (editable) onEdit(); }}
+        className={clsx("truncate max-w-32", editable && "hover:underline cursor-pointer")}
+      >
+        {label}
+      </button>
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); onRemove(); }}
@@ -604,14 +655,20 @@ function FilterChip({
   );
 }
 
-function formatFilterLabel(f: FilterValue): string {
+function formatFilterLabel(f: FilterValue, def?: FilterDef): string {
+  const label = def?.label ?? f.key;
   switch (f.kind) {
-    case "kv": return `${f.key}: ${f.value}`;
-    case "option": return `${f.key}: ${f.value}`;
-    case "boolean": return f.key;
-    case "number": return `${f.key} ${f.operator} ${f.value}`;
-    case "date": return `${f.key}: ${f.from}~${f.to}`;
-    case "sort": return `排序: ${f.key} ${f.value}`;
+    case "kv": return `${label} = ${f.value}`;
+    case "option": {
+      const optLabel = def?.kind === "option"
+        ? def.options.find((o) => o.value === f.value)?.label ?? f.value
+        : f.value;
+      return `${label}: ${optLabel}`;
+    }
+    case "boolean": return label;
+    case "number": return `${label} ${f.operator} ${f.value}`;
+    case "date": return `${label}: ${f.from}~${f.to}`;
+    case "sort": return `排序: ${f.value}`;
     case "group": return `分组: ${f.value}`;
   }
 }

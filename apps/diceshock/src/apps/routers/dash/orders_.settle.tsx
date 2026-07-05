@@ -228,7 +228,7 @@ function BatchSettlePage() {
             sortBy: "start_at",
             sortOrder: "desc",
             groupBy: "none",
-            page: 1,
+            page: "1",
           },
         });
       } else {
@@ -255,7 +255,7 @@ function BatchSettlePage() {
           sortBy: "start_at",
           sortOrder: "desc",
           groupBy: "none",
-          page: 1,
+          page: "1",
         },
       });
     } catch (err) {
@@ -274,7 +274,7 @@ function BatchSettlePage() {
             sortBy: "start_at",
             sortOrder: "desc",
             groupBy: "none",
-            page: 1,
+            page: "1",
           }}
           className="btn btn-primary btn-sm"
         >
@@ -303,7 +303,7 @@ function BatchSettlePage() {
             sortBy: "start_at",
             sortOrder: "desc",
             groupBy: "none",
-            page: 1,
+            page: "1",
           }}
           className="btn btn-primary btn-sm"
         >

@@ -61,6 +61,14 @@ function getArgumentValue(args: SubscriptionArgs, names: string[]): string {
   throw new Error(`Missing argument: ${names.join(" or ")}`);
 }
 
+function tryGetArgumentValue(args: SubscriptionArgs, names: string[]): string | null {
+  for (const name of names) {
+    const value = args[name];
+    if (typeof value === "string" && value.length > 0) return value;
+  }
+  return null;
+}
+
 function readArgs(
   argumentNodes: readonly ArgumentNode[] | undefined,
   variables: Record<string, unknown>,
@@ -87,8 +95,15 @@ function channelForSubscription(
       return `user:${getArgumentValue(args, ["userId"])}`;
     case "leaderboardUpdated":
       return `leaderboard:${getArgumentValue(args, ["category"])}`;
-    case "orderStatusChanged":
-      return `order:${getArgumentValue(args, ["orderId"])}`;
+    case "orderStatusChanged": {
+      const oid = tryGetArgumentValue(args, ["orderId"]);
+      if (oid) return `order:${oid}`;
+      const tid = tryGetArgumentValue(args, ["tableId"]);
+      if (tid) return `order-table:${tid}`;
+      const sid = tryGetArgumentValue(args, ["storeId"]);
+      if (sid) return `order-store:${sid}`;
+      return "order:all";
+    }
     default:
       throw new Error(`Unsupported subscription field: ${field.name.value}`);
   }

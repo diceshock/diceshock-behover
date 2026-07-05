@@ -41,7 +41,7 @@ import {
   type SnapshotData,
 } from "@/shared/utils/pricing";
 
-const BATCH_SIZE = 200;
+const BATCH_SIZE = 100
 
 interface OrderItem {
   id: string;

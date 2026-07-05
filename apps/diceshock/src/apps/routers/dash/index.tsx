@@ -8,7 +8,6 @@ import {
   ImageSquareIcon,
   MegaphoneIcon,
   PackageIcon,
-  ScanIcon,
   ShieldCheckIcon,
   SwordIcon,
   TableIcon,
@@ -16,8 +15,6 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { DashNavMenuButton } from "@/client/components/diceshock/DashNavMenu";
-import DashQRScannerDialog from "@/client/components/diceshock/DashQRScannerDialog";
 import InventoryManagementCard from "@/client/components/diceshock/InventoryManagementCard";
 import {
   CaptchaSettingsDocument,
@@ -26,10 +23,8 @@ import {
   type OrdersQuery,
   SetCaptchaEnabledDocument,
 } from "@/client/graphql/__generated__";
-import { useStoreContext } from "@/client/hooks/useStoreContext";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import { formatMessage } from "@/shared/i18n";
-import { STORES, type StoreCode } from "@/shared/store-locale";
 import dayjs from "@/shared/utils/dayjs-config";
 
 export const Route = createFileRoute("/dash/")({
@@ -51,8 +46,6 @@ function formatTime(val: string | null | undefined): string {
 function RouteComponent() {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const { storeCode, setStore } = useStoreContext();
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [captchaEnabled, setCaptchaEnabled] = useState(true);
@@ -142,29 +135,6 @@ function RouteComponent() {
   return (
     <main className="size-full p-4 overflow-y-auto">
       <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center gap-2">
-          <DashNavMenuButton />
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm gap-1.5"
-            onClick={() => setIsScannerOpen(true)}
-          >
-            <ScanIcon className="size-5" />
-            <span className="hidden sm:inline">{t("dashIndex.scan")}</span>
-          </button>
-          <select
-            className="select select-sm select-bordered"
-            value={storeCode}
-            onChange={(e) => setStore(e.target.value as StoreCode)}
-          >
-            {Object.values(STORES).map((store) => (
-              <option key={store.code} value={store.code}>
-                {store.shortName}
-              </option>
-            ))}
-          </select>
-        </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="card bg-base-100 shadow-sm">
             <div className="card-body p-4">
@@ -536,11 +506,6 @@ function RouteComponent() {
           </div>
         </footer>
       </div>
-
-      <DashQRScannerDialog
-        isOpen={isScannerOpen}
-        onClose={() => setIsScannerOpen(false)}
-      />
     </main>
   );
 }

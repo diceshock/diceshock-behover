@@ -63,7 +63,7 @@ interface UserItem {
   }>;
 }
 
-const BATCH_SIZE = 200;
+const BATCH_SIZE = 100
 
 const PLAN_TYPE_BY_RAW: Record<string, MembershipPlan["plan_type"]> = {
   [MembershipPlanType.Monthly]: "monthly",

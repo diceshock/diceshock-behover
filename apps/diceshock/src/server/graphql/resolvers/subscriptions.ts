@@ -165,8 +165,9 @@ export const subscriptionResolvers: {
     orderStatusChanged: {
       subscribe(_source, args, ctx) {
         requireStaff(ctx);
-        const orderId = String(args.orderId ?? "");
-        return createPubSubIterator(pubsub(ctx), `order:${orderId}`);
+        const orderId = args.orderId ? String(args.orderId) : "";
+        const channel = orderId ? `order:${orderId}` : "order:all";
+        return createPubSubIterator(pubsub(ctx), channel);
       },
       resolve(event) {
         const e = event as PubSubEvent;

@@ -433,12 +433,15 @@ async function publishOrderEvent(
       PUBSUB?: DurableObjectNamespace;
     };
     if (!env.PUBSUB) return;
+    const body = JSON.stringify({ type, payload, timestamp: Date.now() });
+    // Publish to specific order channel
     const pubsubId = env.PUBSUB.idFromName(`order:${orderId}`);
     const stub = env.PUBSUB.get(pubsubId);
-    await stub.fetch("https://internal/publish", {
-      method: "POST",
-      body: JSON.stringify({ type, payload, timestamp: Date.now() }),
-    });
+    await stub.fetch("https://internal/publish", { method: "POST", body });
+    // Also publish to wildcard channel for admin list listeners
+    const allId = env.PUBSUB.idFromName("order:all");
+    const allStub = env.PUBSUB.get(allId);
+    await allStub.fetch("https://internal/publish", { method: "POST", body });
   } catch (e) { console.error("[orders] publishOrderEvent error", e); }
 }
 
