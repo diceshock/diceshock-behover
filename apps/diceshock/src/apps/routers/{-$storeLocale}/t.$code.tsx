@@ -147,7 +147,7 @@ function useSeatIdentity(): {
 
 function SeatTimerPage() {
   const client = useApolloClient();
-  const { code } = Route.useParams();
+  const { code, storeLocale } = Route.useParams();
   const { from } = Route.useSearch();
   const { t } = useTranslation();
   const { identity, ready: identityReady } = useSeatIdentity();
@@ -322,12 +322,12 @@ function SeatTimerPage() {
     if (!identityReady || !identity) return;
 
     if (hadOccupancyRef.current && wsHydrated) {
-      window.location.href = `/ready/${code}`;
+      window.location.href = `/${storeLocale}/ready/${code}`;
       return;
     }
 
     if (!loading && !hadOccupancyRef.current && (wsHydrated || tableData)) {
-      window.location.href = `/ready/${code}`;
+      window.location.href = `/${storeLocale}/ready/${code}`;
     }
   }, [
     myOccupancy,
@@ -337,6 +337,7 @@ function SeatTimerPage() {
     identity,
     identityReady,
     code,
+    storeLocale,
   ]);
 
   const isExpired =
