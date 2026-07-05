@@ -56,6 +56,34 @@ function buildMenuSummary(data: WechatMenuData | null): string {
   return `${count} 个按钮: ${names}`;
 }
 
+// ─── Default menu (mirrors original scripts/wechat-menu.ts) ───────────────
+
+const DEFAULT_MENU: WechatMenuData = {
+  buttons: [
+    { id: "default01", type: "click", name: "会员中心", key: "MEMBERSHIP_PLAN" },
+    {
+      id: "default02",
+      name: "快捷功能",
+      items: [
+        { id: "default03", type: "view", name: "桌游库存", link_target: "/inventory" },
+        { id: "default04", type: "view", name: "日麻战绩", link_target: "/riichi" },
+        { id: "default05", type: "view", name: "约局", link_target: "/actives" },
+      ],
+    },
+    {
+      id: "default06",
+      name: "使用帮助",
+      items: [
+        { id: "default07", type: "click", name: "如何对话", key: "HELP_GUIDE" },
+        { id: "default08", type: "view", name: "进入店铺", link_target: "/" },
+        { id: "default09", type: "view", name: "联系我们", link_target: "/contact-us" },
+        { id: "default10", type: "view", name: "个人信息", link_target: "/me" },
+      ],
+    },
+  ],
+};
+
+
 // ─── Available variables for notification templates ────────────────────────
 
 const MENU_VARIABLES = [
@@ -213,10 +241,10 @@ export const wechatMenuResolvers = {
 
       if (!latest) {
         return {
-          data: JSON.stringify({ buttons: [] }),
+          data: JSON.stringify(DEFAULT_MENU),
           snapshotId: null,
-          snapshotName: null,
-          status: null,
+          snapshotName: "默认菜单",
+          status: "PUBLISHED",
         };
       }
 
