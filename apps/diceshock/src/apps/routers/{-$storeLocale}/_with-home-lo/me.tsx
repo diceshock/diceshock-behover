@@ -52,6 +52,8 @@ import useSmsCode from "@/client/hooks/useSmsCode";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import { copyToClipboard } from "@/server/utils";
 import {
+  DEFAULT_LOCALE,
+  DEFAULT_STORE,
   LOCALES,
   type LocaleCode,
   STORES,
@@ -347,12 +349,14 @@ function RouteComponent() {
       | null
       | undefined;
     setPreferredLocale(
-      typeof prefs?.preferred_locale === "string" ? prefs.preferred_locale : "",
+      typeof prefs?.preferred_locale === "string"
+        ? prefs.preferred_locale
+        : DEFAULT_LOCALE,
     );
     setPreferredStore(
       typeof prefs?.preferred_store_id === "string"
         ? prefs.preferred_store_id
-        : "",
+        : DEFAULT_STORE,
     );
   }, [
     displayInfo?.preferred_locale,
@@ -545,6 +549,9 @@ function RouteComponent() {
             input: {
               preferredLocale: locale || null,
               preferredStoreId: preferredStore || null,
+              preferredTheme:
+                ((displayInfo as Record<string, unknown> | null)
+                  ?.preferred_theme as string) || null,
             },
           },
         });
@@ -554,7 +561,7 @@ function RouteComponent() {
         setIsSavingPrefs(false);
       }
     },
-    [preferredStore, messages, updateMyPreferences],
+    [preferredStore, displayInfo, messages, updateMyPreferences],
   );
 
   const handleSaveStore = useCallback(
@@ -568,6 +575,9 @@ function RouteComponent() {
             input: {
               preferredLocale: preferredLocale || null,
               preferredStoreId: store || null,
+              preferredTheme:
+                ((displayInfo as Record<string, unknown> | null)
+                  ?.preferred_theme as string) || null,
             },
           },
         });
@@ -577,7 +587,7 @@ function RouteComponent() {
         setIsSavingPrefs(false);
       }
     },
-    [preferredLocale, messages, updateMyPreferences],
+    [preferredLocale, displayInfo, messages, updateMyPreferences],
   );
 
   return (

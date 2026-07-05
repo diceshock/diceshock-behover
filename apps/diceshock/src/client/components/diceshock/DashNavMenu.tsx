@@ -33,6 +33,8 @@ import useAuth from "@/client/hooks/useAuth";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import type { TranslationKey } from "@/shared/i18n";
 import {
+  DEFAULT_LOCALE,
+  DEFAULT_STORE,
   LOCALES,
   type LocaleCode,
   STORES,
