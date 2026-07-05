@@ -3,16 +3,23 @@ import {
   QrCodeIcon,
   StorefrontIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import { Link, useMatches, useRouter } from "@tanstack/react-router";
+import { Link, useLocation, useMatches, useRouter } from "@tanstack/react-router";
 import clsx from "clsx";
-import { useAtom, useSetAtom } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useState } from "react";
 import { DashNavMenuButton } from "@/client/components/diceshock/DashNavMenu";
 import DashQRScannerDialog from "@/client/components/diceshock/DashQRScannerDialog";
 import StoreSelectorModal from "@/client/components/StoreSelectorModal";
 import { useAdminStoreFilter } from "@/client/hooks/useAdminStoreFilter";
 import { STORES } from "@/shared/store-locale";
-import { launcherOpenAtom, launcherToggleAtom } from "./launcher/atoms";
+import {
+  launcherCategoryAtom,
+  launcherFiltersAtom,
+  launcherOpenAtom,
+  launcherToggleAtom,
+} from "./launcher/atoms";
+import { getCategoryByRoute } from "./launcher/categories";
+import type { CategoryDef, FilterDef, FilterValue } from "./launcher/types";
 
 export function DashHeader() {
   const router = useRouter();
@@ -22,6 +29,13 @@ export function DashHeader() {
   const [qrOpen, setQrOpen] = useState(false);
   const [launcherOpen] = useAtom(launcherOpenAtom);
   const toggleLauncher = useSetAtom(launcherToggleAtom);
+  const filters = useAtomValue(launcherFiltersAtom);
+  const categoryId = useAtomValue(launcherCategoryAtom);
+  const location = useLocation();
+  const category = categoryId
+    ? getCategoryByRoute("/dash/" + categoryId)
+    : getCategoryByRoute(location.pathname);
+  const hasFilters = filters.length > 0 || !!category;
 
   // Breadcrumbs from route matches
   const crumbs = matches
@@ -89,20 +103,39 @@ export function DashHeader() {
         </div>
 
         {/* Center: launcher trigger */}
-        <div className="flex-1 flex justify-center">
+        <div className="flex-1 flex justify-center min-w-0">
           <button
             type="button"
             onClick={() => toggleLauncher()}
             className={clsx(
-              "flex items-center gap-2 h-7 px-3 rounded-lg",
+              "flex items-center gap-1.5 h-7 rounded-lg",
               "bg-base-200/60 border border-base-300/50",
               "text-xs text-base-content/50 hover:text-base-content/80",
               "transition-all hover:bg-base-200",
-              "max-w-48 w-full",
+              "max-w-64 w-full min-w-0",
+              hasFilters ? "px-1.5" : "px-3",
             )}
           >
-            <span className="truncate flex-1 text-left">搜索…</span>
-            <kbd className="kbd kbd-xs">/</kbd>
+            {hasFilters ? (
+              <div className="flex-1 min-w-0 flex items-center overflow-x-auto scrollbar-none gap-1">
+                {category && (
+                  <span className="shrink-0 inline-flex items-center h-4 px-1.5 rounded bg-base-content/8 text-[10px] font-medium text-base-content/70">
+                    {category.label}
+                  </span>
+                )}
+                {filters.map((f) => (
+                  <span
+                    key={f.key}
+                    className="shrink-0 inline-flex items-center h-4 px-1.5 rounded bg-primary/10 text-[10px] text-primary"
+                  >
+                    {chipLabel(f, category)}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <span className="truncate flex-1 text-left">搜索, 排序和筛选</span>
+            )}
+            <kbd className="kbd kbd-xs shrink-0">/</kbd>
           </button>
         </div>
 
@@ -135,4 +168,29 @@ export function DashHeader() {
       <DashQRScannerDialog isOpen={qrOpen} onClose={() => setQrOpen(false)} />
     </>
   );
+}
+
+function chipLabel(f: FilterValue, category?: CategoryDef): string {
+  const def = category?.filters.find((d) => d.key === f.key);
+  const label = def?.label ?? f.key;
+  switch (f.kind) {
+    case "kv":
+      return `${label}=${f.value}`;
+    case "option": {
+      const ol = def?.kind === "option"
+        ? def.options.find((o) => o.value === f.value)?.label ?? f.value
+        : f.value;
+      return `${label}:${ol}`;
+    }
+    case "boolean":
+      return label;
+    case "number":
+      return `${label}${f.operator}${f.value}`;
+    case "date":
+      return `${label}:${f.from}~${f.to}`;
+    case "sort":
+      return `排序:${f.value}`;
+    case "group":
+      return `分组:${f.value}`;
+  }
 }
