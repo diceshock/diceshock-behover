@@ -1,5 +1,6 @@
 import { getAuthUser } from "@hono/auth-js";
 import db from "@lib/db";
+import { buildStoreLocalePrefix, DEFAULT_LOCALE, DEFAULT_STORE, type LocaleCode, type StoreCode } from "@/shared/store-locale";
 import { FACTORY } from "../factory";
 
 const seatRedirect = FACTORY.createMiddleware(async (c, next) => {
@@ -30,7 +31,10 @@ const seatRedirect = FACTORY.createMiddleware(async (c, next) => {
     });
 
     if (occHere) return next();
-    return c.redirect(`/ready/${code}`);
+    const store = (c.get("StoreCode") ?? DEFAULT_STORE) as StoreCode;
+    const locale = (c.get("LocaleCode") ?? DEFAULT_LOCALE) as LocaleCode;
+    const prefix = buildStoreLocalePrefix(store, locale);
+    return c.redirect(`/${prefix}/ready/${code}`);
   } catch {
     return next();
   }
