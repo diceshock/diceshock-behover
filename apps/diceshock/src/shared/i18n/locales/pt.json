@@ -458,12 +458,12 @@
     "duration": "Duração"
   },
   "dashTables": {
-    "fixedTable": "Fixed Table",
-    "openTable": "Open Table",
+    "fixedTable": "Mesa fixa",
+    "openTable": "Mesa aberta",
     "trpg": "TRPG",
-    "boardGames": "Board Games",
+    "boardGames": "Jogos de tabuleiro",
     "console": "Console",
-    "riichiMahjong": "Riichi Mahjong",
+    "riichiMahjong": "Mahjong Riichi",
     "loadFailed": "Falha ao carregar mesas",
     "nameRequired": "Informe o nome da mesa",
     "created": "Mesa criada",

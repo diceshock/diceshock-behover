@@ -458,12 +458,12 @@
     "duration": "Длительность"
   },
   "dashTables": {
-    "fixedTable": "Fixed Table",
-    "openTable": "Open Table",
+    "fixedTable": "Закрытый стол",
+    "openTable": "Открытый стол",
     "trpg": "TRPG",
-    "boardGames": "Board Games",
-    "console": "Console",
-    "riichiMahjong": "Riichi Mahjong",
+    "boardGames": "Настольные игры",
+    "console": "Приставки",
+    "riichiMahjong": "Риичи-маджонг",
     "loadFailed": "Не удалось загрузить столы",
     "nameRequired": "Введите название стола",
     "created": "Стол создан",
