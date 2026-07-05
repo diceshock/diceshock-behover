@@ -464,13 +464,18 @@ export const authResolvers = {
       requireAuth(ctx);
       const input = zodToGraphQLError(updatePreferencesSchema, args.input);
       const tdb = dbFactory(ctx.env.DB);
+
+      const setFields: Record<string, unknown> = {};
+      if ("preferredLocale" in input)
+        setFields.preferred_locale = input.preferredLocale ?? null;
+      if ("preferredStoreId" in input)
+        setFields.preferred_store_id = input.preferredStoreId ?? null;
+      if ("preferredTheme" in input)
+        setFields.preferred_theme = input.preferredTheme ?? null;
+
       const [updated] = await tdb
         .update(userInfoTable)
-        .set({
-          preferred_locale: input.preferredLocale ?? null,
-          preferred_store_id: input.preferredStoreId ?? null,
-          preferred_theme: input.preferredTheme ?? null,
-        })
+        .set(setFields)
         .where(drizzle.eq(userInfoTable.id, ctx.userId))
         .returning();
 

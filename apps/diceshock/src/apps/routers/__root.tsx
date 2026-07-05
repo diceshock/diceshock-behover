@@ -12,15 +12,20 @@ export const Route = createRootRoute({
   component: RootComponent,
 });
 
+function PreferenceInitializer() {
+  usePreferenceInit();
+  return null;
+}
+
 function RootComponent() {
   useI18nDataRegister();
   useCrossDataRegister();
   useAuthRegister();
-  usePreferenceInit();
   return (
     <GraphQLProvider>
       <StoreProvider>
         <I18nProvider>
+          <PreferenceInitializer />
           <Outlet />
           <Scripts />
           <MessagesContainer />

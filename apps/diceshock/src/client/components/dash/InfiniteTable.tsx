@@ -215,7 +215,7 @@ export function InfiniteTable<TData>({
                   key={cell.id}
                   className={clsx(
                     "text-sm",
-                    cell.column.id === "__actions" && "sticky right-0 bg-base-100/95 backdrop-blur-sm z-10 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.06)]",
+                    cell.column.id === "__actions" && "sticky right-0 bg-base-100 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.06)] has-[:focus]:z-50",
                   )}
                 >
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
