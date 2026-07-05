@@ -14,8 +14,6 @@ import {
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useAtom } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
-import AdminStoreFilter from "@/client/components/AdminStoreFilter";
-import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import {
   type PricingSnapshotsQuery,
@@ -519,12 +517,11 @@ function PricingPage() {
 
   return (
     <main className="size-full overflow-y-auto">
-      <div className="px-4 pt-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <DashBackButton />
-          <AdminStoreFilter />
-        </div>
-        <div className="flex items-center gap-2">
+      <div className="mx-auto w-full max-w-4xl px-4 pb-28 space-y-6 pt-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <EditableTitle value={snapshotName} onChange={setSnapshotName} />
+          </div>
           {hasChanges && (
             <span className="badge badge-warning badge-sm">
               {t("dashPricing.unsaved")}
@@ -545,10 +542,6 @@ function PricingPage() {
             {t("dashPricing.timeSettings")}
           </button>
         </div>
-      </div>
-
-      <div className="mx-auto w-full max-w-4xl px-4 pb-28 space-y-6">
-        <EditableTitle value={snapshotName} onChange={setSnapshotName} />
         <div className="text-sm text-base-content/60">
           {formatMessage(t("dashPricing.timeSummary"), {
             dayStart: effectiveData.config.daytime_start,

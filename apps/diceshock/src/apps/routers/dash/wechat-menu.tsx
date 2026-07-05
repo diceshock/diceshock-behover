@@ -16,7 +16,6 @@ import {
 import { createFileRoute } from "@tanstack/react-router";
 import { nanoid } from "nanoid";
 import { useCallback, useMemo, useRef, useState, useEffect } from "react";
-import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import {
   type WechatMenuSnapshotsQuery,
@@ -262,17 +261,6 @@ function WechatMenuPage() {
 
   return (
     <main className="size-full overflow-y-auto">
-      <div className="px-4 pt-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <DashBackButton />
-          <h1 className="text-lg font-bold">{t("dashWechatMenu.title")}</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          {hasChanges && (
-            <span className="badge badge-warning badge-sm">{t("dashWechatMenu.unsaved")}</span>
-          )}
-        </div>
-      </div>
 
       <div className="mx-auto w-full max-w-4xl px-4 pb-28 space-y-6 mt-4">
         {data.buttons.length === 0 ? (
