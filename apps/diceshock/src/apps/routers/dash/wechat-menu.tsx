@@ -1,6 +1,7 @@
 import {
   ArrowCounterClockwiseIcon,
   CaretDownIcon,
+  CaretUpIcon,
   CloudArrowUpIcon,
   CopyIcon,
   DotsSixVerticalIcon,
@@ -142,6 +143,16 @@ function WechatMenuPage() {
       ...prev,
       buttons: prev.buttons.filter((_, i) => i !== index),
     }));
+  }, []);
+
+  const moveButton = useCallback((index: number, direction: -1 | 1) => {
+    setData((prev) => {
+      const target = index + direction;
+      if (target < 0 || target >= prev.buttons.length) return prev;
+      const buttons = [...prev.buttons];
+      [buttons[index], buttons[target]] = [buttons[target]!, buttons[index]!];
+      return { ...prev, buttons };
+    });
   }, []);
 
   const addItem = () => {
@@ -305,13 +316,31 @@ function WechatMenuPage() {
                         />
                       )}
                     </div>
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-square btn-sm text-error mt-0.5"
-                      onClick={() => openDeleteDialog(idx)}
-                    >
-                      <TrashIcon className="size-4" />
-                    </button>
+                    <div className="flex flex-col gap-0.5 mt-0.5">
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-square btn-xs"
+                        disabled={idx === 0}
+                        onClick={() => moveButton(idx, -1)}
+                      >
+                        <CaretUpIcon className="size-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-square btn-xs"
+                        disabled={idx === data.buttons.length - 1}
+                        onClick={() => moveButton(idx, 1)}
+                      >
+                        <CaretDownIcon className="size-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-square btn-xs text-error"
+                        onClick={() => openDeleteDialog(idx)}
+                      >
+                        <TrashIcon className="size-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -666,6 +695,14 @@ function CategoryEditor({
     onChange({ ...category, items: category.items.filter((_, i) => i !== idx) });
   };
 
+  const moveSubItem = (idx: number, direction: -1 | 1) => {
+    const target = idx + direction;
+    if (target < 0 || target >= category.items.length) return;
+    const items = [...category.items];
+    [items[idx], items[target]] = [items[target]!, items[idx]!];
+    onChange({ ...category, items });
+  };
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
@@ -695,13 +732,31 @@ function CategoryEditor({
                   msg={msg}
                 />
               </div>
-              <button
-                type="button"
-                className="btn btn-ghost btn-square btn-xs text-error mt-1"
-                onClick={() => removeSubItem(idx)}
-              >
-                <TrashIcon className="size-3.5" />
-              </button>
+              <div className="flex flex-col gap-0.5 mt-0.5">
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-square btn-xs"
+                  disabled={idx === 0}
+                  onClick={() => moveSubItem(idx, -1)}
+                >
+                  <CaretUpIcon className="size-3" />
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-square btn-xs"
+                  disabled={idx === category.items.length - 1}
+                  onClick={() => moveSubItem(idx, 1)}
+                >
+                  <CaretDownIcon className="size-3" />
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-square btn-xs text-error"
+                  onClick={() => removeSubItem(idx)}
+                >
+                  <TrashIcon className="size-3" />
+                </button>
+              </div>
             </div>
           ))}
         </div>
