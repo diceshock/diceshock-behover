@@ -1034,6 +1034,20 @@
       "me": "个人中心",
       "contactUs": "联系我们",
       "agents": "会员计划"
+    },
+    "variableCategory": {
+      "user": "用户",
+      "store": "店铺",
+      "system": "系统",
+      "activity": "活动"
+    },
+    "variablePicker": {
+      "title": "插入变量",
+      "copy": "复制",
+      "insert": "插入",
+      "copied": "已复制到剪贴板",
+      "example": "示例",
+      "empty": "此分类下暂无变量"
     }
   }
 }

@@ -2,6 +2,7 @@ import {
   ArrowCounterClockwiseIcon,
   CaretDownIcon,
   CloudArrowUpIcon,
+  CopyIcon,
   DotsSixVerticalIcon,
   FloppyDiskIcon,
   GlobeIcon,
@@ -13,7 +14,7 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute } from "@tanstack/react-router";
 import { nanoid } from "nanoid";
-import { useCallback, useRef, useState, useEffect } from "react";
+import { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import {
@@ -279,7 +280,7 @@ function WechatMenuPage() {
                 style={{ opacity: dragOverIdx === idx ? 0.6 : 1 }}
               >
                 <div className="card-body p-4">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-start gap-3">
                     <div className="cursor-grab active:cursor-grabbing text-base-content/40 hover:text-base-content/70">
                       <DotsSixVerticalIcon className="size-5" />
                     </div>
@@ -306,7 +307,7 @@ function WechatMenuPage() {
                     </div>
                     <button
                       type="button"
-                      className="btn btn-ghost btn-square btn-sm text-error"
+                      className="btn btn-ghost btn-square btn-sm text-error mt-0.5"
                       onClick={() => openDeleteDialog(idx)}
                     >
                       <TrashIcon className="size-4" />
@@ -455,6 +456,7 @@ function ItemEditor({
 }) {
   const [translating, setTranslating] = useState(false);
   const [showTranslations, setShowTranslations] = useState(false);
+  const [variablePickerOpen, setVariablePickerOpen] = useState(false);
   const messageRef = useRef<HTMLTextAreaElement>(null);
 
   const handleTranslate = async () => {
@@ -563,22 +565,23 @@ function ItemEditor({
               {t("dashWechatMenu.notification.message")}
             </span>
             {variables.length > 0 && (
-              <div className="dropdown dropdown-end">
-                <label tabIndex={0} className="btn btn-xs btn-ghost gap-1">
-                  <GlobeIcon className="size-3" />
-                  {t("dashWechatMenu.notification.insertVariable")}
-                </label>
-                <ul tabIndex={0} className="dropdown-content z-50 menu p-2 shadow bg-base-200 rounded-box w-56 max-h-48 overflow-y-auto">
-                  {variables.map((v) => (
-                    <li key={v.id}>
-                      <button type="button" onClick={() => insertVariable(v.id)}>
-                        <span className="font-mono text-xs">{v.id}</span>
-                        <span className="text-xs text-base-content/60">{v.label}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <button
+                type="button"
+                className="btn btn-xs btn-ghost gap-1"
+                onClick={() => setVariablePickerOpen(true)}
+              >
+                <GlobeIcon className="size-3" />
+                {t("dashWechatMenu.notification.insertVariable")}
+              </button>
+            )}
+            {variablePickerOpen && (
+              <VariablePickerDialog
+                variables={variables}
+                onInsert={(varId) => { insertVariable(varId); setVariablePickerOpen(false); }}
+                onClose={() => setVariablePickerOpen(false)}
+                t={t}
+                msg={msg}
+              />
             )}
           </div>
           <textarea
@@ -709,5 +712,132 @@ function CategoryEditor({
         {t("dashWechatMenu.category.addItem")}
       </button>
     </div>
+  );
+}
+
+// ─── Variable categories for the split-panel picker ─────────────────────────
+
+const VARIABLE_CATEGORIES: Array<{ key: string; labelKey: string; prefixes: string[] }> = [
+  { key: "user", labelKey: "dashWechatMenu.variableCategory.user", prefixes: ["user_"] },
+  { key: "store", labelKey: "dashWechatMenu.variableCategory.store", prefixes: ["store_"] },
+  { key: "system", labelKey: "dashWechatMenu.variableCategory.system", prefixes: ["system_"] },
+  { key: "activity", labelKey: "dashWechatMenu.variableCategory.activity", prefixes: ["active_", "next_"] },
+];
+
+function VariablePickerDialog({
+  variables,
+  onInsert,
+  onClose,
+  t,
+  msg,
+}: {
+  variables: Array<{ id: string; label: string; description?: string | null; example?: string | null }>;
+  onInsert: (varId: string) => void;
+  onClose: () => void;
+  t: ReturnType<typeof useTranslation>["t"];
+  msg: ReturnType<typeof useMsg>;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [activeCategory, setActiveCategory] = useState(VARIABLE_CATEGORIES[0]!.key);
+
+  useEffect(() => {
+    dialogRef.current?.showModal();
+  }, []);
+
+  const grouped = useMemo(() => {
+    const map: Record<string, typeof variables> = {};
+    for (const cat of VARIABLE_CATEGORIES) {
+      map[cat.key] = variables.filter((v) => cat.prefixes.some((p) => v.id.startsWith(p)));
+    }
+    return map;
+  }, [variables]);
+
+  const handleCopy = (varId: string) => {
+    navigator.clipboard.writeText(`{{${varId}}}`);
+    msg.success(t("dashWechatMenu.variablePicker.copied"));
+  };
+
+  const handleClose = () => {
+    dialogRef.current?.close();
+    onClose();
+  };
+
+  return (
+    <dialog
+      ref={dialogRef}
+      className="modal"
+      onClose={handleClose}
+      onClick={(e) => { if (e.target === dialogRef.current) handleClose(); }}
+    >
+      <div className="modal-box max-w-2xl p-0 flex flex-col h-[28rem]">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-base-200">
+          <h3 className="font-bold text-base">{t("dashWechatMenu.variablePicker.title")}</h3>
+          <button type="button" className="btn btn-ghost btn-sm btn-square" onClick={handleClose}>✕</button>
+        </div>
+        <div className="flex flex-1 min-h-0">
+          {/* Left: category nav */}
+          <nav className="w-36 shrink-0 border-r border-base-200 overflow-y-auto bg-base-200/50 py-2">
+            {VARIABLE_CATEGORIES.map((cat) => (
+              <button
+                key={cat.key}
+                type="button"
+                className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                  activeCategory === cat.key
+                    ? "bg-primary/10 text-primary font-semibold border-r-2 border-primary"
+                    : "hover:bg-base-200"
+                }`}
+                onClick={() => setActiveCategory(cat.key)}
+              >
+                {t(cat.labelKey)}
+              </button>
+            ))}
+          </nav>
+          {/* Right: variable list */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            {(grouped[activeCategory] ?? []).map((v) => (
+              <div key={v.id} className="rounded-lg border border-base-200 p-3 flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <code className="text-xs font-mono bg-base-200 px-1.5 py-0.5 rounded">{`{{${v.id}}}`}</code>
+                    <span className="text-sm font-medium">{v.label}</span>
+                  </div>
+                  {v.description && (
+                    <p className="text-xs text-base-content/60 mt-1">{v.description}</p>
+                  )}
+                  {v.example && (
+                    <p className="text-xs text-base-content/40 mt-0.5">
+                      {t("dashWechatMenu.variablePicker.example")}: {v.example}
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  <button
+                    type="button"
+                    className="btn btn-xs btn-ghost gap-1"
+                    onClick={() => handleCopy(v.id)}
+                  >
+                    <CopyIcon className="size-3.5" />
+                    {t("dashWechatMenu.variablePicker.copy")}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-xs btn-primary gap-1"
+                    onClick={() => onInsert(v.id)}
+                  >
+                    <PlusIcon className="size-3.5" />
+                    {t("dashWechatMenu.variablePicker.insert")}
+                  </button>
+                </div>
+              </div>
+            ))}
+            {(grouped[activeCategory] ?? []).length === 0 && (
+              <div className="py-8 text-center text-base-content/50 text-sm">
+                {t("dashWechatMenu.variablePicker.empty")}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </dialog>
   );
 }
