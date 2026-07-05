@@ -364,7 +364,7 @@ export function Launcher() {
       }}
     >
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px]" />
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px]" onMouseDown={reset} />
 
       {/* Dialog */}
       <div
@@ -454,14 +454,6 @@ export function Launcher() {
             }}
             onKeyDown={handleKeyDown}
             readOnly={mode.type === "option-select"}
-            onBlur={() => {
-              // Delay to allow click on items
-              setTimeout(() => {
-                if (!inputRef.current?.matches(":focus-within")) {
-                  reset();
-                }
-              }, 150);
-            }}
           />
           {/* Filter icon / X button */}
           {!isSubMode && (

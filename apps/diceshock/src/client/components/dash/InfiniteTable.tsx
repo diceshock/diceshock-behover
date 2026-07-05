@@ -172,6 +172,7 @@ export function InfiniteTable<TData>({
                     className={clsx(
                       "text-xs font-medium text-base-content/70",
                       canSort && "cursor-pointer select-none hover:bg-base-300/40",
+                      header.id === "__actions" && "sticky right-0 bg-base-200/95 backdrop-blur-sm z-10 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.06)]",
                     )}
                     style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
                     onClick={() => handleSort(header.id)}
@@ -210,7 +211,13 @@ export function InfiniteTable<TData>({
               )}
             >
               {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} className="text-sm">
+                <td
+                  key={cell.id}
+                  className={clsx(
+                    "text-sm",
+                    cell.column.id === "__actions" && "sticky right-0 bg-base-100/95 backdrop-blur-sm z-10 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.06)]",
+                  )}
+                >
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>
               ))}
