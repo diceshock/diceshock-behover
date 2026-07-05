@@ -4,6 +4,8 @@ import {
   Link,
   Outlet,
 } from "@tanstack/react-router";
+import { DashHeader } from "@/client/components/dash/DashHeader";
+import { Launcher } from "@/client/components/dash/launcher";
 import ChatPanel from "@/client/components/dash/ChatPanel";
 import MobileChatSheet from "@/client/components/dash/MobileChatSheet";
 import DashNavDrawer from "@/client/components/diceshock/DashNavMenu";
@@ -35,8 +37,12 @@ function RouteComponent() {
   return (
     <ClientOnly>
       <DashNavDrawer>
-        <Outlet />
+        <DashHeader />
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <Outlet />
+        </main>
       </DashNavDrawer>
+      <Launcher />
       <ChatPanel />
       <MobileChatSheet />
     </ClientOnly>

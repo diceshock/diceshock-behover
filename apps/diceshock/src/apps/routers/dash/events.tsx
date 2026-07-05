@@ -1,25 +1,22 @@
+import { NetworkStatus } from "@apollo/client";
 import {
   CopyIcon,
   DotsThreeVerticalIcon,
   EyeIcon,
   PaperPlaneTiltIcon,
-  PlusIcon,
   TrashIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { DashTable } from "@/client/components/dash/DashTable";
-import { DateRangeFilter } from "@/client/components/dash/DateRangeFilter";
-import { usePendingSearch } from "@/client/components/dash/SearchBridge";
-import { TableToolbar } from "@/client/components/dash/TableToolbar";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { InfiniteTable } from "@/client/components/dash/InfiniteTable";
 import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
-import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import {
   ArticleType,
+  type EventFilterInput,
   SortOrder,
   useCreateEventMutation,
   useManagedEventsQuery,
@@ -27,126 +24,106 @@ import {
   useRemoveEventMutation,
   useToggleEventPublishMutation,
 } from "@/client/graphql/__generated__";
-import { useAdminStoreFilter } from "@/client/hooks/useAdminStoreFilter";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
-import { useTranslation } from "@/client/hooks/useTranslation";
 import {
-  EVENT_SEARCH_GRAMMAR,
-  type ParsedSearch,
-  parseSearch,
-  serialize,
-} from "@/client/lib/searchParser";
+  filtersToGqlVariables,
+  useRouteFilters,
+} from "@/client/hooks/useRouteFilters";
+import { useTranslation } from "@/client/hooks/useTranslation";
 import dayjs from "@/shared/utils/dayjs-config";
 
-const PAGE_SIZE = 20;
+const BATCH_SIZE = 200;
 
-function formatCreateAt(val: unknown): string {
-  if (!val) return "—";
-  try {
-    const d = dayjs.tz(val as string | number | Date, "Asia/Shanghai");
-    return d.isValid() ? d.format("YYYY/MM/DD HH:mm") : "—";
-  } catch {
-    return "—";
-  }
-}
-
+/** Extracted from generated query (codegen owns the shape). */
 type EventsList = NonNullable<
   ReturnType<typeof useManagedEventsQuery>["data"]
 >["managedEvents"];
 type EventItem = NonNullable<EventsList>[number];
 
 export const Route = createFileRoute("/dash/events")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    q: (search.q as string) ?? "",
-    page: Number(search.page) > 0 ? Number(search.page) : 1,
-  }),
+  validateSearch: (search) => search as Record<string, string>,
   component: RouteComponent,
 });
-
-export function buildFilter(
-  parsed: ParsedSearch,
-  page: number,
-  sorting: SortingState,
-) {
-  const typeFilter = parsed.filters.type?.value;
-  const statusFilter = parsed.filters.status?.value;
-  const storeFilter = parsed.filters.store?.value;
-  const dateFilter = parsed.filters.date?.value;
-
-  let dateFrom: string | undefined;
-  let dateTo: string | undefined;
-
-  if (dateFilter) {
-    if (typeof dateFilter === "string") {
-      dateFrom = dateTo = dateFilter;
-    } else if (Array.isArray(dateFilter) && dateFilter.length === 2) {
-      dateFrom = dateFilter[0];
-      dateTo = dateFilter[1];
-    }
-  }
-
-  const searchParts = [parsed.freeText];
-  if (typeof typeFilter === "string") searchParts.push(typeFilter);
-  const search = searchParts.filter(Boolean).join(" ") || undefined;
-
-  return {
-    search,
-    status:
-      typeof statusFilter === "string"
-        ? [statusFilter.toUpperCase()]
-        : Array.isArray(statusFilter)
-          ? statusFilter.map((s) => s.toUpperCase())
-          : undefined,
-    dateFrom,
-    dateTo,
-    store: typeof storeFilter === "string" ? storeFilter : undefined,
-    sortBy: sorting.length > 0 ? sorting[0].id : undefined,
-    sortOrder: sorting[0]?.desc ? SortOrder.Desc : SortOrder.Asc,
-    pagination: { offset: (page - 1) * PAGE_SIZE, limit: PAGE_SIZE },
-  };
-}
 
 function RouteComponent() {
   const msg = useMsg();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
-  const { storeFilter } = useAdminStoreFilter();
-  const { q, page } = Route.useSearch();
-  const navigate = useNavigate({ from: Route.fullPath });
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [searchInput, setSearchInput] = useState(q);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const { pendingSearch, clearPendingSearch } = usePendingSearch();
+  const { filters, query } = useRouteFilters();
 
-  const setSearchParam = useCallback(
-    (updates: Partial<{ q: string; page: number }>) =>
-      navigate({ search: (prev) => ({ ...prev, ...updates }), replace: true }),
-    [navigate],
+  const gqlVars = useMemo(
+    () => filtersToGqlVariables(filters, query),
+    [filters, query],
   );
 
-  useEffect(() => {
-    if (pendingSearch !== null) {
-      setSearchInput(pendingSearch);
-      setSearchParam({ q: pendingSearch, page: 1 });
-      clearPendingSearch();
+  const filter = useMemo<EventFilterInput>(() => {
+    const input: EventFilterInput = {};
+    if (gqlVars.search) input.search = gqlVars.search as string;
+    if (gqlVars.status)
+      input.status = Array.isArray(gqlVars.status)
+        ? gqlVars.status
+        : [gqlVars.status as string];
+    if (gqlVars.type) input.type = gqlVars.type as string;
+    if (gqlVars.store) input.store = gqlVars.store as string;
+    if (gqlVars.dateFrom) input.dateFrom = gqlVars.dateFrom as string;
+    if (gqlVars.dateTo) input.dateTo = gqlVars.dateTo as string;
+
+    if (gqlVars.sortBy) {
+      input.sortBy = gqlVars.sortBy as string;
+      input.sortOrder =
+        gqlVars.sortOrder === "asc" ? SortOrder.Asc : SortOrder.Desc;
+    } else if (sorting.length > 0) {
+      input.sortBy = sorting[0].id;
+      input.sortOrder = sorting[0].desc ? SortOrder.Desc : SortOrder.Asc;
     }
-  }, [pendingSearch, clearPendingSearch, setSearchParam]);
 
-  const parsed = useMemo(() => parseSearch(q, EVENT_SEARCH_GRAMMAR), [q]);
-  const filter = useMemo(
-    () => buildFilter(parsed, page, sorting),
-    [parsed, page, sorting],
-  );
+    input.pagination = { offset: 0, limit: BATCH_SIZE };
+    return input;
+  }, [gqlVars, sorting]);
 
-  const { data, loading } = useManagedEventsQuery({
+  const { data, loading, fetchMore, networkStatus } = useManagedEventsQuery({
     variables: { filter },
+    notifyOnNetworkStatusChange: true,
     onError: (err) => {
       msg.error(err.message || t("dashEvents.fetchFailed"));
     },
   });
 
   const events = (data?.managedEvents ?? []) as EventItem[];
+  const hasMore = events.length > 0 && events.length % BATCH_SIZE === 0;
+  const isLoadingMore = networkStatus === NetworkStatus.fetchMore;
+
+  const loadMore = useCallback(async () => {
+    if (isLoadingMore || !hasMore) return;
+    const nextFilter: EventFilterInput = {
+      ...filter,
+      pagination: { offset: events.length, limit: BATCH_SIZE },
+    };
+    await fetchMore({
+      variables: { filter: nextFilter },
+      updateQuery: (prev, { fetchMoreResult }) => {
+        if (!fetchMoreResult) return prev;
+        return {
+          managedEvents: [
+            ...(prev.managedEvents ?? []),
+            ...(fetchMoreResult.managedEvents ?? []),
+          ],
+        };
+      },
+    });
+  }, [fetchMore, filter, events.length, isLoadingMore, hasMore]);
+
+  const clearSelectedIds = useCallback(() => setSelectedIds(new Set()), []);
+  useSelectedTableData({
+    entityType: "活动",
+    rows: events,
+    selectedIds,
+    getRowId: (event) => event.id,
+    onClear: clearSelectedIds,
+  });
 
   const [createEventMutation] = useCreateEventMutation({
     refetchQueries: ["ManagedEvents"],
@@ -300,15 +277,6 @@ function RouteComponent() {
     }
   };
 
-  const clearSelectedIds = useCallback(() => setSelectedIds(new Set()), []);
-  useSelectedTableData({
-    entityType: "活动",
-    rows: events,
-    selectedIds,
-    getRowId: (event) => event.id,
-    onClear: clearSelectedIds,
-  });
-
   const handleBatchDelete = async () => {
     if (selectedIds.size === 0) return;
     setBatchDeletePending(true);
@@ -421,195 +389,127 @@ function RouteComponent() {
       {
         accessorKey: "createdAt",
         header: t("dashEvents.createdAt"),
-        cell: ({ row }) => formatCreateAt(row.original.createdAt),
+        cell: ({ row }) => {
+          const val = row.original.createdAt;
+          if (!val) return "—";
+          try {
+            const d = dayjs.tz(val as string | number | Date, "Asia/Shanghai");
+            return d.isValid() ? d.format("YYYY/MM/DD HH:mm") : "—";
+          } catch {
+            return "—";
+          }
+        },
       },
     ],
     [t, handleCopy],
   );
 
-  const total = events.length;
-  const hasMore = events.length === PAGE_SIZE;
-
   return (
     <main className="size-full flex flex-col">
-      <div className="px-4 pt-4 flex items-center gap-3">
-        <DashBackButton />
-        <TableToolbar
-          searchBar={{
-            grammar: EVENT_SEARCH_GRAMMAR,
-            value: searchInput,
-            onChange: setSearchInput,
-            onSubmit: (parsedResult) => {
-              const serialized = serialize(parsedResult, EVENT_SEARCH_GRAMMAR);
-              setSearchParam({ q: serialized, page: 1 });
-            },
-            placeholder: t("dashEvents.searchPlaceholder") ?? "Search events…",
-          }}
-          storeFilter
-          extra={
-            <div className="flex items-center gap-2">
-              <DateRangeFilter
-                value={
-                  parsed.filters.date
-                    ? {
-                        from: Array.isArray(parsed.filters.date.value)
-                          ? parsed.filters.date.value[0]
-                          : typeof parsed.filters.date.value === "string"
-                            ? parsed.filters.date.value
-                            : undefined,
-                        to: Array.isArray(parsed.filters.date.value)
-                          ? parsed.filters.date.value[1]
-                          : typeof parsed.filters.date.value === "string"
-                            ? parsed.filters.date.value
-                            : undefined,
-                      }
-                    : undefined
-                }
-                onChange={(range) => {
-                  const nextFilters = { ...parsed.filters };
-                  if (!range) {
-                    delete nextFilters.date;
-                  } else if (range.from && range.to) {
-                    nextFilters.date = { operator: "range", value: [range.from, range.to] };
-                  } else if (range.from) {
-                    nextFilters.date = { operator: "gt", value: range.from };
-                  } else if (range.to) {
-                    nextFilters.date = { operator: "lt", value: range.to };
-                  }
-                  const serialized = serialize(
-                    { ...parsed, filters: nextFilters, errors: [] },
-                    EVENT_SEARCH_GRAMMAR,
-                  );
-                  setSearchInput(serialized);
-                  setSearchParam({ q: serialized, page: 1 });
-                }}
-              />
+      <InfiniteTable
+        columns={columns}
+        data={events}
+        loading={loading}
+        emptyMessage={t("dashEvents.noData")}
+        hasMore={hasMore}
+        onLoadMore={loadMore}
+        sorting={sorting}
+        onSortingChange={setSorting}
+        sortableColumns={["title", "isPublished", "createdAt"]}
+        enableRowSelection
+        selectedRows={selectedIds}
+        onSelectedRowsChange={setSelectedIds}
+        getRowId={(row) => row.id}
+        renderActions={(row) =>
+          isMobile ? (
+            <div className="dropdown dropdown-end">
+              <div
+                tabIndex={0}
+                role="button"
+                className="btn btn-xs btn-ghost btn-square"
+              >
+                <DotsThreeVerticalIcon className="size-4" weight="bold" />
+              </div>
+              <ul
+                tabIndex={0}
+                className="dropdown-content menu bg-base-200 rounded-box z-50 w-36 p-2 shadow-lg"
+              >
+                <li>
+                  <Link to="/dash/events/$id" params={{ id: row.id }}>
+                    <EyeIcon className="size-4" />
+                    {t("dashEvents.details")}
+                  </Link>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => handleTogglePublish(row)}
+                  >
+                    {row.isPublished
+                      ? t("dashEvents.unpublish")
+                      : t("dashEvents.publish")}
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => openPublishDialog(row)}
+                  >
+                    <PaperPlaneTiltIcon className="size-4" />
+                    发布微信
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    className="text-error"
+                    onClick={() => openDeleteDialog(row)}
+                  >
+                    <TrashIcon className="size-4" />
+                    {t("dashEvents.delete")}
+                  </button>
+                </li>
+              </ul>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1">
+              <Link
+                to="/dash/events/$id"
+                params={{ id: row.id }}
+                className="btn btn-xs btn-ghost"
+              >
+                <EyeIcon className="size-4" />
+                {t("dashEvents.details")}
+              </Link>
               <button
                 type="button"
-                className="btn btn-primary btn-sm gap-1"
-                onClick={handleCreate}
+                className="btn btn-xs btn-ghost"
+                onClick={() => handleTogglePublish(row)}
               >
-                <PlusIcon className="size-4" weight="bold" />
-                {t("dashEvents.createEvent")}
+                {row.isPublished
+                  ? t("dashEvents.unpublish")
+                  : t("dashEvents.publish")}
+              </button>
+              <button
+                type="button"
+                className="btn btn-xs btn-ghost"
+                onClick={() => openPublishDialog(row)}
+                title="发布到微信"
+              >
+                <PaperPlaneTiltIcon className="size-4" />
+              </button>
+              <button
+                type="button"
+                className="btn btn-xs btn-ghost btn-error"
+                onClick={() => openDeleteDialog(row)}
+              >
+                {t("dashEvents.delete")}
+                <TrashIcon />
               </button>
             </div>
-          }
-        />
-      </div>
-
-      <div className="flex-1 min-h-0">
-        <DashTable
-          columns={columns}
-          data={events}
-          loading={loading}
-          emptyMessage={t("dashEvents.noData")}
-          pagination={{
-            offset: (page - 1) * PAGE_SIZE,
-            limit: PAGE_SIZE,
-            total: total,
-            hasMore,
-          }}
-          onPaginationChange={(p) =>
-            setSearchParam({ page: Math.floor(p.offset / PAGE_SIZE) + 1 })
-          }
-          sorting={sorting}
-          onSortingChange={setSorting}
-          sortableColumns={["title", "isPublished", "createdAt"]}
-          enableRowSelection
-          selectedRows={selectedIds}
-          onSelectedRowsChange={setSelectedIds}
-          getRowId={(row) => row.id}
-          renderActions={(row) =>
-            isMobile ? (
-              <div className="dropdown dropdown-end">
-                <div
-                  tabIndex={0}
-                  role="button"
-                  className="btn btn-xs btn-ghost btn-square"
-                >
-                  <DotsThreeVerticalIcon className="size-4" weight="bold" />
-                </div>
-                <ul
-                  tabIndex={0}
-                  className="dropdown-content menu bg-base-200 rounded-box z-50 w-36 p-2 shadow-lg"
-                >
-                  <li>
-                    <Link to="/dash/events/$id" params={{ id: row.id }}>
-                      <EyeIcon className="size-4" />
-                      {t("dashEvents.details")}
-                    </Link>
-                  </li>
-                  <li>
-                    <button
-                      type="button"
-                      onClick={() => handleTogglePublish(row)}
-                    >
-                      {row.isPublished
-                        ? t("dashEvents.unpublish")
-                        : t("dashEvents.publish")}
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      type="button"
-                      onClick={() => openPublishDialog(row)}
-                    >
-                      <PaperPlaneTiltIcon className="size-4" />
-                      发布微信
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      type="button"
-                      className="text-error"
-                      onClick={() => openDeleteDialog(row)}
-                    >
-                      <TrashIcon className="size-4" />
-                      {t("dashEvents.delete")}
-                    </button>
-                  </li>
-                </ul>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1">
-                <Link
-                  to="/dash/events/$id"
-                  params={{ id: row.id }}
-                  className="btn btn-xs btn-ghost"
-                >
-                  <EyeIcon className="size-4" />
-                  {t("dashEvents.details")}
-                </Link>
-                <button
-                  type="button"
-                  className="btn btn-xs btn-ghost"
-                  onClick={() => handleTogglePublish(row)}
-                >
-                  {row.isPublished
-                    ? t("dashEvents.unpublish")
-                    : t("dashEvents.publish")}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-xs btn-ghost"
-                  onClick={() => openPublishDialog(row)}
-                  title="发布到微信"
-                >
-                  <PaperPlaneTiltIcon className="size-4" />
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-xs btn-ghost btn-error"
-                  onClick={() => openDeleteDialog(row)}
-                >
-                  {t("dashEvents.delete")}
-                  <TrashIcon />
-                </button>
-              </div>
-            )
-          }
-        />
-      </div>
+          )
+        }
+      />
 
       <BatchActionBar
         count={selectedIds.size}

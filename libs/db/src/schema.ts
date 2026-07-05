@@ -326,6 +326,7 @@ export const userMembershipPlansTable = sqlite.sqliteTable(
       .notNull(),
     amount: sqlite.int("amount"),
     note: sqlite.text("note"),
+    order_id: sqlite.text("order_id"),
     start_date: sqlite
       .integer("start_date", { mode: "timestamp_ms" })
       .notNull(),
@@ -421,7 +422,7 @@ export const tableOccupancyTable = sqlite.sqliteTable("table_occupancy", {
     .notNull()
     .$default(() => 1),
   status: sqlite
-    .text("status", { enum: ["active", "paused", "ended"] })
+    .text("status", { enum: ["active", "paused", "ended", "settled"] })
     .notNull()
     .$default(() => "active"),
   start_at: sqlite
@@ -429,92 +430,9 @@ export const tableOccupancyTable = sqlite.sqliteTable("table_occupancy", {
     .notNull()
     .$defaultFn(() => new Date(Date.now())),
   end_at: sqlite.integer("end_at", { mode: "timestamp_ms" }),
-  final_price: sqlite.int("final_price"),
+  settled_at: sqlite.integer("settled_at", { mode: "timestamp_ms" }),
   pricing_snapshot_id: sqlite.text("pricing_snapshot_id"),
-  price_breakdown: sqlite.text("price_breakdown", { mode: "json" }).$type<{
-    planName: string;
-    planType: "fallback" | "conditional";
-    billingType: "hourly" | "fixed";
-    unitPrice: number;
-    totalMinutes: number;
-    billableHalfHours: number;
-    rawPrice: number;
-    capApplied: boolean;
-    capType: string | null;
-    finalPrice: number;
-  }>(),
-  settlement_snapshot: sqlite
-    .text("settlement_snapshot", { mode: "json" })
-    .$type<{
-      /** 订单基础信息 */
-      orderId: string;
-      tableName: string;
-      tableType: string;
-      nickname: string;
-      uid: string | null;
-      seats: number;
-      startAt: number;
-      endAt: number;
-      /** 费用信息 */
-      totalMinutes: number;
-      pausedMinutes: number;
-      billableMinutes: number;
-      finalPrice: number;
-      priceBreakdown: {
-        planName: string;
-        planType: "fallback" | "conditional";
-        billingType: "hourly" | "fixed";
-        unitPrice: number;
-        totalMinutes: number;
-        billableHalfHours: number;
-        rawPrice: number;
-        capApplied: boolean;
-        capType: string | null;
-        finalPrice: number;
-      } | null;
-      /** 会员信息 */
-      membership: {
-        hasTimePlan: boolean;
-        timePlanActive: boolean;
-        timePlanType: string | null;
-        timePlanEndDate: number | null;
-        storedValueBalance: number;
-      };
-      /** 储值卡扣费信息 */
-      storedValueDeduction: {
-        deducted: boolean;
-        amount: number;
-        note: string;
-        balanceBefore: number;
-        balanceAfter: number;
-      } | null;
-      /** 暂停记录 */
-      pauseLogs: Array<{
-        pausedAt: number;
-        resumedAt: number | null;
-      }>;
-      /** 参与结算的计划快照 */
-      pricingPlans: Array<{
-        name: string;
-        planType: "fallback" | "conditional";
-        billingType: "hourly" | "fixed";
-        price: number;
-        matched: boolean;
-      }>;
-      /** 用户最近订单历史 */
-      recentOrders: Array<{
-        id: string;
-        tableName: string;
-        startAt: number;
-        endAt: number | null;
-        finalPrice: number | null;
-        status: string;
-      }>;
-      /** 快照生成时间 */
-      createdAt: number;
-      /** 结算备注 */
-      note?: string | null;
-    }>(),
+  note: sqlite.text("note"),
 });
 
 export const orderPauseLogsTable = sqlite.sqliteTable("order_pause_logs", {

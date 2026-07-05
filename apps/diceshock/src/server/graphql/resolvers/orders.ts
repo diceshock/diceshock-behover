@@ -16,8 +16,6 @@ import {
   eq,
   gte,
   inArray,
-  isNotNull,
-  isNull,
   like,
   lte,
   or,
@@ -41,9 +39,6 @@ type OccupancyRow = typeof tableOccupancyTable.$inferSelect & {
 };
 type PauseLogRow = typeof orderPauseLogsTable.$inferSelect;
 type MembershipPlanRow = typeof userMembershipPlansTable.$inferSelect;
-type SettlementSnapshot = NonNullable<
-  typeof tableOccupancyTable.$inferSelect.settlement_snapshot
->;
 
 type NormalizedStatus = "ACTIVE" | "PAUSED" | "ENDED" | "SETTLED";
 
@@ -87,7 +82,7 @@ const ordersSchema = z.object({
 type LegacyOrderInput = NonNullable<z.infer<typeof ordersSchema>["input"]>;
 type OrderFilter = z.infer<typeof orderFilterSchema>;
 
-type DbOrderStatus = "active" | "paused" | "ended";
+type DbOrderStatus = "active" | "paused" | "ended" | "settled";
 
 function normalizeFilterStatus(
   status: string,
@@ -126,21 +121,10 @@ function buildStatusCondition(
     conditions.push(inArray(tableOccupancyTable.status, rawStatuses));
   }
   if (normalized.includes("ENDED")) {
-    conditions.push(
-      and(
-        eq(tableOccupancyTable.status, "ended"),
-        isNull(tableOccupancyTable.final_price),
-        isNull(tableOccupancyTable.settlement_snapshot),
-      ) as SQL,
-    );
+    conditions.push(eq(tableOccupancyTable.status, "ended") as SQL);
   }
   if (normalized.includes("SETTLED")) {
-    conditions.push(
-      or(
-        isNotNull(tableOccupancyTable.final_price),
-        isNotNull(tableOccupancyTable.settlement_snapshot),
-      ) as SQL,
-    );
+    conditions.push(eq(tableOccupancyTable.status, "settled") as SQL);
   }
 
   if (conditions.length === 0) return eq(tableOccupancyTable.id, "__none__");
@@ -359,9 +343,10 @@ function toIso(
 function normalizeStatus(
   order: typeof tableOccupancyTable.$inferSelect,
 ): NormalizedStatus {
-  if (order.status === "active") return "ACTIVE";
-  if (order.status === "paused") return "PAUSED";
-  if (order.final_price != null || order.settlement_snapshot) return "SETTLED";
+  const s = order.status;
+  if (s === "active") return "ACTIVE";
+  if (s === "paused") return "PAUSED";
+  if (s === "settled") return "SETTLED";
   return "ENDED";
 }
 
@@ -383,12 +368,6 @@ function toGqlTable(table: TableRow | null | undefined) {
   };
 }
 
-function jsonString(value: unknown): string | null {
-  if (value == null) return null;
-  if (typeof value === "string") return value;
-  return JSON.stringify(value);
-}
-
 function toGqlOrder(order: OccupancyRow) {
   return {
     id: order.id,
@@ -402,14 +381,15 @@ function toGqlOrder(order: OccupancyRow) {
     status: normalizeStatus(order),
     startAt: toIso(order.start_at),
     endAt: toIso(order.end_at),
-    finalPrice: order.final_price ?? null,
+    finalPrice: null,
     pricingSnapshotId: order.pricing_snapshot_id ?? null,
-    priceBreakdown: jsonString(order.price_breakdown),
-    settlementSnapshot: jsonString(order.settlement_snapshot),
+    priceBreakdown: null,
+    settlementSnapshot: null,
     table: toGqlTable(order.table),
     user: null,
     duration: calculateActiveMinutes(order, order.pauseLogs ?? []),
-    amount: order.final_price ?? order.price_breakdown?.finalPrice ?? null,
+    amount: null,
+    deductedAmount: null,
   };
 }
 
@@ -529,7 +509,7 @@ async function buildSettlementData(
     price: number;
     matched: boolean;
   }>;
-  membership: SettlementSnapshot["membership"];
+  membership: Awaited<ReturnType<typeof buildMembershipInfo>>;
 }> {
   const order = await fetchOrderOrThrow(tdb, orderId);
   const endDate = options.endAt ?? order.end_at ?? new Date();
@@ -580,7 +560,13 @@ async function buildSettlementData(
 async function buildMembershipInfo(
   tdb: Database,
   userId: string | null,
-): Promise<SettlementSnapshot["membership"]> {
+): Promise<{
+  hasTimePlan: boolean;
+  timePlanActive: boolean;
+  timePlanType: string | null;
+  timePlanEndDate: number | null | undefined;
+  storedValueBalance: number;
+}> {
   if (!userId) {
     return {
       hasTimePlan: false,
@@ -622,8 +608,6 @@ function toGqlSettlementPreview(
   return {
     order: toGqlOrder({
       ...data.order,
-      price_breakdown: data.priceBreakdown,
-      final_price: data.finalPrice,
       pauseLogs: data.order.pauseLogs ?? [],
     }),
     totalMinutes: data.totalMinutes,
@@ -652,7 +636,14 @@ async function applyStoredValueDeduction(
   userId: string | null,
   amount: number,
   note: string,
-): Promise<SettlementSnapshot["storedValueDeduction"]> {
+  orderId: string,
+): Promise<{
+  deducted: boolean;
+  amount: number;
+  note: string;
+  balanceBefore: number;
+  balanceAfter: number;
+} | null> {
   if (!userId || amount <= 0) return null;
   const plans = await tdb.query.userMembershipPlansTable.findMany({
     where: (p, { eq }) => eq(p.user_id, userId),
@@ -686,6 +677,7 @@ async function applyStoredValueDeduction(
     plan_type: "stored_value",
     amount: -deductAmount,
     note,
+    order_id: orderId,
     start_date: new Date(),
   });
 
@@ -732,51 +724,18 @@ async function settleOrderById(
         existing.user_id,
         data.finalPrice,
         note,
+        input.id,
       )
     : null;
-  const settlementSnapshot: SettlementSnapshot = {
-    orderId: existing.id,
-    tableName: existing.table?.name ?? "未知",
-    tableType: existing.table?.scope ?? "boardgame",
-    nickname: "Anonymous",
-    uid: null,
-    seats: existing.seats,
-    startAt: asMs(existing.start_at) ?? Date.now(),
-    endAt: asMs(settlementEnd) ?? Date.now(),
-    totalMinutes: data.totalMinutes,
-    pausedMinutes: data.pausedMinutes,
-    billableMinutes: data.billableMinutes,
-    finalPrice: data.finalPrice,
-    priceBreakdown: data.priceBreakdown,
-    membership: {
-      ...data.membership,
-      storedValueBalance:
-        storedValueDeduction?.balanceAfter ??
-        data.membership.storedValueBalance,
-    },
-    storedValueDeduction,
-    pauseLogs: data.pauseLogs,
-    pricingPlans: data.pricingPlans.map((plan) => ({
-      name: plan.name,
-      planType: plan.planType as "fallback" | "conditional",
-      billingType: plan.billingType as "hourly" | "fixed",
-      price: plan.price,
-      matched: plan.matched,
-    })),
-    recentOrders: [],
-    createdAt: Date.now(),
-    note: input.note ?? null,
-  };
 
   await tdb
     .update(tableOccupancyTable)
     .set({
-      status: "ended",
+      status: "settled",
       end_at: settlementEnd,
-      final_price: data.finalPrice,
+      settled_at: now,
       pricing_snapshot_id: data.snapshotId,
-      price_breakdown: data.priceBreakdown,
-      settlement_snapshot: settlementSnapshot,
+      note: input.note ?? null,
     })
     .where(drizzle.eq(tableOccupancyTable.id, input.id));
 
@@ -791,7 +750,7 @@ async function settleOrderById(
   return {
     order: toGqlOrder(updated),
     price: data.finalPrice,
-    snapshot: JSON.stringify(settlementSnapshot),
+    snapshot: null,
     storedValueDeduction,
   };
 }
@@ -1054,10 +1013,6 @@ export const ordersResolvers = {
         .set({
           status: "ended",
           end_at: now,
-          final_price: null,
-          pricing_snapshot_id: null,
-          price_breakdown: null,
-          settlement_snapshot: null,
         })
         .where(drizzle.eq(tableOccupancyTable.id, input.id));
       const updated = await fetchOrderOrThrow(tdb, input.id);
@@ -1210,8 +1165,7 @@ export const ordersResolvers = {
       if (normalizeStatus(order) !== "SETTLED") {
         throw validationError("id", "Only settled orders can be cancelled");
       }
-      const snapshotTime =
-        order.settlement_snapshot?.createdAt ?? asMs(order.end_at) ?? 0;
+      const snapshotTime = asMs(order.settled_at) ?? asMs(order.end_at) ?? 0;
       if (Date.now() - snapshotTime > RECENT_SETTLEMENT_WINDOW_MS) {
         throw validationError("id", "Settlement is too old to cancel");
       }
@@ -1219,10 +1173,9 @@ export const ordersResolvers = {
         .update(tableOccupancyTable)
         .set({
           status: "ended",
-          final_price: null,
+          settled_at: null,
           pricing_snapshot_id: null,
-          price_breakdown: null,
-          settlement_snapshot: null,
+          note: null,
         })
         .where(drizzle.eq(tableOccupancyTable.id, input.id));
       const updated = await fetchOrderOrThrow(tdb, input.id);

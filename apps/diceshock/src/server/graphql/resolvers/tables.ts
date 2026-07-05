@@ -45,15 +45,11 @@ function toIso(
 
 function toGqlStatus(
   status: string,
-  occupancy?: typeof tableOccupancyTable.$inferSelect,
+  _occupancy?: typeof tableOccupancyTable.$inferSelect,
 ): string {
   if (status === "active") return "ACTIVE";
   if (status === "paused") return "PAUSED";
-  if (
-    occupancy &&
-    (occupancy.final_price != null || occupancy.settlement_snapshot)
-  )
-    return "SETTLED";
+  if (status === "settled") return "SETTLED";
   return "ENDED";
 }
 
@@ -126,14 +122,11 @@ function toGqlOccupancy(
     status: toGqlStatus(occ.status, occ),
     startAt: toIso(occ.start_at),
     endAt: toIso(occ.end_at),
-    finalPrice: occ.final_price ?? null,
+    finalPrice: null,
     pricingSnapshotId: occ.pricing_snapshot_id ?? null,
-    priceBreakdown: occ.price_breakdown
-      ? JSON.stringify(occ.price_breakdown)
-      : null,
-    settlementSnapshot: occ.settlement_snapshot
-      ? JSON.stringify(occ.settlement_snapshot)
-      : null,
+    priceBreakdown: null,
+    settlementSnapshot: null,
+    deductedAmount: null,
     table: null,
     user: null,
   };
@@ -652,10 +645,9 @@ export const tablesResolvers = {
                 seats: true,
                 table_id: true,
                 end_at: true,
-                final_price: true,
+                settled_at: true,
+                note: true,
                 pricing_snapshot_id: true,
-                price_breakdown: true,
-                settlement_snapshot: true,
               },
             },
           },
@@ -768,10 +760,9 @@ export const tablesResolvers = {
               seats: true,
               table_id: true,
               end_at: true,
-              final_price: true,
+              settled_at: true,
+              note: true,
               pricing_snapshot_id: true,
-              price_breakdown: true,
-              settlement_snapshot: true,
             },
           },
         },
@@ -818,10 +809,9 @@ export const tablesResolvers = {
               seats: true,
               table_id: true,
               end_at: true,
-              final_price: true,
+              settled_at: true,
+              note: true,
               pricing_snapshot_id: true,
-              price_breakdown: true,
-              settlement_snapshot: true,
             },
           },
         },
@@ -1552,10 +1542,8 @@ export const tablesResolvers = {
 
       return {
         order: await enrichOccupancyWithUserInfo(tdb, updated),
-        price: updated.final_price ?? 0,
-        snapshot: updated.settlement_snapshot
-          ? JSON.stringify(updated.settlement_snapshot)
-          : null,
+        price: 0,
+        snapshot: null,
         storedValueDeduction: null,
       };
     },

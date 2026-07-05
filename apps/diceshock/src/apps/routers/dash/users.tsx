@@ -4,17 +4,14 @@ import {
   EyeIcon,
   UserMinusIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { DashTable } from "@/client/components/dash/DashTable";
-import { DateRangeFilter } from "@/client/components/dash/DateRangeFilter";
-import { usePendingSearch } from "@/client/components/dash/SearchBridge";
-import { TableToolbar } from "@/client/components/dash/TableToolbar";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { InfiniteTable } from "@/client/components/dash/InfiniteTable";
+import type { FilterValue } from "@/client/components/dash/launcher/types";
 import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
-import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import {
   getPlanConfig,
   getStoredValueBalance,
@@ -30,21 +27,44 @@ import {
   useUsersQuery,
 } from "@/client/graphql/__generated__";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
-import { useTranslation } from "@/client/hooks/useTranslation";
 import {
-  type ParsedSearch,
-  parseSearch,
-  serialize,
-  USER_SEARCH_GRAMMAR,
-} from "@/client/lib/searchParser";
+  filtersToGqlVariables,
+  useRouteFilters,
+} from "@/client/hooks/useRouteFilters";
+import { useTranslation } from "@/client/hooks/useTranslation";
 import dayjs from "@/shared/utils/dayjs-config";
 
-type UserList = NonNullable<
-  ReturnType<typeof useUsersQuery>["data"]
->["managedUsers"];
-type UserItem = UserList["items"][number];
+/** Shape of a single user item from the UsersQuery response */
+interface UserItem {
+  id: string;
+  uid: string | null;
+  name: string | null;
+  email: string | null;
+  image: string | null;
+  role: string;
+  disabled: boolean | null;
+  nickname: string | null;
+  phone: string | null;
+  points: number | null;
+  preferredLocale: string | null;
+  preferredStoreId: string | null;
+  meta: string | null;
+  createdAt: string | null;
+  membershipPlans: Array<{
+    id: string;
+    userId: string;
+    planType: string;
+    amount: number | null;
+    note: string | null;
+    startDate: string;
+    endDate: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+  }>;
+}
 
-const PAGE_SIZE = 30;
+const BATCH_SIZE = 200;
+
 const PLAN_TYPE_BY_RAW: Record<string, MembershipPlan["plan_type"]> = {
   [MembershipPlanType.Monthly]: "monthly",
   [MembershipPlanType.MonthlyCc]: "monthly_cc",
@@ -53,70 +73,69 @@ const PLAN_TYPE_BY_RAW: Record<string, MembershipPlan["plan_type"]> = {
 };
 
 export const Route = createFileRoute("/dash/users")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    q: (search.q as string) ?? "",
-    page: Number(search.page) > 0 ? Number(search.page) : 1,
-  }),
+  validateSearch: (search) => search as Record<string, string>,
   component: RouteComponent,
 });
 
-export function buildFilter(
-  parsed: ParsedSearch,
-  page: number,
+function buildQueryFilter(
+  filters: FilterValue[],
+  query: string,
   sorting: SortingState,
+  offset: number,
 ) {
-  const roleFilter = parsed.filters.role?.value;
-  const storeFilter = parsed.filters.store?.value;
-  const nameFilter = parsed.filters.name?.value;
-  const dateFilter = parsed.filters.date?.value;
+  const vars = filtersToGqlVariables(filters, query);
 
-  let dateFrom: string | undefined;
-  let dateTo: string | undefined;
-  if (dateFilter) {
-    if (typeof dateFilter === "string") {
-      dateFrom = dateTo = dateFilter;
-    } else if (Array.isArray(dateFilter) && dateFilter.length === 2) {
-      dateFrom = dateFilter[0];
-      dateTo = dateFilter[1];
-    }
-  }
+  const search = typeof vars.search === "string" ? vars.search : undefined;
+  const role = typeof vars.role === "string"
+    ? [vars.role.toUpperCase()]
+    : undefined;
+  const store = typeof vars.store === "string" ? vars.store : undefined;
+  const dateFrom = typeof vars.dateFrom === "string" ? vars.dateFrom : undefined;
+  const dateTo = typeof vars.dateTo === "string" ? vars.dateTo : undefined;
 
-  const searchParts = [parsed.freeText];
-  if (typeof nameFilter === "string") searchParts.push(nameFilter);
-  const search = searchParts.filter(Boolean).join(" ") || undefined;
+  const sortBy = sorting.length > 0
+    ? sorting[0].id
+    : typeof vars.sortBy === "string"
+      ? vars.sortBy
+      : undefined;
+  const sortOrder = sorting[0]?.desc
+    ? SortOrder.Desc
+    : vars.sortOrder === "desc"
+      ? SortOrder.Desc
+      : SortOrder.Asc;
 
   return {
     search,
-    role:
-      typeof roleFilter === "string"
-        ? [roleFilter.toUpperCase()]
-        : Array.isArray(roleFilter)
-          ? roleFilter.map((r) => r.toUpperCase())
-          : undefined,
-    store: typeof storeFilter === "string" ? storeFilter : undefined,
+    role,
+    store,
     dateFrom,
     dateTo,
-    sortBy: sorting.length > 0 ? sorting[0].id : undefined,
-    sortOrder: sorting[0]?.desc ? SortOrder.Desc : SortOrder.Asc,
-    pagination: { offset: (page - 1) * PAGE_SIZE, limit: PAGE_SIZE },
+    sortBy,
+    sortOrder,
+    pagination: { offset, limit: BATCH_SIZE },
   };
+}
+
+function hasRole(user: unknown): user is { role: string } {
+  return (
+    typeof user === "object" &&
+    user !== null &&
+    "role" in user &&
+    typeof user.role === "string"
+  );
 }
 
 function RouteComponent() {
   const msg = useMsg();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
-  const { q, page } = Route.useSearch();
-  const navigate = useNavigate({ from: Route.fullPath });
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [searchInput, setSearchInput] = useState(q);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [offset, setOffset] = useState(0);
   const { data: session } = useSession();
-  const isAdmin = (session?.user as { role?: string })?.role === "admin";
+  const isAdmin = hasRole(session?.user) && session.user.role === "admin";
 
-  const { pendingSearch, clearPendingSearch } = usePendingSearch();
-
-  const parsed = useMemo(() => parseSearch(q, USER_SEARCH_GRAMMAR), [q]);
+  const { filters, query } = useRouteFilters();
 
   // Raw membership plan data shape from GraphQL query
   interface RawMembershipPlan {
@@ -142,12 +161,13 @@ function RouteComponent() {
       update_at: p.updatedAt ?? null,
     };
   }, []);
+
   const filter = useMemo(
-    () => buildFilter(parsed, page, sorting),
-    [parsed, page, sorting],
+    () => buildQueryFilter(filters, query, sorting, offset),
+    [filters, query, sorting, offset],
   );
 
-  const { data, loading } = useUsersQuery({
+  const { data, loading, fetchMore } = useUsersQuery({
     variables: { filter },
     onError: (err) => {
       msg.error(err.message || t("dashUsers.fetchFailed"));
@@ -174,7 +194,6 @@ function RouteComponent() {
   const [pendingDisable, setPendingDisable] = useState<UserItem | null>(null);
   const [disablePending, setDisablePending] = useState(false);
 
-
   const openDisableDialog = (user: UserItem) => {
     setPendingDisable(user);
     setTimeout(() => {
@@ -198,20 +217,6 @@ function RouteComponent() {
       setDisablePending(false);
     }
   };
-
-  const setSearchParam = useCallback(
-    (updates: Partial<{ q: string; page: number }>) =>
-      navigate({ search: (prev) => ({ ...prev, ...updates }), replace: true }),
-    [navigate],
-  );
-
-  useEffect(() => {
-    if (pendingSearch !== null) {
-      setSearchInput(pendingSearch);
-      setSearchParam({ q: pendingSearch, page: 1 });
-      clearPendingSearch();
-    }
-  }, [pendingSearch, clearPendingSearch, setSearchParam]);
 
   const columns = useMemo<ColumnDef<UserItem, unknown>[]>(
     () => [
@@ -353,6 +358,9 @@ function RouteComponent() {
   );
 
   const users = (data?.managedUsers?.items ?? []) as UserItem[];
+  const pageInfo = data?.managedUsers?.pageInfo;
+  const hasMore = pageInfo?.hasMore ?? false;
+
   const clearSelectedIds = useCallback(() => setSelectedIds(new Set()), []);
   useSelectedTableData({
     entityType: "用户",
@@ -361,6 +369,30 @@ function RouteComponent() {
     getRowId: (user) => user.id,
     onClear: clearSelectedIds,
   });
+
+  const handleLoadMore = useCallback(() => {
+    const nextOffset = offset + BATCH_SIZE;
+    setOffset(nextOffset);
+    void fetchMore({
+      variables: {
+        filter: { ...filter, pagination: { offset: nextOffset, limit: BATCH_SIZE } },
+      },
+      updateQuery: (prev, { fetchMoreResult }) => {
+        if (!fetchMoreResult) return prev;
+        return {
+          ...fetchMoreResult,
+          managedUsers: {
+            ...fetchMoreResult.managedUsers,
+            items: [
+              ...prev.managedUsers.items,
+              ...fetchMoreResult.managedUsers.items,
+            ],
+          },
+        };
+      },
+    });
+  }, [offset, filter, fetchMore]);
+
   const selectedActions: BatchAction[] = [
     {
       key: "export-csv",
@@ -385,188 +417,100 @@ function RouteComponent() {
       },
     },
   ];
-  const pageInfo = data?.managedUsers?.pageInfo;
-  const total = pageInfo?.total ?? users.length;
-  const hasMore = pageInfo?.hasMore ?? false;
 
   return (
     <main className="size-full flex flex-col">
-      <div className="px-4 pt-4 flex items-center gap-3">
-        <DashBackButton />
-        <TableToolbar
-          searchBar={{
-            grammar: USER_SEARCH_GRAMMAR,
-            value: searchInput,
-            onChange: setSearchInput,
-            onSubmit: (parsedResult) => {
-              const serialized = serialize(parsedResult, USER_SEARCH_GRAMMAR);
-              setSearchParam({ q: serialized, page: 1 });
-            },
-            placeholder: t("dashUsers.searchPlaceholder") ?? "Search users…",
-          }}
-          quickFilters={[
-            {
-              label: t("dashUsers.admin"),
-              key: "role",
-              value: "admin",
-              active: parsed.filters.role?.value === "admin",
-            },
-            {
-              label: t("dashUsers.staff"),
-              key: "role",
-              value: "staff",
-              active: parsed.filters.role?.value === "staff",
-            },
-            {
-              label: t("dashUsers.customer"),
-              key: "role",
-              value: "authenticated",
-              active: parsed.filters.role?.value === "authenticated",
-            },
-          ]}
-          extra={
-            <DateRangeFilter
-              value={
-                parsed.filters.date
-                  ? {
-                      from: Array.isArray(parsed.filters.date.value)
-                        ? parsed.filters.date.value[0]
-                        : typeof parsed.filters.date.value === "string"
-                          ? parsed.filters.date.value
-                          : undefined,
-                      to: Array.isArray(parsed.filters.date.value)
-                        ? parsed.filters.date.value[1]
-                        : typeof parsed.filters.date.value === "string"
-                          ? parsed.filters.date.value
-                          : undefined,
-                    }
-                  : undefined
-              }
-              onChange={(range) => {
-                const nextFilters = { ...parsed.filters };
-                if (!range) {
-                  delete nextFilters.date;
-                } else if (range.from && range.to) {
-                  nextFilters.date = { operator: "range", value: [range.from, range.to] };
-                } else if (range.from) {
-                  nextFilters.date = { operator: "gt", value: range.from };
-                } else if (range.to) {
-                  nextFilters.date = { operator: "lt", value: range.to };
-                }
-                const serialized = serialize(
-                  { ...parsed, filters: nextFilters, errors: [] },
-                  USER_SEARCH_GRAMMAR,
-                );
-                setSearchInput(serialized);
-                setSearchParam({ q: serialized, page: 1 });
-              }}
-            />
-          }
-        />
-      </div>
-
-      <div className="flex-1 min-h-0">
-        <DashTable
-          columns={columns}
-          data={users}
-          loading={loading}
-          emptyMessage={t("dashUsers.noData")}
-          pagination={{
-            offset: (page - 1) * PAGE_SIZE,
-            limit: PAGE_SIZE,
-            total,
-            hasMore,
-          }}
-          onPaginationChange={(p) =>
-            setSearchParam({
-              page: Math.floor(p.offset / PAGE_SIZE) + 1,
-            })
-          }
-          sorting={sorting}
-          onSortingChange={setSorting}
-          sortableColumns={["nickname", "role", "points", "createdAt"]}
-          enableRowSelection
-          selectedRows={selectedIds}
-          onSelectedRowsChange={setSelectedIds}
-          getRowId={(row) => row.id}
-          renderActions={(row) =>
-            isMobile ? (
-              <div className="dropdown dropdown-end">
-                <div
-                  tabIndex={0}
-                  role="button"
-                  className="btn btn-xs btn-ghost btn-square"
-                >
-                  <DotsThreeVerticalIcon className="size-4" weight="bold" />
-                </div>
-                <ul
-                  tabIndex={0}
-                  className="dropdown-content menu bg-base-200 rounded-box z-50 w-32 p-2 shadow-lg"
-                >
-                  <li>
-                    <Link to="/dash/users/$id" params={{ id: row.id }} search={{ tab: "basic" }}>
-                      <EyeIcon className="size-4" />
-                      {t("dashUsers.details")}
-                    </Link>
-                  </li>
-                  <li>
-                    {row.disabled ? (
-                      <button
-                        type="button"
-                        className="text-success"
-                        onClick={() => confirmEnable(row.id)}
-                      >
-                        <UserMinusIcon className="size-4" />
-                        {t("dashUsers.restore")}
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        className="text-error"
-                        onClick={() => openDisableDialog(row)}
-                      >
-                        <UserMinusIcon className="size-4" />
-                        {t("dashUsers.disable")}
-                      </button>
-                    )}
-                  </li>
-                </ul>
+      <InfiniteTable
+        columns={columns}
+        data={users}
+        loading={loading}
+        emptyMessage={t("dashUsers.noData")}
+        hasMore={hasMore}
+        onLoadMore={handleLoadMore}
+        sorting={sorting}
+        onSortingChange={setSorting}
+        sortableColumns={["nickname", "role", "points", "createdAt"]}
+        enableRowSelection
+        selectedRows={selectedIds}
+        onSelectedRowsChange={setSelectedIds}
+        getRowId={(row) => row.id}
+        renderActions={(row) =>
+          isMobile ? (
+            <div className="dropdown dropdown-end">
+              <div
+                tabIndex={0}
+                role="button"
+                className="btn btn-xs btn-ghost btn-square"
+              >
+                <DotsThreeVerticalIcon className="size-4" weight="bold" />
               </div>
-            ) : (
-              <div className="flex items-center gap-1">
-                <Link
-                  to="/dash/users/$id"
-                  params={{ id: row.id }}
-                  search={{ tab: "basic" }}
-                  className="btn btn-xs btn-ghost btn-primary"
+              <ul
+                tabIndex={0}
+                className="dropdown-content menu bg-base-200 rounded-box z-50 w-32 p-2 shadow-lg"
+              >
+                <li>
+                  <Link to="/dash/users/$id" params={{ id: row.id }} search={{ tab: "basic" }}>
+                    <EyeIcon className="size-4" />
+                    {t("dashUsers.details")}
+                  </Link>
+                </li>
+                <li>
+                  {row.disabled ? (
+                    <button
+                      type="button"
+                      className="text-success"
+                      onClick={() => confirmEnable(row.id)}
+                    >
+                      <UserMinusIcon className="size-4" />
+                      {t("dashUsers.restore")}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="text-error"
+                      onClick={() => openDisableDialog(row)}
+                    >
+                      <UserMinusIcon className="size-4" />
+                      {t("dashUsers.disable")}
+                    </button>
+                  )}
+                </li>
+              </ul>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1">
+              <Link
+                to="/dash/users/$id"
+                params={{ id: row.id }}
+                search={{ tab: "basic" }}
+                className="btn btn-xs btn-ghost btn-primary"
+              >
+                {t("dashUsers.details")}
+                <EyeIcon />
+              </Link>
+              {row.disabled ? (
+                <button
+                  type="button"
+                  className="btn btn-xs btn-ghost btn-success"
+                  onClick={() => confirmEnable(row.id)}
                 >
-                  {t("dashUsers.details")}
-                  <EyeIcon />
-                </Link>
-                {row.disabled ? (
-                  <button
-                    type="button"
-                    className="btn btn-xs btn-ghost btn-success"
-                    onClick={() => confirmEnable(row.id)}
-                  >
-                    {t("dashUsers.restore")}
-                    <UserMinusIcon />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn btn-xs btn-ghost btn-error"
-                    onClick={() => openDisableDialog(row)}
-                  >
-                    {t("dashUsers.disable")}
-                    <UserMinusIcon />
-                  </button>
-                )}
-              </div>
-            )
-          }
-        />
-      </div>
+                  {t("dashUsers.restore")}
+                  <UserMinusIcon />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-xs btn-ghost btn-error"
+                  onClick={() => openDisableDialog(row)}
+                >
+                  {t("dashUsers.disable")}
+                  <UserMinusIcon />
+                </button>
+              )}
+            </div>
+          )
+        }
+      />
 
       <BatchActionBar
         count={selectedIds.size}

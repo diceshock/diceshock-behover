@@ -1,22 +1,19 @@
 import {
   DotsThreeVerticalIcon,
   PencilSimpleIcon,
-  PlusIcon,
   PowerIcon,
   TrashIcon,
   XIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { DashTable } from "@/client/components/dash/DashTable";
-import { usePendingSearch } from "@/client/components/dash/SearchBridge";
-import { TableToolbar } from "@/client/components/dash/TableToolbar";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { InfiniteTable } from "@/client/components/dash/InfiniteTable";
 import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
-import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import type { ManagedTablesQuery } from "@/client/graphql/__generated__";
 import {
   SortOrder,
   TableScope,
@@ -27,134 +24,89 @@ import {
   useRemoveTableMutation,
   useToggleTableStatusMutation,
 } from "@/client/graphql/__generated__";
-import { useAdminStoreFilter } from "@/client/hooks/useAdminStoreFilter";
+import {
+  filtersToGqlVariables,
+  useRouteFilters,
+} from "@/client/hooks/useRouteFilters";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
 import { useTranslation } from "@/client/hooks/useTranslation";
-import {
-  type ParsedSearch,
-  parseSearch,
-  serialize,
-  TABLE_SEARCH_GRAMMAR,
-} from "@/client/lib/searchParser";
 import dayjs from "@/shared/utils/dayjs-config";
 
-const PAGE_SIZE = 20;
+const BATCH_SIZE = 200;
 
 const TYPE_LABEL_KEYS: Record<string, string> = {
-  fixed: "dashTables.fixedTable",
-  solo: "dashTables.openTable",
+  FIXED: "dashTables.fixedTable",
+  SOLO: "dashTables.openTable",
 };
 
 const SCOPE_LABEL_KEYS: Record<string, string> = {
-  trpg: "dashTables.trpg",
-  boardgame: "dashTables.boardGames",
-  console: "dashTables.console",
-  mahjong: "dashTables.riichiMahjong",
+  BOARDGAME: "dashTables.boardGames",
+  TRPG: "dashTables.trpg",
+  CONSOLE: "dashTables.console",
+  MAHJONG: "dashTables.riichiMahjong",
 };
 
-type TablesList = NonNullable<
-  ReturnType<typeof useManagedTablesQuery>["data"]
->["managedTables"];
-type TableItem = NonNullable<TablesList>[number];
+type TableItem = ManagedTablesQuery["managedTables"][number];
 
 function formatCreateAt(val: unknown): string {
   if (!val) return "—";
-  try {
-    const d = dayjs.tz(val as string | number | Date, "Asia/Shanghai");
-    return d.isValid() ? d.format("YYYY/MM/DD HH:mm") : "—";
-  } catch {
-    return "—";
-  }
+  const d = dayjs(val as string);
+  return d.isValid() ? d.format("YYYY-MM-DD HH:mm") : "—";
 }
 
 function typeLabel(t: (key: string) => string, value: string) {
-  const key = TYPE_LABEL_KEYS[value];
+  const key = TYPE_LABEL_KEYS[value.toUpperCase()];
   return key ? t(key) : value;
 }
 
 function scopeLabel(value: string) {
-  const key = SCOPE_LABEL_KEYS[value];
-  return key ?? value;
+  return SCOPE_LABEL_KEYS[value.toUpperCase()] ?? value;
 }
 
 export const Route = createFileRoute("/dash/tables")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    q: (search.q as string) ?? "",
-    page: Number(search.page) > 0 ? Number(search.page) : 1,
-  }),
+  validateSearch: (search) => search as Record<string, string>,
   component: RouteComponent,
 });
-
-export function buildFilter(
-  parsed: ParsedSearch,
-  page: number,
-  sorting: SortingState,
-) {
-  const typeFilter = parsed.filters.type?.value;
-  const statusFilter = parsed.filters.status?.value;
-  const storeFilter = parsed.filters.store?.value;
-  const nameFilter = parsed.filters.name?.value;
-
-  const search =
-    [parsed.freeText, typeof nameFilter === "string" ? nameFilter : undefined]
-      .filter(Boolean)
-      .join(" ") || undefined;
-
-  return {
-    search,
-    type:
-      typeof typeFilter === "string"
-        ? [typeFilter.toUpperCase()]
-        : Array.isArray(typeFilter)
-          ? typeFilter.map((v) => v.toUpperCase())
-          : undefined,
-    status:
-      typeof statusFilter === "string"
-        ? [statusFilter.toUpperCase()]
-        : Array.isArray(statusFilter)
-          ? statusFilter.map((v) => v.toUpperCase())
-          : undefined,
-    store: typeof storeFilter === "string" ? storeFilter : undefined,
-    sortBy: sorting.length > 0 ? sorting[0].id : undefined,
-    sortOrder: sorting[0]?.desc ? SortOrder.Desc : SortOrder.Asc,
-    pagination: { offset: (page - 1) * PAGE_SIZE, limit: PAGE_SIZE },
-  };
-}
 
 function RouteComponent() {
   const msg = useMsg();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
-  const { storeFilter } = useAdminStoreFilter();
-  const { q, page } = Route.useSearch();
-  const navigate = useNavigate({ from: Route.fullPath });
+  const { filters, query } = useRouteFilters();
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [searchInput, setSearchInput] = useState(q);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [offset, setOffset] = useState(0);
 
-  const { pendingSearch, clearPendingSearch } = usePendingSearch();
+  const gqlVars = useMemo(() => filtersToGqlVariables(filters, query), [filters, query]);
 
-  const setSearchParam = useCallback(
-    (updates: Partial<{ q: string; page: number }>) =>
-      navigate({ search: (prev) => ({ ...prev, ...updates }), replace: true }),
-    [navigate],
-  );
-
-  useEffect(() => {
-    if (pendingSearch !== null) {
-      setSearchInput(pendingSearch);
-      setSearchParam({ q: pendingSearch, page: 1 });
-      clearPendingSearch();
-    }
-  }, [pendingSearch, clearPendingSearch, setSearchParam]);
-
-  const parsed = useMemo(() => parseSearch(q, TABLE_SEARCH_GRAMMAR), [q]);
   const filter = useMemo(
-    () => buildFilter(parsed, page, sorting),
-    [parsed, page, sorting],
+    () => ({
+      search: gqlVars.search as string | undefined,
+      type: gqlVars.type
+        ? Array.isArray(gqlVars.type)
+          ? (gqlVars.type as string[]).map((v) => v.toUpperCase())
+          : [String(gqlVars.type).toUpperCase()]
+        : undefined,
+      status: gqlVars.status
+        ? Array.isArray(gqlVars.status)
+          ? (gqlVars.status as string[]).map((v) => v.toUpperCase())
+          : [String(gqlVars.status).toUpperCase()]
+        : undefined,
+      store: gqlVars.store as string | undefined,
+      sortBy: (gqlVars.sortBy as string) ?? (sorting.length > 0 ? sorting[0].id : undefined),
+      sortOrder:
+        (gqlVars.sortOrder as SortOrder) ??
+        (sorting.length > 0
+          ? sorting[0].desc
+            ? SortOrder.Desc
+            : SortOrder.Asc
+          : undefined),
+      pagination: { offset: 0, limit: BATCH_SIZE },
+    }),
+    [gqlVars, sorting],
   );
 
-  const { data, loading } = useManagedTablesQuery({
+  const { data, loading, fetchMore } = useManagedTablesQuery({
     variables: { filter },
     onError: (err) => {
       msg.error(err.message || t("dashTables.loadFailed"));
@@ -162,6 +114,23 @@ function RouteComponent() {
   });
 
   const tables = (data?.managedTables ?? []) as TableItem[];
+  const hasMore = tables.length >= offset + BATCH_SIZE;
+
+  const handleLoadMore = useCallback(() => {
+    const nextOffset = offset + BATCH_SIZE;
+    setOffset(nextOffset);
+    void fetchMore({
+      variables: {
+        filter: { ...filter, pagination: { offset: nextOffset, limit: BATCH_SIZE } },
+      },
+      updateQuery: (prev, { fetchMoreResult }) => {
+        if (!fetchMoreResult) return prev;
+        return {
+          managedTables: [...prev.managedTables, ...fetchMoreResult.managedTables],
+        };
+      },
+    });
+  }, [offset, filter, fetchMore]);
 
   const [createTableMutation] = useCreateTableMutation({
     refetchQueries: ["ManagedTables"],
@@ -349,8 +318,6 @@ function RouteComponent() {
     [t],
   );
 
-  const total = tables.length;
-  const hasMore = tables.length === PAGE_SIZE;
   const selectedTables = tables.filter((table) => selectedIds.has(table.id));
   const clearSelectedIds = useCallback(() => setSelectedIds(new Set()), []);
   useSelectedTableData({
@@ -397,180 +364,98 @@ function RouteComponent() {
     },
   ];
 
-  const quickFilters = useMemo(
-    () => [
-      {
-        label: t("dashTables.fixedTable"),
-        key: "type",
-        value: "fixed",
-        active: parsed.filters.type?.value === "fixed",
-      },
-      {
-        label: t("dashTables.openTable"),
-        key: "type",
-        value: "solo",
-        active: parsed.filters.type?.value === "solo",
-      },
-      {
-        label: t("dashTables.active"),
-        key: "status",
-        value: "active",
-        active: parsed.filters.status?.value === "active",
-      },
-      {
-        label: t("dashTables.inactive"),
-        key: "status",
-        value: "inactive",
-        active: parsed.filters.status?.value === "inactive",
-      },
-    ],
-    [t, parsed],
-  );
-
   return (
     <main className="size-full flex flex-col">
-      <div className="px-4 pt-4 flex items-center gap-3">
-        <DashBackButton />
-        <TableToolbar
-          searchBar={{
-            grammar: TABLE_SEARCH_GRAMMAR,
-            value: searchInput,
-            onChange: setSearchInput,
-            onSubmit: (parsedResult) => {
-              const serialized = serialize(parsedResult, TABLE_SEARCH_GRAMMAR);
-              setSearchParam({ q: serialized, page: 1 });
-            },
-            placeholder: t("dashTables.searchPlaceholder") ?? "Search tables…",
-          }}
-          quickFilters={quickFilters}
-          onQuickFilterToggle={(key, value) => {
-            const nextParsed = parseSearch(searchInput, TABLE_SEARCH_GRAMMAR);
-            const nextFilters = { ...nextParsed.filters };
-            const already = nextFilters[key]?.value === value;
-            if (already) delete nextFilters[key];
-            else nextFilters[key] = { operator: "eq", value };
-            const serialized = serialize(
-              { ...nextParsed, filters: nextFilters, errors: [] },
-              TABLE_SEARCH_GRAMMAR,
-            );
-            setSearchInput(serialized);
-            setSearchParam({ q: serialized, page: 1 });
-          }}
-          storeFilter
-          extra={
-            <button
-              type="button"
-              className="btn btn-primary btn-sm gap-1"
-              onClick={() => createDialogRef.current?.showModal()}
-            >
-              <PlusIcon className="size-4" weight="bold" />
-              {t("dashTables.newTable")}
-            </button>
-          }
-        />
-      </div>
-
-      <div className="flex-1 min-h-0">
-        <DashTable
-          columns={columns}
-          data={tables}
-          loading={loading}
-          emptyMessage={t("dashTables.noMatchedTables")}
-          pagination={{
-            offset: (page - 1) * PAGE_SIZE,
-            limit: PAGE_SIZE,
-            total,
-            hasMore,
-          }}
-          onPaginationChange={(p) =>
-            setSearchParam({
-              page: Math.floor(p.offset / PAGE_SIZE) + 1,
-            })
-          }
-          sorting={sorting}
-          onSortingChange={setSorting}
-          sortableColumns={["name", "type", "status", "capacity", "createdAt"]}
-          enableRowSelection
-          selectedRows={selectedIds}
-          onSelectedRowsChange={setSelectedIds}
-          getRowId={(row) => row.id}
-          renderActions={(row) =>
-            isMobile ? (
-              <div className="dropdown dropdown-end">
-                <div
-                  tabIndex={0}
-                  role="button"
-                  className="btn btn-xs btn-ghost btn-square"
-                >
-                  <DotsThreeVerticalIcon className="size-4" weight="bold" />
-                </div>
-                <ul
-                  tabIndex={0}
-                  className="dropdown-content menu bg-base-200 rounded-box z-50 w-36 p-2 shadow-lg"
-                >
-                  <li>
-                    <Link to="/dash/tables/$id" params={{ id: row.id }} search={{ tab: "basic" }}>
-                      <PencilSimpleIcon className="size-4" />
-                      {t("dashTables.details")}
-                    </Link>
-                  </li>
-                  <li>
-                    <button
-                      type="button"
-                      onClick={() => void handleToggleStatus(row)}
-                    >
-                      <PowerIcon className="size-3.5" />
-                      {row.status === TableStatus.Active
-                        ? t("dashTables.inactive")
-                        : t("dashTables.active")}
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      type="button"
-                      className="text-error"
-                      onClick={() => openDeleteDialog(row)}
-                    >
-                      <TrashIcon className="size-3.5" />
-                      {t("dashTables.delete")}
-                    </button>
-                  </li>
-                </ul>
+      <InfiniteTable
+        columns={columns}
+        data={tables}
+        loading={loading}
+        hasMore={hasMore}
+        onLoadMore={handleLoadMore}
+        sorting={sorting}
+        onSortingChange={setSorting}
+        sortableColumns={["name", "type", "status", "capacity", "createdAt"]}
+        enableRowSelection
+        selectedRows={selectedIds}
+        onSelectedRowsChange={setSelectedIds}
+        getRowId={(row) => row.id}
+        emptyMessage={t("dashTables.noMatchedTables")}
+        renderActions={(row) =>
+          isMobile ? (
+            <div className="dropdown dropdown-end">
+              <div
+                tabIndex={0}
+                role="button"
+                className="btn btn-xs btn-ghost btn-square"
+              >
+                <DotsThreeVerticalIcon className="size-4" weight="bold" />
               </div>
-            ) : (
-              <div className="flex items-center gap-1">
-                <Link
-                  to="/dash/tables/$id"
-                  params={{ id: row.id }}
-                  search={{ tab: "basic" }}
-                  className="btn btn-xs btn-ghost"
-                >
-                  <PencilSimpleIcon className="size-4" />
-                  {t("dashTables.details")}
-                </Link>
-                <button
-                  type="button"
-                  className={`btn btn-xs btn-ghost ${row.status === TableStatus.Active ? "btn-neutral" : "btn-success"}`}
-                  onClick={() => void handleToggleStatus(row)}
-                >
-                  <PowerIcon className="size-3.5" />
-                  {row.status === TableStatus.Active
-                    ? t("dashTables.inactive")
-                    : t("dashTables.active")}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-xs btn-ghost btn-error"
-                  onClick={() => openDeleteDialog(row)}
-                >
-                  <TrashIcon className="size-3.5" />
-                  {t("dashTables.delete")}
-                </button>
-              </div>
-            )
-          }
-        />
-      </div>
+              <ul
+                tabIndex={0}
+                className="dropdown-content menu bg-base-200 rounded-box z-50 w-36 p-2 shadow-lg"
+              >
+                <li>
+                  <Link to="/dash/tables/$id" params={{ id: row.id }} search={{ tab: "basic" }}>
+                    <PencilSimpleIcon className="size-4" />
+                    {t("dashTables.details")}
+                  </Link>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => void handleToggleStatus(row)}
+                  >
+                    <PowerIcon className="size-3.5" />
+                    {row.status === TableStatus.Active
+                      ? t("dashTables.inactive")
+                      : t("dashTables.active")}
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    className="text-error"
+                    onClick={() => openDeleteDialog(row)}
+                  >
+                    <TrashIcon className="size-3.5" />
+                    {t("dashTables.delete")}
+                  </button>
+                </li>
+              </ul>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1">
+              <Link
+                to="/dash/tables/$id"
+                params={{ id: row.id }}
+                search={{ tab: "basic" }}
+                className="btn btn-xs btn-ghost"
+              >
+                <PencilSimpleIcon className="size-4" />
+                {t("dashTables.details")}
+              </Link>
+              <button
+                type="button"
+                className={`btn btn-xs btn-ghost ${row.status === TableStatus.Active ? "btn-neutral" : "btn-success"}`}
+                onClick={() => void handleToggleStatus(row)}
+              >
+                <PowerIcon className="size-3.5" />
+                {row.status === TableStatus.Active
+                  ? t("dashTables.inactive")
+                  : t("dashTables.active")}
+              </button>
+              <button
+                type="button"
+                className="btn btn-xs btn-ghost btn-error"
+                onClick={() => openDeleteDialog(row)}
+              >
+                <TrashIcon className="size-3.5" />
+                {t("dashTables.delete")}
+              </button>
+            </div>
+          )
+        }
+      />
 
       <BatchActionBar
         count={selectedIds.size}

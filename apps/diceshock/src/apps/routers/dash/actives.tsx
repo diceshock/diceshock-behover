@@ -6,16 +6,12 @@ import {
   PaperPlaneTiltIcon,
   TrashIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { DashTable } from "@/client/components/dash/DashTable";
-import { DateRangeFilter } from "@/client/components/dash/DateRangeFilter";
-import { usePendingSearch } from "@/client/components/dash/SearchBridge";
-import { TableToolbar } from "@/client/components/dash/TableToolbar";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { InfiniteTable } from "@/client/components/dash/InfiniteTable";
 import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
-import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import {
   type ActiveFilterInput,
@@ -27,17 +23,15 @@ import {
   useRemoveActiveMutation,
 } from "@/client/graphql/__generated__";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
-import { useTranslation } from "@/client/hooks/useTranslation";
 import {
-  ACTIVE_SEARCH_GRAMMAR,
-  type ParsedSearch,
-  parseSearch,
-  serialize,
-} from "@/client/lib/searchParser";
+  filtersToGqlVariables,
+  useRouteFilters,
+} from "@/client/hooks/useRouteFilters";
+import { useTranslation } from "@/client/hooks/useTranslation";
 import { formatMessage } from "@/shared/i18n";
 import dayjs from "@/shared/utils/dayjs-config";
 
-const PAGE_SIZE = 20;
+const BATCH_SIZE = 200;
 
 function formatCreateAt(val: unknown): string {
   if (!val) return "—";
@@ -49,79 +43,52 @@ function formatCreateAt(val: unknown): string {
   }
 }
 
+/** Extracted from generated query return type (codegen owns the shape). */
 type ActivesList = NonNullable<
   ReturnType<typeof useManagedActivesQuery>["data"]
 >["managedActives"];
 type ActiveItem = NonNullable<ActivesList>[number];
 
 export const Route = createFileRoute("/dash/actives")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    q: (search.q as string) ?? "",
-  }),
+  validateSearch: (search) => search as Record<string, string>,
   component: RouteComponent,
 });
-
-export function buildFilter(
-  parsed: ParsedSearch,
-  sorting: SortingState,
-  cursor?: string,
-): ActiveFilterInput {
-  const statusFilter = parsed.filters.status?.value;
-  const statusArray =
-    typeof statusFilter === "string"
-      ? [statusFilter]
-      : Array.isArray(statusFilter)
-        ? statusFilter
-        : undefined;
-
-  const typeValue = parsed.filters.type?.value;
-  const creatorValue = parsed.filters.creator?.value;
-  const storeValue = parsed.filters.store?.value;
-  const dateFilter = parsed.filters.date?.value;
-
-  let dateFrom: string | undefined;
-  let dateTo: string | undefined;
-  if (dateFilter) {
-    if (typeof dateFilter === "string") {
-      dateFrom = dateTo = dateFilter;
-    } else if (Array.isArray(dateFilter) && dateFilter.length === 2) {
-      dateFrom = dateFilter[0];
-      dateTo = dateFilter[1];
-    }
-  }
-
-  const input: ActiveFilterInput = {};
-
-  if (parsed.freeText) input.search = parsed.freeText;
-  if (statusArray) input.status = statusArray;
-  if (typeof typeValue === "string") input.type = typeValue;
-  if (typeof creatorValue === "string") input.creator = creatorValue;
-  if (typeof storeValue === "string") input.store = storeValue;
-  if (dateFrom) input.dateFrom = dateFrom;
-  if (dateTo) input.dateTo = dateTo;
-  if (sorting.length > 0) {
-    input.sortBy = sorting[0].id;
-    input.sortOrder = sorting[0].desc ? SortOrder.Desc : SortOrder.Asc;
-  }
-  input.pagination = { cursor: cursor ?? undefined, limit: PAGE_SIZE };
-
-  return input;
-}
 
 function RouteComponent() {
   const msg = useMsg();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
-  const { q } = Route.useSearch();
-  const navigate = useNavigate({ from: Route.fullPath });
-  const [searchInput, setSearchInput] = useState(q);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const { pendingSearch, clearPendingSearch } = usePendingSearch();
+  const { filters, query } = useRouteFilters();
 
-  const parsed = useMemo(() => parseSearch(q, ACTIVE_SEARCH_GRAMMAR), [q]);
-  const filter = useMemo(() => buildFilter(parsed, sorting), [parsed, sorting]);
+  const gqlVars = useMemo(
+    () => filtersToGqlVariables(filters, query),
+    [filters, query],
+  );
+
+  const filter = useMemo<ActiveFilterInput>(() => {
+    const input: ActiveFilterInput = {};
+    if (gqlVars.search) input.search = gqlVars.search as string;
+    if (gqlVars.status) input.status = Array.isArray(gqlVars.status) ? gqlVars.status : [gqlVars.status as string];
+    if (gqlVars.type) input.type = gqlVars.type as string;
+    if (gqlVars.creator) input.creator = gqlVars.creator as string;
+    if (gqlVars.store) input.store = gqlVars.store as string;
+    if (gqlVars.dateFrom) input.dateFrom = gqlVars.dateFrom as string;
+    if (gqlVars.dateTo) input.dateTo = gqlVars.dateTo as string;
+
+    if (gqlVars.sortBy) {
+      input.sortBy = gqlVars.sortBy as string;
+      input.sortOrder = gqlVars.sortOrder === "asc" ? SortOrder.Asc : SortOrder.Desc;
+    } else if (sorting.length > 0) {
+      input.sortBy = sorting[0].id;
+      input.sortOrder = sorting[0].desc ? SortOrder.Desc : SortOrder.Asc;
+    }
+
+    input.pagination = { limit: BATCH_SIZE };
+    return input;
+  }, [gqlVars, sorting]);
 
   const { data, loading, fetchMore, networkStatus } = useManagedActivesQuery({
     variables: { filter },
@@ -140,8 +107,9 @@ function RouteComponent() {
     getRowId: (active) => active.id,
     onClear: clearSelectedIds,
   });
+
   const lastCursor = actives.length > 0 ? actives[actives.length - 1].id : null;
-  const hasMore = actives.length > 0 && actives.length % PAGE_SIZE === 0;
+  const hasMore = actives.length > 0 && actives.length % BATCH_SIZE === 0;
   const isLoadingMore = networkStatus === NetworkStatus.fetchMore;
 
   const [removeActiveMutation] = useRemoveActiveMutation({
@@ -181,9 +149,7 @@ function RouteComponent() {
       });
       const result = data?.publishArticleToWechat;
       if (result?.success) {
-        msg.success(
-          autoPublish ? "已发布到微信" : "草稿已创建",
-        );
+        msg.success(autoPublish ? "已发布到微信" : "草稿已创建");
       } else {
         msg.error(`发布失败: ${result?.error ?? "未知错误"}`);
       }
@@ -230,20 +196,6 @@ function RouteComponent() {
     batchPublishDialogRef.current?.close();
   };
 
-  const setSearchParam = useCallback(
-    (updates: Partial<{ q: string }>) =>
-      navigate({ search: (prev) => ({ ...prev, ...updates }), replace: true }),
-    [navigate],
-  );
-
-  useEffect(() => {
-    if (pendingSearch !== null) {
-      setSearchInput(pendingSearch);
-      setSearchParam({ q: pendingSearch });
-      clearPendingSearch();
-    }
-  }, [pendingSearch, clearPendingSearch, setSearchParam]);
-
   const handleCopy = useCallback(
     (text: string) => {
       try {
@@ -258,10 +210,12 @@ function RouteComponent() {
 
   const loadMore = useCallback(async () => {
     if (!lastCursor || isLoadingMore) return;
+    const nextFilter: ActiveFilterInput = {
+      ...filter,
+      pagination: { cursor: lastCursor, limit: BATCH_SIZE },
+    };
     await fetchMore({
-      variables: {
-        filter: buildFilter(parsed, sorting, lastCursor),
-      },
+      variables: { filter: nextFilter },
       updateQuery: (prev, { fetchMoreResult }) => {
         if (!fetchMoreResult) return prev;
         return {
@@ -272,7 +226,7 @@ function RouteComponent() {
         };
       },
     });
-  }, [fetchMore, parsed, sorting, lastCursor, isLoadingMore]);
+  }, [fetchMore, filter, lastCursor, isLoadingMore]);
 
   const openDeleteDialog = (active: ActiveItem) => {
     setPendingDelete(active);
@@ -425,193 +379,93 @@ function RouteComponent() {
     [t, handleCopy, shanghaiToday],
   );
 
-  const quickFilters = useMemo(() => {
-    const statusFilter = parsed.filters.status?.value;
-    const activeStatus =
-      typeof statusFilter === "string"
-        ? [statusFilter]
-        : Array.isArray(statusFilter)
-          ? statusFilter
-          : [];
-
-    return [
-      {
-        label: t("dashActives.statusActive"),
-        key: "status",
-        value: "active",
-        active: activeStatus.includes("active"),
-      },
-      {
-        label: t("dashActives.statusExpired"),
-        key: "status",
-        value: "expired",
-        active: activeStatus.includes("expired"),
-      },
-    ];
-  }, [parsed, t]);
-
   return (
     <main className="size-full flex flex-col">
-      <div className="px-4 pt-4 flex items-center gap-3">
-        <DashBackButton />
-        <TableToolbar
-          searchBar={{
-            grammar: ACTIVE_SEARCH_GRAMMAR,
-            value: searchInput,
-            onChange: setSearchInput,
-            onSubmit: (parsedResult) => {
-              const serialized = serialize(parsedResult, ACTIVE_SEARCH_GRAMMAR);
-              setSearchParam({ q: serialized });
-            },
-            placeholder:
-              t("dashActives.searchPlaceholder") ?? "Search actives…",
-          }}
-          quickFilters={quickFilters}
-          storeFilter
-          extra={
-            <DateRangeFilter
-              value={
-                parsed.filters.date
-                  ? {
-                      from: Array.isArray(parsed.filters.date.value)
-                        ? parsed.filters.date.value[0]
-                        : typeof parsed.filters.date.value === "string"
-                          ? parsed.filters.date.value
-                          : undefined,
-                      to: Array.isArray(parsed.filters.date.value)
-                        ? parsed.filters.date.value[1]
-                        : typeof parsed.filters.date.value === "string"
-                          ? parsed.filters.date.value
-                          : undefined,
-                    }
-                  : undefined
-              }
-              onChange={(range) => {
-                const nextFilters = { ...parsed.filters };
-                if (!range) {
-                  delete nextFilters.date;
-                } else if (range.from && range.to) {
-                  nextFilters.date = { operator: "range", value: [range.from, range.to] };
-                } else if (range.from) {
-                  nextFilters.date = { operator: "gt", value: range.from };
-                } else if (range.to) {
-                  nextFilters.date = { operator: "lt", value: range.to };
-                }
-                const serialized = serialize(
-                  { ...parsed, filters: nextFilters, errors: [] },
-                  ACTIVE_SEARCH_GRAMMAR,
-                );
-                setSearchInput(serialized);
-                setSearchParam({ q: serialized });
-              }}
-            />
-          }
-        />
-      </div>
-
-      <div className="flex-1 min-h-0">
-        <DashTable
-          columns={columns}
-          data={actives}
-          loading={loading}
-          emptyMessage={t("dashActives.noData")}
-          paginationMode="none"
-          sorting={sorting}
-          onSortingChange={setSorting}
-          sortableColumns={["title", "date", "maxPlayers", "createdAt"]}
-          enableRowSelection
-          selectedRows={selectedIds}
-          onSelectedRowsChange={setSelectedIds}
-          getRowId={(row) => row.id}
-          renderActions={(row) =>
-            isMobile ? (
-              <div className="dropdown dropdown-end">
-                <div
-                  tabIndex={0}
-                  role="button"
-                  className="btn btn-xs btn-ghost btn-square"
-                >
-                  <DotsThreeVerticalIcon className="size-4" weight="bold" />
-                </div>
-                <ul
-                  tabIndex={0}
-                  className="dropdown-content menu bg-base-200 rounded-box z-50 w-32 p-2 shadow-lg"
-                >
-                  <li>
-                    <Link to="/dash/actives/$id" params={{ id: row.id }}>
-                      <EyeIcon className="size-4" />
-                      {t("dashActives.details")}
-                    </Link>
-                  </li>
-                  <li>
-                    <button
-                      type="button"
-                      onClick={() => openPublishDialog(row)}
-                    >
-                      <PaperPlaneTiltIcon className="size-4" />
-                      发布微信
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      type="button"
-                      className="text-error"
-                      onClick={() => openDeleteDialog(row)}
-                    >
-                      <TrashIcon className="size-4" />
-                      {t("dashActives.delete")}
-                    </button>
-                  </li>
-                </ul>
+      <InfiniteTable
+        columns={columns}
+        data={actives}
+        loading={loading}
+        hasMore={hasMore}
+        onLoadMore={loadMore}
+        sorting={sorting}
+        onSortingChange={setSorting}
+        sortableColumns={["title", "date", "maxPlayers", "createdAt"]}
+        enableRowSelection
+        selectedRows={selectedIds}
+        onSelectedRowsChange={setSelectedIds}
+        getRowId={(row) => row.id}
+        emptyMessage={t("dashActives.noData")}
+        renderActions={(row) =>
+          isMobile ? (
+            <div className="dropdown dropdown-end">
+              <div
+                tabIndex={0}
+                role="button"
+                className="btn btn-xs btn-ghost btn-square"
+              >
+                <DotsThreeVerticalIcon className="size-4" weight="bold" />
               </div>
-            ) : (
-              <div className="flex items-center gap-1">
-                <Link
-                  to="/dash/actives/$id"
-                  params={{ id: row.id }}
-                  className="btn btn-xs btn-ghost"
-                >
-                  <EyeIcon className="size-4" />
-                  {t("dashActives.details")}
-                </Link>
-                <button
-                  type="button"
-                  className="btn btn-xs btn-ghost"
-                  onClick={() => openPublishDialog(row)}
-                  title="发布到微信"
-                >
-                  <PaperPlaneTiltIcon className="size-4" />
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-xs btn-ghost btn-error"
-                  onClick={() => openDeleteDialog(row)}
-                >
-                  {t("dashActives.delete")}
-                  <TrashIcon />
-                </button>
-              </div>
-            )
-          }
-        />
-
-        {hasMore && (
-          <div className="flex justify-center py-4">
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={loadMore}
-              disabled={isLoadingMore}
-            >
-              {isLoadingMore ? (
-                <span className="loading loading-dots loading-sm" />
-              ) : (
-                t("dashActives.loadMore")
-              )}
-            </button>
-          </div>
-        )}
-      </div>
+              <ul
+                tabIndex={0}
+                className="dropdown-content menu bg-base-200 rounded-box z-50 w-32 p-2 shadow-lg"
+              >
+                <li>
+                  <Link to="/dash/actives/$id" params={{ id: row.id }}>
+                    <EyeIcon className="size-4" />
+                    {t("dashActives.details")}
+                  </Link>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => openPublishDialog(row)}
+                  >
+                    <PaperPlaneTiltIcon className="size-4" />
+                    发布微信
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    className="text-error"
+                    onClick={() => openDeleteDialog(row)}
+                  >
+                    <TrashIcon className="size-4" />
+                    {t("dashActives.delete")}
+                  </button>
+                </li>
+              </ul>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1">
+              <Link
+                to="/dash/actives/$id"
+                params={{ id: row.id }}
+                className="btn btn-xs btn-ghost"
+              >
+                <EyeIcon className="size-4" />
+                {t("dashActives.details")}
+              </Link>
+              <button
+                type="button"
+                className="btn btn-xs btn-ghost"
+                onClick={() => openPublishDialog(row)}
+                title="发布到微信"
+              >
+                <PaperPlaneTiltIcon className="size-4" />
+              </button>
+              <button
+                type="button"
+                className="btn btn-xs btn-ghost btn-error"
+                onClick={() => openDeleteDialog(row)}
+              >
+                {t("dashActives.delete")}
+                <TrashIcon />
+              </button>
+            </div>
+          )
+        }
+      />
 
       {selectedIds.size > 0 && (
         <BatchActionBar

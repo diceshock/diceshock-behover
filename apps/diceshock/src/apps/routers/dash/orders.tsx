@@ -1,3 +1,4 @@
+import { NetworkStatus } from "@apollo/client";
 import {
   CopyIcon,
   DotsThreeVerticalIcon,
@@ -10,15 +11,13 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { DashTable } from "@/client/components/dash/DashTable";
-import { usePendingSearch } from "@/client/components/dash/SearchBridge";
-import { TableToolbar } from "@/client/components/dash/TableToolbar";
+import { InfiniteTable } from "@/client/components/dash/InfiniteTable";
 import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
-import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import {
+  type OrderFilterInput,
   SortOrder,
   useBatchPauseOrdersMutation,
   useBatchResumeOrdersMutation,
@@ -29,13 +28,11 @@ import {
   useResumeOrderMutation,
 } from "@/client/graphql/__generated__";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
-import { useTranslation } from "@/client/hooks/useTranslation";
 import {
-  ORDER_SEARCH_GRAMMAR,
-  type ParsedSearch,
-  parseSearch,
-  serialize,
-} from "@/client/lib/searchParser";
+  filtersToGqlVariables,
+  useRouteFilters,
+} from "@/client/hooks/useRouteFilters";
+import { useTranslation } from "@/client/hooks/useTranslation";
 import { formatMessage } from "@/shared/i18n";
 import dayjs from "@/shared/utils/dayjs-config";
 import {
@@ -44,42 +41,36 @@ import {
   type SnapshotData,
 } from "@/shared/utils/pricing";
 
-const PAGE_SIZE = 50;
+const BATCH_SIZE = 200;
 
-type SortBy = "start_at" | "end_at";
-type SortOrderVal = "asc" | "desc";
-type GroupBy = "table" | "user" | "date" | "none";
-type StatusTab = "all" | "active" | "paused" | "ended";
-
-type OrdersList = NonNullable<
-  ReturnType<typeof useOrdersQuery>["data"]
->["orders"];
-type OrderItem = OrdersList["items"][number];
+interface OrderItem {
+  id: string;
+  tableId: string;
+  userId: string | null;
+  tempId: string | null;
+  nickname: string | null;
+  uid: string | null;
+  phone: string | null;
+  seats: number;
+  status: string;
+  startAt: string;
+  endAt: string | null;
+  finalPrice: number | null;
+  pricingSnapshotId: string | null;
+  deductedAmount: number | null;
+  table: { id: string; name: string; code: string; scope: string } | null;
+}
 
 export const Route = createFileRoute("/dash/orders")({
+  validateSearch: (search) => search as Record<string, string>,
   component: RouteComponent,
-  validateSearch: (search: Record<string, unknown>) => ({
-    q: (search.q as string) ?? "",
-    sortBy: ["start_at", "end_at"].includes(search.sortBy as string)
-      ? (search.sortBy as SortBy)
-      : "start_at",
-    sortOrder: ["asc", "desc"].includes(search.sortOrder as string)
-      ? (search.sortOrder as SortOrderVal)
-      : "desc",
-    groupBy: ["table", "user", "date", "none"].includes(
-      search.groupBy as string,
-    )
-      ? (search.groupBy as GroupBy)
-      : "none",
-    page: Number(search.page) > 0 ? Number(search.page) : 1,
-  }),
 });
 
 function formatTime(val: number | null | undefined): string {
   if (!val) return "—";
   try {
     const d = dayjs.tz(val, "Asia/Shanghai");
-    return d.isValid() ? d.format("YYYY/MM/DD HH:mm:ss") : "—";
+    return d.isValid() ? d.format("MM/DD HH:mm") : "—";
   } catch {
     return "—";
   }
@@ -90,16 +81,14 @@ function formatDuration(
   endAt?: string | null,
 ) {
   if (!startAt) return "—";
-
   const start = dayjs(startAt);
   const end = endAt ? dayjs(endAt) : dayjs();
-  if (!start.isValid() || !end.isValid()) return "—";
-
-  const minutes = Math.max(0, end.diff(start, "minute"));
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-
-  return hours > 0 ? `${hours}h ${rest}m` : `${rest}m`;
+  if (!start.isValid()) return "—";
+  const diffMin = end.diff(start, "minute");
+  if (diffMin < 60) return `${diffMin}分钟`;
+  const h = Math.floor(diffMin / 60);
+  const m = diffMin % 60;
+  return m > 0 ? `${h}小时${m}分钟` : `${h}小时`;
 }
 
 function parsePricingData(
@@ -129,98 +118,6 @@ function parsePricingData(
   }
 }
 
-function singleFilterValue(
-  parsed: ParsedSearch,
-  key: string,
-): string | undefined {
-  const value = parsed.filters[key]?.value;
-  return typeof value === "string" ? value : undefined;
-}
-
-function stringArrayFilterValue(
-  parsed: ParsedSearch,
-  key: string,
-): string[] | undefined {
-  const value = parsed.filters[key]?.value;
-  if (typeof value === "string") return [value];
-  if (Array.isArray(value))
-    return value.filter((item) => typeof item === "string");
-  return undefined;
-}
-
-function mapOrderStatuses(values: string[] | undefined): string[] | undefined {
-  if (!values || values.length === 0) return undefined;
-
-  const mapped = values
-    .map(
-      (value) =>
-        ({
-          active: "ACTIVE",
-          paused: "PAUSED",
-          ended: "SETTLED",
-        })[value],
-    )
-    .filter(Boolean) as string[];
-
-  return mapped.length > 0 ? mapped : undefined;
-}
-
-function dateRangeFromSearch(parsed: ParsedSearch): {
-  dateFrom?: string;
-  dateTo?: string;
-} {
-  const filter = parsed.filters.date;
-  if (!filter) return {};
-
-  if (filter.operator === "eq" && typeof filter.value === "string") {
-    return { dateFrom: filter.value, dateTo: filter.value };
-  }
-
-  if (filter.operator === "gt" && typeof filter.value === "string") {
-    return { dateFrom: filter.value };
-  }
-
-  if (filter.operator === "lt" && typeof filter.value === "string") {
-    return { dateTo: filter.value };
-  }
-
-  if (filter.operator === "range" && Array.isArray(filter.value)) {
-    return { dateFrom: filter.value[0], dateTo: filter.value[1] };
-  }
-
-  return {};
-}
-
-export function buildFilter(
-  parsed: ParsedSearch,
-  page: number,
-  sorting: SortingState,
-  groupBy: GroupBy = "none",
-) {
-  const search = [parsed.freeText, singleFilterValue(parsed, "user")]
-    .filter(Boolean)
-    .join(" ");
-  const sort = sorting[0];
-  const status = mapOrderStatuses(
-    stringArrayFilterValue(parsed, "is") ??
-      stringArrayFilterValue(parsed, "status"),
-  );
-  const { dateFrom, dateTo } = dateRangeFromSearch(parsed);
-
-  return {
-    search: search || undefined,
-    status,
-    tableCode: singleFilterValue(parsed, "table"),
-    store: singleFilterValue(parsed, "store"),
-    dateFrom,
-    dateTo,
-    sortBy: sort?.id,
-    sortOrder: sort ? (sort.desc ? SortOrder.Desc : SortOrder.Asc) : undefined,
-    groupBy,
-    pagination: { offset: (page - 1) * PAGE_SIZE, limit: PAGE_SIZE },
-  };
-}
-
 function orderStatusBadge(order: OrderItem, t: (key: string) => string) {
   if (order.status === "ACTIVE") {
     return (
@@ -229,41 +126,52 @@ function orderStatusBadge(order: OrderItem, t: (key: string) => string) {
       </span>
     );
   }
-
   if (order.status === "PAUSED") {
     return (
-      <span className="badge badge-neutral badge-sm">
+      <span className="badge badge-warning badge-sm">
         {t("dashOrders.statusPaused")}
       </span>
     );
   }
-
-  return (
-    <span className="badge badge-ghost badge-sm">{t("dashOrders.ended")}</span>
-  );
+  if (order.status === "SETTLED") {
+    return (
+      <span className="badge badge-ghost badge-sm">
+        {t("dashOrders.ended")}
+      </span>
+    );
+  }
+  return <span className="badge badge-sm">{order.status}</span>;
 }
 
-function orderAmount(order: OrderItem, pricingSnapshot: SnapshotData | null) {
-  if (order.finalPrice != null) return formatPrice(order.finalPrice);
+function orderCalculatedAmount(
+  order: OrderItem,
+  pricingSnapshot: SnapshotData | null,
+) {
+  if (!pricingSnapshot) return "—";
 
-  if (order.status !== "SETTLED" && pricingSnapshot) {
-    const price = calculatePrice(
-      order.startAt ? new Date(order.startAt).getTime() : Date.now(),
-      Date.now(),
-      order.table?.scope ?? "boardgame",
-      pricingSnapshot,
-    );
+  const startAt = order.startAt
+    ? new Date(order.startAt).getTime()
+    : Date.now();
+  const endAt = order.endAt ? new Date(order.endAt).getTime() : Date.now();
 
-    return price ? (
+  const price = calculatePrice(
+    startAt,
+    endAt,
+    order.table?.scope ?? "boardgame",
+    pricingSnapshot,
+  );
+
+  if (!price) return "—";
+
+  if (order.status === "ACTIVE" || order.status === "PAUSED") {
+    return (
       <span className="text-base-content/50">
         ~{formatPrice(price.finalPrice)}
       </span>
-    ) : (
-      "—"
     );
   }
 
-  return "—";
+  return formatPrice(price.finalPrice);
 }
 
 function RouteComponent() {
@@ -273,61 +181,59 @@ function RouteComponent() {
   const { t } = useTranslation();
   const [, setTick] = useState(0);
 
-  const { q, sortBy, sortOrder, groupBy, page } = Route.useSearch();
-  const [searchInput, setSearchInput] = useState(q);
+  const [sorting, setSorting] = useState<SortingState>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [actionPending, setActionPending] = useState<string | null>(null);
 
-  useEffect(() => {
-    setSearchInput(q);
-  }, [q]);
+  const { filters, query } = useRouteFilters();
+
+  const gqlVars = useMemo(
+    () => filtersToGqlVariables(filters, query),
+    [filters, query],
+  );
+
+  const filter = useMemo<OrderFilterInput>(() => {
+    const input: OrderFilterInput = {};
+    if (gqlVars.search) input.search = gqlVars.search as string;
+    if (gqlVars.status) {
+      input.status = Array.isArray(gqlVars.status)
+        ? gqlVars.status
+        : [gqlVars.status as string];
+    }
+    if (gqlVars.tableCode) input.tableCode = gqlVars.tableCode as string;
+    if (gqlVars.store) input.store = gqlVars.store as string;
+    if (gqlVars.dateFrom) input.dateFrom = gqlVars.dateFrom as string;
+    if (gqlVars.dateTo) input.dateTo = gqlVars.dateTo as string;
+    if (gqlVars.groupBy) input.groupBy = gqlVars.groupBy as string;
+
+    if (gqlVars.sortBy) {
+      input.sortBy = gqlVars.sortBy as string;
+      input.sortOrder =
+        gqlVars.sortOrder === "asc" ? SortOrder.Asc : SortOrder.Desc;
+    } else if (sorting.length > 0) {
+      input.sortBy = sorting[0].id;
+      input.sortOrder = sorting[0].desc ? SortOrder.Desc : SortOrder.Asc;
+    }
+
+    input.pagination = { offset: 0, limit: BATCH_SIZE };
+    return input;
+  }, [gqlVars, sorting]);
 
   useEffect(() => {
     const timer = setInterval(() => setTick((tick) => tick + 1), 30000);
     return () => clearInterval(timer);
   }, []);
 
-  const setSearchParam = useCallback(
-    (
-      updates: Partial<{
-        q: string;
-        sortBy: SortBy;
-        sortOrder: SortOrderVal;
-        groupBy: GroupBy;
-        page: number;
-      }>,
-    ) =>
-      navigate({ search: (prev) => ({ ...prev, ...updates }), replace: true }),
-    [navigate],
-  );
-
-  const { pendingSearch, clearPendingSearch } = usePendingSearch();
-
-  useEffect(() => {
-    if (pendingSearch !== null) {
-      setSearchInput(pendingSearch);
-      setSearchParam({ q: pendingSearch, page: 1 });
-      clearPendingSearch();
-    }
-  }, [pendingSearch, clearPendingSearch, setSearchParam]);
-
-  const parsed = useMemo(() => parseSearch(q, ORDER_SEARCH_GRAMMAR), [q]);
-  const sorting = useMemo<SortingState>(
-    () => [{ id: sortBy, desc: sortOrder === "desc" }],
-    [sortBy, sortOrder],
-  );
-  const filter = useMemo(
-    () => buildFilter(parsed, page, sorting, groupBy),
-    [parsed, page, sorting, groupBy],
-  );
-
   const {
     data: qlData,
     loading,
+    fetchMore,
     refetch,
+    networkStatus,
   } = useOrdersQuery({
     variables: { filter },
     fetchPolicy: "cache-and-network",
+    notifyOnNetworkStatusChange: true,
   });
 
   useOrderStatusChangedSubscription({
@@ -347,12 +253,47 @@ function RouteComponent() {
   const [batchPause] = useBatchPauseOrdersMutation();
   const [batchResume] = useBatchResumeOrdersMutation();
 
-  const data = qlData?.orders ?? null;
   const items = useMemo<OrderItem[]>(
-    () => (data?.items ?? []) as OrderItem[],
-    [data],
+    () => (qlData?.orders?.items ?? []) as OrderItem[],
+    [qlData],
   );
-  const total = data?.pageInfo?.total ?? 0;
+  const pageInfo = qlData?.orders?.pageInfo;
+  const hasMore = pageInfo?.hasMore ?? false;
+  const isLoadingMore = networkStatus === NetworkStatus.fetchMore;
+
+  const loadMore = useCallback(async () => {
+    if (isLoadingMore || !hasMore) return;
+    const nextOffset = items.length;
+    await fetchMore({
+      variables: {
+        filter: {
+          ...filter,
+          pagination: { offset: nextOffset, limit: BATCH_SIZE },
+        },
+      },
+      updateQuery: (prev, { fetchMoreResult }) => {
+        if (!fetchMoreResult) return prev;
+        return {
+          orders: {
+            ...fetchMoreResult.orders,
+            items: [
+              ...(prev.orders?.items ?? []),
+              ...(fetchMoreResult.orders?.items ?? []),
+            ],
+          },
+        };
+      },
+    });
+  }, [fetchMore, filter, items.length, isLoadingMore, hasMore]);
+
+  const clearSelectedIds = useCallback(() => setSelectedIds(new Set()), []);
+  useSelectedTableData({
+    entityType: "订单",
+    rows: items,
+    selectedIds,
+    getRowId: (order) => order.id,
+    onClear: clearSelectedIds,
+  });
 
   const handleCopy = useCallback(
     (text: string) => {
@@ -417,14 +358,6 @@ function RouteComponent() {
   };
 
   const selectedItems = items.filter((order) => selectedIds.has(order.id));
-  const clearSelectedIds = useCallback(() => setSelectedIds(new Set()), []);
-  useSelectedTableData({
-    entityType: "订单",
-    rows: items,
-    selectedIds,
-    getRowId: (order) => order.id,
-    onClear: clearSelectedIds,
-  });
   const hasActiveSelected = selectedItems.some(
     (order) => order.status === "ACTIVE",
   );
@@ -595,10 +528,21 @@ function RouteComponent() {
       },
       {
         accessorKey: "amount",
-        header: t("dashOrders.cost"),
+        header: "自动计算",
         cell: ({ row }) => (
           <span className="font-mono whitespace-nowrap">
-            {orderAmount(row.original, pricingSnapshot)}
+            {orderCalculatedAmount(row.original, pricingSnapshot)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "deductedAmount",
+        header: "计划划扣",
+        cell: ({ row }) => (
+          <span className="font-mono whitespace-nowrap">
+            {row.original.deductedAmount != null
+              ? formatPrice(row.original.deductedAmount)
+              : "—"}
           </span>
         ),
       },
@@ -751,60 +695,6 @@ function RouteComponent() {
       </div>
     );
 
-  const groups = useMemo(() => {
-    if (groupBy === "none") return [{ key: "", items }];
-
-    const grouped = new Map<string, OrderItem[]>();
-    for (const item of items) {
-      const key =
-        groupBy === "table"
-          ? (item.table?.name ?? t("dashOrders.unknownTable"))
-          : groupBy === "user"
-            ? (item.nickname ?? t("dashOrders.unknownUser"))
-            : item.startAt
-              ? dayjs(item.startAt).format("YYYY/MM/DD")
-              : t("dashOrders.unknownDate");
-      grouped.set(key, [...(grouped.get(key) ?? []), item]);
-    }
-
-    return Array.from(grouped.entries()).map(([key, items]) => ({
-      key,
-      items,
-    }));
-  }, [items, groupBy, t]);
-
-  const groupLabel = (key: string): string => {
-    if (groupBy === "table")
-      return formatMessage(t("dashOrders.groupTable"), { value: key });
-    if (groupBy === "user")
-      return formatMessage(t("dashOrders.groupUser"), { value: key });
-    if (groupBy === "date")
-      return formatMessage(t("dashOrders.groupDate"), { value: key });
-    return key;
-  };
-
-  const quickFilters = useMemo(
-    () =>
-      (
-        [
-          ["all", t("dashOrders.all")],
-          ["active", t("dashOrders.active")],
-          ["paused", t("dashOrders.statusPaused")],
-          ["ended", t("dashOrders.ended")],
-        ] as const
-      ).map(([value, label]) => ({
-        label,
-        key: "status",
-        value,
-        active:
-          value === "all"
-            ? !parsed.filters.status && !parsed.filters.is
-            : parsed.filters.status?.value === value ||
-              parsed.filters.is?.value === value,
-      })),
-    [t, parsed],
-  );
-
   const selectedActions = [
     ...(hasActiveSelected
       ? [
@@ -853,166 +743,28 @@ function RouteComponent() {
       : []),
   ];
 
-  const renderTable = (
-    tableItems: OrderItem[],
-    paginationMode: "offset" | "none",
-  ) => (
-    <DashTable
-      columns={columns}
-      data={tableItems}
-      loading={loading}
-      emptyMessage={
-        q.trim() ? t("dashOrders.noMatchedOrders") : t("dashOrders.noOrders")
-      }
-      pagination={{
-        offset: (page - 1) * PAGE_SIZE,
-        limit: PAGE_SIZE,
-        total,
-        hasMore: page * PAGE_SIZE < total,
-      }}
-      paginationMode={paginationMode}
-      onPaginationChange={(nextPage) =>
-        setSearchParam({ page: Math.floor(nextPage.offset / PAGE_SIZE) + 1 })
-      }
-      sorting={sorting}
-      onSortingChange={(nextSorting) => {
-        const nextSort = nextSorting[0];
-        setSearchParam({
-          sortBy: (nextSort?.id as SortBy | undefined) ?? "start_at",
-          sortOrder: nextSort?.desc ? "desc" : "asc",
-          page: 1,
-        });
-      }}
-      sortableColumns={["start_at", "end_at", "status", "amount"]}
-      enableRowSelection
-      selectedRows={selectedIds}
-      onSelectedRowsChange={setSelectedIds}
-      getRowId={(row) => row.id}
-      renderActions={renderActions}
-    />
-  );
-
   return (
-    <main className="size-full flex flex-col overflow-hidden relative">
-      <div className="px-4 pt-4 flex flex-col gap-3 shrink-0">
-        <div className="flex items-center gap-3">
-          <DashBackButton />
-          <TableToolbar
-            searchBar={{
-              grammar: ORDER_SEARCH_GRAMMAR,
-              value: searchInput,
-              onChange: setSearchInput,
-              onSubmit: (parsedResult) => {
-                const serialized = serialize(
-                  parsedResult,
-                  ORDER_SEARCH_GRAMMAR,
-                );
-                setSearchParam({ q: serialized, page: 1 });
-              },
-              placeholder: t("dashOrders.searchPlaceholder"),
-            }}
-            quickFilters={quickFilters}
-            onQuickFilterToggle={(key, value) => {
-              const nextParsed = parseSearch(searchInput, ORDER_SEARCH_GRAMMAR);
-              const nextFilters = { ...nextParsed.filters };
-              if (value === "all") delete nextFilters[key];
-              else if (nextFilters[key]?.value === value)
-                delete nextFilters[key];
-              else nextFilters[key] = { operator: "eq", value };
-              delete nextFilters.is;
-              const serialized = serialize(
-                { ...nextParsed, filters: nextFilters, errors: [] },
-                ORDER_SEARCH_GRAMMAR,
-              );
-              setSearchInput(serialized);
-              setSearchParam({ q: serialized, page: 1 });
-            }}
-            storeFilter
-            extra={
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  className="btn btn-xs btn-ghost"
-                  onClick={() => selectAllByStatus("ACTIVE")}
-                >
-                  {t("dashOrders.selectAllActive")}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-xs btn-ghost"
-                  onClick={() => selectAllByStatus("PAUSED")}
-                >
-                  {t("dashOrders.selectAllPaused")}
-                </button>
-                <select
-                  className="select select-bordered select-xs"
-                  value={groupBy}
-                  onChange={(event) =>
-                    setSearchParam({
-                      groupBy: event.target.value as GroupBy,
-                      page: 1,
-                    })
-                  }
-                >
-                  <option value="none">{t("dashOrders.noGrouping")}</option>
-                  <option value="table">{t("dashOrders.groupByTable")}</option>
-                  <option value="user">{t("dashOrders.groupByUser")}</option>
-                  <option value="date">{t("dashOrders.groupByDate")}</option>
-                </select>
-              </div>
-            }
-          />
-        </div>
-      </div>
-
-      <div className="w-full flex-1 min-h-0 overflow-auto relative px-4 pb-4 pt-3">
-        {groupBy === "none" ? (
-          renderTable(items, "offset")
-        ) : (
-          <div className="flex flex-col gap-4">
-            {groups.map((group) => (
-              <section
-                key={group.key || "__ungrouped"}
-                className="flex flex-col gap-2"
-              >
-                {group.key && (
-                  <div className="bg-base-200 rounded-box px-4 py-2 font-semibold text-sm">
-                    {groupLabel(group.key)}
-                  </div>
-                )}
-                {renderTable(group.items, "none")}
-              </section>
-            ))}
-            {total > PAGE_SIZE && (
-              <div className="flex flex-wrap items-center justify-end gap-3">
-                <span className="text-sm font-medium">
-                  {page} / {Math.max(1, Math.ceil(total / PAGE_SIZE))}
-                </span>
-                <div className="join">
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-ghost join-item"
-                    disabled={page <= 1 || loading}
-                    onClick={() => setSearchParam({ page: page - 1 })}
-                  >
-                    {t("dashOrders.previousPage")}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-ghost join-item"
-                    disabled={page * PAGE_SIZE >= total || loading}
-                    onClick={() => setSearchParam({ page: page + 1 })}
-                  >
-                    {t("dashOrders.nextPage")}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-        {selectedIds.size > 0 && <div className="h-24" />}
-      </div>
-
+    <main className="size-full flex flex-col">
+      <InfiniteTable
+        columns={columns}
+        data={items}
+        loading={loading}
+        hasMore={hasMore}
+        onLoadMore={loadMore}
+        sorting={sorting}
+        onSortingChange={setSorting}
+        sortableColumns={["start_at", "end_at", "status", "amount"]}
+        enableRowSelection
+        selectedRows={selectedIds}
+        onSelectedRowsChange={setSelectedIds}
+        getRowId={(row) => row.id}
+        emptyMessage={
+          query.trim()
+            ? t("dashOrders.noMatchedOrders")
+            : t("dashOrders.noOrders")
+        }
+        renderActions={renderActions}
+      />
       {selectedIds.size > 0 && (
         <BatchActionBar
           count={selectedIds.size}
