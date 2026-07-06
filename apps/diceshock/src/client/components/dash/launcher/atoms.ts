@@ -10,6 +10,8 @@ import type {
 
 // ─── Launcher state shape ────────────────────────────────────────────────────
 
+export type LauncherOrigin = "search" | "header";
+
 export interface LauncherFormState {
   open: boolean;
   mode: LauncherMode;
@@ -18,6 +20,8 @@ export interface LauncherFormState {
   filters: FilterValue[];
   focusIndex: number;
   results: SearchResultItem[];
+  /** How the launcher was opened: "search" = from search mode, "header" = from table header click */
+  origin: LauncherOrigin;
 }
 
 const INITIAL_STATE: LauncherFormState = {
@@ -28,6 +32,7 @@ const INITIAL_STATE: LauncherFormState = {
   filters: [],
   focusIndex: 0,
   results: [],
+  origin: "search",
 };
 
 // ─── Single source of truth ──────────────────────────────────────────────────
@@ -81,6 +86,7 @@ export const launcherOpenWithFiltersAtom = atom(
       launcherAtom,
       produce(get(launcherAtom), (d) => {
         d.open = true;
+        d.origin = "search";
         d.mode = { type: "search" };
         d.filters = payload.filters;
         d.query = payload.query;
@@ -208,6 +214,7 @@ export const launcherOpenForFieldAtom = atom(
       launcherAtom,
       produce(get(launcherAtom), (d) => {
         d.open = true;
+        d.origin = "header";
         d.categoryId = payload.categoryId;
         d.filters = payload.filters;
         d.query = "";

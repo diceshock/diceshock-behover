@@ -51,7 +51,7 @@ import {
 
 export function Launcher() {
   const state = useAtomValue(launcherAtom);
-  const { open, mode, query, categoryId, filters, focusIndex, results } = state;
+  const { open, mode, query, categoryId, filters, focusIndex, results, origin } = state;
   const update = useSetAtom(launcherUpdateAtom);
   const addFilter = useSetAtom(launcherAddFilterAtom);
   const removeFilter = useSetAtom(launcherRemoveFilterAtom);
@@ -108,30 +108,26 @@ export function Launcher() {
     }
   }, [open, mode.type]);
 
-  // Escape key handling
+  // Escape / X behavior depends on how the launcher was opened:
+  // - origin "header" (table header click): close the launcher entirely
+  // - origin "search" (normal open): return directly to search mode from any level
   useEffect(() => {
     if (!open) return;
     const handler = (e: globalThis.KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
-        if (mode.type === "value-input") {
-          // Go back to operator-select for the same field
-          setMode({ type: "operator-select", field: mode.field });
-          setQuery("");
-        } else if (mode.type === "operator-select") {
-          // Go back to field-select
-          setMode({ type: "field-select" });
-          setQuery("");
-        } else if (mode.type === "field-select") {
-          exitToSearch();
-        } else {
+        if (origin === "header") {
           reset();
+        } else if (mode.type === "search") {
+          reset();
+        } else {
+          exitToSearch();
         }
       }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [open, mode, reset, exitToSearch, setMode, setQuery]);
+  }, [open, mode, origin, reset, exitToSearch]);
 
   // Build menu items based on current mode
   const menuItems = useMemo((): MenuItemData[] => {
@@ -549,15 +545,14 @@ export function Launcher() {
             <button
               type="button"
               onClick={() => {
-                if (mode.type === "value-input") {
-                  setMode({ type: "operator-select", field: mode.field });
+                if (origin === "header") {
+                  reset();
                 } else {
-                  setMode({ type: "field-select" });
+                  exitToSearch();
                 }
-                setQuery("");
               }}
               className="btn btn-ghost btn-xs btn-square"
-              title="返回 (Esc)"
+              title={origin === "header" ? "关闭 (Esc)" : "返回搜索 (Esc)"}
             >
               <XIcon className="size-3.5" />
             </button>
