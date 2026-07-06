@@ -689,6 +689,15 @@ export type ToggleEventPublishMutationVariables = Exact<{
 
 export type ToggleEventPublishMutation = { toggleEventPublish: { id: string, isPublished: boolean } };
 
+export type DashGlobalSearchQueryVariables = Exact<{
+  query: string;
+  categories?: Array<string> | string | null | undefined;
+  limit?: number | null | undefined;
+}>;
+
+
+export type DashGlobalSearchQuery = { dashGlobalSearch: Array<{ category: string, items: Array<{ id: string, category: string, title: string, subtitle: string | null, detail: string | null, href: string, avatar: string | null, searchableFields: string | null }> }> };
+
 export type MahjongMatchQueryVariables = Exact<{
   id: string | number;
   storeId?: string | number | null | undefined;
@@ -2865,6 +2874,61 @@ export function useToggleEventPublishMutation(baseOptions?: Apollo.MutationHookO
 export type ToggleEventPublishMutationHookResult = ReturnType<typeof useToggleEventPublishMutation>;
 export type ToggleEventPublishMutationResult = Apollo.MutationResult<Types.ToggleEventPublishMutation>;
 export type ToggleEventPublishMutationOptions = Apollo.BaseMutationOptions<Types.ToggleEventPublishMutation, Types.ToggleEventPublishMutationVariables>;
+export const DashGlobalSearchDocument = gql`
+    query DashGlobalSearch($query: String!, $categories: [String!], $limit: Int) {
+  dashGlobalSearch(query: $query, categories: $categories, limit: $limit) {
+    category
+    items {
+      id
+      category
+      title
+      subtitle
+      detail
+      href
+      avatar
+      searchableFields
+    }
+  }
+}
+    `;
+
+/**
+ * __useDashGlobalSearchQuery__
+ *
+ * To run a query within a React component, call `useDashGlobalSearchQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDashGlobalSearchQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDashGlobalSearchQuery({
+ *   variables: {
+ *      query: // value for 'query'
+ *      categories: // value for 'categories'
+ *      limit: // value for 'limit'
+ *   },
+ * });
+ */
+export function useDashGlobalSearchQuery(baseOptions: Apollo.QueryHookOptions<Types.DashGlobalSearchQuery, Types.DashGlobalSearchQueryVariables> & ({ variables: Types.DashGlobalSearchQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<Types.DashGlobalSearchQuery, Types.DashGlobalSearchQueryVariables>(DashGlobalSearchDocument, options);
+      }
+export function useDashGlobalSearchLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<Types.DashGlobalSearchQuery, Types.DashGlobalSearchQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<Types.DashGlobalSearchQuery, Types.DashGlobalSearchQueryVariables>(DashGlobalSearchDocument, options);
+        }
+// @ts-ignore
+export function useDashGlobalSearchSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<Types.DashGlobalSearchQuery, Types.DashGlobalSearchQueryVariables>): Apollo.UseSuspenseQueryResult<Types.DashGlobalSearchQuery, Types.DashGlobalSearchQueryVariables>;
+export function useDashGlobalSearchSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<Types.DashGlobalSearchQuery, Types.DashGlobalSearchQueryVariables>): Apollo.UseSuspenseQueryResult<Types.DashGlobalSearchQuery | undefined, Types.DashGlobalSearchQueryVariables>;
+export function useDashGlobalSearchSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<Types.DashGlobalSearchQuery, Types.DashGlobalSearchQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<Types.DashGlobalSearchQuery, Types.DashGlobalSearchQueryVariables>(DashGlobalSearchDocument, options);
+        }
+export type DashGlobalSearchQueryHookResult = ReturnType<typeof useDashGlobalSearchQuery>;
+export type DashGlobalSearchLazyQueryHookResult = ReturnType<typeof useDashGlobalSearchLazyQuery>;
+export type DashGlobalSearchSuspenseQueryHookResult = ReturnType<typeof useDashGlobalSearchSuspenseQuery>;
+export type DashGlobalSearchQueryResult = Apollo.QueryResult<Types.DashGlobalSearchQuery, Types.DashGlobalSearchQueryVariables>;
 export const MahjongMatchDocument = gql`
     query MahjongMatch($id: ID!, $storeId: ID) {
   mahjongMatch(id: $id, storeId: $storeId) {

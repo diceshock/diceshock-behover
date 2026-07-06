@@ -306,6 +306,12 @@ export type CursorPaginationInput = {
   limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
+export type DashGlobalSearchResult = {
+  __typename?: 'DashGlobalSearchResult';
+  category: Scalars['String']['output'];
+  items: Array<DashSearchResultItem>;
+};
+
 export type DashSearchHistoryEntry = {
   __typename?: 'DashSearchHistoryEntry';
   categoryId: Scalars['String']['output'];
@@ -314,6 +320,18 @@ export type DashSearchHistoryEntry = {
   label: Scalars['String']['output'];
   params: Scalars['String']['output'];
   route: Scalars['String']['output'];
+};
+
+export type DashSearchResultItem = {
+  __typename?: 'DashSearchResultItem';
+  avatar?: Maybe<Scalars['String']['output']>;
+  category: Scalars['String']['output'];
+  detail?: Maybe<Scalars['String']['output']>;
+  href: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  searchableFields?: Maybe<Scalars['String']['output']>;
+  subtitle?: Maybe<Scalars['String']['output']>;
+  title: Scalars['String']['output'];
 };
 
 export type DeductPointsInput = {
@@ -1503,6 +1521,7 @@ export type Query = {
   captchaSettings: CaptchaSettings;
   crawlerErrors: Array<CrawlerError>;
   crawlerStats: CrawlerStats;
+  dashGlobalSearch: Array<DashGlobalSearchResult>;
   dashSearchHistory: Array<DashSearchHistoryEntry>;
   event: Event;
   events: Array<Event>;
@@ -1591,6 +1610,13 @@ export type QueryBusinessCardArgs = {
 
 export type QueryCrawlerErrorsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryDashGlobalSearchArgs = {
+  categories?: InputMaybe<Array<Scalars['String']['input']>>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  query: Scalars['String']['input'];
 };
 
 

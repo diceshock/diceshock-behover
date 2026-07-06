@@ -1,0 +1,15 @@
+query DashGlobalSearch($query: String!, $categories: [String!], $limit: Int) {
+  dashGlobalSearch(query: $query, categories: $categories, limit: $limit) {
+    category
+    items {
+      id
+      category
+      title
+      subtitle
+      detail
+      href
+      avatar
+      searchableFields
+    }
+  }
+}

@@ -14,6 +14,7 @@ import { tablesResolvers } from "./tables";
 import { usersResolvers } from "./users";
 import { wechatMenuResolvers } from "./wechatMenu";
 import { searchHistoryResolvers } from "./searchHistory";
+import { globalSearchResolvers } from "./globalSearch";
 
 function mergeResolverMaps(
   ...maps: Record<string, Record<string, unknown>>[]
@@ -43,6 +44,7 @@ export const ALL_RESOLVERS: ResolverMap = mergeResolverMaps(
   usersResolvers as Record<string, Record<string, unknown>>,
   wechatMenuResolvers as Record<string, Record<string, unknown>>,
   searchHistoryResolvers as Record<string, Record<string, unknown>>,
+  globalSearchResolvers as Record<string, Record<string, unknown>>,
 );
 
 export const ALL_TYPEDEFS = baseSchema;

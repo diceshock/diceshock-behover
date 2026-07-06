@@ -1731,3 +1731,26 @@ extend type Mutation {
   removeDashSearchHistory(id: ID!): Boolean! # @auth(role: STAFF)
   clearDashSearchHistory: Boolean! # @auth(role: STAFF)
 }
+
+# ─── Dash Global Search (Launcher live search) ───────────────────
+
+type DashSearchResultItem {
+  id: ID!
+  category: String!
+  title: String!
+  subtitle: String
+  detail: String
+  href: String!
+  avatar: String
+  # Searchable fields for client-side Fuse.js re-ranking
+  searchableFields: String
+}
+
+type DashGlobalSearchResult {
+  items: [DashSearchResultItem!]!
+  category: String!
+}
+
+extend type Query {
+  dashGlobalSearch(query: String!, categories: [String!], limit: Int = 10): [DashGlobalSearchResult!]! # @auth(role: STAFF)
+}

@@ -13,6 +13,7 @@ import {
   useDashSearchHistoryQuery,
   useSaveDashSearchHistoryMutation,
   useClearDashSearchHistoryMutation,
+  useDashGlobalSearchLazyQuery,
   DashSearchHistoryDocument,
 } from "@/client/graphql/__generated__/operations";
 import {
@@ -100,6 +101,30 @@ export function Launcher() {
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [open]);
+
+  // ── Global live search (debounced) ──
+  const [execGlobalSearch, { data: globalSearchData, loading: globalSearchLoading }] =
+    useDashGlobalSearchLazyQuery({ fetchPolicy: "cache-and-network" });
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    // Only run global search in search mode with query text
+    if (!open || mode.type !== "search" || !query.trim()) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      const categories = categoryId ? [categoryId] : undefined;
+      execGlobalSearch({ variables: { query: query.trim(), categories, limit: 15 } });
+    }, 200);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [open, mode.type, query, categoryId, execGlobalSearch]);
+
+  // Flatten server results for Fuse.js re-ranking
+  const globalResults = useMemo(() => {
+    if (!globalSearchData?.dashGlobalSearch) return [];
+    return globalSearchData.dashGlobalSearch.flatMap((g) => g.items);
+  }, [globalSearchData]);
 
   // Re-focus input on mode change
   useEffect(() => {
@@ -222,58 +247,60 @@ export function Launcher() {
       return [];
     }
 
-    // ── Has query or filters → show search results
-    if (!activeCategory) {
-      // No category: filter categories by query text
-      const filtered = query
-        ? CATEGORIES.filter((c) =>
-            c.label.toLowerCase().includes(query.toLowerCase()),
-          )
-        : [];
-      return filtered.map((c) => ({
-        id: `cat:${c.id}`,
-        label: c.label,
-        icon: c.icon,
-        category: c,
-      }));
-    }
-
-    // In a category with query or filters — show navigate + results
+    // ── Has query or filters → show live search results (from server, re-ranked locally)
     const items: MenuItemData[] = [];
 
-    // Navigate item
-    items.push({
-      id: "navigate",
-      label: `前往 ${activeCategory.label}`,
-      description: buildFilterDescription(filters, query),
-      isNavigate: true,
-    });
-
-    // Fuse search on results
-    if (results.length > 0) {
-      const fuse = new Fuse(results, {
-        keys: ["title", "subtitle"],
-        threshold: 0.4,
-        includeScore: true,
+    // If a category is active, show "navigate" item for applying filters
+    if (activeCategory) {
+      items.push({
+        id: "navigate",
+        label: `前往 ${activeCategory.label}`,
+        description: buildFilterDescription(filters, query),
+        isNavigate: true,
       });
-      const matched = query
+    }
+
+    // Also show matching category entries (only when no category selected)
+    if (!activeCategory && query) {
+      const matchedCats = CATEGORIES.filter((c) =>
+        c.label.toLowerCase().includes(query.toLowerCase()),
+      );
+      for (const c of matchedCats) {
+        items.push({ id: `cat:${c.id}`, label: c.label, icon: c.icon, category: c });
+      }
+    }
+
+    // Use globalResults from server, re-ranked by Fuse.js with weighted keys
+    if (globalResults.length > 0) {
+      // Weight title highest, then subtitle, then searchableFields for broad matching
+      const fuse = new Fuse(globalResults, {
+        keys: [
+          { name: "title", weight: 3 },
+          { name: "subtitle", weight: 1.5 },
+          { name: "searchableFields", weight: 1 },
+        ],
+        threshold: 0.5,
+        includeScore: true,
+        ignoreLocation: true,
+      });
+      const ranked = query
         ? fuse.search(query).map((r) => r.item)
-        : results.slice(0, 20);
-      for (const r of matched) {
+        : globalResults;
+      for (const r of ranked.slice(0, 20)) {
         items.push({
           id: `result:${r.id}`,
           label: r.title,
-          subtitle: r.subtitle,
-          detail: r.detail,
+          subtitle: r.subtitle ?? undefined,
+          detail: r.detail ? (JSON.parse(r.detail) as Record<string, string | number | null>) : undefined,
           href: r.href,
-          avatar: r.avatar,
-          resultType: r.type,
+          avatar: r.avatar ?? undefined,
+          resultType: r.category,
         });
       }
     }
 
     return items;
-  }, [mode, activeCategory, categoryId, query, results, filters, searchHistory]);
+  }, [mode, activeCategory, categoryId, query, results, filters, searchHistory, globalResults]);
 
   // Clamp focus
   useEffect(() => {
@@ -382,6 +409,18 @@ export function Launcher() {
 
     // ── Result item
     if ("href" in item && item.href) {
+      // Save to search history when navigating to a concrete result
+      const resultCategory = ("resultType" in item ? item.resultType : categoryId) || "";
+      saveHistory({
+        variables: {
+          input: {
+            label: item.label,
+            categoryId: resultCategory,
+            route: item.href,
+            params: "{}",
+          },
+        },
+      });
       navigate({ to: item.href });
       reset();
       return;
@@ -612,9 +651,14 @@ export function Launcher() {
                   </p>
                 </div>
               )}
-              {menuItems.length === 0 && query && (
+              {menuItems.length === 0 && query && !globalSearchLoading && (
                 <div className="px-4 py-6 text-center text-xs text-base-content/40">
                   无结果
+                </div>
+              )}
+              {menuItems.length === 0 && query && globalSearchLoading && (
+                <div className="px-4 py-6 text-center">
+                  <span className="loading loading-dots loading-sm text-base-content/30" />
                 </div>
               )}
             </>
