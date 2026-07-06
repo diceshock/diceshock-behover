@@ -8,8 +8,11 @@ import {
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { useCallback, useMemo, useRef, useState } from "react";
+import { useSetAtom } from "jotai";
 import { DataTable } from "@/client/components/dash/DataTable"
 import { IdCell } from "@/client/components/dash/IdCell";
+import { launcherOpenForFieldAtom } from "@/client/components/dash/launcher/atoms";
+import { getCategoryById } from "@/client/components/dash/launcher/categories";
 import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
 import { useMsg } from "@/client/components/diceshock/Msg";
@@ -62,6 +65,16 @@ function RouteComponent() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { filters, query } = useRouteFilters();
+  const openForField = useSetAtom(launcherOpenForFieldAtom);
+  const activesCategory = getCategoryById("actives");
+
+  const handleColumnFilter = useCallback((columnId: string) => {
+    if (!activesCategory) return;
+    const field = activesCategory.fields.find((f) => f.key === columnId);
+    if (!field) return;
+    openForField({ field, filters, query, categoryId: "actives" });
+  }, [activesCategory, openForField, filters, query]);
+
 
   const gqlVars = useMemo(
     () => filtersToGqlVariables(filters, query),
@@ -359,6 +372,8 @@ function RouteComponent() {
       sorting={sorting}
       onSortingChange={setSorting}
       sortableColumns={["title", "date", "maxPlayers", "createdAt"]}
+      filterableColumns={["creator", "type", "status", "store", "date", "start_time"]}
+      onColumnFilter={handleColumnFilter}
       enableRowSelection
       selectedRows={selectedIds}
       onSelectedRowsChange={setSelectedIds}

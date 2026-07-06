@@ -13,6 +13,7 @@ import { subscriptionResolvers } from "./subscriptions";
 import { tablesResolvers } from "./tables";
 import { usersResolvers } from "./users";
 import { wechatMenuResolvers } from "./wechatMenu";
+import { searchHistoryResolvers } from "./searchHistory";
 
 function mergeResolverMaps(
   ...maps: Record<string, Record<string, unknown>>[]
@@ -41,6 +42,7 @@ export const ALL_RESOLVERS: ResolverMap = mergeResolverMaps(
   tablesResolvers as Record<string, Record<string, unknown>>,
   usersResolvers as Record<string, Record<string, unknown>>,
   wechatMenuResolvers as Record<string, Record<string, unknown>>,
+  searchHistoryResolvers as Record<string, Record<string, unknown>>,
 );
 
 export const ALL_TYPEDEFS = baseSchema;

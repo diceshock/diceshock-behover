@@ -21,9 +21,11 @@ export function useRouteFilters(): {
     const category = getCategoryByRoute(location.pathname);
     const params: Record<string, string> = {};
     // TanStack Router location.search is a parsed object
-    const searchObj = (location.search ?? {}) as Record<string, unknown>;
-    for (const [k, v] of Object.entries(searchObj)) {
-      if (v != null) params[k] = String(v);
+    const searchObj = location.search;
+    if (searchObj && typeof searchObj === "object") {
+      for (const [k, v] of Object.entries(searchObj)) {
+        if (v != null) params[k] = String(v);
+      }
     }
 
     const { filters, query } = searchParamsToFilters(params, category);
@@ -34,6 +36,14 @@ export function useRouteFilters(): {
 /**
  * Convert FilterValue[] into variables for GraphQL queries.
  * Each table page can extend this with category-specific logic.
+ *
+ * New format maps operator-based filters:
+ * - eq → key = value (exact match)
+ * - include → key contains value (text search)
+ * - gte → key >= value
+ * - lte → key <= value
+ * - range → key between from|to
+ * - sort_asc / sort_desc → sortBy + sortOrder
  */
 export function filtersToGqlVariables(
   filters: FilterValue[],
@@ -44,30 +54,35 @@ export function filtersToGqlVariables(
   if (query) vars.search = query;
 
   for (const f of filters) {
-    switch (f.kind) {
-      case "kv":
+    switch (f.operator) {
+      case "eq":
         vars[f.key] = f.value;
         break;
-      case "option":
+      case "include":
+        // Use the same key — server interprets as LIKE/contains
         vars[f.key] = f.value;
         break;
-      case "boolean":
-        vars[f.key] = true;
+      case "gte":
+        vars[`${f.key}From`] = f.value;
         break;
-      case "number":
-        vars[`${f.key}_${f.operator}`] = f.value;
+      case "lte":
+        vars[`${f.key}To`] = f.value;
         break;
-      case "date":
-        vars[`${f.key}From`] = f.from;
-        vars[`${f.key}To`] = f.to;
-        break;
-      case "sort": {
-        vars.sortBy = f.key;
-        vars.sortOrder = f.value;
+      case "range": {
+        const sep = f.value.indexOf("|");
+        if (sep !== -1) {
+          vars[`${f.key}From`] = f.value.slice(0, sep);
+          vars[`${f.key}To`] = f.value.slice(sep + 1);
+        }
         break;
       }
-      case "group":
-        vars.groupBy = f.value;
+      case "sort_asc":
+        vars.sortBy = f.key;
+        vars.sortOrder = "asc";
+        break;
+      case "sort_desc":
+        vars.sortBy = f.key;
+        vars.sortOrder = "desc";
         break;
     }
   }

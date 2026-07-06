@@ -7,12 +7,12 @@ export const CATEGORIES: CategoryDef[] = [
     icon: "Users",
     route: "/dash/users",
     searchKeys: ["nickname", "phone", "uid"],
-    filters: [
-      { kind: "kv", key: "name", label: "昵称", placeholder: "搜索昵称…" },
-      { kind: "kv", key: "uid", label: "UID", placeholder: "UID 前缀…" },
-      { kind: "kv", key: "phone", label: "手机号", placeholder: "手机号…" },
+    fields: [
+      { type: "text", key: "name", label: "昵称", placeholder: "搜索昵称…" },
+      { type: "text", key: "uid", label: "UID", placeholder: "UID…", operators: ["eq", "include"] },
+      { type: "text", key: "phone", label: "手机号", placeholder: "手机号…", operators: ["eq", "include"] },
       {
-        kind: "option",
+        type: "enum",
         key: "role",
         label: "角色",
         options: [
@@ -21,17 +21,13 @@ export const CATEGORIES: CategoryDef[] = [
           { value: "authenticated", label: "顾客" },
         ],
       },
-      { kind: "option", key: "store", label: "门店", options: [
+      { type: "enum", key: "store", label: "门店", options: [
         { value: "gg", label: "光谷" },
         { value: "jdk", label: "街道口" },
       ]},
-      { kind: "boolean", key: "disabled", label: "已禁用" },
-      { kind: "date", key: "created", label: "注册时间", granularity: "day" },
-      { kind: "sort", key: "sort", label: "排序", fields: [
-        { value: "created_at", label: "注册时间" },
-        { value: "nickname", label: "昵称" },
-        { value: "stored_value", label: "储值余额" },
-      ]},
+      { type: "boolean", key: "disabled", label: "已禁用" },
+      { type: "number", key: "stored_value", label: "储值余额", unit: "元" },
+      { type: "date", key: "created", label: "注册时间", granularity: "day" },
     ],
   },
   {
@@ -40,11 +36,11 @@ export const CATEGORIES: CategoryDef[] = [
     icon: "ClipboardText",
     route: "/dash/orders",
     searchKeys: ["table", "user", "id"],
-    filters: [
-      { kind: "kv", key: "table", label: "桌台", placeholder: "桌台名…" },
-      { kind: "kv", key: "user", label: "用户", placeholder: "用户…" },
+    fields: [
+      { type: "text", key: "table", label: "桌台", placeholder: "桌台名…" },
+      { type: "text", key: "user", label: "用户", placeholder: "用户…" },
       {
-        kind: "option",
+        type: "enum",
         key: "status",
         label: "状态",
         options: [
@@ -53,21 +49,13 @@ export const CATEGORIES: CategoryDef[] = [
           { value: "ended", label: "已结束" },
         ],
       },
-      { kind: "option", key: "store", label: "门店", options: [
+      { type: "enum", key: "store", label: "门店", options: [
         { value: "gg", label: "光谷" },
         { value: "jdk", label: "街道口" },
       ]},
-      { kind: "date", key: "date", label: "日期", granularity: "day" },
-      { kind: "sort", key: "sort", label: "排序", fields: [
-        { value: "start_at", label: "开始时间" },
-        { value: "end_at", label: "结束时间" },
-      ]},
-      { kind: "group", key: "group", label: "分组", options: [
-        { value: "table", label: "桌台" },
-        { value: "user", label: "用户" },
-        { value: "date", label: "日期" },
-        { value: "none", label: "无" },
-      ]},
+      { type: "date", key: "date", label: "日期", granularity: "day" },
+      { type: "date", key: "start_at", label: "开始时间", granularity: "hour" },
+      { type: "date", key: "end_at", label: "结束时间", granularity: "hour" },
     ],
   },
   {
@@ -76,10 +64,10 @@ export const CATEGORIES: CategoryDef[] = [
     icon: "Table",
     route: "/dash/tables",
     searchKeys: ["name", "code"],
-    filters: [
-      { kind: "kv", key: "name", label: "桌台名", placeholder: "搜索桌台…" },
+    fields: [
+      { type: "text", key: "name", label: "桌台名", placeholder: "搜索桌台…" },
       {
-        kind: "option",
+        type: "enum",
         key: "type",
         label: "类型",
         options: [
@@ -88,7 +76,7 @@ export const CATEGORIES: CategoryDef[] = [
         ],
       },
       {
-        kind: "option",
+        type: "enum",
         key: "status",
         label: "状态",
         options: [
@@ -96,14 +84,11 @@ export const CATEGORIES: CategoryDef[] = [
           { value: "inactive", label: "停用" },
         ],
       },
-      { kind: "option", key: "store", label: "门店", options: [
+      { type: "enum", key: "store", label: "门店", options: [
         { value: "gg", label: "光谷" },
         { value: "jdk", label: "街道口" },
       ]},
-      { kind: "sort", key: "sort", label: "排序", fields: [
-        { value: "created_at", label: "创建时间" },
-        { value: "name", label: "名称" },
-      ]},
+      { type: "date", key: "created_at", label: "创建时间", granularity: "day" },
     ],
   },
   {
@@ -112,11 +97,11 @@ export const CATEGORIES: CategoryDef[] = [
     icon: "CalendarDots",
     route: "/dash/actives",
     searchKeys: ["title", "creator"],
-    filters: [
-      { kind: "kv", key: "creator", label: "发起人", placeholder: "搜索发起人…" },
-      { kind: "kv", key: "type", label: "类型", placeholder: "类型…" },
+    fields: [
+      { type: "text", key: "creator", label: "发起人", placeholder: "搜索发起人…" },
+      { type: "text", key: "type", label: "类型", placeholder: "类型…" },
       {
-        kind: "option",
+        type: "enum",
         key: "status",
         label: "状态",
         options: [
@@ -124,15 +109,12 @@ export const CATEGORIES: CategoryDef[] = [
           { value: "expired", label: "已过期" },
         ],
       },
-      { kind: "option", key: "store", label: "门店", options: [
+      { type: "enum", key: "store", label: "门店", options: [
         { value: "gg", label: "光谷" },
         { value: "jdk", label: "街道口" },
       ]},
-      { kind: "date", key: "date", label: "日期", granularity: "day" },
-      { kind: "sort", key: "sort", label: "排序", fields: [
-        { value: "created_at", label: "创建时间" },
-        { value: "start_time", label: "开始时间" },
-      ]},
+      { type: "date", key: "date", label: "日期", granularity: "day" },
+      { type: "date", key: "start_time", label: "开始时间", granularity: "hour" },
     ],
   },
   {
@@ -141,10 +123,10 @@ export const CATEGORIES: CategoryDef[] = [
     icon: "Megaphone",
     route: "/dash/events",
     searchKeys: ["title", "description"],
-    filters: [
-      { kind: "kv", key: "title", label: "标题", placeholder: "搜索标题…" },
+    fields: [
+      { type: "text", key: "title", label: "标题", placeholder: "搜索标题…" },
       {
-        kind: "option",
+        type: "enum",
         key: "status",
         label: "状态",
         options: [
@@ -153,15 +135,12 @@ export const CATEGORIES: CategoryDef[] = [
           { value: "upcoming", label: "即将开始" },
         ],
       },
-      { kind: "option", key: "store", label: "门店", options: [
+      { type: "enum", key: "store", label: "门店", options: [
         { value: "gg", label: "光谷" },
         { value: "jdk", label: "街道口" },
       ]},
-      { kind: "date", key: "date", label: "日期", granularity: "day" },
-      { kind: "sort", key: "sort", label: "排序", fields: [
-        { value: "created_at", label: "创建时间" },
-        { value: "start_date", label: "开始日期" },
-      ]},
+      { type: "date", key: "date", label: "日期", granularity: "day" },
+      { type: "date", key: "start_date", label: "开始日期", granularity: "day" },
     ],
   },
   {
@@ -170,10 +149,10 @@ export const CATEGORIES: CategoryDef[] = [
     icon: "Sword",
     route: "/dash/gsz",
     searchKeys: ["table", "player"],
-    filters: [
-      { kind: "kv", key: "table", label: "桌台", placeholder: "桌台…" },
+    fields: [
+      { type: "text", key: "table", label: "桌台", placeholder: "桌台…" },
       {
-        kind: "option",
+        type: "enum",
         key: "mode",
         label: "模式",
         options: [
@@ -182,7 +161,7 @@ export const CATEGORIES: CategoryDef[] = [
         ],
       },
       {
-        kind: "option",
+        type: "enum",
         key: "format",
         label: "局数",
         options: [
@@ -191,7 +170,7 @@ export const CATEGORIES: CategoryDef[] = [
         ],
       },
       {
-        kind: "option",
+        type: "enum",
         key: "completion",
         label: "完成度",
         options: [
@@ -199,11 +178,8 @@ export const CATEGORIES: CategoryDef[] = [
           { value: "incomplete", label: "未完成" },
         ],
       },
-      { kind: "date", key: "date", label: "日期", granularity: "day" },
-      { kind: "sort", key: "sort", label: "排序", fields: [
-        { value: "created_at", label: "创建时间" },
-        { value: "ended_at", label: "结束时间" },
-      ]},
+      { type: "date", key: "date", label: "日期", granularity: "day" },
+      { type: "date", key: "created_at", label: "创建时间", granularity: "day" },
     ],
   },
 ];

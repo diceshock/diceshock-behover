@@ -8,8 +8,11 @@ import {
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { useCallback, useMemo, useRef, useState } from "react";
+import { useSetAtom } from "jotai";
 import { DataTable } from "@/client/components/dash/DataTable"
 import { IdCell } from "@/client/components/dash/IdCell";
+import { launcherOpenForFieldAtom } from "@/client/components/dash/launcher/atoms";
+import { getCategoryById } from "@/client/components/dash/launcher/categories";
 import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
@@ -75,6 +78,15 @@ function RouteComponent() {
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   const { filters, query } = useRouteFilters();
+  const openForField = useSetAtom(launcherOpenForFieldAtom);
+  const tablesCategory = getCategoryById("tables");
+
+  const handleColumnFilter = useCallback((columnId: string) => {
+    if (!tablesCategory) return;
+    const field = tablesCategory.fields.find((f) => f.key === columnId);
+    if (!field) return;
+    openForField({ field, filters, query, categoryId: "tables" });
+  }, [tablesCategory, openForField, filters, query]);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [offset, setOffset] = useState(0);
@@ -375,6 +387,8 @@ function RouteComponent() {
       sorting={sorting}
       onSortingChange={setSorting}
       sortableColumns={["name", "type", "status", "capacity", "createdAt"]}
+      filterableColumns={["name", "type", "status", "store", "created_at"]}
+      onColumnFilter={handleColumnFilter}
       enableRowSelection
       selectedRows={selectedIds}
       onSelectedRowsChange={setSelectedIds}

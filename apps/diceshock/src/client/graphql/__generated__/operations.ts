@@ -310,6 +310,13 @@ export type RequestSmsCodeInput = {
   phone: string;
 };
 
+export type SaveDashSearchHistoryInput = {
+  categoryId: string;
+  label: string;
+  params: string;
+  route: string;
+};
+
 export type SavePricingSnapshotInput = {
   data: PricingSnapshotDataInput;
   name: string;
@@ -901,6 +908,32 @@ export type RestorePricingSnapshotMutationVariables = Exact<{
 
 
 export type RestorePricingSnapshotMutation = { restorePricingSnapshot: { id: string, name: string, status: Types.PricingSnapshotStatus, summary: string | null, createdAt: string | null, publishedAt: string | null, data: { plans: string, config: { daytimeStart: string, daytimeEnd: string } } } };
+
+export type DashSearchHistoryQueryVariables = Exact<{
+  limit?: number | null | undefined;
+}>;
+
+
+export type DashSearchHistoryQuery = { dashSearchHistory: Array<{ id: string, label: string, categoryId: string, route: string, params: string, createdAt: string }> };
+
+export type SaveDashSearchHistoryMutationVariables = Exact<{
+  input: Types.SaveDashSearchHistoryInput;
+}>;
+
+
+export type SaveDashSearchHistoryMutation = { saveDashSearchHistory: { id: string, label: string, categoryId: string, route: string, params: string, createdAt: string } };
+
+export type RemoveDashSearchHistoryMutationVariables = Exact<{
+  id: string | number;
+}>;
+
+
+export type RemoveDashSearchHistoryMutation = { removeDashSearchHistory: boolean };
+
+export type ClearDashSearchHistoryMutationVariables = Exact<{ [key: string]: never; }>;
+
+
+export type ClearDashSearchHistoryMutation = { clearDashSearchHistory: boolean };
 
 export type CaptchaSettingsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -4396,6 +4429,153 @@ export function useRestorePricingSnapshotMutation(baseOptions?: Apollo.MutationH
 export type RestorePricingSnapshotMutationHookResult = ReturnType<typeof useRestorePricingSnapshotMutation>;
 export type RestorePricingSnapshotMutationResult = Apollo.MutationResult<Types.RestorePricingSnapshotMutation>;
 export type RestorePricingSnapshotMutationOptions = Apollo.BaseMutationOptions<Types.RestorePricingSnapshotMutation, Types.RestorePricingSnapshotMutationVariables>;
+export const DashSearchHistoryDocument = gql`
+    query DashSearchHistory($limit: Int) {
+  dashSearchHistory(limit: $limit) {
+    id
+    label
+    categoryId
+    route
+    params
+    createdAt
+  }
+}
+    `;
+
+/**
+ * __useDashSearchHistoryQuery__
+ *
+ * To run a query within a React component, call `useDashSearchHistoryQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDashSearchHistoryQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDashSearchHistoryQuery({
+ *   variables: {
+ *      limit: // value for 'limit'
+ *   },
+ * });
+ */
+export function useDashSearchHistoryQuery(baseOptions?: Apollo.QueryHookOptions<Types.DashSearchHistoryQuery, Types.DashSearchHistoryQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<Types.DashSearchHistoryQuery, Types.DashSearchHistoryQueryVariables>(DashSearchHistoryDocument, options);
+      }
+export function useDashSearchHistoryLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<Types.DashSearchHistoryQuery, Types.DashSearchHistoryQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<Types.DashSearchHistoryQuery, Types.DashSearchHistoryQueryVariables>(DashSearchHistoryDocument, options);
+        }
+// @ts-ignore
+export function useDashSearchHistorySuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<Types.DashSearchHistoryQuery, Types.DashSearchHistoryQueryVariables>): Apollo.UseSuspenseQueryResult<Types.DashSearchHistoryQuery, Types.DashSearchHistoryQueryVariables>;
+export function useDashSearchHistorySuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<Types.DashSearchHistoryQuery, Types.DashSearchHistoryQueryVariables>): Apollo.UseSuspenseQueryResult<Types.DashSearchHistoryQuery | undefined, Types.DashSearchHistoryQueryVariables>;
+export function useDashSearchHistorySuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<Types.DashSearchHistoryQuery, Types.DashSearchHistoryQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<Types.DashSearchHistoryQuery, Types.DashSearchHistoryQueryVariables>(DashSearchHistoryDocument, options);
+        }
+export type DashSearchHistoryQueryHookResult = ReturnType<typeof useDashSearchHistoryQuery>;
+export type DashSearchHistoryLazyQueryHookResult = ReturnType<typeof useDashSearchHistoryLazyQuery>;
+export type DashSearchHistorySuspenseQueryHookResult = ReturnType<typeof useDashSearchHistorySuspenseQuery>;
+export type DashSearchHistoryQueryResult = Apollo.QueryResult<Types.DashSearchHistoryQuery, Types.DashSearchHistoryQueryVariables>;
+export const SaveDashSearchHistoryDocument = gql`
+    mutation SaveDashSearchHistory($input: SaveDashSearchHistoryInput!) {
+  saveDashSearchHistory(input: $input) {
+    id
+    label
+    categoryId
+    route
+    params
+    createdAt
+  }
+}
+    `;
+export type SaveDashSearchHistoryMutationFn = Apollo.MutationFunction<Types.SaveDashSearchHistoryMutation, Types.SaveDashSearchHistoryMutationVariables>;
+
+/**
+ * __useSaveDashSearchHistoryMutation__
+ *
+ * To run a mutation, you first call `useSaveDashSearchHistoryMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSaveDashSearchHistoryMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [saveDashSearchHistoryMutation, { data, loading, error }] = useSaveDashSearchHistoryMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useSaveDashSearchHistoryMutation(baseOptions?: Apollo.MutationHookOptions<Types.SaveDashSearchHistoryMutation, Types.SaveDashSearchHistoryMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<Types.SaveDashSearchHistoryMutation, Types.SaveDashSearchHistoryMutationVariables>(SaveDashSearchHistoryDocument, options);
+      }
+export type SaveDashSearchHistoryMutationHookResult = ReturnType<typeof useSaveDashSearchHistoryMutation>;
+export type SaveDashSearchHistoryMutationResult = Apollo.MutationResult<Types.SaveDashSearchHistoryMutation>;
+export type SaveDashSearchHistoryMutationOptions = Apollo.BaseMutationOptions<Types.SaveDashSearchHistoryMutation, Types.SaveDashSearchHistoryMutationVariables>;
+export const RemoveDashSearchHistoryDocument = gql`
+    mutation RemoveDashSearchHistory($id: ID!) {
+  removeDashSearchHistory(id: $id)
+}
+    `;
+export type RemoveDashSearchHistoryMutationFn = Apollo.MutationFunction<Types.RemoveDashSearchHistoryMutation, Types.RemoveDashSearchHistoryMutationVariables>;
+
+/**
+ * __useRemoveDashSearchHistoryMutation__
+ *
+ * To run a mutation, you first call `useRemoveDashSearchHistoryMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRemoveDashSearchHistoryMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [removeDashSearchHistoryMutation, { data, loading, error }] = useRemoveDashSearchHistoryMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useRemoveDashSearchHistoryMutation(baseOptions?: Apollo.MutationHookOptions<Types.RemoveDashSearchHistoryMutation, Types.RemoveDashSearchHistoryMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<Types.RemoveDashSearchHistoryMutation, Types.RemoveDashSearchHistoryMutationVariables>(RemoveDashSearchHistoryDocument, options);
+      }
+export type RemoveDashSearchHistoryMutationHookResult = ReturnType<typeof useRemoveDashSearchHistoryMutation>;
+export type RemoveDashSearchHistoryMutationResult = Apollo.MutationResult<Types.RemoveDashSearchHistoryMutation>;
+export type RemoveDashSearchHistoryMutationOptions = Apollo.BaseMutationOptions<Types.RemoveDashSearchHistoryMutation, Types.RemoveDashSearchHistoryMutationVariables>;
+export const ClearDashSearchHistoryDocument = gql`
+    mutation ClearDashSearchHistory {
+  clearDashSearchHistory
+}
+    `;
+export type ClearDashSearchHistoryMutationFn = Apollo.MutationFunction<Types.ClearDashSearchHistoryMutation, Types.ClearDashSearchHistoryMutationVariables>;
+
+/**
+ * __useClearDashSearchHistoryMutation__
+ *
+ * To run a mutation, you first call `useClearDashSearchHistoryMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useClearDashSearchHistoryMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [clearDashSearchHistoryMutation, { data, loading, error }] = useClearDashSearchHistoryMutation({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useClearDashSearchHistoryMutation(baseOptions?: Apollo.MutationHookOptions<Types.ClearDashSearchHistoryMutation, Types.ClearDashSearchHistoryMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<Types.ClearDashSearchHistoryMutation, Types.ClearDashSearchHistoryMutationVariables>(ClearDashSearchHistoryDocument, options);
+      }
+export type ClearDashSearchHistoryMutationHookResult = ReturnType<typeof useClearDashSearchHistoryMutation>;
+export type ClearDashSearchHistoryMutationResult = Apollo.MutationResult<Types.ClearDashSearchHistoryMutation>;
+export type ClearDashSearchHistoryMutationOptions = Apollo.BaseMutationOptions<Types.ClearDashSearchHistoryMutation, Types.ClearDashSearchHistoryMutationVariables>;
 export const CaptchaSettingsDocument = gql`
     query CaptchaSettings {
   captchaSettings {

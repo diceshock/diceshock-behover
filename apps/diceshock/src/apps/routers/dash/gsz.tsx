@@ -9,10 +9,13 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSetAtom } from "jotai";
 import { DataTable } from "@/client/components/dash/DataTable";
 import { DateRangeFilter } from "@/client/components/dash/DateRangeFilter";
 import { usePendingSearch } from "@/client/components/dash/SearchBridge";
 import { TableToolbar } from "@/client/components/dash/TableToolbar";
+import { launcherOpenForFieldAtom } from "@/client/components/dash/launcher/atoms";
+import { getCategoryById } from "@/client/components/dash/launcher/categories";
 import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
@@ -31,6 +34,9 @@ import {
 } from "@/client/graphql/__generated__";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
 import { useTranslation } from "@/client/hooks/useTranslation";
+import {
+  useRouteFilters,
+} from "@/client/hooks/useRouteFilters";
 import {
   GSZ_SEARCH_GRAMMAR,
   type ParsedSearch,
@@ -202,6 +208,17 @@ function RouteComponent() {
       clearPendingSearch();
     }
   }, [pendingSearch, clearPendingSearch, setSearchParam]);
+
+  const { filters, query: routeQuery } = useRouteFilters();
+  const openForField = useSetAtom(launcherOpenForFieldAtom);
+  const gszCategory = getCategoryById("gsz");
+
+  const handleColumnFilter = useCallback((columnId: string) => {
+    if (!gszCategory) return;
+    const field = gszCategory.fields.find((f) => f.key === columnId);
+    if (!field) return;
+    openForField({ field, filters, query: routeQuery, categoryId: "gsz" });
+  }, [gszCategory, openForField, filters, routeQuery]);
 
   const parsed = useMemo(() => parseSearch(q, GSZ_SEARCH_GRAMMAR), [q]);
   const filter = useMemo(
@@ -655,6 +672,8 @@ function RouteComponent() {
           sorting={sorting}
           onSortingChange={setSorting}
           sortableColumns={["startedAt", "endedAt"]}
+          filterableColumns={["table", "mode", "format", "completion", "date", "created_at"]}
+          onColumnFilter={handleColumnFilter}
           getRowId={(row) => row.id}
           enableRowSelection={true}
           selectedRows={selectedIds}

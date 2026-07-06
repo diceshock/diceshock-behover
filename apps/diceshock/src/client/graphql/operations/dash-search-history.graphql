@@ -1,0 +1,29 @@
+query DashSearchHistory($limit: Int) {
+  dashSearchHistory(limit: $limit) {
+    id
+    label
+    categoryId
+    route
+    params
+    createdAt
+  }
+}
+
+mutation SaveDashSearchHistory($input: SaveDashSearchHistoryInput!) {
+  saveDashSearchHistory(input: $input) {
+    id
+    label
+    categoryId
+    route
+    params
+    createdAt
+  }
+}
+
+mutation RemoveDashSearchHistory($id: ID!) {
+  removeDashSearchHistory(id: $id)
+}
+
+mutation ClearDashSearchHistory {
+  clearDashSearchHistory
+}

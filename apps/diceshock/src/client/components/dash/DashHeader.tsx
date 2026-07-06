@@ -15,7 +15,7 @@ import { useRouteFilters } from "@/client/hooks/useRouteFilters";
 import { STORES } from "@/shared/store-locale";
 import { launcherOpenAtom, launcherToggleAtom } from "./launcher/atoms";
 import { getCategoryByRoute } from "./launcher/categories";
-import type { CategoryDef, FilterValue } from "./launcher/types";
+import { formatFilterChipLabel } from "./launcher/types";
 
 export function DashHeader() {
   const router = useRouter();
@@ -50,8 +50,11 @@ export function DashHeader() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "/" && !launcherOpen) {
-        const tag = (e.target as HTMLElement)?.tagName;
-        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+        const el = e.target;
+        if (el instanceof HTMLElement) {
+          const tag = el.tagName;
+          if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+        }
         e.preventDefault();
         toggleLauncher(filtersRef.current);
       }
@@ -126,10 +129,10 @@ export function DashHeader() {
                 )}
                 {filters.map((f) => (
                   <span
-                    key={f.key}
+                    key={`${f.key}:${f.operator}`}
                     className="shrink-0 inline-flex items-center h-4 px-1.5 rounded bg-primary/10 text-[10px] text-primary"
                   >
-                    {chipLabel(f, category)}
+                    {formatFilterChipLabel(f, category)}
                   </span>
                 ))}
               </div>
@@ -169,29 +172,4 @@ export function DashHeader() {
       <DashQRScannerDialog isOpen={qrOpen} onClose={() => setQrOpen(false)} />
     </>
   );
-}
-
-function chipLabel(f: FilterValue, category?: CategoryDef): string {
-  const def = category?.filters.find((d) => d.key === f.key);
-  const label = def?.label ?? f.key;
-  switch (f.kind) {
-    case "kv":
-      return `${label}=${f.value}`;
-    case "option": {
-      const ol = def?.kind === "option"
-        ? def.options.find((o) => o.value === f.value)?.label ?? f.value
-        : f.value;
-      return `${label}:${ol}`;
-    }
-    case "boolean":
-      return label;
-    case "number":
-      return `${label}${f.operator}${f.value}`;
-    case "date":
-      return `${label}:${f.from}~${f.to}`;
-    case "sort":
-      return `排序:${f.value}`;
-    case "group":
-      return `分组:${f.value}`;
-  }
 }

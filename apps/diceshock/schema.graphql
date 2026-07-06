@@ -1702,3 +1702,32 @@ type ArticlePublishResult {
 extend type Mutation {
   publishArticleToWechat(input: PublishArticleInput!): ArticlePublishResult! # @auth(role: STAFF)
 }
+
+
+# ─── Dash Search History ────────────────────────────────────────
+
+type DashSearchHistoryEntry {
+  id: ID!
+  label: String!
+  categoryId: String!
+  route: String!
+  params: String!
+  createdAt: String!
+}
+
+input SaveDashSearchHistoryInput {
+  label: String!
+  categoryId: String!
+  route: String!
+  params: String!
+}
+
+extend type Query {
+  dashSearchHistory(limit: Int): [DashSearchHistoryEntry!]! # @auth(role: STAFF)
+}
+
+extend type Mutation {
+  saveDashSearchHistory(input: SaveDashSearchHistoryInput!): DashSearchHistoryEntry! # @auth(role: STAFF)
+  removeDashSearchHistory(id: ID!): Boolean! # @auth(role: STAFF)
+  clearDashSearchHistory: Boolean! # @auth(role: STAFF)
+}

@@ -8,8 +8,11 @@ import {
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { useCallback, useMemo, useRef, useState } from "react";
+import { useSetAtom } from "jotai";
 import { DataTable } from "@/client/components/dash/DataTable"
 import { IdCell } from "@/client/components/dash/IdCell";
+import { launcherOpenForFieldAtom } from "@/client/components/dash/launcher/atoms";
+import { getCategoryById } from "@/client/components/dash/launcher/categories";
 import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
@@ -53,6 +56,15 @@ function RouteComponent() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { filters, query } = useRouteFilters();
+  const openForField = useSetAtom(launcherOpenForFieldAtom);
+  const eventsCategory = getCategoryById("events");
+
+  const handleColumnFilter = useCallback((columnId: string) => {
+    if (!eventsCategory) return;
+    const field = eventsCategory.fields.find((f) => f.key === columnId);
+    if (!field) return;
+    openForField({ field, filters, query, categoryId: "events" });
+  }, [eventsCategory, openForField, filters, query]);
 
   const gqlVars = useMemo(
     () => filtersToGqlVariables(filters, query),
@@ -68,8 +80,10 @@ function RouteComponent() {
         : [gqlVars.status as string];
     if (gqlVars.type) input.type = gqlVars.type as string;
     if (gqlVars.store) input.store = gqlVars.store as string;
-    if (gqlVars.dateFrom) input.dateFrom = gqlVars.dateFrom as string;
-    if (gqlVars.dateTo) input.dateTo = gqlVars.dateTo as string;
+    if (gqlVars.dateFrom || gqlVars.start_dateFrom)
+      input.dateFrom = (gqlVars.dateFrom ?? gqlVars.start_dateFrom) as string;
+    if (gqlVars.dateTo || gqlVars.start_dateTo)
+      input.dateTo = (gqlVars.dateTo ?? gqlVars.start_dateTo) as string;
 
     if (gqlVars.sortBy) {
       input.sortBy = gqlVars.sortBy as string;
@@ -385,6 +399,8 @@ function RouteComponent() {
       sorting={sorting}
       onSortingChange={setSorting}
       sortableColumns={["title", "isPublished", "createdAt"]}
+      filterableColumns={["title", "status", "store", "date", "start_date"]}
+      onColumnFilter={handleColumnFilter}
       enableRowSelection
       selectedRows={selectedIds}
       onSelectedRowsChange={setSelectedIds}

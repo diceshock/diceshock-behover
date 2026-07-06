@@ -10,7 +10,10 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSetAtom } from "jotai";
 import { DataTable } from "@/client/components/dash/DataTable"
+import { launcherOpenForFieldAtom } from "@/client/components/dash/launcher/atoms";
+import { getCategoryById } from "@/client/components/dash/launcher/categories";
 import { IdCell } from "@/client/components/dash/IdCell";
 import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
@@ -187,6 +190,18 @@ function RouteComponent() {
 
   const { filters, query } = useRouteFilters();
 
+  const openForField = useSetAtom(launcherOpenForFieldAtom);
+  const ordersCategory = getCategoryById("orders");
+  const handleColumnFilter = useCallback(
+    (columnId: string) => {
+      if (!ordersCategory) return;
+      const field = ordersCategory.fields.find((f) => f.key === columnId);
+      if (!field) return;
+      openForField({ field, filters, query, categoryId: "orders" });
+    },
+    [ordersCategory, openForField, filters, query],
+  );
+
   const gqlVars = useMemo(
     () => filtersToGqlVariables(filters, query),
     [filters, query],
@@ -200,7 +215,7 @@ function RouteComponent() {
         ? gqlVars.status
         : [gqlVars.status as string];
     }
-    if (gqlVars.tableCode) input.tableCode = gqlVars.tableCode as string;
+    if (gqlVars.table) input.tableCode = gqlVars.table as string;
     if (gqlVars.store) input.store = gqlVars.store as string;
     if (gqlVars.dateFrom) input.dateFrom = gqlVars.dateFrom as string;
     if (gqlVars.dateTo) input.dateTo = gqlVars.dateTo as string;
@@ -723,6 +738,8 @@ function RouteComponent() {
       sorting={sorting}
       onSortingChange={setSorting}
       sortableColumns={["start_at", "end_at", "status", "amount"]}
+      filterableColumns={["table", "user", "status", "store", "date", "start_at", "end_at"]}
+      onColumnFilter={handleColumnFilter}
       enableRowSelection
       selectedRows={selectedIds}
       onSelectedRowsChange={setSelectedIds}

@@ -986,3 +986,34 @@ export const storesRelations = relations(storesTable, ({ many }) => ({
   leaderboardSnapshots: many(leaderboardSnapshotsTable),
   preferredByUsers: many(userInfoTable),
 }));
+
+// ─── Dash Search History (per-user, staff only) ─────────────────
+
+export const dashSearchHistoryTable = sqlite.sqliteTable(
+  "dash_search_history",
+  {
+    id: sqlite.text("id").primaryKey().$defaultFn(createId),
+    user_id: sqlite.text("user_id").notNull(),
+    label: sqlite.text("label").notNull(),
+    category_id: sqlite.text("category_id").notNull(),
+    route: sqlite.text("route").notNull(),
+    params: sqlite.text("params").notNull().default("{}"),
+    created_at: sqlite
+      .integer("created_at")
+      .notNull()
+      .$defaultFn(() => Date.now()),
+  },
+  (table) => [
+    sqlite.index("idx_dash_search_history_user_id").on(table.user_id),
+  ],
+);
+
+export const dashSearchHistoryRelations = relations(
+  dashSearchHistoryTable,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [dashSearchHistoryTable.user_id],
+      references: [users.id],
+    }),
+  }),
+);

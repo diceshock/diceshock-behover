@@ -306,6 +306,16 @@ export type CursorPaginationInput = {
   limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
+export type DashSearchHistoryEntry = {
+  __typename?: 'DashSearchHistoryEntry';
+  categoryId: Scalars['String']['output'];
+  createdAt: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  label: Scalars['String']['output'];
+  params: Scalars['String']['output'];
+  route: Scalars['String']['output'];
+};
+
 export type DeductPointsInput = {
   amount: Scalars['Int']['input'];
   note?: InputMaybe<Scalars['String']['input']>;
@@ -695,6 +705,7 @@ export type Mutation = {
   cancelSettlement: BatchOrderResult;
   cleanupOrphanedData: CleanupOrphanedDataResult;
   cleanupOrphanedOrders: CleanupOrphanedDataResult;
+  clearDashSearchHistory: Scalars['Boolean']['output'];
   closeShortlink: Shortlink;
   createActive: Active;
   createEvent: Event;
@@ -729,6 +740,7 @@ export type Mutation = {
   removeActive: Active;
   removeActiveRegistration: ActiveRegistration;
   removeAdminPhone: Array<Scalars['String']['output']>;
+  removeDashSearchHistory: Scalars['Boolean']['output'];
   removeEvent: Event;
   removeMediaObject: MediaObject;
   removeMembershipPlan: MembershipPlan;
@@ -741,6 +753,7 @@ export type Mutation = {
   restorePricingSnapshot: PricingSnapshot;
   restoreWechatMenuSnapshot: WechatMenuSnapshot;
   resumeOrder: TableOccupancy;
+  saveDashSearchHistory: DashSearchHistoryEntry;
   saveMahjongMatch: MahjongMatch;
   savePricingSnapshot: PricingSnapshot;
   saveWechatMenuSnapshot: WechatMenuSnapshot;
@@ -1022,6 +1035,11 @@ export type MutationRemoveAdminPhoneArgs = {
 };
 
 
+export type MutationRemoveDashSearchHistoryArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
 export type MutationRemoveEventArgs = {
   id: Scalars['ID']['input'];
 };
@@ -1075,6 +1093,11 @@ export type MutationRestoreWechatMenuSnapshotArgs = {
 
 export type MutationResumeOrderArgs = {
   id: Scalars['ID']['input'];
+};
+
+
+export type MutationSaveDashSearchHistoryArgs = {
+  input: SaveDashSearchHistoryInput;
 };
 
 
@@ -1480,6 +1503,7 @@ export type Query = {
   captchaSettings: CaptchaSettings;
   crawlerErrors: Array<CrawlerError>;
   crawlerStats: CrawlerStats;
+  dashSearchHistory: Array<DashSearchHistoryEntry>;
   event: Event;
   events: Array<Event>;
   getTotpSecret: TotpSecretResult;
@@ -1566,6 +1590,11 @@ export type QueryBusinessCardArgs = {
 
 
 export type QueryCrawlerErrorsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryDashSearchHistoryArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
@@ -1856,6 +1885,13 @@ export type RuleSearchResult = {
   score: Scalars['Float']['output'];
   source: Scalars['String']['output'];
   text: Scalars['String']['output'];
+};
+
+export type SaveDashSearchHistoryInput = {
+  categoryId: Scalars['String']['input'];
+  label: Scalars['String']['input'];
+  params: Scalars['String']['input'];
+  route: Scalars['String']['input'];
 };
 
 export type SaveMahjongMatchInput = {

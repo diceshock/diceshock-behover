@@ -2,6 +2,7 @@ import {
   ArrowDownIcon,
   ArrowUpIcon,
   ArrowsDownUpIcon,
+  FunnelIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import type { Column, ColumnDef, SortingState } from "@tanstack/react-table";
 import {
@@ -50,6 +51,11 @@ export interface DataTableProps<TData> {
   sorting?: SortingState;
   onSortingChange?: (sorting: SortingState) => void;
   sortableColumns?: string[];
+
+  /** Called when user clicks a column header to open filter for that column */
+  onColumnFilter?: (columnId: string) => void;
+  /** Column IDs that support filtering via header click */
+  filterableColumns?: string[];
 
   enableRowSelection?: boolean;
   selectedRows?: Set<string>;
@@ -107,6 +113,8 @@ export function DataTable<TData>({
   sorting = [],
   onSortingChange,
   sortableColumns,
+  onColumnFilter,
+  filterableColumns,
   enableRowSelection = false,
   selectedRows = new Set<string>(),
   onSelectedRowsChange,
@@ -296,23 +304,31 @@ export function DataTable<TData>({
               <tr key={hg.id} style={{ display: "flex", width: "100%" }}>
                 {hg.headers.map((header) => {
                   const canSort = isSortable(header.id);
+                  const canFilter = filterableColumns?.includes(header.id) ?? false;
                   const sorted = sorting.find((s) => s.id === header.id);
                   const pinningStyles = getColumnPinningStyles(header.column);
                   const isPinned = header.column.getIsPinned();
+                  const isInteractive = canSort || canFilter;
 
                   return (
                     <th
                       key={header.id}
                       className={clsx(
                         "flex items-center gap-1 px-3 py-2 text-xs font-medium text-base-content/70 whitespace-nowrap",
-                        canSort &&
+                        isInteractive &&
                           "cursor-pointer select-none hover:bg-base-300/40",
                         isPinned && "bg-base-200/95 backdrop-blur-sm",
                       )}
                       style={{
                         ...pinningStyles,
                       }}
-                      onClick={() => handleSort(header.id)}
+                      onClick={() => {
+                        if (canFilter && onColumnFilter) {
+                          onColumnFilter(header.id);
+                        } else if (canSort) {
+                          handleSort(header.id);
+                        }
+                      }}
                     >
                       {header.isPlaceholder
                         ? null
@@ -332,6 +348,9 @@ export function DataTable<TData>({
                             <ArrowsDownUpIcon className="size-3 opacity-30" />
                           )}
                         </span>
+                      )}
+                      {canFilter && (
+                        <FunnelIcon className="size-3 opacity-40" />
                       )}
                     </th>
                   );

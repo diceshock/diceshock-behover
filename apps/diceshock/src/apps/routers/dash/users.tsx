@@ -7,9 +7,12 @@ import {
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { useCallback, useMemo, useRef, useState } from "react";
+import { useSetAtom } from "jotai";
 import { DataTable } from "@/client/components/dash/DataTable"
 import { IdCell } from "@/client/components/dash/IdCell";
 import type { FilterValue } from "@/client/components/dash/launcher/types";
+import { launcherOpenForFieldAtom } from "@/client/components/dash/launcher/atoms";
+import { getCategoryById } from "@/client/components/dash/launcher/categories";
 import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
@@ -87,12 +90,15 @@ function buildQueryFilter(
   const vars = filtersToGqlVariables(filters, query);
 
   const search = typeof vars.search === "string" ? vars.search : undefined;
+  const name = typeof vars.name === "string" ? vars.name : undefined;
+  const uid = typeof vars.uid === "string" ? vars.uid : undefined;
+  const phone = typeof vars.phone === "string" ? vars.phone : undefined;
   const role = typeof vars.role === "string"
     ? [vars.role.toUpperCase()]
     : undefined;
   const store = typeof vars.store === "string" ? vars.store : undefined;
-  const dateFrom = typeof vars.dateFrom === "string" ? vars.dateFrom : undefined;
-  const dateTo = typeof vars.dateTo === "string" ? vars.dateTo : undefined;
+  const dateFrom = typeof vars.createdFrom === "string" ? vars.createdFrom : undefined;
+  const dateTo = typeof vars.createdTo === "string" ? vars.createdTo : undefined;
 
   const sortBy = sorting.length > 0
     ? sorting[0].id
@@ -106,7 +112,7 @@ function buildQueryFilter(
       : SortOrder.Asc;
 
   return {
-    search,
+    search: search ?? name ?? uid ?? phone,
     role,
     store,
     dateFrom,
@@ -137,6 +143,15 @@ function RouteComponent() {
   const isAdmin = hasRole(session?.user) && session.user.role === "admin";
 
   const { filters, query } = useRouteFilters();
+  const openForField = useSetAtom(launcherOpenForFieldAtom);
+  const usersCategory = getCategoryById("users");
+
+  const handleColumnFilter = useCallback((columnId: string) => {
+    if (!usersCategory) return;
+    const field = usersCategory.fields.find((f) => f.key === columnId);
+    if (!field) return;
+    openForField({ field, filters, query, categoryId: "users" });
+  }, [usersCategory, openForField, filters, query]);
 
   // Raw membership plan data shape from GraphQL query
   interface RawMembershipPlan {
@@ -427,6 +442,8 @@ function RouteComponent() {
       sorting={sorting}
       onSortingChange={setSorting}
       sortableColumns={["nickname", "role", "points", "createdAt"]}
+      filterableColumns={["name", "uid", "phone", "role", "store", "disabled", "stored_value", "created"]}
+      onColumnFilter={handleColumnFilter}
       enableRowSelection
       selectedRows={selectedIds}
       onSelectedRowsChange={setSelectedIds}
