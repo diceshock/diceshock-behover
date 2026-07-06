@@ -60,15 +60,15 @@ type ActiveMatch = NonNullable<
 >[number];
 
 const TYPE_LABELS: Record<string, string> = {
-  fixed: "固定桌",
-  solo: "散人桌",
+  FIXED: "固定桌",
+  SOLO: "散人桌",
 };
 
 const SCOPE_LABELS: Record<string, string> = {
-  trpg: "跑团",
-  boardgame: "桌游",
-  console: "电玩",
-  mahjong: "日麻",
+  TRPG: "跑团",
+  BOARDGAME: "桌游",
+  CONSOLE: "电玩",
+  MAHJONG: "日麻",
 };
 
 const GSZ_MODE_LABELS: Record<string, string> = {
