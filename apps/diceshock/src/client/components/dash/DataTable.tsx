@@ -57,6 +57,8 @@ export interface DataTableProps<TData> {
 
   /** Sticky right actions column */
   renderActions?: (row: TData) => ReactNode;
+  /** Width of the actions column in px (default: 200) */
+  actionsColumnSize?: number;
 
   /** Row height estimate for virtualizer (default: 44) */
   estimateRowHeight?: number;
@@ -109,6 +111,7 @@ export function DataTable<TData>({
   onSelectedRowsChange,
   getRowId,
   renderActions,
+  actionsColumnSize,
   estimateRowHeight = ROW_HEIGHT_ESTIMATE,
 }: DataTableProps<TData>) {
   const { t } = useTranslation();
@@ -169,7 +172,7 @@ export function DataTable<TData>({
             header: () => null,
             cell: ({ row }: { row: { original: TData } }) =>
               renderActions(row.original),
-            size: 60,
+            size: actionsColumnSize ?? 200,
           } satisfies ColumnDef<TData, unknown>,
         ]
       : []),
