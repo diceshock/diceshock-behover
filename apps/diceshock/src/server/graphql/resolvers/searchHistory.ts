@@ -1,5 +1,5 @@
-import dbFactory, { dashSearchHistoryTable, drizzle as drizzleOp } from "@lib/db";
-import { and, desc, eq } from "drizzle-orm";
+import dbFactory, { dashSearchHistoryTable } from "@lib/db";
+import { and, desc, eq, lt } from "drizzle-orm";
 import type { GQLContext } from "../context";
 import { requireStaff } from "../guards";
 
@@ -103,7 +103,7 @@ export const searchHistoryResolvers = {
             .where(
               and(
                 eq(dashSearchHistoryTable.user_id, userId),
-                drizzleOp.lt(dashSearchHistoryTable.created_at, cutoff[0].created_at),
+                lt(dashSearchHistoryTable.created_at, cutoff[0].created_at),
               ),
             );
         }
