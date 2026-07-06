@@ -11,7 +11,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { InfiniteTable } from "@/client/components/dash/InfiniteTable";
+import { DataTable } from "@/client/components/dash/DataTable"
 import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
@@ -745,26 +745,24 @@ function RouteComponent() {
 
   return (
     <main className="flex-1 min-h-0 flex flex-col">
-      <InfiniteTable
-        columns={columns}
-        data={items}
-        loading={loading}
-        hasMore={hasMore}
-        onLoadMore={loadMore}
-        sorting={sorting}
-        onSortingChange={setSorting}
-        sortableColumns={["start_at", "end_at", "status", "amount"]}
-        enableRowSelection
-        selectedRows={selectedIds}
-        onSelectedRowsChange={setSelectedIds}
-        getRowId={(row) => row.id}
-        emptyMessage={
-          query.trim()
-            ? t("dashOrders.noMatchedOrders")
-            : t("dashOrders.noOrders")
-        }
-        renderActions={renderActions}
-      />
+      <DataTable columns={columns}
+      data={items}
+      loading={loading}
+      hasMore={hasMore}
+      onLoadMore={loadMore}
+      sorting={sorting}
+      onSortingChange={setSorting}
+      sortableColumns={["start_at", "end_at", "status", "amount"]}
+      enableRowSelection
+      selectedRows={selectedIds}
+      onSelectedRowsChange={setSelectedIds}
+      getRowId={(row) => row.id}
+      emptyMessage={
+        query.trim()
+          ? t("dashOrders.noMatchedOrders")
+          : t("dashOrders.noOrders")
+      }
+      renderActions={renderActions} />
       {selectedIds.size > 0 && (
         <BatchActionBar
           count={selectedIds.size}

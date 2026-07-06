@@ -9,7 +9,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { DashTable } from "@/client/components/dash/DashTable";
+import { DataTable } from "@/client/components/dash/DataTable";
 import { DateRangeFilter } from "@/client/components/dash/DateRangeFilter";
 import { usePendingSearch } from "@/client/components/dash/SearchBridge";
 import { TableToolbar } from "@/client/components/dash/TableToolbar";
@@ -632,7 +632,7 @@ function RouteComponent() {
       )}
 
       <div className="flex-1 min-h-0">
-        <DashTable
+        <DataTable
           columns={columns}
           data={matches}
           loading={loading}

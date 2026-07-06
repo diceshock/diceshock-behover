@@ -8,7 +8,7 @@ import {
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { InfiniteTable } from "@/client/components/dash/InfiniteTable";
+import { DataTable } from "@/client/components/dash/DataTable"
 import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
@@ -367,96 +367,94 @@ function RouteComponent() {
 
   return (
     <main className="flex-1 min-h-0 flex flex-col">
-      <InfiniteTable
-        columns={columns}
-        data={tables}
-        loading={loading}
-        hasMore={hasMore}
-        onLoadMore={handleLoadMore}
-        sorting={sorting}
-        onSortingChange={setSorting}
-        sortableColumns={["name", "type", "status", "capacity", "createdAt"]}
-        enableRowSelection
-        selectedRows={selectedIds}
-        onSelectedRowsChange={setSelectedIds}
-        getRowId={(row) => row.id}
-        emptyMessage={t("dashTables.noMatchedTables")}
-        renderActions={(row) =>
-          isMobile ? (
-            <div className="dropdown dropdown-end">
-              <div
-                tabIndex={0}
-                role="button"
-                className="btn btn-xs btn-ghost btn-square"
-              >
-                <DotsThreeVerticalIcon className="size-4" weight="bold" />
-              </div>
-              <ul
-                tabIndex={0}
-                className="dropdown-content menu bg-base-200 rounded-box z-50 w-36 p-2 shadow-lg"
-              >
-                <li>
-                  <Link to="/dash/tables/$id" params={{ id: row.id }} search={{ tab: "basic" }}>
-                    <PencilSimpleIcon className="size-4" />
-                    {t("dashTables.details")}
-                  </Link>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    onClick={() => void handleToggleStatus(row)}
-                  >
-                    <PowerIcon className="size-3.5" />
-                    {row.status === TableStatus.Active
-                      ? t("dashTables.inactive")
-                      : t("dashTables.active")}
-                  </button>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    className="text-error"
-                    onClick={() => openDeleteDialog(row)}
-                  >
-                    <TrashIcon className="size-3.5" />
-                    {t("dashTables.delete")}
-                  </button>
-                </li>
-              </ul>
+      <DataTable columns={columns}
+      data={tables}
+      loading={loading}
+      hasMore={hasMore}
+      onLoadMore={handleLoadMore}
+      sorting={sorting}
+      onSortingChange={setSorting}
+      sortableColumns={["name", "type", "status", "capacity", "createdAt"]}
+      enableRowSelection
+      selectedRows={selectedIds}
+      onSelectedRowsChange={setSelectedIds}
+      getRowId={(row) => row.id}
+      emptyMessage={t("dashTables.noMatchedTables")}
+      renderActions={(row) =>
+        isMobile ? (
+          <div className="dropdown dropdown-end">
+            <div
+              tabIndex={0}
+              role="button"
+              className="btn btn-xs btn-ghost btn-square"
+            >
+              <DotsThreeVerticalIcon className="size-4" weight="bold" />
             </div>
-          ) : (
-            <div className="flex items-center gap-1">
-              <Link
-                to="/dash/tables/$id"
-                params={{ id: row.id }}
-                search={{ tab: "basic" }}
-                className="btn btn-xs btn-ghost"
-              >
-                <PencilSimpleIcon className="size-4" />
-                {t("dashTables.details")}
-              </Link>
-              <button
-                type="button"
-                className={`btn btn-xs btn-ghost ${row.status === TableStatus.Active ? "btn-neutral" : "btn-success"}`}
-                onClick={() => void handleToggleStatus(row)}
-              >
-                <PowerIcon className="size-3.5" />
-                {row.status === TableStatus.Active
-                  ? t("dashTables.inactive")
-                  : t("dashTables.active")}
-              </button>
-              <button
-                type="button"
-                className="btn btn-xs btn-ghost btn-error"
-                onClick={() => openDeleteDialog(row)}
-              >
-                <TrashIcon className="size-3.5" />
-                {t("dashTables.delete")}
-              </button>
-            </div>
-          )
-        }
-      />
+            <ul
+              tabIndex={0}
+              className="dropdown-content menu bg-base-200 rounded-box z-50 w-36 p-2 shadow-lg"
+            >
+              <li>
+                <Link to="/dash/tables/$id" params={{ id: row.id }} search={{ tab: "basic" }}>
+                  <PencilSimpleIcon className="size-4" />
+                  {t("dashTables.details")}
+                </Link>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => void handleToggleStatus(row)}
+                >
+                  <PowerIcon className="size-3.5" />
+                  {row.status === TableStatus.Active
+                    ? t("dashTables.inactive")
+                    : t("dashTables.active")}
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  className="text-error"
+                  onClick={() => openDeleteDialog(row)}
+                >
+                  <TrashIcon className="size-3.5" />
+                  {t("dashTables.delete")}
+                </button>
+              </li>
+            </ul>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1">
+            <Link
+              to="/dash/tables/$id"
+              params={{ id: row.id }}
+              search={{ tab: "basic" }}
+              className="btn btn-xs btn-ghost"
+            >
+              <PencilSimpleIcon className="size-4" />
+              {t("dashTables.details")}
+            </Link>
+            <button
+              type="button"
+              className={`btn btn-xs btn-ghost ${row.status === TableStatus.Active ? "btn-neutral" : "btn-success"}`}
+              onClick={() => void handleToggleStatus(row)}
+            >
+              <PowerIcon className="size-3.5" />
+              {row.status === TableStatus.Active
+                ? t("dashTables.inactive")
+                : t("dashTables.active")}
+            </button>
+            <button
+              type="button"
+              className="btn btn-xs btn-ghost btn-error"
+              onClick={() => openDeleteDialog(row)}
+            >
+              <TrashIcon className="size-3.5" />
+              {t("dashTables.delete")}
+            </button>
+          </div>
+        )
+      } />
 
       <BatchActionBar
         count={selectedIds.size}
