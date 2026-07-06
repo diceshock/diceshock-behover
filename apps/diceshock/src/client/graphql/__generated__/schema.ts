@@ -159,6 +159,7 @@ export type BatchSettleInput = {
   deductAmount?: InputMaybe<Scalars['Int']['input']>;
   deductFromStoredValue?: InputMaybe<Scalars['Boolean']['input']>;
   ids: Array<Scalars['ID']['input']>;
+  items?: InputMaybe<Array<PerUserSettleInput>>;
   note?: InputMaybe<Scalars['String']['input']>;
 };
 
@@ -1371,6 +1372,14 @@ export type PaginationInput = {
   offset?: InputMaybe<Scalars['Int']['input']>;
 };
 
+export type PerUserSettleInput = {
+  deductAmount?: InputMaybe<Scalars['Int']['input']>;
+  deductFromStoredValue?: InputMaybe<Scalars['Boolean']['input']>;
+  note?: InputMaybe<Scalars['String']['input']>;
+  orderId: Scalars['ID']['input'];
+  pointsChange?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export type PreferenceParseError = {
   __typename?: 'PreferenceParseError';
   error: Scalars['String']['output'];
@@ -1890,6 +1899,8 @@ export type SettleOrderInput = {
   deductAmount?: InputMaybe<Scalars['Int']['input']>;
   deductFromStoredValue?: InputMaybe<Scalars['Boolean']['input']>;
   id: Scalars['ID']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+  pointsChange?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type SettlementMembershipInfo = {

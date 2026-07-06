@@ -60,6 +60,7 @@ export type BatchSettleInput = {
   deductAmount?: number | null | undefined;
   deductFromStoredValue?: boolean | null | undefined;
   ids: Array<string | number>;
+  items?: Array<PerUserSettleInput> | null | undefined;
   note?: string | null | undefined;
 };
 
@@ -273,6 +274,14 @@ export type PaginationInput = {
   offset?: number | null | undefined;
 };
 
+export type PerUserSettleInput = {
+  deductAmount?: number | null | undefined;
+  deductFromStoredValue?: boolean | null | undefined;
+  note?: string | null | undefined;
+  orderId: string | number;
+  pointsChange?: number | null | undefined;
+};
+
 export type PricingSnapshotDataInput = {
   config: string;
   plans: string;
@@ -322,6 +331,8 @@ export type SettleOrderInput = {
   deductAmount?: number | null | undefined;
   deductFromStoredValue?: boolean | null | undefined;
   id: string | number;
+  note?: string | null | undefined;
+  pointsChange?: number | null | undefined;
 };
 
 export type SortOrder =

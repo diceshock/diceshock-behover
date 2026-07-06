@@ -1,10 +1,10 @@
 import {
   CheckCircleIcon,
   ClockIcon,
-  CurrencyDollarIcon,
+  HouseIcon,
+  LinkIcon,
   ReceiptIcon,
   UserIcon,
-  XCircleIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import {
   ClientOnly,
@@ -12,19 +12,19 @@ import {
   Link,
   useNavigate,
 } from "@tanstack/react-router";
-import clsx from "clsx";
 import type { EChartsOption } from "echarts";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { lazy, Suspense } from "react";
+import { forwardRef, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import confetti from "canvas-confetti";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import {
   useBatchSettlementPreviewMutation,
-  useBatchSettleOrdersMutation,
-  useCancelBatchSettlementMutation,
+  useSettleOrderMutation,
+  useResumeOrderMutation,
+  usePublishedPricingQuery,
 } from "@/client/graphql/__generated__";
 import dayjs from "@/shared/utils/dayjs-config";
-import { formatPrice } from "@/shared/utils/pricing";
+import { calculatePrice, formatPrice, type SnapshotData } from "@/shared/utils/pricing";
 
 const ReactECharts = lazy(() => import("echarts-for-react"));
 
@@ -35,100 +35,76 @@ export const Route = createFileRoute("/dash/orders_/settle")({
     if (Array.isArray(raw)) return { ids: raw.filter(Boolean) as string[] };
     if (typeof raw === "string") {
       if (raw.startsWith("[")) {
-        try {
-          const parsed: unknown = JSON.parse(raw);
-          if (Array.isArray(parsed))
-            return {
-              ids: parsed.filter(
-                (v): v is string => typeof v === "string" && v.length > 0,
-              ),
-            };
-        } catch (e) { console.error("[orders.settle] search param parse error", e); }
+        try { return { ids: JSON.parse(raw) as string[] }; } catch { return { ids: [] }; }
       }
       return { ids: raw.split(",").filter(Boolean) };
     }
-    return { ids: [] as string[] };
+    return { ids: [] };
   },
 });
+
+// --- Types ---
 
 type SettlementPreviewItem = NonNullable<
   ReturnType<typeof useBatchSettlementPreviewMutation>[1]["data"]
 >["batchSettlementPreview"][number];
 
-type BatchSettlementData = {
-  previews: SettlementPreviewItem[];
-};
-
-function formatTime(val: number | null | undefined): string {
-  if (!val) return "—";
-  const d = dayjs.tz(val, "Asia/Shanghai");
-  return d.isValid() ? d.format("YYYY/MM/DD HH:mm:ss") : "—";
+interface UserCardState {
+  deductAmount: number; // cents
+  pointsChange: number;
+  note: string;
+  settled: boolean;
+  selectedPlan: string;
 }
 
-function formatShortTime(val: number | null | undefined): string {
-  if (!val) return "—";
-  const d = dayjs.tz(val, "Asia/Shanghai");
-  return d.isValid() ? d.format("HH:mm") : "—";
-}
+// --- Plan options ---
+
+const PLAN_OPTIONS: { value: string; label: string }[] = [
+  { value: "none", label: "无计划" },
+  { value: "monthly", label: "桌面通行证" },
+  { value: "monthly_cc", label: "CC桌面通行证" },
+  { value: "yearly", label: "桌面通行证 LTS" },
+  { value: "stored_value", label: "储值卡" },
+];
+
+// --- Utility ---
+
+const HALF_HOUR_MS = 30 * 60 * 1000;
 
 function formatMinutes(mins: number): string {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
-  if (h > 0) return `${h}小时${m}分钟`;
-  return `${m}分钟`;
+  if (h === 0) return `${m}分钟`;
+  if (m === 0) return `${h}小时`;
+  return `${h}小时${m}分钟`;
 }
 
-function buildSegments(
-  startAt: number,
-  endAt: number,
-  pauseLogs: Array<{ pausedAt: string; resumedAt: string | null }>,
-) {
-  const sorted = [...pauseLogs].sort(
-    (a, b) => new Date(a.pausedAt).getTime() - new Date(b.pausedAt).getTime(),
-  );
-  const segments: Array<{
-    type: "active" | "paused";
-    start: number;
-    end: number;
-  }> = [];
-  let cursor = startAt;
-
-  for (const log of sorted) {
-    const pStart = Math.max(new Date(log.pausedAt).getTime(), startAt);
-    const pEnd = Math.min(
-      log.resumedAt ? new Date(log.resumedAt).getTime() : endAt,
-      endAt,
-    );
-    if (pStart > cursor)
-      segments.push({ type: "active", start: cursor, end: pStart });
-    if (pEnd > pStart)
-      segments.push({ type: "paused", start: pStart, end: pEnd });
-    cursor = Math.max(cursor, pEnd);
-  }
-
-  if (cursor < endAt)
-    segments.push({ type: "active", start: cursor, end: endAt });
-  if (segments.length === 0)
-    segments.push({ type: "active", start: startAt, end: endAt });
-  return segments;
-}
+// --- Main Page ---
 
 function BatchSettlePage() {
   const { ids } = Route.useSearch();
   const navigate = useNavigate();
   const msg = useMsg();
 
-  const [data, setData] = useState<BatchSettlementData | null>(null);
+  const [previews, setPreviews] = useState<SettlementPreviewItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [settling, setSettling] = useState(false);
-  const [deductEnabled, setDeductEnabled] = useState(false);
-  const [customDeductAmount, setCustomDeductAmount] = useState<number | null>(null);
-  const [cancelIds, setCancelIds] = useState<Set<string>>(new Set());
-  const [note, setNote] = useState("");
+  const [userStates, setUserStates] = useState<Map<string, UserCardState>>(new Map());
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   const [fetchPreview] = useBatchSettlementPreviewMutation();
-  const [batchSettle] = useBatchSettleOrdersMutation();
-  const [cancelSettlement] = useCancelBatchSettlementMutation();
+  const [settleOrder] = useSettleOrderMutation();
+  const [resumeOrder] = useResumeOrderMutation();
+  const { data: pricingData } = usePublishedPricingQuery();
+
+  const pricingSnapshot = useMemo<SnapshotData | null>(() => {
+    const d = pricingData?.publishedPricing?.data;
+    if (!d) return null;
+    return {
+      config: { daytime_start: d.config.daytimeStart, daytime_end: d.config.daytimeEnd },
+      plans: d.plans as SnapshotData["plans"],
+    };
+  }, [pricingData]);
 
   const fetchData = useCallback(async () => {
     if (ids.length === 0) return;
@@ -136,7 +112,29 @@ function BatchSettlePage() {
     try {
       const result = await fetchPreview({ variables: { ids } });
       if (result.data?.batchSettlementPreview) {
-        setData({ previews: result.data.batchSettlementPreview });
+        const items = result.data.batchSettlementPreview;
+        setPreviews(items);
+        setUserStates((prev) => {
+          const next = new Map<string, UserCardState>();
+          for (const p of items) {
+            const existing = prev.get(p.order.id);
+            if (existing) {
+              next.set(p.order.id, { ...existing, settled: p.order.status === "SETTLED" });
+            } else {
+              const autoDeduct = Math.min(p.membership.storedValueBalance, p.finalPrice);
+              next.set(p.order.id, {
+                deductAmount: autoDeduct,
+                pointsChange: 0,
+                note: "",
+                settled: p.order.status === "SETTLED",
+                selectedPlan: p.membership.hasTimePlan
+                  ? (p.membership.timePlanType?.toLowerCase() ?? "none")
+                  : "none",
+              });
+            }
+          }
+          return next;
+        });
       }
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "加载失败");
@@ -145,151 +143,110 @@ function BatchSettlePage() {
     }
   }, [ids, fetchPreview, msg]);
 
-  useEffect(() => {
-    void fetchData();
-  }, [fetchData]);
+  useEffect(() => { void fetchData(); }, [fetchData]);
 
-  const toggleCancelId = (id: string) => {
-    setCancelIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+  const updateUserState = useCallback((orderId: string, patch: Partial<UserCardState>) => {
+    setUserStates((prev) => {
+      const next = new Map(prev);
+      const old = next.get(orderId);
+      if (old) next.set(orderId, { ...old, ...patch });
       return next;
     });
-  };
+  }, []);
 
-  const previewMap = useMemo(
-    () => new Map(data?.previews.map((p) => [p.order.id, p]) ?? []),
-    [data],
+  // Computed values
+  const totalPrice = useMemo(() => previews.reduce((s, p) => s + p.finalPrice, 0), [previews]);
+  const totalDuration = useMemo(() => previews.reduce((s, p) => s + p.totalMinutes, 0), [previews]);
+  const settledCount = useMemo(
+    () => Array.from(userStates.values()).filter((s) => s.settled).length,
+    [userStates],
+  );
+  const allSettled = previews.length > 0 && settledCount === previews.length;
+
+  // Compute price with plan override
+  const computeUserPrice = useCallback(
+    (preview: SettlementPreviewItem, planOverride?: string): number => {
+      if (!pricingSnapshot) return preview.finalPrice;
+      const pauseLogs = preview.pauseLogs.map((l: { pausedAt: string; resumedAt: string | null }) => ({
+        pausedAt: new Date(l.pausedAt).getTime(),
+        resumedAt: l.resumedAt ? new Date(l.resumedAt).getTime() : null,
+      }));
+      const startAt = new Date(preview.order.startAt).getTime();
+      const endAt = preview.order.endAt ? new Date(preview.order.endAt).getTime() : Date.now();
+      const scope = preview.order.table?.scope ?? "basic";
+      const result = calculatePrice(startAt, endAt, scope, pricingSnapshot, pauseLogs);
+      return result?.finalPrice ?? preview.finalPrice;
+    },
+    [pricingSnapshot],
   );
 
-  const activeSettleIds = useMemo(
-    () => ids.filter((id) => !cancelIds.has(id)),
-    [ids, cancelIds],
-  );
-
-  const totalPrice = useMemo(
-    () =>
-      activeSettleIds.reduce(
-        (sum, id) => sum + (previewMap.get(id)?.finalPrice ?? 0),
-        0,
-      ),
-    [activeSettleIds, previewMap],
-  );
-
-  const allEnded = useMemo(
-    () => data?.previews.every((p) => p.order.status === "SETTLED") ?? false,
-    [data],
-  );
-
-  const autoDeductAmount = useMemo(() => {
-    if (!deductEnabled) return 0;
-    return activeSettleIds.reduce((sum, id) => {
-      const p = previewMap.get(id);
-      if (!p) return sum;
-      return sum + Math.min(p.membership.storedValueBalance, p.finalPrice);
-    }, 0);
-  }, [deductEnabled, activeSettleIds, previewMap]);
-
-  const totalDeductAmount = deductEnabled
-    ? (customDeductAmount ?? autoDeductAmount)
-    : 0;
-
-  const remainingAfterDeduct = totalPrice - totalDeductAmount;
-
-  const handleSettle = async () => {
-    const settleIds = ids.filter((id) => !cancelIds.has(id));
-    if (settleIds.length === 0) return;
-    setSettling(true);
+  // Settle single user
+  const handleSettleUser = useCallback(async (orderId: string) => {
+    const state = userStates.get(orderId);
+    if (!state) return;
     try {
-      await batchSettle({
+      await settleOrder({
         variables: {
           input: {
-            ids: settleIds,
-            deductFromStoredValue: deductEnabled,
-            deductAmount: deductEnabled && customDeductAmount != null
-              ? customDeductAmount
-              : null,
-            note: note.trim() || null,
+            id: orderId,
+            deductFromStoredValue: state.deductAmount > 0,
+            deductAmount: state.deductAmount > 0 ? state.deductAmount : null,
+            pointsChange: state.pointsChange || 0,
+            note: state.note.trim() || null,
           },
         },
       });
+      updateUserState(orderId, { settled: true });
       msg.success("结算完成");
-      await fetchData();
-    } catch (err) {
-      msg.error(err instanceof Error ? err.message : "结算失败");
-    } finally {
-      setSettling(false);
-    }
-  };
-
-  const handleCancelSettlement = async () => {
-    const idsToCancel = Array.from(cancelIds);
-    if (idsToCancel.length === 0) return;
-    try {
-      await cancelSettlement({
-        variables: { ids: idsToCancel },
-      });
-      msg.success(`已取消 ${idsToCancel.length} 个订单的结算`);
-      const remainingIds = ids.filter((id) => !cancelIds.has(id));
-      if (remainingIds.length === 0) {
-        void navigate({
-          to: "/dash/orders",
-          search: {
-            q: "",
-            sortBy: "start_at",
-            sortOrder: "desc",
-            groupBy: "none",
-            page: "1",
-          },
-        });
-      } else {
-        void navigate({
-          to: "/dash/orders/settle",
-          search: { ids: remainingIds },
-        });
+      // Check if all settled
+      const newSettledCount = settledCount + 1;
+      if (newSettledCount === previews.length) {
+        void confetti({ particleCount: 150, spread: 80, origin: { y: 0.7 } });
+        setTimeout(() => {
+          bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+        }, 500);
       }
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "取消失败");
+      msg.error(err instanceof Error ? err.message : "结算失败");
     }
-  };
+  }, [userStates, settleOrder, updateUserState, msg, settledCount, previews.length]);
 
-  const handleCancelAll = async () => {
+  // Resume order
+  const handleResumeUser = useCallback(async (orderId: string) => {
+    if (!confirm("确定恢复计费？该用户将从批量结算中移除并继续计费。")) return;
     try {
-      await cancelSettlement({
-        variables: { ids },
-      });
-      msg.success("已取消全部结算");
-      void navigate({
-        to: "/dash/orders",
-        search: {
-          q: "",
-          sortBy: "start_at",
-          sortOrder: "desc",
-          groupBy: "none",
-          page: "1",
-        },
-      });
+      await resumeOrder({ variables: { id: orderId } });
+      msg.success("已恢复计费");
+      const remaining = ids.filter((id) => id !== orderId);
+      if (remaining.length === 0) {
+        void navigate({ to: "/dash/orders", search: { q: "", sortBy: "start_at", sortOrder: "desc", groupBy: "none", page: "1" } });
+      } else {
+        void navigate({ to: "/dash/orders/settle", search: { ids: remaining } });
+      }
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "取消失败");
+      msg.error(err instanceof Error ? err.message : "恢复失败");
     }
-  };
+  }, [ids, resumeOrder, navigate, msg]);
+
+  // Scroll to next pending card
+  const scrollToNextPending = useCallback(() => {
+    for (const p of previews) {
+      const state = userStates.get(p.order.id);
+      if (state && !state.settled) {
+        const el = cardRefs.current.get(p.order.id);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+    }
+  }, [previews, userStates]);
+
+  // --- Render ---
 
   if (ids.length === 0) {
     return (
       <main className="size-full flex flex-col items-center justify-center gap-4">
         <p className="text-base-content/60">未选择订单</p>
-        <Link
-          to="/dash/orders"
-          search={{
-            q: "",
-            sortBy: "start_at",
-            sortOrder: "desc",
-            groupBy: "none",
-            page: "1",
-          }}
-          className="btn btn-primary btn-sm"
-        >
+        <Link to="/dash/orders" search={{ q: "", sortBy: "start_at", sortOrder: "desc", groupBy: "none", page: "1" }} className="btn btn-primary btn-sm">
           返回订单列表
         </Link>
       </main>
@@ -304,21 +261,11 @@ function BatchSettlePage() {
     );
   }
 
-  if (!data || data.previews.length === 0) {
+  if (previews.length === 0) {
     return (
       <main className="size-full flex flex-col items-center justify-center gap-4">
         <p className="text-base-content/60">订单不存在</p>
-        <Link
-          to="/dash/orders"
-          search={{
-            q: "",
-            sortBy: "start_at",
-            sortOrder: "desc",
-            groupBy: "none",
-            page: "1",
-          }}
-          className="btn btn-primary btn-sm"
-        >
+        <Link to="/dash/orders" search={{ q: "", sortBy: "start_at", sortOrder: "desc", groupBy: "none", page: "1" }} className="btn btn-primary btn-sm">
           返回订单列表
         </Link>
       </main>
@@ -327,698 +274,456 @@ function BatchSettlePage() {
 
   return (
     <ClientOnly>
-      <main className="size-full overflow-y-auto">
-        <div className="px-4 pt-4">
-          <DashBackButton to="/dash/orders" />
-        </div>
+      <main className="size-full overflow-y-auto scroll-smooth">
+        <OverviewSection
+          previews={previews}
+          totalPrice={totalPrice}
+          totalDuration={totalDuration}
+          pricingSnapshot={pricingSnapshot}
+        />
 
-        <div className="mx-auto w-full max-w-3xl px-4 pb-20">
-          <div className="flex items-center gap-3 mb-6">
-            <h1 className="text-2xl font-bold">
-              {ids.length === 1 ? "订单详情" : "批量结算"}
-            </h1>
-            {ids.length > 1 && (
-              <span className="badge badge-warning">{ids.length} 个订单</span>
-            )}
-            {allEnded && (
-              <span className="badge badge-success">已结算</span>
-            )}
-          </div>
-
-          <OrderCardsGrid
-            previews={data.previews}
-            cancelIds={cancelIds}
-            onToggle={toggleCancelId}
-            readonly={allEnded}
-          />
-
-          <BillingChart previews={data.previews} />
-
-          <CombinedPriceSection
-            activeSettleIds={activeSettleIds}
-            previewMap={previewMap}
-            totalPrice={totalPrice}
-          />
-
-          <MultiOrderTimeline previews={data.previews} />
-
-          <GroupedMembershipSection
-            previews={data.previews}
-            activeSettleIds={activeSettleIds}
-            previewMap={previewMap}
-            isAllEnded={allEnded}
-            deductEnabled={deductEnabled}
-            onDeductToggle={setDeductEnabled}
-            autoDeductAmount={autoDeductAmount}
-            customDeductAmount={customDeductAmount}
-            onDeductAmountChange={setCustomDeductAmount}
-          />
-
-          <BatchPricingPlansSection previews={data.previews} />
-
-          {!allEnded && (
-            <div className="bg-base-200 rounded-xl p-5 mb-4">
-              <h3 className="font-semibold text-sm text-base-content/60 mb-3">
-                结算备注
-              </h3>
-              <textarea
-                className="textarea textarea-bordered w-full"
-                placeholder="填写结算备注（可选）"
-                rows={2}
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
+        <div className="mx-auto w-full max-w-4xl px-4 pb-32">
+          {previews.map((preview) => {
+            const state = userStates.get(preview.order.id);
+            if (!state) return null;
+            return (
+              <UserBillingCard
+                key={preview.order.id}
+                ref={(el) => { if (el) cardRefs.current.set(preview.order.id, el); }}
+                preview={preview}
+                state={state}
+                pricingSnapshot={pricingSnapshot}
+                computePrice={computeUserPrice}
+                onStateChange={(patch) => updateUserState(preview.order.id, patch)}
+                onSettle={() => void handleSettleUser(preview.order.id)}
+                onResume={() => void handleResumeUser(preview.order.id)}
               />
+            );
+          })}
+
+          <PendingBar
+            settledCount={settledCount}
+            totalCount={previews.length}
+            onScrollToPending={scrollToNextPending}
+            allSettled={allSettled}
+          />
+
+          {allSettled && (
+            <div ref={bottomRef} className="flex flex-col items-center justify-center gap-4 py-12">
+              <CheckCircleIcon className="size-12 text-success animate-bounce" />
+              <p className="text-lg font-bold text-success">所有订单处理完成</p>
+              <button
+                type="button"
+                className="btn btn-primary gap-2"
+                onClick={() => void navigate({ to: "/dash" })}
+              >
+                <HouseIcon className="size-4" />
+                返回主页
+              </button>
             </div>
           )}
         </div>
-
-        {!allEnded && (
-          <div className="fixed bottom-0 right-0 left-0 lg:left-20 bg-base-100 border-t border-base-200 px-4 py-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 z-40">
-            {deductEnabled && totalDeductAmount > 0 && (
-              <span className="text-xs text-base-content/60 sm:mr-auto text-center sm:text-left">
-                储值扣费 {formatPrice(totalDeductAmount)}
-                {remainingAfterDeduct > 0 &&
-                  ` · 剩余 ${formatPrice(remainingAfterDeduct)}`}
-              </span>
-            )}
-            <div className="flex items-center justify-end gap-2">
-              {cancelIds.size > 0 && (
-                <button
-                  type="button"
-                  className="btn btn-sm gap-2"
-                  onClick={() => void handleCancelSettlement()}
-                  disabled={settling}
-                >
-                  <XCircleIcon className="size-4" />
-                  取消选中 ({cancelIds.size})
-                </button>
-              )}
-              <button
-                type="button"
-                className="btn btn-sm gap-2"
-                onClick={() => void handleCancelAll()}
-                disabled={settling}
-              >
-                全部取消
-              </button>
-              <button
-                type="button"
-                className="btn btn-sm btn-primary gap-2"
-                onClick={() => void handleSettle()}
-                disabled={settling || activeSettleIds.length === 0}
-              >
-                <CheckCircleIcon className="size-4" />
-                {settling
-                  ? "结算中..."
-                  : `确认结算 (${activeSettleIds.length})`}
-              </button>
-            </div>
-          </div>
-        )}
       </main>
     </ClientOnly>
   );
 }
 
-function OrderCardsGrid({
-  previews,
-  cancelIds,
-  onToggle,
-  readonly,
-}: {
-  previews: SettlementPreviewItem[];
-  cancelIds: Set<string>;
-  onToggle: (id: string) => void;
-  readonly: boolean;
-}) {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-      {previews.map((preview) => {
-        const cancelled = cancelIds.has(preview.order.id);
-        return (
-          <div
-            key={preview.order.id}
-            className={clsx(
-              "bg-base-200 rounded-xl p-4 transition-opacity",
-              cancelled && "opacity-50",
-            )}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                {!readonly && (
-                  <input
-                    type="checkbox"
-                    className="checkbox checkbox-sm"
-                    checked={!cancelled}
-                    onChange={() => onToggle(preview.order.id)}
-                  />
-                )}
-                <span className="font-semibold">
-                  {preview.order.table?.name ?? "—"}
-                </span>
-              </div>
-              <span className="badge badge-sm badge-ghost">
-                {preview.order.status === "SETTLED" ? "已结束" : "待结算"}
-              </span>
-            </div>
-            <div className="text-sm text-base-content/70 space-y-1">
-              <div>用户: {preview.order.nickname}</div>
-              <div>
-                时长: {formatMinutes(preview.billableMinutes)} (暂停{" "}
-                {formatMinutes(preview.pausedMinutes)})
-              </div>
-              <div className="font-mono font-bold text-primary text-lg">
-                {formatPrice(preview.finalPrice)}
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+// === Overview Section ===
 
-function CombinedPriceSection({
-  activeSettleIds,
-  previewMap,
+function OverviewSection({
+  previews,
   totalPrice,
+  totalDuration,
+  pricingSnapshot,
 }: {
-  activeSettleIds: string[];
-  previewMap: Map<string, SettlementPreviewItem>;
+  previews: SettlementPreviewItem[];
   totalPrice: number;
+  totalDuration: number;
+  pricingSnapshot: SnapshotData | null;
 }) {
-  return (
-    <div className="bg-base-200 rounded-xl p-5 mb-4">
-      <h3 className="font-semibold text-sm text-base-content/60 mb-3 flex items-center gap-1.5">
-        <CurrencyDollarIcon className="size-4" />
-        费用汇总
-      </h3>
-      <div className="flex flex-col gap-3">
-        {activeSettleIds.map((id) => {
-          const p = previewMap.get(id);
-          if (!p) return null;
-          return (
-            <div key={id} className="flex items-center justify-between text-sm">
-              <span className="text-base-content/70">
-                {p.order.table?.name ?? "—"} · {p.order.nickname}
-              </span>
-              <span className="font-mono">{formatPrice(p.finalPrice)}</span>
-            </div>
-          );
-        })}
-        <div className="border-t border-base-content/10 pt-2 flex items-center justify-between">
-          <span className="font-semibold">总计</span>
-          <span className="font-mono text-2xl font-bold text-primary">
-            {formatPrice(totalPrice)}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
+  const chartOption = useMemo<EChartsOption>(() => {
+    if (previews.length === 0) return {};
 
-function MultiOrderTimeline({
-  previews,
-}: {
-  previews: SettlementPreviewItem[];
-}) {
-  const globalStart = Math.min(
-    ...previews.map((p) => new Date(p.order.startAt).getTime()),
-  );
-  const globalEnd = Math.max(
-    ...previews.map((p) =>
+    const globalStart = Math.min(...previews.map((p) => new Date(p.order.startAt).getTime()));
+    const globalEnd = Math.max(...previews.map((p) =>
       p.order.endAt ? new Date(p.order.endAt).getTime() : Date.now(),
-    ),
-  );
-  const totalDuration = Math.max(1, globalEnd - globalStart);
+    ));
+    const duration = globalEnd - globalStart;
+    const intervals = Math.max(1, Math.ceil(duration / HALF_HOUR_MS));
+
+    const timePoints: string[] = [];
+    for (let i = 0; i <= intervals; i++) {
+      timePoints.push(dayjs(globalStart + i * HALF_HOUR_MS).format("HH:mm"));
+    }
+
+    // Per-user cumulative prices
+    const userSeries: { name: string; data: number[] }[] = [];
+    for (const p of previews) {
+      const startAt = new Date(p.order.startAt).getTime();
+      const endAt = p.order.endAt ? new Date(p.order.endAt).getTime() : Date.now();
+      const pauseLogs = p.pauseLogs.map((l: { pausedAt: string; resumedAt: string | null }) => ({
+        pausedAt: new Date(l.pausedAt).getTime(),
+        resumedAt: l.resumedAt ? new Date(l.resumedAt).getTime() : null,
+      }));
+      const scope = p.order.table?.scope ?? "basic";
+      const points: number[] = [];
+      for (let i = 0; i <= intervals; i++) {
+        const t = globalStart + i * HALF_HOUR_MS;
+        if (t < startAt) { points.push(0); continue; }
+        const currentEnd = Math.min(t, endAt);
+        if (pricingSnapshot) {
+          const result = calculatePrice(startAt, currentEnd, scope, pricingSnapshot, pauseLogs);
+          points.push(result?.finalPrice ?? 0);
+        } else {
+          const pct = Math.max(0, currentEnd - startAt) / Math.max(1, endAt - startAt);
+          points.push(Math.round(p.finalPrice * pct));
+        }
+      }
+      userSeries.push({ name: p.order.nickname ?? p.order.uid ?? "用户", data: points });
+    }
+
+    // Total line
+    const totalData: number[] = [];
+    for (let i = 0; i <= intervals; i++) {
+      totalData.push(userSeries.reduce((s, u) => s + (u.data[i] ?? 0), 0));
+    }
+
+    const colors = ["#6366f1", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#ec4899"];
+
+    return {
+      animation: true,
+      grid: { top: 10, bottom: 10, left: 10, right: 10 },
+      xAxis: { type: "category", data: timePoints, show: false },
+      yAxis: { type: "value", show: false },
+      series: [
+        {
+          name: "总计",
+          type: "line",
+          data: totalData,
+          smooth: true,
+          lineStyle: { width: 2.5, color: "rgba(99, 102, 241, 0.4)" },
+          areaStyle: { color: "rgba(99, 102, 241, 0.06)" },
+          symbol: "none",
+        },
+        ...userSeries.map((s, i) => ({
+          name: s.name,
+          type: "line" as const,
+          data: s.data,
+          smooth: true,
+          lineStyle: { width: 1.5, color: `${colors[i % colors.length]}40` },
+          symbol: "none",
+        })),
+      ],
+      tooltip: { show: false },
+    };
+  }, [previews, pricingSnapshot]);
 
   return (
-    <div className="bg-base-200 rounded-xl p-5 mb-4">
-      <h3 className="font-semibold text-sm text-base-content/60 mb-3 flex items-center gap-1.5">
-        <ClockIcon className="size-4" />
-        时间轴
-      </h3>
-      <div className="flex flex-col gap-3">
-        {previews.map((preview) => {
-          const orderStart = new Date(preview.order.startAt).getTime();
-          const orderEnd = preview.order.endAt
-            ? new Date(preview.order.endAt).getTime()
-            : Date.now();
-          const leftPct = ((orderStart - globalStart) / totalDuration) * 100;
-          const widthPct = ((orderEnd - orderStart) / totalDuration) * 100;
-
-          const segments = buildSegments(
-            orderStart,
-            orderEnd,
-            preview.pauseLogs,
-          );
-
-          return (
-            <div key={preview.order.id}>
-              <div className="text-xs text-base-content/60 mb-1 flex items-center gap-2">
-                <span className="font-medium">
-                  {preview.order.table?.name ?? "—"}
-                </span>
-                <span>{preview.order.nickname}</span>
-              </div>
-              <div className="relative h-5 bg-base-300 rounded-lg overflow-hidden">
-                <div
-                  className="absolute top-0 bottom-0 flex rounded-md overflow-hidden"
-                  style={{
-                    left: `${leftPct}%`,
-                    width: `${Math.max(widthPct, 1)}%`,
-                  }}
-                >
-                  {segments.map((seg) => {
-                    const segPct =
-                      ((seg.end - seg.start) / (orderEnd - orderStart)) * 100;
-                    const durMs = seg.end - seg.start;
-                    const durMin = Math.floor(durMs / 60000);
-                    const durSec = Math.floor((durMs % 60000) / 1000);
-                    const tooltip =
-                      seg.type === "active"
-                        ? `运行 ${durMin}分${durSec}秒`
-                        : `暂停 ${durMin}分${durSec}秒`;
-                    return (
-                      <div
-                        key={`${seg.type}-${seg.start}`}
-                        className="tooltip tooltip-bottom"
-                        data-tip={tooltip}
-                        style={{
-                          width: `${Math.max(segPct, 1)}%`,
-                          backgroundColor:
-                            seg.type === "active" ? "#22c55e" : "#9ca3af",
-                        }}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+    <div className="relative overflow-hidden mb-6">
+      <div className="absolute inset-0 opacity-60 pointer-events-none">
+        <Suspense fallback={null}>
+          <ReactECharts option={chartOption} style={{ height: "100%", width: "100%" }} opts={{ renderer: "svg" }} />
+        </Suspense>
       </div>
-      <div className="flex justify-between mt-2 text-xs text-base-content/50">
-        <span>{formatShortTime(globalStart)}</span>
-        <span>{formatShortTime(globalEnd)}</span>
-      </div>
-      <div className="flex items-center gap-4 mt-2 text-xs">
-        <div className="flex items-center gap-1.5">
-          <div
-            className="size-3 rounded-sm"
-            style={{ backgroundColor: "#22c55e" }}
-          />
-          <span>运行中</span>
+
+      <div className="relative z-10 px-4 pt-4 pb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <DashBackButton to="/dash/orders" />
+          <h1 className="text-xl font-bold">批量结算</h1>
         </div>
-        <div className="flex items-center gap-1.5">
-          <div
-            className="size-3 rounded-sm"
-            style={{ backgroundColor: "#9ca3af" }}
-          />
-          <span>暂停</span>
+
+        <div className="mx-auto max-w-4xl flex flex-wrap gap-6 items-end">
+          <div>
+            <div className="text-xs text-base-content/50 uppercase tracking-wider">总金额</div>
+            <div className="text-3xl font-bold font-mono">{formatPrice(totalPrice)}</div>
+          </div>
+          <div>
+            <div className="text-xs text-base-content/50 uppercase tracking-wider">总时长</div>
+            <div className="text-xl font-semibold">{formatMinutes(totalDuration)}</div>
+          </div>
+          <div className="flex flex-wrap gap-3 ml-auto">
+            {previews.map((p) => (
+              <div key={p.order.id} className="text-sm">
+                <span className="text-base-content/60">{p.order.nickname ?? p.order.uid ?? "用户"}</span>
+                <span className="ml-1 font-mono font-semibold">{formatPrice(p.finalPrice)}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function GroupedMembershipSection({
-  previews,
-  activeSettleIds,
-  previewMap,
-  isAllEnded,
-  deductEnabled,
-  onDeductToggle,
-  autoDeductAmount,
-  customDeductAmount,
-  onDeductAmountChange,
-}: {
-  previews: SettlementPreviewItem[];
-  activeSettleIds: string[];
-  previewMap: Map<string, SettlementPreviewItem>;
-  isAllEnded: boolean;
-  deductEnabled: boolean;
-  onDeductToggle: (v: boolean) => void;
-  autoDeductAmount: number;
-  customDeductAmount: number | null;
-  onDeductAmountChange: (v: number | null) => void;
-}) {
-  const userGroups = useMemo(() => {
-    const map = new Map<
-      string,
-      {
-        nickname: string;
-        uid: string | null;
-        membership: SettlementPreviewItem["membership"];
-        totalPrice: number;
-      }
-    >();
-    for (const id of activeSettleIds) {
-      const p = previewMap.get(id);
-      if (!p) continue;
-      const key = p.order.uid ?? p.order.nickname ?? "unknown";
-      const existing = map.get(key);
-      if (existing) {
-        existing.totalPrice += p.finalPrice;
+// === Per-User Billing Card ===
+
+const UserBillingCard = forwardRef<HTMLDivElement, {
+  preview: SettlementPreviewItem;
+  state: UserCardState;
+  pricingSnapshot: SnapshotData | null;
+  computePrice: (preview: SettlementPreviewItem, plan?: string) => number;
+  onStateChange: (patch: Partial<UserCardState>) => void;
+  onSettle: () => void;
+  onResume: () => void;
+}>(function UserBillingCard({ preview, state, pricingSnapshot, computePrice, onStateChange, onSettle, onResume }, ref) {
+  const calculatedPrice = useMemo(
+    () => computePrice(preview, state.selectedPlan),
+    [preview, state.selectedPlan, computePrice],
+  );
+
+  // Bar chart for 30min intervals with event annotations
+  const barChartOption = useMemo(() => {
+    const startAt = new Date(preview.order.startAt).getTime();
+    const endAt = preview.order.endAt ? new Date(preview.order.endAt).getTime() : Date.now();
+    const duration = endAt - startAt;
+    const intervals = Math.max(1, Math.ceil(duration / HALF_HOUR_MS));
+    const scope = preview.order.table?.scope ?? "basic";
+
+    const pauseLogs = preview.pauseLogs.map((l: { pausedAt: string; resumedAt: string | null }) => ({
+      pausedAt: new Date(l.pausedAt).getTime(),
+      resumedAt: l.resumedAt ? new Date(l.resumedAt).getTime() : null,
+    }));
+
+    // Compute incremental price per interval
+    const barData: number[] = [];
+    const labels: string[] = [];
+    let prevPrice = 0;
+    for (let i = 1; i <= intervals; i++) {
+      const t = startAt + i * HALF_HOUR_MS;
+      const currentEnd = Math.min(t, endAt);
+      labels.push(dayjs(currentEnd).format("HH:mm"));
+      if (pricingSnapshot) {
+        const result = calculatePrice(startAt, currentEnd, scope, pricingSnapshot, pauseLogs);
+        const cumPrice = result?.finalPrice ?? 0;
+        barData.push(cumPrice - prevPrice);
+        prevPrice = cumPrice;
       } else {
-        map.set(key, {
-          nickname: p.order.nickname ?? "",
-          uid: p.order.uid ?? null,
-          membership: p.membership,
-          totalPrice: p.finalPrice,
+        const pct = Math.min(1, (i * HALF_HOUR_MS) / Math.max(1, duration));
+        const cumPrice = Math.round(preview.finalPrice * pct);
+        barData.push(cumPrice - prevPrice);
+        prevPrice = cumPrice;
+      }
+    }
+
+    // Event marklines: pauses, daytime/nighttime boundary
+    const markLines: Array<{ xAxis: number; label: { formatter: string; fontSize: number }; lineStyle?: { color: string } }> = [];
+
+    // Pause events
+    for (const log of preview.pauseLogs) {
+      const pauseIdx = Math.floor((new Date(log.pausedAt).getTime() - startAt) / HALF_HOUR_MS);
+      markLines.push({
+        xAxis: Math.min(pauseIdx, intervals - 1),
+        label: { formatter: "暂停", fontSize: 9 },
+        lineStyle: { color: "#f59e0b" },
+      });
+      if (log.resumedAt) {
+        const resumeIdx = Math.floor((new Date(log.resumedAt).getTime() - startAt) / HALF_HOUR_MS);
+        markLines.push({
+          xAxis: Math.min(resumeIdx, intervals - 1),
+          label: { formatter: "恢复", fontSize: 9 },
+          lineStyle: { color: "#10b981" },
         });
       }
     }
-    return Array.from(map.values());
-  }, [activeSettleIds, previewMap]);
 
-  const hasAnyBalance = userGroups.some(
-    (g) => g.membership.storedValueBalance > 0,
-  );
-
-  return (
-    <div className="bg-base-200 rounded-xl p-5 mb-4">
-      <h3 className="font-semibold text-sm text-base-content/60 mb-3 flex items-center gap-1.5">
-        <UserIcon className="size-4" />
-        会员信息
-      </h3>
-      <div className="flex flex-col gap-4">
-        {userGroups.map((group) => {
-          const balance = group.membership.storedValueBalance;
-          const deductAmount = Math.min(balance, group.totalPrice);
-          const remaining = group.totalPrice - deductAmount;
-
-          return (
-            <div key={group.uid ?? group.nickname}>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="font-medium text-sm">{group.nickname}</span>
-                {group.uid && (
-                  <span className="text-xs text-base-content/40">
-                    {group.uid}
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-base-content/70">时间卡</span>
-                  <div className="flex items-center gap-2">
-                    {group.membership.hasTimePlan ? (
-                      <>
-                        <span
-                          className={clsx(
-                            "badge badge-sm",
-                            group.membership.timePlanActive
-                              ? "badge-success"
-                              : "badge-ghost",
-                          )}
-                        >
-                          {group.membership.timePlanActive ? "有效" : "已过期"}
-                        </span>
-                        {group.membership.timePlanType && (
-                          <span className="badge badge-sm badge-outline">
-                            {group.membership.timePlanType === "YEARLY"
-                              ? "LTS"
-                              : group.membership.timePlanType === "MONTHLY_CC"
-                                ? "CC"
-                                : "标准"}
-                          </span>
-                        )}
-                        {group.membership.timePlanEndDate && (
-                          <span className="text-xs text-base-content/50">
-                            至{" "}
-                            {dayjs(group.membership.timePlanEndDate).format(
-                              "YYYY/MM/DD",
-                            )}
-                          </span>
-                        )}
-                      </>
-                    ) : (
-                      <span className="text-sm text-base-content/40">
-                        无时间卡
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-base-content/70">
-                    储值卡余额
-                  </span>
-                  <span className="font-mono font-bold text-accent">
-                    {formatPrice(balance)}
-                  </span>
-                </div>
-                {deductEnabled && balance > 0 && (
-                  <div className="text-xs text-base-content/50">
-                    可扣上限 {formatPrice(deductAmount)}
-                  </div>
-                )}
-              </div>
-              {userGroups.length > 1 && (
-                <div className="border-b border-base-content/5 mt-3" />
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {!isAllEnded && hasAnyBalance && (
-        <div className="border-t border-base-content/10 pt-3 mt-3 flex flex-col gap-3">
-          <label className="flex items-center justify-between cursor-pointer">
-            <span className="text-sm font-medium">使用储值卡扣费</span>
-            <input
-              type="checkbox"
-              className="toggle toggle-accent"
-              checked={deductEnabled}
-              onChange={(e) => onDeductToggle(e.target.checked)}
-            />
-          </label>
-          {deductEnabled && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-base-content/70 shrink-0">扣费金额</span>
-              <input
-                type="number"
-                className="input input-sm input-bordered w-32 font-mono text-right"
-                min={0}
-                max={autoDeductAmount / 100}
-                step={0.01}
-                value={
-                  customDeductAmount != null
-                    ? (customDeductAmount / 100).toFixed(2)
-                    : (autoDeductAmount / 100).toFixed(2)
-                }
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === "" || val === (autoDeductAmount / 100).toFixed(2)) {
-                    onDeductAmountChange(null);
-                  } else {
-                    const cents = Math.round(Number.parseFloat(val) * 100);
-                    if (!Number.isNaN(cents) && cents >= 0) {
-                      onDeductAmountChange(Math.min(cents, autoDeductAmount));
-                    }
-                  }
-                }}
-              />
-              <span className="text-xs text-base-content/50">元</span>
-              {customDeductAmount != null && (
-                <button
-                  type="button"
-                  className="btn btn-xs btn-ghost"
-                  onClick={() => onDeductAmountChange(null)}
-                >
-                  重置
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function BatchPricingPlansSection({
-  previews,
-}: {
-  previews: SettlementPreviewItem[];
-}) {
-  const allPlans = useMemo(() => {
-    const seen = new Set<string>();
-    const result: SettlementPreviewItem["pricingPlans"] = [];
-    for (const p of previews) {
-      for (const plan of p.pricingPlans) {
-        if (!seen.has(plan.name)) {
-          seen.add(plan.name);
-          result.push(plan);
+    // Daytime/nighttime boundary
+    if (pricingSnapshot) {
+      const daytimeEnd = pricingSnapshot.config.daytime_end;
+      if (daytimeEnd) {
+        const [hh, mm] = daytimeEnd.split(":").map(Number);
+        const startDay = dayjs(startAt);
+        let boundary = startDay.startOf("day").add(hh, "hour").add(mm, "minute").valueOf();
+        if (boundary < startAt) boundary += 24 * 60 * 60 * 1000;
+        if (boundary > startAt && boundary < endAt) {
+          const idx = Math.floor((boundary - startAt) / HALF_HOUR_MS);
+          markLines.push({
+            xAxis: Math.min(idx, intervals - 1),
+            label: { formatter: "夜间", fontSize: 9 },
+            lineStyle: { color: "#8b5cf6" },
+          });
         }
       }
     }
-    return result;
-  }, [previews]);
 
-  if (allPlans.length === 0) return null;
+    return {
+      animation: true,
+      grid: { top: 20, bottom: 30, left: 40, right: 10 },
+      xAxis: { type: "category", data: labels, axisLabel: { fontSize: 10 } },
+      yAxis: {
+        type: "value",
+        axisLabel: { fontSize: 10, formatter: (v: number) => `¥${(v / 100).toFixed(0)}` },
+      },
+      series: [
+        {
+          type: "bar",
+          data: barData,
+          itemStyle: { color: "#6366f1", borderRadius: [4, 4, 0, 0] },
+          markLine: markLines.length > 0 ? {
+            silent: true,
+            symbol: "none",
+            lineStyle: { type: "dashed", color: "#f59e0b" },
+            data: markLines,
+          } : undefined,
+        },
+      ],
+      tooltip: {
+        trigger: "axis",
+        formatter: (params: Array<{ name: string; value: number }>) => {
+          const p = params[0];
+          return `${p?.name ?? ""}<br/>增量: ${formatPrice(p?.value ?? 0)}`;
+        },
+      },
+    };
+  }, [preview, pricingSnapshot]);
+
+  // Settled receipt view
+  if (state.settled) {
+    return (
+      <div ref={ref} id={`card-${preview.order.id}`} className="bg-base-200 rounded-xl p-5 mb-4 opacity-70">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <ReceiptIcon className="size-5 text-success" />
+            <span className="font-bold">{preview.order.nickname ?? preview.order.uid ?? "用户"}</span>
+            <span className="badge badge-success badge-sm">已结算</span>
+          </div>
+          <span className="font-mono text-lg font-bold">{formatPrice(preview.finalPrice)}</span>
+        </div>
+        <div className="text-sm text-base-content/60 space-y-1">
+          <div>时长: {formatMinutes(preview.billableMinutes)} (暂停 {formatMinutes(preview.pausedMinutes)})</div>
+          <div>桌台: {preview.order.table?.name ?? "-"}</div>
+          {state.deductAmount > 0 && <div>储值扣费: {formatPrice(state.deductAmount)}</div>}
+          {state.pointsChange !== 0 && <div>积分变更: {state.pointsChange > 0 ? "+" : ""}{state.pointsChange}</div>}
+          {state.note && <div>备注: {state.note}</div>}
+        </div>
+        <div className="flex gap-2 mt-3">
+          <Link to="/dash/tables/$id" params={{ id: preview.order.table?.id ?? "" }} search={{ tab: "basic" }} className="btn btn-xs btn-ghost gap-1">
+            <LinkIcon className="size-3" /> 桌台详情
+          </Link>
+          {preview.order.userId && (
+            <Link to="/dash/users/$id" params={{ id: preview.order.userId }} search={{ tab: "basic" }} className="btn btn-xs btn-ghost gap-1">
+              <UserIcon className="size-3" /> 用户详情
+            </Link>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-base-200 rounded-xl p-5 mb-4">
-      <h3 className="font-semibold text-sm text-base-content/60 mb-3 flex items-center gap-1.5">
-        <ReceiptIcon className="size-4" />
-        参与结算的计划
-      </h3>
-      <div className="flex flex-col gap-2">
-        {allPlans.map((plan: SettlementPreviewItem["pricingPlans"][number]) => (
-          <div
-            key={plan.name}
-            className={clsx(
-              "flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 rounded-lg px-3 py-2 text-sm",
-              plan.matched
-                ? "bg-primary/10 border border-primary/20"
-                : "bg-base-100",
-            )}
-          >
-            <div className="flex items-center gap-2">
-              <span className="font-medium">{plan.name}</span>
-              <span className="badge badge-xs badge-ghost">
-                {plan.billingType === "hourly" ? "按时" : "固定"}
-              </span>
-              {plan.matched && (
-                <span className="badge badge-xs badge-primary">已匹配</span>
-              )}
-            </div>
-            <span className="font-mono">
-              {formatPrice(plan.price)}
-              {plan.billingType === "hourly" && "/小时"}
-            </span>
-          </div>
-        ))}
+    <div ref={ref} id={`card-${preview.order.id}`} className="bg-base-200 rounded-xl p-5 mb-4">
+      {/* Header: user + plan selector */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <UserIcon className="size-5" />
+          <span className="font-bold text-lg">{preview.order.nickname ?? preview.order.uid ?? "用户"}</span>
+          <span className="text-sm text-base-content/50">{preview.order.table?.name}</span>
+        </div>
+        <select
+          className="select select-sm select-bordered"
+          value={state.selectedPlan}
+          onChange={(e) => onStateChange({ selectedPlan: e.target.value })}
+        >
+          {PLAN_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Bar chart */}
+      <div className="rounded-lg overflow-hidden mb-4 bg-base-100">
+        <Suspense fallback={<div className="h-48 flex items-center justify-center"><span className="loading loading-dots" /></div>}>
+          <ReactECharts option={barChartOption} style={{ height: 200 }} opts={{ renderer: "svg" }} />
+        </Suspense>
+      </div>
+
+      {/* Price display */}
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-sm text-base-content/60">计费金额</span>
+        <span className="font-mono text-2xl font-bold text-primary">{formatPrice(calculatedPrice)}</span>
+      </div>
+
+      {/* Inputs */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+        <label className="form-control">
+          <div className="label"><span className="label-text text-xs">储值扣费</span></div>
+          <input
+            type="number"
+            className="input input-bordered input-sm font-mono"
+            value={state.deductAmount / 100}
+            min={0}
+            step={0.01}
+            onChange={(e) => onStateChange({ deductAmount: Math.round(Number(e.target.value) * 100) })}
+          />
+        </label>
+        <label className="form-control">
+          <div className="label"><span className="label-text text-xs">积分变更</span></div>
+          <input
+            type="number"
+            className="input input-bordered input-sm font-mono"
+            value={state.pointsChange}
+            onChange={(e) => onStateChange({ pointsChange: Number(e.target.value) || 0 })}
+          />
+        </label>
+      </div>
+
+      {/* Quick links */}
+      <div className="flex gap-2 mb-3">
+        <Link to="/dash/tables/$id" params={{ id: preview.order.table?.id ?? "" }} search={{ tab: "basic" }} className="btn btn-xs btn-ghost gap-1">
+          <LinkIcon className="size-3" /> 桌台详情
+        </Link>
+        {preview.order.userId && (
+          <Link to="/dash/users/$id" params={{ id: preview.order.userId }} search={{ tab: "basic" }} className="btn btn-xs btn-ghost gap-1">
+            <UserIcon className="size-3" /> 用户详情
+          </Link>
+        )}
+      </div>
+
+      {/* Note */}
+      <textarea
+        className="textarea textarea-bordered w-full textarea-sm mb-4"
+        placeholder="备注（可选）"
+        rows={2}
+        value={state.note}
+        onChange={(e) => onStateChange({ note: e.target.value })}
+      />
+
+      {/* Action buttons */}
+      <div className="flex items-center gap-2">
+        <button type="button" className="btn btn-sm btn-primary flex-1 gap-1" onClick={onSettle}>
+          <CheckCircleIcon className="size-4" /> 结算
+        </button>
+        <button type="button" className="btn btn-sm btn-ghost gap-1" onClick={onResume}>
+          <ClockIcon className="size-4" /> 恢复计费
+        </button>
       </div>
     </div>
   );
-}
+});
 
-const HALF_HOUR_MS = 30 * 60 * 1000;
-const FREE_PERIOD_MS = HALF_HOUR_MS;
+// === Pending Bar ===
 
-function BillingChart({ previews }: { previews: SettlementPreviewItem[] }) {
-  const option = useMemo<EChartsOption>(() => {
-    // For each order, compute cost per half-hour slot
-    const globalStart = Math.min(
-      ...previews.map((p) => new Date(p.order.startAt).getTime()),
-    );
-    const globalEnd = Math.max(
-      ...previews.map((p) =>
-        p.order.endAt ? new Date(p.order.endAt).getTime() : Date.now(),
-      ),
-    );
-
-    // Build half-hour time slots from global start to end
-    const slots: string[] = [];
-    const slotStarts: number[] = [];
-    let t = globalStart;
-    while (t < globalEnd) {
-      slots.push(dayjs(t).format("HH:mm"));
-      slotStarts.push(t);
-      t += HALF_HOUR_MS;
-    }
-    if (slots.length === 0) {
-      slots.push(dayjs(globalStart).format("HH:mm"));
-      slotStarts.push(globalStart);
-    }
-
-    // For each order, compute per-slot cost
-    const series: EChartsOption["series"] = previews.map((p) => {
-      const orderStart = new Date(p.order.startAt).getTime();
-      const breakdown = p.priceBreakdown;
-      const pricePerHalfHour = breakdown
-        ? Math.round(breakdown.unitPrice / 2)
-        : 0;
-      const cap = breakdown?.capApplied ? breakdown.finalPrice : null;
-
-      const data = slotStarts.map((slotStart) => {
-        const slotEnd = slotStart + HALF_HOUR_MS;
-        // Is this order active during this slot?
-        if (slotEnd <= orderStart) return 0;
-        const orderEnd = p.order.endAt
-          ? new Date(p.order.endAt).getTime()
-          : Date.now();
-        if (slotStart >= orderEnd) return 0;
-
-        // How many half-hours elapsed since order start to this slot's end
-        const elapsedMs = Math.min(slotEnd, orderEnd) - orderStart;
-        if (elapsedMs <= FREE_PERIOD_MS) return 0; // Still in free period
-
-        // This slot's marginal cost
-        const prevElapsed = Math.max(0, slotStart - orderStart);
-        if (prevElapsed < FREE_PERIOD_MS && elapsedMs > FREE_PERIOD_MS) {
-          // Partial: free period ends in this slot
-          return pricePerHalfHour;
-        }
-        if (prevElapsed >= FREE_PERIOD_MS) {
-          return pricePerHalfHour;
-        }
-        return 0;
-      });
-
-      return {
-        name: `${p.order.table?.name ?? "—"} · ${p.order.nickname}`,
-        type: "bar" as const,
-        stack: "cost",
-        data,
-        emphasis: { focus: "series" as const },
-      };
-    });
-
-    return {
-      tooltip: {
-        trigger: "axis",
-        axisPointer: { type: "shadow" },
-        formatter: (params: unknown) => {
-          if (!Array.isArray(params)) return "";
-          const lines = params
-            .filter((p: { value: number }) => p.value > 0)
-            .map(
-              (p: { seriesName: string; value: number; color: string }) =>
-                `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color};margin-right:4px;"></span>${p.seriesName}: ¥${(p.value / 100).toFixed(2)}`,
-            );
-          if (lines.length === 0) return "免费时段";
-          return lines.join("<br/>");
-        },
-      },
-      grid: { left: 50, right: 16, top: 24, bottom: 32 },
-      xAxis: {
-        type: "category",
-        data: slots,
-        axisLabel: { fontSize: 11 },
-      },
-      yAxis: {
-        type: "value",
-        axisLabel: {
-          formatter: (v: number) => `¥${(v / 100).toFixed(0)}`,
-          fontSize: 11,
-        },
-      },
-      series,
-      color: ["#6366f1", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#ec4899"],
-    };
-  }, [previews]);
-
+function PendingBar({
+  settledCount,
+  totalCount,
+  onScrollToPending,
+  allSettled,
+}: {
+  settledCount: number;
+  totalCount: number;
+  onScrollToPending: () => void;
+  allSettled: boolean;
+}) {
+  if (allSettled) return null;
   return (
-    <div className="bg-base-200 rounded-xl p-5 mb-4">
-      <h3 className="font-semibold text-sm text-base-content/60 mb-3 flex items-center gap-1.5">
-        <CurrencyDollarIcon className="size-4" />
-        计费明细图
-      </h3>
-      <Suspense
-        fallback={
-          <div className="h-48 flex items-center justify-center">
-            <span className="loading loading-spinner loading-sm" />
-          </div>
-        }
-      >
-        <ReactECharts
-          option={option}
-          style={{ height: 200 }}
-          opts={{ renderer: "svg" }}
-        />
-      </Suspense>
+    <div className="sticky bottom-4 z-30 mx-auto max-w-md">
+      <div className="bg-base-100 shadow-lg rounded-full px-5 py-3 flex items-center justify-between border border-base-300">
+        <span className="text-sm font-medium">
+          待处理 <span className="font-bold text-primary">{settledCount}/{totalCount}</span>
+        </span>
+        <button type="button" className="btn btn-xs btn-primary" onClick={onScrollToPending}>
+          前往待处理项
+        </button>
+      </div>
     </div>
   );
 }

@@ -524,10 +524,21 @@ input SettleOrderInput {
   id: ID!
   deductFromStoredValue: Boolean = false
   deductAmount: Int
+  pointsChange: Int = 0
+  note: String
+}
+
+input PerUserSettleInput {
+  orderId: ID!
+  deductFromStoredValue: Boolean = false
+  deductAmount: Int
+  pointsChange: Int = 0
+  note: String
 }
 
 input BatchSettleInput {
   ids: [ID!]!
+  items: [PerUserSettleInput!]
   deductFromStoredValue: Boolean = false
   deductAmount: Int
   note: String
