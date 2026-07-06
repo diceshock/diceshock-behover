@@ -26,6 +26,10 @@ export function DashHeader() {
   const launcherOpen = useAtomValue(launcherOpenAtom);
   const toggleLauncher = useSetAtom(launcherToggleAtom);
   const location = useLocation();
+  const [isMac, setIsMac] = useState(false);
+  useEffect(() => {
+    setIsMac(navigator.userAgent.includes("Mac"));
+  }, []);
 
   // Chips come from URL search params, NOT launcher atoms
   const { filters, query: routeQuery, categoryId } = useRouteFilters();
@@ -46,15 +50,10 @@ export function DashHeader() {
       path: m.pathname,
     }));
 
-  // Global "/" hotkey to open launcher
+  // Global Ctrl/Cmd+K hotkey to open launcher
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "/" && !launcherOpen) {
-        const el = e.target;
-        if (el instanceof HTMLElement) {
-          const tag = el.tagName;
-          if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-        }
+      if (e.key === "k" && (e.metaKey || e.ctrlKey) && !launcherOpen) {
         e.preventDefault();
         toggleLauncher(filtersRef.current);
       }
@@ -139,7 +138,11 @@ export function DashHeader() {
             ) : (
               <span className="truncate flex-1 text-left">搜索, 排序和筛选</span>
             )}
-            <kbd className="kbd kbd-xs shrink-0">/</kbd>
+            <span className="shrink-0 inline-flex items-center gap-0.5">
+              <kbd className="kbd kbd-xs">{isMac ? "⌘" : "ctrl"}</kbd>
+              <span className="text-[10px] text-base-content/40">+</span>
+              <kbd className="kbd kbd-xs">K</kbd>
+            </span>
           </button>
         </div>
 

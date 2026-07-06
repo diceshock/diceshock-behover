@@ -594,7 +594,7 @@ export function Launcher() {
                   <ClockCounterClockwiseIcon className="size-8 mx-auto text-base-content/20 mb-2" />
                   <p className="text-xs text-base-content/40">暂无搜索历史</p>
                   <p className="text-[10px] text-base-content/30 mt-1">
-                    按 <kbd className="kbd kbd-xs">/</kbd> 然后输入搜索, 或点击漏斗图标筛选
+                    按 <kbd className="kbd kbd-xs">⌘/Ctrl</kbd><span className="mx-0.5">+</span><kbd className="kbd kbd-xs">K</kbd> 然后输入搜索, 或点击漏斗图标筛选
                   </p>
                 </div>
               )}
