@@ -32,7 +32,7 @@ export default function MobileChatSheet() {
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-5 right-5 z-50 btn btn-circle btn-primary shadow-lg"
+          className="fixed bottom-20 right-5 z-50 btn btn-circle btn-primary shadow-lg"
         >
           <ChatCircleIcon className="size-6" weight="fill" />
         </button>

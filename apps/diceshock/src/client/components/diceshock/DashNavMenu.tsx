@@ -444,12 +444,14 @@ function SidebarContent({
   onScanClick,
   onAccountClick,
   className,
+  hideChatTrigger,
 }: {
   currentPath: string;
   close: () => void;
   onScanClick: () => void;
   onAccountClick: () => void;
   className?: string;
+  hideChatTrigger?: boolean;
 }) {
   const { t } = useTranslation();
   const isActive = (to: string, exact?: boolean) => {
@@ -489,9 +491,11 @@ function SidebarContent({
         </button>
       </li>
 
-      <li>
-        <ChatTriggerButton />
-      </li>
+      {!hideChatTrigger && (
+        <li>
+          <ChatTriggerButton />
+        </li>
+      )}
 
       <li>
         <AccountButton onClick={onAccountClick} />
@@ -571,13 +575,14 @@ export default function DashNavDrawer({
               close={close}
               onScanClick={onScanClick}
               onAccountClick={onAccountClick}
+              hideChatTrigger
             />
           </div>
         </div>
       </div>
 
       <div
-        className="lg:pl-16 h-screen overflow-hidden flex flex-col transition-[padding-right] duration-200"
+        className="lg:pl-16 h-screen overflow-hidden flex flex-col transition-[padding-right] duration-200 max-lg:!pr-0"
         style={{ paddingRight: isChatOpen ? chatPanelWidth : 0 }}
       >
         {children}
