@@ -276,7 +276,7 @@ export function DataTable<TData>({
         className="flex-1 min-h-0 overflow-auto relative"
       >
         {/* Table with CSS grid display (TanStack recommended for virtualization) */}
-        <table style={{ display: "grid" }}>
+        <table style={{ display: "grid", minWidth: "100%" }}>
           {/* Sticky header */}
           <thead
             style={{
