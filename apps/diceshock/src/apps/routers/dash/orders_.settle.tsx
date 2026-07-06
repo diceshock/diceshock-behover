@@ -13,7 +13,9 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import clsx from "clsx";
+import type { EChartsOption } from "echarts";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense } from "react";
 import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import {
@@ -23,6 +25,8 @@ import {
 } from "@/client/graphql/__generated__";
 import dayjs from "@/shared/utils/dayjs-config";
 import { formatPrice } from "@/shared/utils/pricing";
+
+const ReactECharts = lazy(() => import("echarts-for-react"));
 
 export const Route = createFileRoute("/dash/orders_/settle")({
   component: BatchSettlePage,
@@ -339,6 +343,8 @@ function BatchSettlePage() {
             onToggle={toggleCancelId}
             readonly={allEnded}
           />
+
+          <BillingChart previews={data.previews} />
 
           <CombinedPriceSection
             activeSettleIds={activeSettleIds}
@@ -831,6 +837,135 @@ function BatchPricingPlansSection({
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+const HALF_HOUR_MS = 30 * 60 * 1000;
+const FREE_PERIOD_MS = HALF_HOUR_MS;
+
+function BillingChart({ previews }: { previews: SettlementPreviewItem[] }) {
+  const option = useMemo<EChartsOption>(() => {
+    // For each order, compute cost per half-hour slot
+    const globalStart = Math.min(
+      ...previews.map((p) => new Date(p.order.startAt).getTime()),
+    );
+    const globalEnd = Math.max(
+      ...previews.map((p) =>
+        p.order.endAt ? new Date(p.order.endAt).getTime() : Date.now(),
+      ),
+    );
+
+    // Build half-hour time slots from global start to end
+    const slots: string[] = [];
+    const slotStarts: number[] = [];
+    let t = globalStart;
+    while (t < globalEnd) {
+      slots.push(dayjs(t).format("HH:mm"));
+      slotStarts.push(t);
+      t += HALF_HOUR_MS;
+    }
+    if (slots.length === 0) {
+      slots.push(dayjs(globalStart).format("HH:mm"));
+      slotStarts.push(globalStart);
+    }
+
+    // For each order, compute per-slot cost
+    const series: EChartsOption["series"] = previews.map((p) => {
+      const orderStart = new Date(p.order.startAt).getTime();
+      const breakdown = p.priceBreakdown;
+      const pricePerHalfHour = breakdown
+        ? Math.round(breakdown.unitPrice / 2)
+        : 0;
+      const cap = breakdown?.capApplied ? breakdown.finalPrice : null;
+
+      const data = slotStarts.map((slotStart) => {
+        const slotEnd = slotStart + HALF_HOUR_MS;
+        // Is this order active during this slot?
+        if (slotEnd <= orderStart) return 0;
+        const orderEnd = p.order.endAt
+          ? new Date(p.order.endAt).getTime()
+          : Date.now();
+        if (slotStart >= orderEnd) return 0;
+
+        // How many half-hours elapsed since order start to this slot's end
+        const elapsedMs = Math.min(slotEnd, orderEnd) - orderStart;
+        if (elapsedMs <= FREE_PERIOD_MS) return 0; // Still in free period
+
+        // This slot's marginal cost
+        const prevElapsed = Math.max(0, slotStart - orderStart);
+        if (prevElapsed < FREE_PERIOD_MS && elapsedMs > FREE_PERIOD_MS) {
+          // Partial: free period ends in this slot
+          return pricePerHalfHour;
+        }
+        if (prevElapsed >= FREE_PERIOD_MS) {
+          return pricePerHalfHour;
+        }
+        return 0;
+      });
+
+      return {
+        name: `${p.order.table?.name ?? "—"} · ${p.order.nickname}`,
+        type: "bar" as const,
+        stack: "cost",
+        data,
+        emphasis: { focus: "series" as const },
+      };
+    });
+
+    return {
+      tooltip: {
+        trigger: "axis",
+        axisPointer: { type: "shadow" },
+        formatter: (params: unknown) => {
+          if (!Array.isArray(params)) return "";
+          const lines = params
+            .filter((p: { value: number }) => p.value > 0)
+            .map(
+              (p: { seriesName: string; value: number; color: string }) =>
+                `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color};margin-right:4px;"></span>${p.seriesName}: ¥${(p.value / 100).toFixed(2)}`,
+            );
+          if (lines.length === 0) return "免费时段";
+          return lines.join("<br/>");
+        },
+      },
+      grid: { left: 50, right: 16, top: 24, bottom: 32 },
+      xAxis: {
+        type: "category",
+        data: slots,
+        axisLabel: { fontSize: 11 },
+      },
+      yAxis: {
+        type: "value",
+        axisLabel: {
+          formatter: (v: number) => `¥${(v / 100).toFixed(0)}`,
+          fontSize: 11,
+        },
+      },
+      series,
+      color: ["#6366f1", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#ec4899"],
+    };
+  }, [previews]);
+
+  return (
+    <div className="bg-base-200 rounded-xl p-5 mb-4">
+      <h3 className="font-semibold text-sm text-base-content/60 mb-3 flex items-center gap-1.5">
+        <CurrencyDollarIcon className="size-4" />
+        计费明细图
+      </h3>
+      <Suspense
+        fallback={
+          <div className="h-48 flex items-center justify-center">
+            <span className="loading loading-spinner loading-sm" />
+          </div>
+        }
+      >
+        <ReactECharts
+          option={option}
+          style={{ height: 200 }}
+          opts={{ renderer: "svg" }}
+        />
+      </Suspense>
     </div>
   );
 }
