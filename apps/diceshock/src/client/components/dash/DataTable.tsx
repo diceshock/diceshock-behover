@@ -3,7 +3,7 @@ import {
   ArrowUpIcon,
   ArrowsDownUpIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import type { ColumnDef, SortingState } from "@tanstack/react-table";
+import type { Column, ColumnDef, SortingState } from "@tanstack/react-table";
 import {
   flexRender,
   getCoreRowModel,
@@ -11,7 +11,13 @@ import {
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import clsx from "clsx";
-import { type ReactNode, useCallback, useEffect, useRef } from "react";
+import {
+  type CSSProperties,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
 import { useTranslation } from "@/client/hooks/useTranslation";
 
 // ---------------------------------------------------------------------------
@@ -57,13 +63,28 @@ export interface DataTableProps<TData> {
 }
 
 // ---------------------------------------------------------------------------
-// Shared styles for the sticky actions column
+// Sticky column pinning styles (from TanStack official example)
 // ---------------------------------------------------------------------------
 
-const STICKY_ACTIONS_TH =
-  "sticky right-0 z-10 bg-base-200/95 backdrop-blur-sm shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.06)]";
-const STICKY_ACTIONS_TD =
-  "sticky right-0 bg-base-100 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.06)]";
+function getColumnPinningStyles<TData>(
+  column: Column<TData, unknown>,
+): CSSProperties {
+  const isPinned = column.getIsPinned();
+  return {
+    left: isPinned === "left" ? `${column.getStart("left")}px` : undefined,
+    right: isPinned === "right" ? `${column.getAfter("right")}px` : undefined,
+    position: isPinned ? "sticky" : "relative",
+    width: column.getSize(),
+    zIndex: isPinned ? 1 : 0,
+    // Visual separation for pinned columns
+    boxShadow:
+      isPinned === "right"
+        ? "-2px 0 4px -2px rgba(0,0,0,0.06)"
+        : isPinned === "left"
+          ? "2px 0 4px -2px rgba(0,0,0,0.06)"
+          : undefined,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -91,7 +112,7 @@ export function DataTable<TData>({
   estimateRowHeight = ROW_HEIGHT_ESTIMATE,
 }: DataTableProps<TData>) {
   const { t } = useTranslation();
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   // -- Build column list with optional select & actions columns --
@@ -154,11 +175,17 @@ export function DataTable<TData>({
       : []),
   ];
 
-  // -- TanStack Table instance --
+  // -- TanStack Table instance with column pinning --
   const table = useReactTable({
     data,
     columns: allColumns,
-    state: { sorting },
+    state: {
+      sorting,
+      columnPinning: {
+        left: enableRowSelection ? ["__select"] : [],
+        right: renderActions ? ["__actions"] : [],
+      },
+    },
     onSortingChange: onSortingChange
       ? (updater) => {
           const next =
@@ -173,12 +200,17 @@ export function DataTable<TData>({
 
   const { rows } = table.getRowModel();
 
-  // -- Virtualizer: virtualizes table rows --
-  const virtualizer = useVirtualizer({
+  // -- Virtualizer --
+  const rowVirtualizer = useVirtualizer({
     count: rows.length,
-    getScrollElement: () => scrollRef.current,
     estimateSize: () => estimateRowHeight,
-    overscan: 12,
+    getScrollElement: () => tableContainerRef.current,
+    measureElement:
+      typeof window !== "undefined" &&
+      !navigator.userAgent.includes("Firefox")
+        ? (element) => element?.getBoundingClientRect().height
+        : undefined,
+    overscan: 10,
   });
 
   // -- Infinite scroll via IntersectionObserver --
@@ -190,7 +222,7 @@ export function DataTable<TData>({
           onLoadMore();
         }
       },
-      { root: scrollRef.current, rootMargin: "300px" },
+      { root: tableContainerRef.current, rootMargin: "300px" },
     );
     observer.observe(sentinelRef.current);
     return () => observer.disconnect();
@@ -238,55 +270,64 @@ export function DataTable<TData>({
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      {/* Scrollable container — both horizontal & vertical */}
-      <div ref={scrollRef} className="flex-1 min-h-0 overflow-auto">
-        <table className="table table-sm table-pin-rows w-full">
-          <thead>
+      {/* Scrollable container */}
+      <div
+        ref={tableContainerRef}
+        className="flex-1 min-h-0 overflow-auto relative"
+      >
+        {/* Table with CSS grid display (TanStack recommended for virtualization) */}
+        <table style={{ display: "grid" }}>
+          {/* Sticky header */}
+          <thead
+            style={{
+              display: "grid",
+              position: "sticky",
+              top: 0,
+              zIndex: 2,
+            }}
+            className="bg-base-200/95 backdrop-blur-sm"
+          >
             {table.getHeaderGroups().map((hg) => (
-              <tr key={hg.id} className="bg-base-200/60">
+              <tr key={hg.id} style={{ display: "flex", width: "100%" }}>
                 {hg.headers.map((header) => {
                   const canSort = isSortable(header.id);
                   const sorted = sorting.find((s) => s.id === header.id);
-                  const isActions = header.id === "__actions";
+                  const pinningStyles = getColumnPinningStyles(header.column);
+                  const isPinned = header.column.getIsPinned();
 
                   return (
                     <th
                       key={header.id}
                       className={clsx(
-                        "text-xs font-medium text-base-content/70 whitespace-nowrap",
+                        "flex items-center gap-1 px-3 py-2 text-xs font-medium text-base-content/70 whitespace-nowrap",
                         canSort &&
                           "cursor-pointer select-none hover:bg-base-300/40",
-                        isActions && STICKY_ACTIONS_TH,
+                        isPinned && "bg-base-200/95 backdrop-blur-sm",
                       )}
                       style={{
-                        width:
-                          header.getSize() !== 150
-                            ? header.getSize()
-                            : undefined,
+                        ...pinningStyles,
                       }}
                       onClick={() => handleSort(header.id)}
                     >
-                      <div className="flex items-center gap-1">
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext(),
-                            )}
-                        {canSort && (
-                          <span className="size-3.5 inline-flex items-center justify-center">
-                            {sorted ? (
-                              sorted.desc ? (
-                                <ArrowDownIcon className="size-3" />
-                              ) : (
-                                <ArrowUpIcon className="size-3" />
-                              )
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                      {canSort && (
+                        <span className="size-3.5 inline-flex items-center justify-center">
+                          {sorted ? (
+                            sorted.desc ? (
+                              <ArrowDownIcon className="size-3" />
                             ) : (
-                              <ArrowsDownUpIcon className="size-3 opacity-30" />
-                            )}
-                          </span>
-                        )}
-                      </div>
+                              <ArrowUpIcon className="size-3" />
+                            )
+                          ) : (
+                            <ArrowsDownUpIcon className="size-3 opacity-30" />
+                          )}
+                        </span>
+                      )}
                     </th>
                   );
                 })}
@@ -294,87 +335,65 @@ export function DataTable<TData>({
             ))}
           </thead>
 
-          <tbody>
+          {/* Virtualized body */}
+          <tbody
+            style={{
+              display: "grid",
+              height: `${rowVirtualizer.getTotalSize()}px`,
+              position: "relative",
+            }}
+          >
             {rows.length > 0 ? (
-              <>
-                {/* Top spacer for virtual scroll */}
-                {virtualizer.getVirtualItems()[0]?.start > 0 && (
-                  <tr>
-                    <td
-                      colSpan={colSpan}
-                      style={{
-                        height: virtualizer.getVirtualItems()[0]?.start,
-                        padding: 0,
-                        border: "none",
-                      }}
-                    />
+              rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                const row = rows[virtualRow.index];
+                return (
+                  <tr
+                    key={row.id}
+                    data-index={virtualRow.index}
+                    ref={(node) => rowVirtualizer.measureElement(node)}
+                    className={clsx(
+                      "hover:bg-base-200/40 transition-colors border-b border-base-content/5",
+                      selectedRows.has(row.id) && "bg-primary/5",
+                    )}
+                    style={{
+                      display: "flex",
+                      position: "absolute",
+                      transform: `translateY(${virtualRow.start}px)`,
+                      width: "100%",
+                    }}
+                  >
+                    {row.getVisibleCells().map((cell) => {
+                      const pinningStyles = getColumnPinningStyles(
+                        cell.column,
+                      );
+                      const isPinned = cell.column.getIsPinned();
+
+                      return (
+                        <td
+                          key={cell.id}
+                          className={clsx(
+                            "flex items-center px-3 py-2 text-sm",
+                            isPinned && "bg-base-100",
+                          )}
+                          style={{
+                            ...pinningStyles,
+                          }}
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </td>
+                      );
+                    })}
                   </tr>
-                )}
-
-                {/* Virtualized rows */}
-                {virtualizer.getVirtualItems().map((virtualRow) => {
-                  const row = rows[virtualRow.index];
-                  return (
-                    <tr
-                      key={row.id}
-                      ref={virtualizer.measureElement}
-                      data-index={virtualRow.index}
-                      className={clsx(
-                        "hover:bg-base-200/40 transition-colors",
-                        selectedRows.has(row.id) && "bg-primary/5",
-                      )}
-                    >
-                      {row.getVisibleCells().map((cell) => {
-                        const isActions = cell.column.id === "__actions";
-                        return (
-                          <td
-                            key={cell.id}
-                            className={clsx(
-                              "text-sm",
-                              isActions && STICKY_ACTIONS_TD,
-                            )}
-                          >
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext(),
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-
-                {/* Bottom spacer for virtual scroll */}
-                {virtualizer.getVirtualItems().length > 0 &&
-                  virtualizer.getTotalSize() -
-                    (virtualizer.getVirtualItems().at(-1)?.end ?? 0) >
-                    0 && (
-                    <tr>
-                      <td
-                        colSpan={colSpan}
-                        style={{
-                          height:
-                            virtualizer.getTotalSize() -
-                            (virtualizer.getVirtualItems().at(-1)?.end ?? 0),
-                          padding: 0,
-                          border: "none",
-                        }}
-                      />
-                    </tr>
-                  )}
-              </>
-            ) : loading ? (
-              <tr>
-                <td colSpan={colSpan} className="py-12 text-center">
-                  <span className="loading loading-dots loading-lg" />
-                </td>
-              </tr>
-            ) : (
-              <tr>
+                );
+              })
+            ) : loading ? null : (
+              <tr style={{ display: "flex" }}>
                 <td
                   colSpan={colSpan}
-                  className="py-12 text-center text-base-content/40 text-sm"
+                  className="flex-1 py-12 text-center text-base-content/40 text-sm"
                 >
                   {emptyMessage}
                 </td>
@@ -383,8 +402,8 @@ export function DataTable<TData>({
           </tbody>
         </table>
 
-        {/* Loading at bottom (infinite scroll) */}
-        {loading && rows.length > 0 && (
+        {/* Loading indicator */}
+        {loading && (
           <div className="flex justify-center py-4">
             <span className="loading loading-dots loading-sm text-primary" />
           </div>
