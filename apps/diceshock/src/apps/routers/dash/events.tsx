@@ -1,6 +1,5 @@
 import { NetworkStatus } from "@apollo/client";
 import {
-  CopyIcon,
   DotsThreeVerticalIcon,
   EyeIcon,
   PaperPlaneTiltIcon,
@@ -10,6 +9,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { DataTable } from "@/client/components/dash/DataTable"
+import { IdCell } from "@/client/components/dash/IdCell";
 import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
@@ -207,18 +207,6 @@ function RouteComponent() {
     batchPublishDialogRef.current?.close();
   };
 
-  const handleCopy = useCallback(
-    (text: string) => {
-      try {
-        navigator.clipboard.writeText(text);
-        msg.success(t("dashEvents.copied"));
-      } catch {
-        msg.error(t("dashEvents.clipboardDenied"));
-      }
-    },
-    [t, msg],
-  );
-
   const handleCreate = async () => {
     try {
       await createEventMutation({
@@ -319,26 +307,8 @@ function RouteComponent() {
       {
         accessorKey: "id",
         header: "ID",
-        cell: ({ row }) => (
-          <div className="relative group flex items-center gap-1">
-            <span className="font-mono cursor-default">
-              {row.original.id.slice(0, 5)}
-            </span>
-            <button
-              type="button"
-              className="btn btn-xs btn-ghost btn-square shrink-0"
-              onClick={() => handleCopy(row.original.id)}
-              title={t("dashEvents.copyId")}
-            >
-              <CopyIcon className="size-3.5" />
-            </button>
-            <div className="absolute right-0 top-full z-30 hidden group-hover:block pt-1">
-              <div className="bg-base-200 shadow-lg rounded-lg px-3 py-1.5 text-xs font-mono whitespace-nowrap">
-                {row.original.id}
-              </div>
-            </div>
-          </div>
-        ),
+        size: 120,
+        cell: ({ row }) => <IdCell value={row.original.id} />,
       },
       {
         accessorKey: "title",
@@ -401,7 +371,7 @@ function RouteComponent() {
         },
       },
     ],
-    [t, handleCopy],
+    [t],
   );
 
   return (

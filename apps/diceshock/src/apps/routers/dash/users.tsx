@@ -8,6 +8,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { DataTable } from "@/client/components/dash/DataTable"
+import { IdCell } from "@/client/components/dash/IdCell";
 import type { FilterValue } from "@/client/components/dash/launcher/types";
 import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
@@ -250,11 +251,8 @@ function RouteComponent() {
       {
         accessorKey: "uid",
         header: "UID",
-        cell: ({ row }) => (
-          <span className="font-mono whitespace-nowrap">
-            {row.original.uid || "—"}
-          </span>
-        ),
+        size: 120,
+        cell: ({ row }) => <IdCell value={row.original.uid ?? ""} />,
       },
       {
         accessorKey: "role",

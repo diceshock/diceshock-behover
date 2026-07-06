@@ -9,6 +9,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { DataTable } from "@/client/components/dash/DataTable"
+import { IdCell } from "@/client/components/dash/IdCell";
 import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
@@ -249,10 +250,9 @@ function RouteComponent() {
       {
         accessorKey: "code",
         header: t("dashTables.code"),
+        size: 130,
         cell: ({ row }) => (
-          <span className="font-mono text-xs">
-            {row.original.code ? row.original.code.slice(0, 8) : "—"}
-          </span>
+          <IdCell value={row.original.code ?? ""} truncate={8} />
         ),
       },
       {
