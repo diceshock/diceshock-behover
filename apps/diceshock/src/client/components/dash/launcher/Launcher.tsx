@@ -191,35 +191,54 @@ export function Launcher() {
       return [];
     }
 
-    // ── Search mode (default): show history or fuse results
-    if (!activeCategory) {
-      // No category context — show categories as navigation
-      const filtered = query
-        ? CATEGORIES.filter((c) =>
-            c.label.toLowerCase().includes(query.toLowerCase()),
-          )
-        : [];
-      if (filtered.length > 0) {
-        return filtered.map((c) => ({
-          id: `cat:${c.id}`,
-          label: c.label,
-          icon: c.icon,
-          category: c,
-        }));
-      }
-      // Show search history
-      if (!query && searchHistory.length > 0) {
-        return searchHistory.map((h) => ({
+    // ── Search mode (default): show history or search results
+    // History is shown when: no query text AND no filters applied
+    // (category selection alone does NOT count as a filter)
+    const hasFilters = filters.length > 0;
+    const showHistory = !query && !hasFilters;
+
+    if (showHistory) {
+      // Show history entries, filtered by current category if one is selected
+      const historyItems = activeCategory
+        ? searchHistory.filter((h) => h.categoryId === categoryId)
+        : searchHistory;
+      if (historyItems.length > 0) {
+        return historyItems.map((h) => ({
           id: `history:${h.id}`,
           label: h.label,
           subtitle: h.categoryId,
           historyEntry: h,
         }));
       }
+      // No history — show categories as quick navigation (only when no category selected)
+      if (!activeCategory) {
+        return CATEGORIES.map((c) => ({
+          id: `cat:${c.id}`,
+          label: c.label,
+          icon: c.icon,
+          category: c,
+        }));
+      }
       return [];
     }
 
-    // In a category, search mode
+    // ── Has query or filters → show search results
+    if (!activeCategory) {
+      // No category: filter categories by query text
+      const filtered = query
+        ? CATEGORIES.filter((c) =>
+            c.label.toLowerCase().includes(query.toLowerCase()),
+          )
+        : [];
+      return filtered.map((c) => ({
+        id: `cat:${c.id}`,
+        label: c.label,
+        icon: c.icon,
+        category: c,
+      }));
+    }
+
+    // In a category with query or filters — show navigate + results
     const items: MenuItemData[] = [];
 
     // Navigate item
@@ -584,7 +603,7 @@ export function Launcher() {
                 />
               ))}
               {/* Empty states */}
-              {menuItems.length === 0 && mode.type === "search" && !query && !activeCategory && (
+              {menuItems.length === 0 && mode.type === "search" && !query && filters.length === 0 && (
                 <div className="px-4 py-8 text-center">
                   <ClockCounterClockwiseIcon className="size-8 mx-auto text-base-content/20 mb-2" />
                   <p className="text-xs text-base-content/40">暂无搜索历史</p>
@@ -600,8 +619,8 @@ export function Launcher() {
               )}
             </>
           )}
-          {/* Clear history button */}
-          {mode.type === "search" && !query && !activeCategory && searchHistory.length > 0 && (
+          {/* Clear history button — shown whenever history entries are displayed */}
+          {mode.type === "search" && !query && filters.length === 0 && searchHistory.length > 0 && (
             <div className="border-t border-base-300/30 px-3 py-2">
               <button
                 type="button"
