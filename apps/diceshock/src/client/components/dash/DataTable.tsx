@@ -31,42 +31,45 @@ export interface DataTableProps<TData> {
   loading?: boolean;
   emptyMessage?: string;
 
-  // Infinite scroll mode (default)
+  /** Infinite scroll: whether there are more rows to load */
   hasMore?: boolean;
+  /** Infinite scroll: called when scroll reaches bottom */
   onLoadMore?: () => void;
 
-  // Pagination mode
+  /** Pagination mode (mutually exclusive with infinite scroll) */
   pagination?: DataTablePagination;
   onPaginationChange?: (page: { offset: number; limit: number }) => void;
 
-  // Sorting
   sorting?: SortingState;
   onSortingChange?: (sorting: SortingState) => void;
   sortableColumns?: string[];
 
-  // Row selection
   enableRowSelection?: boolean;
   selectedRows?: Set<string>;
   onSelectedRowsChange?: (ids: Set<string>) => void;
   getRowId?: (row: TData) => string;
 
-  // Actions column (sticky right)
+  /** Sticky right actions column */
   renderActions?: (row: TData) => ReactNode;
 
-  // Estimated row height for virtualizer (default: 44)
+  /** Row height estimate for virtualizer (default: 44) */
   estimateRowHeight?: number;
 }
 
 // ---------------------------------------------------------------------------
-// Constants
+// Shared styles for the sticky actions column
 // ---------------------------------------------------------------------------
 
-const ROW_HEIGHT_ESTIMATE = 44;
-const LOAD_MORE_THRESHOLD = 300; // px from bottom to trigger load more
+const STICKY_ACTIONS_TH =
+  "sticky right-0 z-10 bg-base-200/95 backdrop-blur-sm shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.06)]";
+const STICKY_ACTIONS_TD =
+  "sticky right-0 bg-base-100 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.06)]";
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
+
+const ROW_HEIGHT_ESTIMATE = 44;
 
 export function DataTable<TData>({
   columns,
@@ -134,7 +137,6 @@ export function DataTable<TData>({
               );
             },
             size: 40,
-            meta: { sticky: "left" as const },
           } satisfies ColumnDef<TData, unknown>,
         ]
       : []),
@@ -147,7 +149,6 @@ export function DataTable<TData>({
             cell: ({ row }: { row: { original: TData } }) =>
               renderActions(row.original),
             size: 60,
-            meta: { sticky: "right" as const },
           } satisfies ColumnDef<TData, unknown>,
         ]
       : []),
@@ -172,12 +173,12 @@ export function DataTable<TData>({
 
   const { rows } = table.getRowModel();
 
-  // -- Virtualizer --
+  // -- Virtualizer: virtualizes table rows --
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => estimateRowHeight,
-    overscan: 10,
+    overscan: 12,
   });
 
   // -- Infinite scroll via IntersectionObserver --
@@ -189,7 +190,7 @@ export function DataTable<TData>({
           onLoadMore();
         }
       },
-      { root: scrollRef.current, rootMargin: `${LOAD_MORE_THRESHOLD}px` },
+      { root: scrollRef.current, rootMargin: "300px" },
     );
     observer.observe(sentinelRef.current);
     return () => observer.disconnect();
@@ -233,147 +234,157 @@ export function DataTable<TData>({
     });
   };
 
-  // -- Column sticky helpers --
-  const headerGroups = table.getHeaderGroups();
+  const colSpan = allColumns.length;
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      {/* Scrollable area */}
-      <div ref={scrollRef} className="flex-1 min-h-0 overflow-auto relative">
-        {/* Header - pinned */}
-        <div className="sticky top-0 z-20 bg-base-200/95 backdrop-blur-sm border-b border-base-content/5">
-          {headerGroups.map((hg) => (
-            <div key={hg.id} className="flex">
-              {hg.headers.map((header) => {
-                const canSort = isSortable(header.id);
-                const sorted = sorting.find((s) => s.id === header.id);
-                const isActionsCol = header.id === "__actions";
-                const isSelectCol = header.id === "__select";
-                const stickyRight = isActionsCol;
-                const stickyLeft = isSelectCol;
+      {/* Scrollable container — both horizontal & vertical */}
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-auto">
+        <table className="table table-sm table-pin-rows w-full">
+          <thead>
+            {table.getHeaderGroups().map((hg) => (
+              <tr key={hg.id} className="bg-base-200/60">
+                {hg.headers.map((header) => {
+                  const canSort = isSortable(header.id);
+                  const sorted = sorting.find((s) => s.id === header.id);
+                  const isActions = header.id === "__actions";
 
-                return (
-                  <div
-                    key={header.id}
-                    className={clsx(
-                      "flex items-center gap-1 px-3 py-2 text-xs font-medium text-base-content/70 shrink-0",
-                      canSort &&
-                        "cursor-pointer select-none hover:bg-base-300/40",
-                      stickyRight &&
-                        "sticky right-0 bg-base-200/95 backdrop-blur-sm shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.06)]",
-                      stickyLeft &&
-                        "sticky left-0 bg-base-200/95 backdrop-blur-sm z-10",
-                    )}
-                    style={{
-                      width:
-                        header.getSize() !== 150 ? header.getSize() : undefined,
-                      minWidth: isActionsCol ? 60 : isSelectCol ? 40 : 80,
-                      flex:
-                        header.getSize() === 150 && !isActionsCol && !isSelectCol
-                          ? "1 1 0%"
-                          : undefined,
-                    }}
-                    onClick={() => handleSort(header.id)}
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                    {canSort && (
-                      <span className="size-3.5 inline-flex items-center justify-center">
-                        {sorted ? (
-                          sorted.desc ? (
-                            <ArrowDownIcon className="size-3" />
-                          ) : (
-                            <ArrowUpIcon className="size-3" />
-                          )
-                        ) : (
-                          <ArrowsDownUpIcon className="size-3 opacity-30" />
-                        )}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-
-        {/* Virtualized rows */}
-        {rows.length > 0 ? (
-          <div
-            style={{ height: virtualizer.getTotalSize(), position: "relative" }}
-          >
-            {virtualizer.getVirtualItems().map((virtualRow) => {
-              const row = rows[virtualRow.index];
-              return (
-                <div
-                  key={row.id}
-                  ref={virtualizer.measureElement}
-                  data-index={virtualRow.index}
-                  className={clsx(
-                    "flex absolute w-full hover:bg-base-200/40 transition-colors border-b border-base-content/5",
-                    selectedRows.has(row.id) && "bg-primary/5",
-                  )}
-                  style={{
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                >
-                  {row.getVisibleCells().map((cell) => {
-                    const isActionsCol = cell.column.id === "__actions";
-                    const isSelectCol = cell.column.id === "__select";
-                    const stickyRight = isActionsCol;
-                    const stickyLeft = isSelectCol;
-
-                    return (
-                      <div
-                        key={cell.id}
-                        className={clsx(
-                          "flex items-center px-3 py-2 text-sm shrink-0",
-                          stickyRight &&
-                            "sticky right-0 bg-base-100 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.06)]",
-                          stickyLeft &&
-                            "sticky left-0 bg-base-100 z-10",
-                        )}
-                        style={{
-                          width:
-                            cell.column.getSize() !== 150
-                              ? cell.column.getSize()
-                              : undefined,
-                          minWidth: isActionsCol
-                            ? 60
-                            : isSelectCol
-                              ? 40
-                              : 80,
-                          flex:
-                            cell.column.getSize() === 150 &&
-                            !isActionsCol &&
-                            !isSelectCol
-                              ? "1 1 0%"
-                              : undefined,
-                        }}
-                      >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
+                  return (
+                    <th
+                      key={header.id}
+                      className={clsx(
+                        "text-xs font-medium text-base-content/70 whitespace-nowrap",
+                        canSort &&
+                          "cursor-pointer select-none hover:bg-base-300/40",
+                        isActions && STICKY_ACTIONS_TH,
+                      )}
+                      style={{
+                        width:
+                          header.getSize() !== 150
+                            ? header.getSize()
+                            : undefined,
+                      }}
+                      onClick={() => handleSort(header.id)}
+                    >
+                      <div className="flex items-center gap-1">
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext(),
+                            )}
+                        {canSort && (
+                          <span className="size-3.5 inline-flex items-center justify-center">
+                            {sorted ? (
+                              sorted.desc ? (
+                                <ArrowDownIcon className="size-3" />
+                              ) : (
+                                <ArrowUpIcon className="size-3" />
+                              )
+                            ) : (
+                              <ArrowsDownUpIcon className="size-3 opacity-30" />
+                            )}
+                          </span>
                         )}
                       </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
-        ) : loading ? null : (
-          <div className="flex justify-center py-12 text-base-content/40 text-sm">
-            {emptyMessage}
-          </div>
-        )}
+                    </th>
+                  );
+                })}
+              </tr>
+            ))}
+          </thead>
 
-        {/* Loading indicator */}
-        {loading && (
+          <tbody>
+            {rows.length > 0 ? (
+              <>
+                {/* Top spacer for virtual scroll */}
+                {virtualizer.getVirtualItems()[0]?.start > 0 && (
+                  <tr>
+                    <td
+                      colSpan={colSpan}
+                      style={{
+                        height: virtualizer.getVirtualItems()[0]?.start,
+                        padding: 0,
+                        border: "none",
+                      }}
+                    />
+                  </tr>
+                )}
+
+                {/* Virtualized rows */}
+                {virtualizer.getVirtualItems().map((virtualRow) => {
+                  const row = rows[virtualRow.index];
+                  return (
+                    <tr
+                      key={row.id}
+                      ref={virtualizer.measureElement}
+                      data-index={virtualRow.index}
+                      className={clsx(
+                        "hover:bg-base-200/40 transition-colors",
+                        selectedRows.has(row.id) && "bg-primary/5",
+                      )}
+                    >
+                      {row.getVisibleCells().map((cell) => {
+                        const isActions = cell.column.id === "__actions";
+                        return (
+                          <td
+                            key={cell.id}
+                            className={clsx(
+                              "text-sm",
+                              isActions && STICKY_ACTIONS_TD,
+                            )}
+                          >
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext(),
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+
+                {/* Bottom spacer for virtual scroll */}
+                {virtualizer.getVirtualItems().length > 0 &&
+                  virtualizer.getTotalSize() -
+                    (virtualizer.getVirtualItems().at(-1)?.end ?? 0) >
+                    0 && (
+                    <tr>
+                      <td
+                        colSpan={colSpan}
+                        style={{
+                          height:
+                            virtualizer.getTotalSize() -
+                            (virtualizer.getVirtualItems().at(-1)?.end ?? 0),
+                          padding: 0,
+                          border: "none",
+                        }}
+                      />
+                    </tr>
+                  )}
+              </>
+            ) : loading ? (
+              <tr>
+                <td colSpan={colSpan} className="py-12 text-center">
+                  <span className="loading loading-dots loading-lg" />
+                </td>
+              </tr>
+            ) : (
+              <tr>
+                <td
+                  colSpan={colSpan}
+                  className="py-12 text-center text-base-content/40 text-sm"
+                >
+                  {emptyMessage}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+
+        {/* Loading at bottom (infinite scroll) */}
+        {loading && rows.length > 0 && (
           <div className="flex justify-center py-4">
             <span className="loading loading-dots loading-sm text-primary" />
           </div>
