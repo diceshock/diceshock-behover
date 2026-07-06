@@ -19,6 +19,7 @@ import {
   useRef,
 } from "react";
 import { useTranslation } from "@/client/hooks/useTranslation";
+import { useIsMobile } from "@/client/hooks/useIsMobile";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -115,6 +116,7 @@ export function DataTable<TData>({
   estimateRowHeight = ROW_HEIGHT_ESTIMATE,
 }: DataTableProps<TData>) {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -172,7 +174,7 @@ export function DataTable<TData>({
             header: () => null,
             cell: ({ row }: { row: { original: TData } }) =>
               renderActions(row.original),
-            size: actionsColumnSize ?? 200,
+            size: actionsColumnSize ?? (isMobile ? 48 : 200),
           } satisfies ColumnDef<TData, unknown>,
         ]
       : []),
