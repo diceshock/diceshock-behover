@@ -6,7 +6,7 @@ import {
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import clsx from "clsx";
 import Fuse from "fuse.js";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import {
   type KeyboardEvent,
   useCallback,
@@ -17,17 +17,12 @@ import {
 import { CATEGORIES, getCategoryByRoute } from "./categories";
 import {
   launcherAddFilterAtom,
-  launcherCategoryAtom,
+  launcherAtom,
   launcherEnterFilterMenuAtom,
   launcherExitFilterMenuAtom,
-  launcherFiltersAtom,
-  launcherFocusIndexAtom,
-  launcherModeAtom,
-  launcherOpenAtom,
-  launcherQueryAtom,
   launcherRemoveFilterAtom,
   launcherResetAtom,
-  launcherResultsAtom,
+  launcherUpdateAtom,
 } from "./atoms";
 import {
   type CategoryDef,
@@ -41,18 +36,21 @@ import {
 // ─── Launcher Dialog ─────────────────────────────────────────────────────────
 
 export function Launcher() {
-  const [open, setOpen] = useAtom(launcherOpenAtom);
-  const [mode, setMode] = useAtom(launcherModeAtom);
-  const [query, setQuery] = useAtom(launcherQueryAtom);
-  const [categoryId, setCategoryId] = useAtom(launcherCategoryAtom);
-  const [filters, setFilters] = useAtom(launcherFiltersAtom);
-  const [focusIndex, setFocusIndex] = useAtom(launcherFocusIndexAtom);
-  const results = useAtomValue(launcherResultsAtom);
+  const state = useAtomValue(launcherAtom);
+  const { open, mode, query, categoryId, filters, focusIndex, results } = state;
+  const update = useSetAtom(launcherUpdateAtom);
   const addFilter = useSetAtom(launcherAddFilterAtom);
   const removeFilter = useSetAtom(launcherRemoveFilterAtom);
   const enterFilterMenu = useSetAtom(launcherEnterFilterMenuAtom);
   const exitFilterMenu = useSetAtom(launcherExitFilterMenuAtom);
   const reset = useSetAtom(launcherResetAtom);
+
+  // Convenience setters via immer update
+  const setMode = useCallback((m: typeof mode) => update((d) => { d.mode = m; }), [update]);
+  const setQuery = useCallback((q: string) => update((d) => { d.query = q; }), [update]);
+  const setCategoryId = useCallback((id: string | null) => update((d) => { d.categoryId = id; }), [update]);
+  const setFilters = useCallback((f: FilterValue[]) => update((d) => { d.filters = f; }), [update]);
+  const setFocusIndex = useCallback((i: number) => update((d) => { d.focusIndex = i; }), [update]);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -64,12 +62,6 @@ export function Launcher() {
     ? CATEGORIES.find((c) => c.id === categoryId)
     : routeCategory;
 
-  // Sync route category
-  useEffect(() => {
-    if (routeCategory && !categoryId) {
-      setCategoryId(routeCategory.id);
-    }
-  }, [routeCategory, categoryId, setCategoryId]);
 
   // Auto focus input when opened
   useEffect(() => {
@@ -384,10 +376,12 @@ export function Launcher() {
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setCategoryId(null);
-                    setFilters([]);
-                    setMode({ type: "search" });
-                    setQuery("");
+                    update((d) => {
+                      d.categoryId = null;
+                      d.filters = [];
+                      d.mode = { type: "search" };
+                      d.query = "";
+                    });
                   }}
                   className="size-3.5 flex items-center justify-center rounded-full hover:bg-accent/20"
                 >

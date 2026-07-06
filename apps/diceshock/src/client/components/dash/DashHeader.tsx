@@ -1,25 +1,21 @@
 import {
   ArrowLeftIcon,
-  QrCodeIcon,
+  ScanIcon,
   StorefrontIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { Link, useLocation, useMatches, useRouter } from "@tanstack/react-router";
 import clsx from "clsx";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useState } from "react";
 import { DashNavMenuButton } from "@/client/components/diceshock/DashNavMenu";
 import DashQRScannerDialog from "@/client/components/diceshock/DashQRScannerDialog";
 import StoreSelectorModal from "@/client/components/StoreSelectorModal";
 import { useAdminStoreFilter } from "@/client/hooks/useAdminStoreFilter";
+import { useRouteFilters } from "@/client/hooks/useRouteFilters";
 import { STORES } from "@/shared/store-locale";
-import {
-  launcherCategoryAtom,
-  launcherFiltersAtom,
-  launcherOpenAtom,
-  launcherToggleAtom,
-} from "./launcher/atoms";
+import { launcherOpenAtom, launcherToggleAtom } from "./launcher/atoms";
 import { getCategoryByRoute } from "./launcher/categories";
-import type { CategoryDef, FilterDef, FilterValue } from "./launcher/types";
+import type { CategoryDef, FilterValue } from "./launcher/types";
 
 export function DashHeader() {
   const router = useRouter();
@@ -27,11 +23,12 @@ export function DashHeader() {
   const { storeFilter, setStoreFilter } = useAdminStoreFilter();
   const [storeModalOpen, setStoreModalOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
-  const [launcherOpen] = useAtom(launcherOpenAtom);
+  const launcherOpen = useAtomValue(launcherOpenAtom);
   const toggleLauncher = useSetAtom(launcherToggleAtom);
-  const filters = useAtomValue(launcherFiltersAtom);
-  const categoryId = useAtomValue(launcherCategoryAtom);
   const location = useLocation();
+
+  // Chips come from URL search params, NOT launcher atoms
+  const { filters, query: routeQuery, categoryId } = useRouteFilters();
   const category = categoryId
     ? getCategoryByRoute("/dash/" + categoryId)
     : getCategoryByRoute(location.pathname);
@@ -52,7 +49,7 @@ export function DashHeader() {
         const tag = (e.target as HTMLElement)?.tagName;
         if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
         e.preventDefault();
-        toggleLauncher();
+        toggleLauncher({ filters, query: routeQuery, categoryId: categoryId ?? category?.id ?? null });
       }
     };
     document.addEventListener("keydown", handler);
@@ -106,7 +103,7 @@ export function DashHeader() {
         <div className="flex-1 flex justify-center min-w-0">
           <button
             type="button"
-            onClick={() => toggleLauncher()}
+            onClick={() => toggleLauncher({ filters, query: routeQuery, categoryId: categoryId ?? category?.id ?? null })}
             className={clsx(
               "flex items-center gap-1.5 h-7 rounded-lg",
               "bg-base-200/60 border border-base-300/50",
@@ -154,7 +151,7 @@ export function DashHeader() {
             onClick={() => setQrOpen(true)}
             className="btn btn-ghost btn-square btn-sm"
           >
-            <QrCodeIcon className="size-4" />
+            <ScanIcon className="size-4" />
           </button>
         </div>
       </header>
