@@ -59,8 +59,9 @@ function typeLabel(t: (key: string) => string, value: string) {
   return key ? t(key) : value;
 }
 
-function scopeLabel(value: string) {
-  return SCOPE_LABEL_KEYS[value.toUpperCase()] ?? value;
+function scopeLabel(t: (key: string) => string, value: string) {
+  const key = SCOPE_LABEL_KEYS[value.toUpperCase()];
+  return key ? t(key) : value;
 }
 
 export const Route = createFileRoute("/dash/tables")({
@@ -305,7 +306,7 @@ function RouteComponent() {
         header: t("dashTables.scope"),
         cell: ({ row }) => (
           <span className="badge badge-sm badge-outline">
-            {scopeLabel(row.original.scope)}
+            {scopeLabel(t, row.original.scope)}
           </span>
         ),
       },
