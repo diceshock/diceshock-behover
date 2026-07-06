@@ -1,6 +1,5 @@
 import { QrCodeIcon } from "@phosphor-icons/react/dist/ssr";
 import clsx from "clsx";
-import QRCode from "qrcode";
 import { useEffect, useMemo, useRef, useState } from "react";
 import useCrossData from "@/client/hooks/useCrossData";
 import useTOTP, { getLoginTime } from "@/client/hooks/useTOTP";
@@ -29,11 +28,13 @@ export default function TOTPCard() {
   useEffect(() => {
     if (!qrPayload || !canvasRef.current) return;
 
-    QRCode.toCanvas(canvasRef.current, qrPayload, {
-      width: 180,
-      margin: 1,
-      color: { dark: "#000000", light: "#ffffff" },
-    }).catch(() => setQrError(true));
+    import("qrcode").then((QRCode) =>
+      QRCode.default.toCanvas(canvasRef.current!, qrPayload, {
+        width: 180,
+        margin: 1,
+        color: { dark: "#000000", light: "#ffffff" },
+      }),
+    ).catch(() => setQrError(true));
   }, [qrPayload]);
 
   const progress = remainingSeconds / TOTP_TIME_STEP;

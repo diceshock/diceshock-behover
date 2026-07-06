@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import QRCode from "qrcode";
 import { useEffect, useState } from "react";
 import HookHole from "@/client/assets/svg/hook-hole.svg?react";
 import QQ from "@/client/assets/svg/tencent-qq.svg?react";
@@ -30,10 +29,12 @@ function RouteComponent() {
   const [qrSrc, setQrSrc] = useState<string>("");
 
   useEffect(() => {
-    QRCode.toDataURL(WECHAT_OA_URL, {
-      width: 180,
-      margin: 1,
-    }).then(setQrSrc).catch(() => {});
+    import("qrcode").then((QRCode) =>
+      QRCode.default.toDataURL(WECHAT_OA_URL, {
+        width: 180,
+        margin: 1,
+      }),
+    ).then(setQrSrc).catch(() => {});
   }, []);
 
   return (

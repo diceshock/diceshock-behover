@@ -20,7 +20,6 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import clsx from "clsx";
-import QRCode from "qrcode";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
@@ -1172,7 +1171,8 @@ async function renderStickerCanvas(
   ctx.fillText(`#${code}`, STICKER_W / 2, 98);
 
   const qrUrl = `https://diceshock.com/t/${code}`;
-  const qrDataUrl = await QRCode.toDataURL(qrUrl, {
+  const QRCode = await import("qrcode");
+  const qrDataUrl = await QRCode.default.toDataURL(qrUrl, {
     width: 440,
     margin: 1,
     color: { dark: BRAND_DARK, light: "#ffffff" },

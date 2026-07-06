@@ -8,6 +8,20 @@ import react from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
 import path from "node:path";
 
+// Rolldown emits `__require("assert")` etc. for CJS deps in Workers ESM.
+// nodejs_compat_v2 makes `node:module` createRequire available — inject a
+// global `require` shim so CJS wrappers resolve Node builtins correctly.
+function workerRequireShim() {
+  return {
+    name: "worker-require-shim",
+    renderChunk(code: string) {
+      if (!code.includes("__require")) return null;
+      const shim = `import{createRequire as __cr}from"node:module";var require=__cr("file:///worker.mjs");\n`;
+      return { code: shim + code, map: null };
+    },
+  };
+}
+
 const config = defineConfig({
   plugins: [
     svgr(),
@@ -34,8 +48,14 @@ const config = defineConfig({
       },
     }),
     react(),
+    workerRequireShim(),
   ],
-  resolve: { alias: { "@": path.resolve(__dirname, "./src") } },
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+      qrcode: "qrcode/lib/browser.js",
+    },
+  },
 });
 
 export default mergeConfig(config, baseConfig);

@@ -41,7 +41,7 @@
     "lodash": "^4.17.23",
     "mem0ai": "^3.0.9",
     "qrcode": "^1.5.4",
-    "wrangler": "^4.75.0",
+    "wrangler": "^4.107.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

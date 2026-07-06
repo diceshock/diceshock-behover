@@ -1,9 +1,9 @@
 "$schema" = "node_modules/wrangler/config-schema.json"
 
 name = "diceshock-behover"
-compatibility_date = "2025-09-24"
+compatibility_date = "2025-06-02"
 main = "./src/main.tsx"
-compatibility_flags = ["nodejs_compat"]
+compatibility_flags = ["nodejs_compat_v2"]
 account_id = "3244c8f91cd34317ce18652158e5853a"
 workers_dev = true
 

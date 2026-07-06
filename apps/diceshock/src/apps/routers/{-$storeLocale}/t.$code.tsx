@@ -10,7 +10,6 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { ClientOnly, createFileRoute, Link } from "@tanstack/react-router";
 import clsx from "clsx";
-import QRCode from "qrcode";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DisconnectionOverlay from "@/client/components/diceshock/DisconnectionOverlay";
 import LoginDialog from "@/client/components/diceshock/Header/LoginDialog";
@@ -755,11 +754,13 @@ function TOTPDisplay({
     prevQrPayloadRef.current = qrPayload;
 
     setQrError(false);
-    QRCode.toCanvas(canvasRef.current, qrPayload, {
-      width: 200,
-      margin: 1,
-      color: { dark: "#000000", light: "#ffffff" },
-    }).catch(() => setQrError(true));
+    import("qrcode").then((QRCode) =>
+      QRCode.default.toCanvas(canvasRef.current!, qrPayload, {
+        width: 200,
+        margin: 1,
+        color: { dark: "#000000", light: "#ffffff" },
+      }),
+    ).catch(() => setQrError(true));
   }, [qrPayload]);
 
   return (
