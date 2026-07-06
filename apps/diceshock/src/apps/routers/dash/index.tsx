@@ -296,7 +296,7 @@ function RouteComponent() {
               groupBy: "none",
               page: 1,
             }}
-            className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
+            className="card bg-base-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200"
           >
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
@@ -314,7 +314,7 @@ function RouteComponent() {
           <Link
             to="/dash/users"
             search={{ q: "", page: 1 }}
-            className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
+            className="card bg-base-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200"
           >
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
@@ -332,7 +332,7 @@ function RouteComponent() {
           <Link
             to="/dash/tables"
             search={{ q: "", page: 1 }}
-            className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
+            className="card bg-base-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200"
           >
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
@@ -350,7 +350,7 @@ function RouteComponent() {
           <Link
             to="/dash/actives"
             search={{ q: "" }}
-            className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
+            className="card bg-base-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200"
           >
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
@@ -368,7 +368,7 @@ function RouteComponent() {
           <Link
             to="/dash/events"
             search={{ q: "", page: 1 }}
-            className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
+            className="card bg-base-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200"
           >
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
@@ -385,7 +385,7 @@ function RouteComponent() {
 
           <Link
             to="/dash/pricing"
-            className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
+            className="card bg-base-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200"
           >
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
@@ -403,7 +403,7 @@ function RouteComponent() {
           <Link
             to="/dash/gsz"
             search={{ q: "", page: 1 }}
-            className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
+            className="card bg-base-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200"
           >
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
@@ -421,7 +421,7 @@ function RouteComponent() {
           <Link
             to="/dash/media"
             search={{ q: "", type: "", sort: "uploaded-desc" }}
-            className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow"
+            className="card bg-base-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200"
           >
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
