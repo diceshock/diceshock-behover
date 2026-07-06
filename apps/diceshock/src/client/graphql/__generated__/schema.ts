@@ -156,6 +156,7 @@ export type BatchOrderResult = {
 };
 
 export type BatchSettleInput = {
+  deductAmount?: InputMaybe<Scalars['Int']['input']>;
   deductFromStoredValue?: InputMaybe<Scalars['Boolean']['input']>;
   ids: Array<Scalars['ID']['input']>;
   note?: InputMaybe<Scalars['String']['input']>;
@@ -1886,6 +1887,7 @@ export type SendSmsCodeInput = {
 };
 
 export type SettleOrderInput = {
+  deductAmount?: InputMaybe<Scalars['Int']['input']>;
   deductFromStoredValue?: InputMaybe<Scalars['Boolean']['input']>;
   id: Scalars['ID']['input'];
 };

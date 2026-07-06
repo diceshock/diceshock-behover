@@ -312,6 +312,7 @@ const settleOrderSchema = z.object({
   input: z.object({
     id: z.string().min(1),
     deductFromStoredValue: z.boolean().default(false),
+    deductAmount: z.number().int().nonnegative().nullable().optional(),
     paymentMethod: z.string().nullable().optional(),
   }),
 });
@@ -319,6 +320,7 @@ const batchSettleSchema = z.object({
   input: z.object({
     ids: z.array(z.string().min(1)).min(1),
     deductFromStoredValue: z.boolean().default(false),
+    deductAmount: z.number().int().nonnegative().nullable().optional(),
     paymentMethod: z.string().nullable().optional(),
     note: z.string().nullable().optional(),
   }),
@@ -699,6 +701,7 @@ async function settleOrderById(
   input: {
     id: string;
     deductFromStoredValue?: boolean;
+    deductAmount?: number | null;
     paymentMethod?: string | null;
     note?: string | null;
   },
@@ -721,11 +724,14 @@ async function settleOrderById(
     endAt: settlementEnd,
   });
   const note = `${input.paymentMethod ?? "settlement"} · ${new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })}`;
-  const storedValueDeduction = input.deductFromStoredValue
+  const deductTarget = input.deductFromStoredValue
+    ? (input.deductAmount != null ? input.deductAmount : data.finalPrice)
+    : 0;
+  const storedValueDeduction = deductTarget > 0
     ? await applyStoredValueDeduction(
         tdb,
         existing.user_id,
-        data.finalPrice,
+        deductTarget,
         note,
         input.id,
       )

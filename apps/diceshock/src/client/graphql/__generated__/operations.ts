@@ -57,6 +57,7 @@ export type ArticleType =
   | 'EVENT';
 
 export type BatchSettleInput = {
+  deductAmount?: number | null | undefined;
   deductFromStoredValue?: boolean | null | undefined;
   ids: Array<string | number>;
   note?: string | null | undefined;
@@ -318,6 +319,7 @@ export type SendSmsCodeInput = {
 };
 
 export type SettleOrderInput = {
+  deductAmount?: number | null | undefined;
   deductFromStoredValue?: boolean | null | undefined;
   id: string | number;
 };

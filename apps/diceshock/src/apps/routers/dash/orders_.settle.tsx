@@ -122,6 +122,7 @@ function BatchSettlePage() {
   const [loading, setLoading] = useState(true);
   const [settling, setSettling] = useState(false);
   const [deductEnabled, setDeductEnabled] = useState(false);
+  const [customDeductAmount, setCustomDeductAmount] = useState<number | null>(null);
   const [cancelIds, setCancelIds] = useState<Set<string>>(new Set());
   const [note, setNote] = useState("");
 
@@ -181,7 +182,7 @@ function BatchSettlePage() {
     [data],
   );
 
-  const totalDeductAmount = useMemo(() => {
+  const autoDeductAmount = useMemo(() => {
     if (!deductEnabled) return 0;
     return activeSettleIds.reduce((sum, id) => {
       const p = previewMap.get(id);
@@ -189,6 +190,10 @@ function BatchSettlePage() {
       return sum + Math.min(p.membership.storedValueBalance, p.finalPrice);
     }, 0);
   }, [deductEnabled, activeSettleIds, previewMap]);
+
+  const totalDeductAmount = deductEnabled
+    ? (customDeductAmount ?? autoDeductAmount)
+    : 0;
 
   const remainingAfterDeduct = totalPrice - totalDeductAmount;
 
@@ -202,6 +207,9 @@ function BatchSettlePage() {
           input: {
             ids: settleIds,
             deductFromStoredValue: deductEnabled,
+            deductAmount: deductEnabled && customDeductAmount != null
+              ? customDeductAmount
+              : null,
             note: note.trim() || null,
           },
         },
@@ -361,6 +369,9 @@ function BatchSettlePage() {
             isAllEnded={allEnded}
             deductEnabled={deductEnabled}
             onDeductToggle={setDeductEnabled}
+            autoDeductAmount={autoDeductAmount}
+            customDeductAmount={customDeductAmount}
+            onDeductAmountChange={setCustomDeductAmount}
           />
 
           <BatchPricingPlansSection previews={data.previews} />
@@ -638,6 +649,9 @@ function GroupedMembershipSection({
   isAllEnded,
   deductEnabled,
   onDeductToggle,
+  autoDeductAmount,
+  customDeductAmount,
+  onDeductAmountChange,
 }: {
   previews: SettlementPreviewItem[];
   activeSettleIds: string[];
@@ -645,6 +659,9 @@ function GroupedMembershipSection({
   isAllEnded: boolean;
   deductEnabled: boolean;
   onDeductToggle: (v: boolean) => void;
+  autoDeductAmount: number;
+  customDeductAmount: number | null;
+  onDeductAmountChange: (v: number | null) => void;
 }) {
   const userGroups = useMemo(() => {
     const map = new Map<
@@ -752,9 +769,7 @@ function GroupedMembershipSection({
                 </div>
                 {deductEnabled && balance > 0 && (
                   <div className="text-xs text-base-content/50">
-                    可扣 {formatPrice(deductAmount)}
-                    {remaining > 0 &&
-                      ` · 剩余 ${formatPrice(remaining)} 需另付`}
+                    可扣上限 {formatPrice(deductAmount)}
                   </div>
                 )}
               </div>
@@ -767,7 +782,7 @@ function GroupedMembershipSection({
       </div>
 
       {!isAllEnded && hasAnyBalance && (
-        <div className="border-t border-base-content/10 pt-3 mt-3">
+        <div className="border-t border-base-content/10 pt-3 mt-3 flex flex-col gap-3">
           <label className="flex items-center justify-between cursor-pointer">
             <span className="text-sm font-medium">使用储值卡扣费</span>
             <input
@@ -777,6 +792,44 @@ function GroupedMembershipSection({
               onChange={(e) => onDeductToggle(e.target.checked)}
             />
           </label>
+          {deductEnabled && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-base-content/70 shrink-0">扣费金额</span>
+              <input
+                type="number"
+                className="input input-sm input-bordered w-32 font-mono text-right"
+                min={0}
+                max={autoDeductAmount / 100}
+                step={0.01}
+                value={
+                  customDeductAmount != null
+                    ? (customDeductAmount / 100).toFixed(2)
+                    : (autoDeductAmount / 100).toFixed(2)
+                }
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "" || val === (autoDeductAmount / 100).toFixed(2)) {
+                    onDeductAmountChange(null);
+                  } else {
+                    const cents = Math.round(Number.parseFloat(val) * 100);
+                    if (!Number.isNaN(cents) && cents >= 0) {
+                      onDeductAmountChange(Math.min(cents, autoDeductAmount));
+                    }
+                  }
+                }}
+              />
+              <span className="text-xs text-base-content/50">元</span>
+              {customDeductAmount != null && (
+                <button
+                  type="button"
+                  className="btn btn-xs btn-ghost"
+                  onClick={() => onDeductAmountChange(null)}
+                >
+                  重置
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
