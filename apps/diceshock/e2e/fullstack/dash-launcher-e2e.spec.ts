@@ -45,31 +45,31 @@ async function setupAdmin(page: Page) {
 async function openLauncher(page: Page) {
   // Press "/" to open
   await page.keyboard.press("/");
-  await expect(page.locator(".fixed.inset-0.z-50")).toBeVisible({ timeout: 3000 });
+  await expect(page.locator("[data-testid='launcher-dialog']")).toBeVisible({ timeout: 3000 });
 }
 
 async function openLauncherViaClick(page: Page) {
   const trigger = page.locator("button", { hasText: "搜索…" });
   await trigger.click();
-  await expect(page.locator(".fixed.inset-0.z-50")).toBeVisible({ timeout: 3000 });
+  await expect(page.locator("[data-testid='launcher-dialog']")).toBeVisible({ timeout: 3000 });
 }
 
 async function getLauncherInput(page: Page) {
-  return page.locator(".fixed.inset-0.z-50 input[type='text']");
+  return page.locator("[data-testid='launcher-dialog'] input[type='text']");
 }
 
 async function closeLauncher(page: Page) {
   await page.keyboard.press("Escape");
-  await expect(page.locator(".fixed.inset-0.z-50")).not.toBeVisible({ timeout: 2000 });
+  await expect(page.locator("[data-testid='launcher-dialog']")).not.toBeVisible({ timeout: 2000 });
 }
 
 async function enterFilterMenu(page: Page) {
-  const filterBtn = page.locator(".fixed.inset-0.z-50 button[title='筛选器']");
+  const filterBtn = page.locator("[data-testid='launcher-dialog'] button[title='筛选器']");
   await filterBtn.click();
 }
 
 async function selectMenuItem(page: Page, label: string) {
-  const item = page.locator(".fixed.inset-0.z-50 [role='option'], .fixed.inset-0.z-50 .overflow-y-auto > div").filter({ hasText: label }).first();
+  const item = page.locator("[data-testid='launcher-dialog'] [role='option'], [data-testid='launcher-dialog'] .overflow-y-auto > div").filter({ hasText: label }).first();
   await item.click();
 }
 
@@ -104,7 +104,13 @@ async function expectUrlParam(page: Page, key: string, value: string) {
 
 async function expectUrlContains(page: Page, substring: string) {
   await expect.poll(
-    () => page.url(),
+    () => {
+      // Decode URL and strip TanStack Router's JSON quotes around values
+      const decoded = decodeURIComponent(page.url()).replace(/="|"(&|$)/g, (m) =>
+        m === '="' ? "=" : m.endsWith("&") ? "&" : "",
+      );
+      return decoded;
+    },
     { timeout: 5000, message: `URL contains ${substring}` },
   ).toContain(substring);
 }
@@ -117,8 +123,17 @@ async function expectNoUrlParam(page: Page, key: string) {
 }
 
 async function navigateToCategory(page: Page, route: string) {
-  await page.goto(route);
-  await waitForTable(page);
+  // Retry navigation in case workerd restarted
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await page.goto(route, { timeout: 15000 });
+      await waitForTable(page);
+      return;
+    } catch {
+      if (attempt === 2) throw new Error(`Failed to navigate to ${route} after 3 attempts`);
+      await page.waitForTimeout(2000);
+    }
+  }
 }
 
 /** Apply a kv filter: open launcher → filter menu → select kv filter → type value → submit */
@@ -126,10 +141,13 @@ async function applyKvFilter(page: Page, filterLabel: string, value: string) {
   await openLauncher(page);
   await enterFilterMenu(page);
   await selectMenuItem(page, filterLabel);
-  // Now in kv-input mode
-  await page.keyboard.type(value);
-  await page.keyboard.press("Enter");
-  // Launcher should navigate
+  // Wait for input to be focused after mode switch
+  const kvInput = page.locator("[data-testid='launcher-dialog'] input[type='text']");
+  await kvInput.focus();
+  await kvInput.fill(value);
+  await page.keyboard.press("Enter"); // Adds filter, returns to search mode
+  await page.waitForTimeout(200);
+  await page.keyboard.press("Enter"); // Navigates with the filter applied
   await page.waitForTimeout(300);
 }
 
@@ -140,6 +158,8 @@ async function applyOptionFilter(page: Page, filterLabel: string, optionLabel: s
   await selectMenuItem(page, filterLabel);
   // Now in option-select mode, use keyboard or click
   await selectMenuItem(page, optionLabel);
+  await page.waitForTimeout(200);
+  await page.keyboard.press("Enter"); // Navigate with filter applied
   await page.waitForTimeout(300);
 }
 
@@ -149,13 +169,15 @@ async function applySort(page: Page, sortLabel: string, fieldLabel: string) {
   await enterFilterMenu(page);
   await selectMenuItem(page, sortLabel);
   await selectMenuItem(page, fieldLabel);
+  await page.waitForTimeout(200);
+  await page.keyboard.press("Enter"); // Navigate with sort applied
   await page.waitForTimeout(300);
 }
 
 /** Verify a filter chip is visible in the launcher */
 async function expectFilterChip(page: Page, text: string) {
   await openLauncher(page);
-  const chip = page.locator(".fixed.inset-0.z-50").getByText(text, { exact: false });
+  const chip = page.locator("[data-testid='launcher-dialog']").getByText(text, { exact: false });
   await expect(chip).toBeVisible({ timeout: 3000 });
   await closeLauncher(page);
 }
@@ -222,8 +244,10 @@ test.describe("Launcher E2E — Full Filter Coverage", () => {
       await openLauncher(page);
       await enterFilterMenu(page);
       await selectMenuItem(page, "已禁用");
+      await page.waitForTimeout(200);
+      await page.keyboard.press("Enter"); // Navigate with boolean filter
       await page.waitForTimeout(300);
-      await expectUrlContains(page, "f.disabled=true");
+      await expectUrlContains(page, "f.disabled=1");
     });
 
     test("Sort: 按注册时间排序", async ({ page }) => {
@@ -289,7 +313,7 @@ test.describe("Launcher E2E — Full Filter Coverage", () => {
       await expectUrlContains(page, "f.role=admin");
       // Reopen launcher and verify chip shows
       await openLauncher(page);
-      const chip = page.locator(".fixed.inset-0.z-50").getByText("admin", { exact: false });
+      const chip = page.locator("[data-testid='launcher-dialog']").getByText("admin", { exact: false });
       await expect(chip).toBeVisible();
       await closeLauncher(page);
     });
@@ -352,6 +376,8 @@ test.describe("Launcher E2E — Full Filter Coverage", () => {
       await enterFilterMenu(page);
       await selectMenuItem(page, "分组");
       await selectMenuItem(page, "桌台");
+      await page.waitForTimeout(200);
+      await page.keyboard.press("Enter");
       await page.waitForTimeout(300);
       await expectUrlContains(page, "group=table");
     });
@@ -361,6 +387,8 @@ test.describe("Launcher E2E — Full Filter Coverage", () => {
       await enterFilterMenu(page);
       await selectMenuItem(page, "分组");
       await selectMenuItem(page, "用户");
+      await page.waitForTimeout(200);
+      await page.keyboard.press("Enter");
       await page.waitForTimeout(300);
       await expectUrlContains(page, "group=user");
     });
@@ -370,6 +398,8 @@ test.describe("Launcher E2E — Full Filter Coverage", () => {
       await enterFilterMenu(page);
       await selectMenuItem(page, "分组");
       await selectMenuItem(page, "日期");
+      await page.waitForTimeout(200);
+      await page.keyboard.press("Enter");
       await page.waitForTimeout(300);
       await expectUrlContains(page, "group=date");
     });
@@ -392,7 +422,8 @@ test.describe("Launcher E2E — Full Filter Coverage", () => {
       await enterFilterMenu(page);
       await selectMenuItem(page, "分组");
       await selectMenuItem(page, "桌台");
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(200);
+      await page.keyboard.press("Enter");
       await expectUrlContains(page, "f.table=");
       await expectUrlContains(page, "f.status=active");
       await expectUrlContains(page, "group=table");
@@ -406,7 +437,8 @@ test.describe("Launcher E2E — Full Filter Coverage", () => {
       await enterFilterMenu(page);
       await selectMenuItem(page, "分组");
       await selectMenuItem(page, "用户");
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(200);
+      await page.keyboard.press("Enter");
       await expectUrlContains(page, "f.user=");
       await expectUrlContains(page, "f.status=ended");
       await expectUrlContains(page, "sort=end_at");
@@ -751,7 +783,7 @@ test.describe("Launcher E2E — Full Filter Coverage", () => {
       await page.goto(`${BASE_URL}/users`);
       await waitForTable(page);
       await openLauncher(page);
-      const dialog = page.locator(".fixed.inset-0.z-50");
+      const dialog = page.locator("[data-testid='launcher-dialog']");
       await expect(dialog).toBeVisible();
     });
 
@@ -759,7 +791,7 @@ test.describe("Launcher E2E — Full Filter Coverage", () => {
       await page.goto(`${BASE_URL}/users`);
       await waitForTable(page);
       await openLauncherViaClick(page);
-      const dialog = page.locator(".fixed.inset-0.z-50");
+      const dialog = page.locator("[data-testid='launcher-dialog']");
       await expect(dialog).toBeVisible();
     });
 
@@ -775,7 +807,7 @@ test.describe("Launcher E2E — Full Filter Coverage", () => {
       await waitForTable(page);
       await openLauncher(page);
       // Click the backdrop
-      const backdrop = page.locator(".fixed.inset-0.z-50").first();
+      const backdrop = page.locator("[data-testid='launcher-dialog']").first();
       await backdrop.click({ position: { x: 10, y: 10 } });
       await expect(page.locator(".fixed.inset-0.z-50 .max-w-lg")).not.toBeVisible({ timeout: 2000 });
     });

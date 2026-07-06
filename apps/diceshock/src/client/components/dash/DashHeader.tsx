@@ -6,7 +6,7 @@ import {
 import { Link, useLocation, useMatches, useRouter } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useAtomValue, useSetAtom } from "jotai";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DashNavMenuButton } from "@/client/components/diceshock/DashNavMenu";
 import DashQRScannerDialog from "@/client/components/diceshock/DashQRScannerDialog";
 import StoreSelectorModal from "@/client/components/StoreSelectorModal";
@@ -34,6 +34,10 @@ export function DashHeader() {
     : getCategoryByRoute(location.pathname);
   const hasFilters = filters.length > 0 || !!category;
 
+  // Ref for fresh filter state in stable keydown handler
+  const filtersRef = useRef({ filters, query: routeQuery, categoryId: categoryId ?? category?.id ?? null });
+  filtersRef.current = { filters, query: routeQuery, categoryId: categoryId ?? category?.id ?? null };
+
   // Breadcrumbs from route matches
   const crumbs = matches
     .filter((m) => m.pathname !== "/" && m.pathname !== "/dash")
@@ -49,7 +53,7 @@ export function DashHeader() {
         const tag = (e.target as HTMLElement)?.tagName;
         if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
         e.preventDefault();
-        toggleLauncher({ filters, query: routeQuery, categoryId: categoryId ?? category?.id ?? null });
+        toggleLauncher(filtersRef.current);
       }
     };
     document.addEventListener("keydown", handler);

@@ -70,6 +70,13 @@ export function Launcher() {
     }
   }, [open]);
 
+  // Re-focus input on mode change (e.g. entering kv-input mode)
+  useEffect(() => {
+    if (open && (mode.type === "kv-input" || mode.type === "filter-menu" || mode.type === "search")) {
+      requestAnimationFrame(() => inputRef.current?.focus());
+    }
+  }, [open, mode.type]);
+
   // Close on Escape
   useEffect(() => {
     if (!open) return;
@@ -181,8 +188,21 @@ export function Launcher() {
   }, [menuItems.length, focusIndex, setFocusIndex]);
 
   // Handle Enter
-  const handleSubmit = useCallback(() => {
-    const item = menuItems[focusIndex];
+  const handleSubmit = useCallback((indexOverride?: number) => {
+    const idx = indexOverride ?? focusIndex;
+    const item = menuItems[idx];
+
+    // KV input mode → use selected autocomplete label or typed query
+    if (mode.type === "kv-input") {
+      const val = item && "label" in item && item.id.startsWith("ac:")
+        ? item.label
+        : query;
+      if (val) {
+        addFilter({ kind: "kv", key: mode.filter.key, value: val });
+      }
+      return;
+    }
+
     if (!item) return;
 
     // Category selection
@@ -239,7 +259,7 @@ export function Launcher() {
       if (def.kind === "group") {
         setMode({
           type: "option-select",
-          filter: { kind: "option", key: def.key, label: def.label, options: def.options },
+          filter: { kind: "group", key: def.key, label: def.label, options: def.options },
         });
         setQuery("");
         setFocusIndex(0);
@@ -256,21 +276,12 @@ export function Launcher() {
         const [key, dir] = item.value.split(":");
         addFilter({ kind: "sort", key: key!, value: dir as "asc" | "desc" });
       } else if (typeof item.value === "string") {
-        addFilter({ kind: "option", key: filterDef.key, value: item.value });
+        const kind = filterDef.kind === "group" ? "group" : "option";
+        addFilter({ kind, key: filterDef.key, value: item.value } as FilterValue);
       }
       return;
     }
 
-    // KV input mode → use query as the value
-    if (mode.type === "kv-input") {
-      const val = "label" in item && item.id.startsWith("ac:")
-        ? item.label
-        : query;
-      if (val) {
-        addFilter({ kind: "kv", key: mode.filter.key, value: val });
-      }
-      return;
-    }
 
     // Navigate item → go to filtered page
     if ("isNavigate" in item && item.isNavigate && activeCategory) {
@@ -350,6 +361,7 @@ export function Launcher() {
 
   return (
     <div
+      data-testid="launcher-dialog"
       className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh] px-4"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) reset();
@@ -499,7 +511,7 @@ export function Launcher() {
                 onMouseEnter={() => setFocusIndex(i)}
                 onClick={() => {
                   setFocusIndex(i);
-                  handleSubmit();
+                  handleSubmit(i);
                 }}
               />
             ))

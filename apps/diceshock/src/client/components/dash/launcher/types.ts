@@ -171,7 +171,7 @@ export type LauncherMode =
   | { type: "search" } // default: search items + categories
   | { type: "filter-menu" } // showing all filters for current category
   | { type: "kv-input"; filter: KvFilterDef } // typing kv value
-  | { type: "option-select"; filter: OptionFilterDef } // selecting enum
+  | { type: "option-select"; filter: OptionFilterDef | GroupFilterDef } // selecting enum/group
   | { type: "date-pick"; filter: DateFilterDef } // picking date range
   | { type: "number-input"; filter: NumberFilterDef }; // entering number
 
