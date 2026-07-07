@@ -446,7 +446,7 @@
     "copyOrderNumber": "Copy order number",
     "temporary": "Temp",
     "pause": "Pause",
-    "terminate": "End",
+    "terminate": "Pause & Settle",
     "resume": "Resume",
     "details": "Details",
     "previousPage": "Previous",

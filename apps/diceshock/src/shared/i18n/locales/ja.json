@@ -446,7 +446,7 @@
     "copyOrderNumber": "注文番号をコピー",
     "temporary": "一時",
     "pause": "一時停止",
-    "terminate": "終了",
+    "terminate": "一時停止して精算",
     "resume": "再開",
     "details": "詳細",
     "previousPage": "前へ",

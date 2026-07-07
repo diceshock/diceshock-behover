@@ -447,7 +447,7 @@
     "copyOrderNumber": "复制订单号",
     "temporary": "临时",
     "pause": "暂停",
-    "terminate": "终止",
+    "terminate": "暂停并结算",
     "resume": "继续",
     "details": "详情",
     "previousPage": "上一页",

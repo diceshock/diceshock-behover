@@ -446,7 +446,7 @@
     "copyOrderNumber": "Copiar número do pedido",
     "temporary": "Temporário",
     "pause": "Pausar",
-    "terminate": "Encerrar",
+    "terminate": "Pausar e liquidar",
     "resume": "Retomar",
     "details": "Detalhes",
     "previousPage": "Anterior",

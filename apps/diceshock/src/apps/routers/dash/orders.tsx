@@ -599,14 +599,12 @@ function RouteComponent() {
               </li>
             </>
           )}
-          {order.status === "SETTLED" && (
-            <li>
-              <Link to="/dash/orders/$id/settle" params={{ id: order.id }}>
-                <EyeIcon className="size-3" />
-                {t("dashOrders.details")}
-              </Link>
-            </li>
-          )}
+          <li>
+            <Link to="/dash/orders/$id/settle" params={{ id: order.id }}>
+              <EyeIcon className="size-3" />
+              {t("dashOrders.details")}
+            </Link>
+          </li>
         </ul>
       </div>
     ) : (
@@ -667,16 +665,14 @@ function RouteComponent() {
             </button>
           </>
         )}
-        {order.status === "SETTLED" && (
-          <Link
-            to="/dash/orders/$id/settle"
-            params={{ id: order.id }}
-            className="btn btn-xs btn-ghost"
-          >
-            <EyeIcon className="size-3" />
-            {t("dashOrders.details")}
-          </Link>
-        )}
+        <Link
+          to="/dash/orders/$id/settle"
+          params={{ id: order.id }}
+          className="btn btn-xs btn-ghost"
+        >
+          <EyeIcon className="size-3" />
+          {t("dashOrders.details")}
+        </Link>
       </div>
     );
 

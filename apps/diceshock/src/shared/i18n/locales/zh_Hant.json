@@ -446,7 +446,7 @@
     "copyOrderNumber": "複製訂單號",
     "temporary": "臨時",
     "pause": "暫停",
-    "terminate": "終止",
+    "terminate": "暫停並結算",
     "resume": "繼續",
     "details": "詳情",
     "previousPage": "上一頁",
