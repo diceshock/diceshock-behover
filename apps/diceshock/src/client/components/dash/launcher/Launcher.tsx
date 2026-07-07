@@ -134,31 +134,39 @@ export function Launcher() {
     }
   }, [open, mode.type]);
 
-  // Escape / X behavior depends on how the launcher was opened:
-  // - origin "header" (table header click): close the launcher entirely
-  // - origin "search" (normal open): return directly to search mode from any level
+  // Escape / X: progressive unwind
+  // Sub-modes → field-select → search → clear query/filters → close
   useEffect(() => {
     if (!open) return;
     const handler = (e: globalThis.KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
         if (origin === "header") {
-          reset();
-        } else if (mode.type === "search" || mode.type === "field-select") {
+          // Opened from table header: always close entirely
           reset();
         } else if (mode.type === "sort-field-select" || mode.type === "group-field-select") {
-          // Go back to field-select
           setMode({ type: "field-select" });
           setQuery("");
           setFocusIndex(0);
-        } else {
+        } else if (mode.type === "operator-select" || mode.type === "value-input") {
           exitToSearch();
+        } else if (mode.type === "field-select") {
+          exitToSearch();
+        } else {
+          // search mode: clear query/filters first, then close
+          if (query || filters.length > 0) {
+            setQuery("");
+            update((d) => { d.filters = []; });
+            setFocusIndex(0);
+          } else {
+            reset();
+          }
         }
       }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [open, mode, origin, reset, exitToSearch]);
+  }, [open, mode, origin, query, filters, reset, exitToSearch, setQuery, setMode, setFocusIndex, update]);
 
   // Build menu items based on current mode
   const menuItems = useMemo((): MenuItemData[] => {
@@ -580,13 +588,15 @@ export function Launcher() {
       }}
     >
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px]" onMouseDown={reset} />
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onMouseDown={reset} />
 
       {/* Dialog */}
       <div
         className={clsx(
-          "relative w-full max-w-lg bg-base-100 rounded-xl shadow-2xl",
-          "border border-base-300/50 flex flex-col overflow-hidden",
+          "relative w-full max-w-lg rounded-xl flex flex-col overflow-hidden",
+          "bg-base-100 ring-1 ring-base-content/10",
+          "border border-base-300/60",
+          "shadow-[0_16px_70px_-12px_rgba(0,0,0,0.4)]",
           "max-h-[70vh]",
         )}
       >
@@ -659,18 +669,33 @@ export function Launcher() {
             onKeyDown={handleKeyDown}
             readOnly={mode.type === "operator-select"}
           />
-          {/* Right button: filter/x */}
+          {/* Right button: context-dependent */}
           {!isSubMode && (
             <button
               type="button"
               onClick={() => {
-                if (isFieldSelect) exitToSearch();
-                else enterFieldSelect();
+                if (isFieldSelect) {
+                  exitToSearch();
+                } else if (query || filters.length > 0) {
+                  // Clear query and filters → return to history view
+                  setQuery("");
+                  update((d) => { d.filters = []; });
+                  setFocusIndex(0);
+                } else {
+                  // Clean state: enter field-select
+                  enterFieldSelect();
+                }
               }}
               className="btn btn-ghost btn-xs btn-square"
-              title={isFieldSelect ? "返回搜索" : "筛选器"}
+              title={
+                isFieldSelect ? "返回搜索 (Esc)"
+                : (query || filters.length > 0) ? "清除 (Esc)"
+                : "筛选器"
+              }
             >
               {isFieldSelect ? (
+                <XIcon className="size-3.5" />
+              ) : (query || filters.length > 0) ? (
                 <XIcon className="size-3.5" />
               ) : (
                 <FunnelIcon className="size-3.5" />
