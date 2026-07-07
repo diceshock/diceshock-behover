@@ -36,17 +36,20 @@ Diceshock 是一套面向桌游店的全栈 SaaS 系统，部署在 Cloudflare W
 ```
 diceshock-behover/
 ├── apps/
-│   └── diceshock/          # 主应用 (全栈 Worker)
-│       ├── src/
-│       │   ├── server/     # Hono 路由、GraphQL resolvers、中间件、Durable Objects
-│       │   ├── client/     # React 组件、hooks、GraphQL operations
-│       │   ├── shared/     # i18n、工具函数、计价逻辑
-│       │   └── apps/routers/  # TanStack Router 页面
-│       ├── e2e/            # Playwright E2E 测试
-│       └── tests/          # Vitest 单元测试
+│   ├── diceshock/          # 主应用 (全栈 Worker)
+│   │   ├── src/
+│   │   │   ├── server/     # Hono 路由、GraphQL resolvers、中间件、Durable Objects
+│   │   │   ├── client/     # React 组件、hooks、GraphQL operations
+│   │   │   ├── shared/     # i18n、工具函数、计价逻辑
+│   │   │   └── apps/routers/  # TanStack Router 页面
+│   │   ├── e2e/            # Playwright E2E 测试
+│   │   └── tests/          # Vitest 单元测试
+│   └── rolesandbox/        # 体素编辑器测试站点
 ├── libs/
 │   ├── db/                 # Drizzle schema + 共享数据库逻辑
-│   └── utils/              # 通用工具库
+│   ├── utils/              # 通用工具库
+│   ├── rolesandbox-client/ # 体素编辑器 React 组件 (Three.js + Yjs)
+│   └── rolesandbox-server/ # 体素编辑器 Hono middleware + Durable Object
 ├── plugins/                # 自定义 Vite 插件 (日志、命令监听)
 ├── scripts/                # 数据迁移、爬虫、种子脚本
 └── drizzle/                # D1 数据库迁移文件
@@ -109,6 +112,22 @@ cd apps/diceshock && npx wrangler d1 migrations apply diceshock --remote
 
 ```bash
 pnpm test:e2e:diceshock
+```
+
+### RoleSandbox (体素编辑器)
+
+```bash
+# 开发
+pnpm --filter rolesandbox dev
+
+# 类型检查
+cd apps/rolesandbox && npx tsc --noEmit
+
+# 构建
+pnpm --filter rolesandbox build
+
+# 部署
+pnpm --filter rolesandbox deploy
 ```
 
 ## 环境变量
