@@ -745,7 +745,8 @@ function RouteComponent() {
           ? t("dashOrders.noMatchedOrders")
           : t("dashOrders.noOrders")
       }
-      renderActions={renderActions} />
+      renderActions={renderActions}
+      actionsColumnSize={280} />
       {selectedIds.size > 0 && (
         <BatchActionBar
           count={selectedIds.size}
