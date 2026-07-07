@@ -87,7 +87,7 @@ export const SCHEMAS: Record<string, TableSchema> = {
   },
   userMembershipPlansTable: {
     table: "userMembershipPlansTable",
-    description: "会员计划",
+    description: "会员&消费",
     fields: [
       { name: "id", type: "text" },
       { name: "user_id", type: "text" },

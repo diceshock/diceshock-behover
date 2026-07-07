@@ -902,7 +902,7 @@ function UserDetailPage() {
               )}
               onClick={() => setActiveTab("membership")}
             >
-              会员计划
+              会员&消费
             </button>
             <button
               type="button"
@@ -1105,7 +1105,7 @@ function UserDetailPage() {
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <h3 className="text-lg font-semibold">会员计划历史</h3>
+                  <h3 className="text-lg font-semibold">历史</h3>
                   {getStoredValueBalance(membershipPlans) > 0 && (
                     <span className="badge badge-accent badge-lg">
                       储值余额: ¥
@@ -1159,7 +1159,7 @@ function UserDetailPage() {
 
               {membershipPlans.length === 0 ? (
                 <div className="py-12 text-center text-base-content/60">
-                  暂无会员计划
+                  暂无记录
                 </div>
               ) : (
                 <div className="overflow-x-auto">

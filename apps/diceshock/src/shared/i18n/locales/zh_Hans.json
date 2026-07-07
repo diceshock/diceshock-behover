@@ -661,7 +661,7 @@
     "nickname": "昵称",
     "name": "姓名",
     "role": "角色",
-    "membershipPlan": "会员计划",
+    "membershipPlan": "会员&消费",
     "storedBalance": "储值余额",
     "points": "积分",
     "store": "门店",
@@ -1049,7 +1049,7 @@
       "actives": "约局",
       "me": "个人中心",
       "contactUs": "联系我们",
-      "agents": "会员计划"
+      "agents": "会员&消费"
     },
     "variableCategory": {
       "user": "用户",
