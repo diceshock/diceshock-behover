@@ -325,7 +325,8 @@ export const userMembershipPlansTable = sqlite.sqliteTable(
         enum: ["monthly", "monthly_cc", "yearly", "stored_value"],
       })
       .notNull(),
-    amount: sqlite.int("amount"),
+    amount: sqlite.int("amount"), // 储值变动(分)
+    points: sqlite.int("points"), // 积分变动
     note: sqlite.text("note"),
     order_id: sqlite.text("order_id"),
     start_date: sqlite
@@ -346,35 +347,6 @@ export const userMembershipPlansRelations = relations(
   ({ one }) => ({
     user: one(users, {
       fields: [userMembershipPlansTable.user_id],
-      references: [users.id],
-    }),
-  }),
-);
-
-export const userPointsLogTable = sqlite.sqliteTable(
-  "user_points_log",
-  {
-    id: sqlite.text().$defaultFn(createId).primaryKey(),
-    user_id: sqlite
-      .text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    amount: sqlite.int("amount").notNull(),
-    balance_after: sqlite.int("balance_after").notNull(),
-    note: sqlite.text("note"),
-    created_by: sqlite.text("created_by"),
-    create_at: sqlite
-      .integer("create_at", { mode: "timestamp_ms" })
-      .$defaultFn(() => new Date(Date.now())),
-  },
-  (table) => [sqlite.index("idx_user_points_log_user_id").on(table.user_id)],
-);
-
-export const userPointsLogRelations = relations(
-  userPointsLogTable,
-  ({ one }) => ({
-    user: one(users, {
-      fields: [userPointsLogTable.user_id],
       references: [users.id],
     }),
   }),

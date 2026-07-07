@@ -238,7 +238,7 @@ mutation { pauseOrder(id: "order-123") { id status } }
 - 日期范围: dateFrom/dateTo 格式 "YYYY-MM-DD"
 
 [Schema — 用户 UserProfile]
-字段: id uid name email image role nickname phone points preferredLocale preferredStoreId meta createdAt membershipPlans{id userId planType amount note startDate endDate createdAt updatedAt}
+字段: id uid name email image role nickname phone points preferredLocale preferredStoreId meta createdAt membershipPlans{id userId planType amount points note orderId startDate endDate createdAt updatedAt}
 查询: query { managedUsers(filter: { search: "关键词", role: ["CUSTOMER","STAFF","ADMIN"], store: "storeId", sortBy: "name", sortOrder: DESC, pagination: { offset: 0, limit: 30 } }) { items { ...字段 } pageInfo { offset limit total hasMore } } }
 单个: query { user(id: "userId") { ...字段 } }
 关联: membershipPlansByUser(userId) / pointsLogByUser(userId) / occupanciesByUser(userId)
@@ -284,11 +284,11 @@ mutation { pauseOrder(id: "order-123") { id status } }
 变更: savePricingSnapshot(input: { name, data: { config, plans }, storeId }) / publishPricingSnapshot(storeId) / restorePricingSnapshot(id)
 
 [Schema — 会员/积分]
-会员: query { membershipPlansByUser(userId) { id userId planType amount note startDate endDate createdAt updatedAt } }
+会员: query { membershipPlansByUser(userId) { id userId planType amount points note orderId startDate endDate createdAt updatedAt } }
 类型: planType = monthly | monthly_cc | yearly | stored_value
-变更: createMembershipPlan(input: { userId, planType, amount, note, startDate, endDate }) / updateMembershipPlan(input: { id, ... }) / removeMembershipPlan(id)
+变更: createMembershipPlan(input: { userId, planType, amount, points, startDate, endDate }) / updateMembershipPlan(input: { id, ... }) / removeMembershipPlan(id)
 储值扣款: deductStoredValue(input: { userId, amount, note }) { plan{id amount} deducted }
-积分: query { pointsLogByUser(userId) { id userId amount balanceAfter note createdBy createdAt } }
+积分: query { pointsLogByUser(userId) { ...MembershipPlan字段(只返回points!=0的记录) } }
 变更: addPoints(input: { userId, amount, note }) / deductPoints(input: { userId, amount, note })
 
 [日期推断规则]

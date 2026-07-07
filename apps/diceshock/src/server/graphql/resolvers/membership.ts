@@ -1,4 +1,5 @@
-import dbFactory, { drizzle, userMembershipPlansTable } from "@lib/db";
+import dbFactory, { drizzle, userInfoTable, userMembershipPlansTable } from "@lib/db";
+import type { Database } from "@lib/db";
 import { z } from "zod/v4";
 import type { GQLContext } from "../context";
 import { notFound, validationError } from "../errors";
@@ -37,7 +38,7 @@ function findOverlaps(
 }
 
 async function getAllTimePlans(
-  tdb: ReturnType<typeof dbFactory>,
+  tdb: Database,
   userId: string,
 ) {
   const all = await tdb.query.userMembershipPlansTable.findMany({
@@ -75,6 +76,7 @@ function mapRow(row: PlanRow) {
     userId: row.user_id,
     planType: planTypeToEnum(row.plan_type),
     amount: row.amount,
+    points: row.points,
     note: row.note,
     orderId: row.order_id ?? null,
     startDate: row.start_date ? toIsoString(row.start_date) : null,
@@ -97,6 +99,7 @@ const createPlanSchema = z.object({
   userId: z.string().min(1),
   planType: planTypeEnum,
   amount: z.number().int().nullable().optional(),
+  points: z.number().int().nullable().optional(),
   startDate: z.string().min(1),
   endDate: z.string().nullable().optional(),
 });
@@ -207,6 +210,7 @@ export const membershipResolvers = {
           user_id: input.userId,
           plan_type: planTypeFromEnum(input.planType),
           amount: input.amount ?? null,
+          points: input.points ?? null,
           start_date: new Date(startDate),
           end_date: endDate ? new Date(endDate) : null,
         })
@@ -214,6 +218,19 @@ export const membershipResolvers = {
 
       if (!created) {
         throw notFound("Failed to create membership plan");
+      }
+
+      // Update points balance if this plan carries points
+      if (input.points && input.points !== 0) {
+        const info = await tdb.query.userInfoTable.findFirst({
+          where: (t, { eq }) => eq(t.id, input.userId),
+          columns: { points: true },
+        });
+        const currentPts = info?.points ?? 0;
+        await tdb
+          .update(userInfoTable)
+          .set({ points: currentPts + input.points })
+          .where(drizzle.eq(userInfoTable.id, input.userId));
       }
 
       return mapRow(created);

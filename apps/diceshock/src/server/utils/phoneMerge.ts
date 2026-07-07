@@ -21,7 +21,6 @@ import db, {
   userBusinessCardTable,
   userInfoTable,
   userMembershipPlansTable,
-  userPointsLogTable,
   userPreferencesTable,
   users,
 } from "@lib/db";
@@ -161,13 +160,7 @@ async function mergeUsersInto(
       .set({ user_id: targetUserId })
       .where(eq(userMembershipPlansTable.user_id, sourceUserId));
 
-    // d. Move points log
-    await d
-      .update(userPointsLogTable)
-      .set({ user_id: targetUserId })
-      .where(eq(userPointsLogTable.user_id, sourceUserId));
-
-    // e. Move mahjong registration (if target doesn't have one)
+    // d. Move mahjong registration (if target doesn't have one)
     if (!targetMahjong) {
       await d
         .update(mahjongRegistrationsTable)

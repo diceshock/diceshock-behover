@@ -37,7 +37,6 @@ import {
   SendWechatTemplateTestDocument,
   UserRole,
   type useActiveMahjongMatchesQuery,
-  useAddPointsMutation,
   useBatchPauseOrdersMutation,
   useBatchResumeOrdersMutation,
   useCreateMembershipPlanMutation,
@@ -46,7 +45,6 @@ import {
   useMembershipPlansByUserQuery,
   useOccupanciesByUserQuery,
   usePauseOrderMutation,
-  usePointsLogByUserQuery,
   useRemoveMembershipPlanMutation,
   useResumeOrderMutation,
   useUpdateMembershipPlanMutation,
@@ -307,11 +305,8 @@ function UserDetailPage() {
   const [deductStoredValue] = useDeductStoredValueMutation({
     refetchQueries: ["MembershipPlansByUser"],
   });
-  const [addPoints] = useAddPointsMutation({
-    refetchQueries: ["User", "PointsLogByUser"],
-  });
   const [deductPoints] = useDeductPointsMutation({
-    refetchQueries: ["User", "PointsLogByUser"],
+    refetchQueries: ["User", "MembershipPlansByUser"],
   });
   const [pauseOrder] = usePauseOrderMutation({
     refetchQueries: ["OccupanciesByUser"],
@@ -332,11 +327,6 @@ function UserDetailPage() {
   });
   const rawOccupancies = occupanciesQlData?.occupanciesByUser ?? [];
 
-  const { data: pointsLogData } = usePointsLogByUserQuery({
-    variables: { userId: id },
-    skip: !id,
-  });
-  const pointsLog = pointsLogData?.pointsLogByUser ?? [];
 
   const [orderActionPending, setOrderActionPending] = useState<string | null>(
     null,
@@ -637,6 +627,9 @@ function UserDetailPage() {
     setAddFormError("");
     setAddPending(true);
     try {
+      const ptsChange = addForm.pointsChange
+        ? Math.round(Number.parseFloat(addForm.pointsChange))
+        : null;
       await createMembershipPlan({
         variables: {
           input: {
@@ -646,6 +639,7 @@ function UserDetailPage() {
               addForm.planType === "stored_value" && addForm.amount
                 ? Math.round(Number.parseFloat(addForm.amount) * 100)
                 : null,
+            points: ptsChange || null,
             startDate: new Date(
               dayjs(addForm.startDate).valueOf(),
             ).toISOString(),
@@ -655,20 +649,8 @@ function UserDetailPage() {
           },
         },
       });
-      const ptsChange = addForm.pointsChange
-        ? Math.round(Number.parseFloat(addForm.pointsChange))
-        : 0;
-      if (ptsChange > 0) {
-        await addPoints({
-          variables: { input: { userId: id, amount: ptsChange, note: "添加计划附带积分" } },
-        });
-      } else if (ptsChange < 0) {
-        await deductPoints({
-          variables: { input: { userId: id, amount: Math.abs(ptsChange), note: "添加计划附带积分扣除" } },
-        });
-      }
       const successParts = ["会员计划已添加"];
-      if (ptsChange !== 0) successParts.push(`积分${ptsChange > 0 ? "+" : ""}${ptsChange}`);
+      if (ptsChange) successParts.push(`积分${ptsChange > 0 ? "+" : ""}${ptsChange}`);
       msg.success(successParts.join("，"));
       addDialogRef.current?.close();
       setAddForm({
@@ -1380,17 +1362,13 @@ function UserDetailPage() {
                             <td>
                               {(() => {
                                 const raw = rawPlansById.get(plan.id) as any;
-                                const note = raw?.note ?? "";
-                                const pointsMatch = note.match(/积分[+\-]?(\d+)/);
-                                if (pointsMatch) {
-                                  return (
-                                    <span className="text-sm">
-                                      {note.includes("-") ? "-" : "+"}
-                                      {pointsMatch[1]}点
-                                    </span>
-                                  );
-                                }
-                                return "—";
+                                const pts = raw?.points ?? 0;
+                                if (pts === 0 || pts == null) return "—";
+                                return (
+                                  <span className={clsx("text-sm font-mono", pts > 0 ? "text-success" : "text-error")}>
+                                    {pts > 0 ? "+" : ""}{pts}点
+                                  </span>
+                                );
                               })()}
                             </td>
                             <td>
@@ -1443,61 +1421,6 @@ function UserDetailPage() {
                           </tr>
                         );
                       })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {/* Points Log / Bill Deductions */}
-              <div className="divider" />
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">积分流水</h3>
-              </div>
-              {pointsLog.length === 0 ? (
-                <div className="py-6 text-center text-base-content/60">
-                  暂无积分流水记录
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="table table-sm">
-                    <thead>
-                      <tr>
-                        <th>时间</th>
-                        <th>变动</th>
-                        <th>余额</th>
-                        <th>说明</th>
-                        <th>操作</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pointsLog.map((log: any) => (
-                        <tr key={log.id}>
-                          <td className="text-sm">
-                            {log.createdAt ? dayjs(log.createdAt).format("MM/DD HH:mm") : "—"}
-                          </td>
-                          <td className={clsx("font-mono text-sm", log.amount > 0 ? "text-success" : "text-error")}>
-                            {log.amount > 0 ? "+" : ""}{log.amount}点
-                          </td>
-                          <td className="font-mono text-sm">
-                            {formatPoints(log.balanceAfter)}
-                          </td>
-                          <td className="text-sm max-w-[200px] truncate">
-                            {log.note ?? "—"}
-                          </td>
-                          <td>
-                            {log.note?.includes("订单结算") && (
-                              <Link
-                                to="/dash/orders"
-                                search={{ q: "", sortBy: "start_at", sortOrder: "desc", groupBy: "none", page: "1" }}
-                                className="btn btn-xs btn-ghost btn-primary"
-                              >
-                                <EyeIcon className="size-3.5" />
-                                查看订单
-                              </Link>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
                     </tbody>
                   </table>
                 </div>

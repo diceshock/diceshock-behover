@@ -21,6 +21,7 @@ query Users($filter: UserFilterInput) {
         userId
         planType
         amount
+        points
         note
         startDate
         endDate
@@ -60,6 +61,7 @@ query User($id: ID!) {
       userId
       planType
       amount
+      points
       note
       startDate
       endDate
@@ -110,6 +112,7 @@ query MembershipPlansByUser($userId: ID!) {
     userId
     planType
     amount
+    points
     note
     orderId
     startDate
@@ -125,6 +128,7 @@ mutation CreateMembershipPlan($input: CreateMembershipPlanInput!) {
     userId
     planType
     amount
+    points
     note
     startDate
     endDate
@@ -139,6 +143,7 @@ mutation UpdateMembershipPlan($input: UpdateMembershipPlanInput!) {
     userId
     planType
     amount
+    points
     note
     startDate
     endDate
@@ -195,10 +200,12 @@ query PointsLogByUser($userId: ID!) {
   pointsLogByUser(userId: $userId) {
     id
     userId
+    planType
     amount
-    balanceAfter
+    points
     note
-    createdBy
+    orderId
+    startDate
     createdAt
   }
 }
@@ -207,10 +214,11 @@ mutation AddPoints($input: AddPointsInput!) {
   addPoints(input: $input) {
     id
     userId
+    planType
     amount
-    balanceAfter
+    points
     note
-    createdBy
+    startDate
     createdAt
   }
 }
@@ -219,10 +227,11 @@ mutation DeductPoints($input: DeductPointsInput!) {
   deductPoints(input: $input) {
     id
     userId
+    planType
     amount
-    balanceAfter
+    points
     note
-    createdBy
+    startDate
     createdAt
   }
 }

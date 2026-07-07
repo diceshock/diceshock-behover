@@ -8,6 +8,7 @@ import dbFactory, {
   userMembershipPlansTable,
   users,
 } from "@lib/db";
+import type { Database } from "@lib/db";
 import type { SQL } from "drizzle-orm";
 import {
   and,
@@ -31,7 +32,7 @@ import { notFound, validationError } from "../errors";
 import { requireStaff } from "../guards";
 import { zodToGraphQLError } from "../validate";
 
-type Database = ReturnType<typeof dbFactory>;
+// (Database imported from @lib/db above)
 type TableRow = typeof tablesTable.$inferSelect;
 type OccupancyRow = typeof tableOccupancyTable.$inferSelect & {
   table?: TableRow | null;
@@ -753,13 +754,14 @@ async function applyPointsDeduction(
     .set({ points: balanceAfter })
     .where(drizzle.eq(userInfoTable.id, userId));
 
-  const { userPointsLogTable } = await import("@lib/db");
-  await tdb.insert(userPointsLogTable).values({
+  // Record points deduction as a membership plan entry (unified log)
+  await tdb.insert(userMembershipPlansTable).values({
     user_id: userId,
-    amount: -deductAmount,
-    balance_after: balanceAfter,
+    plan_type: "stored_value",
+    amount: 0,
+    points: -deductAmount,
     note,
-    created_by: "system",
+    start_date: new Date(),
   });
 
   return {
@@ -825,7 +827,6 @@ async function settleOrderById(
 
   // Points change (bonus/penalty, separate from deduction)
   if (input.pointsChange && input.pointsChange !== 0 && existing.user_id) {
-    const { userPointsLogTable } = await import("@lib/db");
     const info = await tdb.query.userInfoTable.findFirst({
       where: (t, { eq }) => eq(t.id, existing.user_id!),
       columns: { points: true },
@@ -836,12 +837,14 @@ async function settleOrderById(
       .update(userInfoTable)
       .set({ points: newPts })
       .where(drizzle.eq(userInfoTable.id, existing.user_id!));
-    await tdb.insert(userPointsLogTable).values({
+    await tdb.insert(userMembershipPlansTable).values({
       user_id: existing.user_id!,
-      amount: input.pointsChange,
-      balance_after: newPts,
+      plan_type: "stored_value",
+      amount: 0,
+      points: input.pointsChange,
       note: `积分变动 · ${input.note ?? "结算"}`,
-      created_by: "system",
+      order_id: input.id,
+      start_date: new Date(),
     });
   }
 

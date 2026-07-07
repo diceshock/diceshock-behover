@@ -654,6 +654,7 @@ type MembershipPlan {
   userId: ID!
   planType: MembershipPlanType!
   amount: Int
+  points: Int
   note: String
   orderId: ID
   startDate: String!
@@ -671,6 +672,7 @@ input CreateMembershipPlanInput {
   userId: ID!
   planType: MembershipPlanType!
   amount: Int
+  points: Int
   startDate: String!
   endDate: String
 }
@@ -679,6 +681,7 @@ input UpdateMembershipPlanInput {
   id: ID!
   planType: MembershipPlanType
   amount: Int
+  points: Int
   startDate: String
   endDate: String
 }
@@ -703,16 +706,6 @@ extend type Mutation {
 }
 
 
-type UserPointsLog {
-  id: ID!
-  userId: ID!
-  amount: Int!
-  balanceAfter: Int!
-  note: String
-  createdBy: String
-  createdAt: String
-}
-
 input AddPointsInput {
   userId: ID!
   amount: Int!
@@ -726,14 +719,15 @@ input DeductPointsInput {
 }
 
 extend type Query {
-  pointsLogByUser(userId: ID!): [UserPointsLog!]! # @auth(role: STAFF)
+  pointsLogByUser(userId: ID!): [MembershipPlan!]! # @auth(role: STAFF) — returns plans where points != 0
   myPointsBalance: Int! # @auth(role: CUSTOMER)
 }
 
 extend type Mutation {
-  addPoints(input: AddPointsInput!): UserPointsLog! # @auth(role: STAFF)
-  deductPoints(input: DeductPointsInput!): UserPointsLog! # @auth(role: STAFF)
+  addPoints(input: AddPointsInput!): MembershipPlan! # @auth(role: STAFF)
+  deductPoints(input: DeductPointsInput!): MembershipPlan! # @auth(role: STAFF)
 }
+
 
 
 type BusinessCard {

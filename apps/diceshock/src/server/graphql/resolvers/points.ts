@@ -1,21 +1,31 @@
-import dbFactory, { drizzle, userInfoTable, userPointsLogTable } from "@lib/db";
+import dbFactory, { drizzle, userInfoTable, userMembershipPlansTable } from "@lib/db";
+import type { Database } from "@lib/db";
 import { z } from "zod/v4";
 import type { GQLContext } from "../context";
-import { notFound, validationError } from "../errors";
+import { notFound } from "../errors";
 import { requireAuth, requireStaff } from "../guards";
 import { zodToGraphQLError } from "../validate";
 
-type PointsRow = typeof userPointsLogTable.$inferSelect;
+type PlanRow = typeof userMembershipPlansTable.$inferSelect;
 
-function mapRow(row: PointsRow) {
+function toIsoString(value: Date | number | null): string | null {
+  if (value == null) return null;
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
+function mapRow(row: PlanRow) {
   return {
     id: row.id,
     userId: row.user_id,
+    planType: row.plan_type.toUpperCase(),
     amount: row.amount,
-    balanceAfter: row.balance_after,
+    points: row.points,
     note: row.note,
-    createdBy: row.created_by,
-    createdAt: row.create_at ? row.create_at.toISOString() : null,
+    orderId: row.order_id ?? null,
+    startDate: row.start_date ? toIsoString(row.start_date) : null,
+    endDate: row.end_date ? toIsoString(row.end_date) : null,
+    createdAt: row.create_at ? toIsoString(row.create_at) : null,
+    updatedAt: row.update_at ? toIsoString(row.update_at) : null,
   };
 }
 
@@ -32,7 +42,7 @@ const deductPointsSchema = z.object({
 });
 
 async function getCurrentBalance(
-  tdb: ReturnType<typeof dbFactory>,
+  tdb: Database,
   userId: string,
 ): Promise<number> {
   const info = await tdb.query.userInfoTable.findFirst({
@@ -51,11 +61,13 @@ export const pointsResolvers = {
     ) {
       requireStaff(ctx);
       const tdb = dbFactory(ctx.env.DB);
-      const logs = await tdb.query.userPointsLogTable.findMany({
-        where: (t, { eq }) => eq(t.user_id, args.userId),
+      // Return membership plan entries where points is non-null and non-zero
+      const rows = await tdb.query.userMembershipPlansTable.findMany({
+        where: (t, { eq, and, ne }) =>
+          and(eq(t.user_id, args.userId), ne(t.points, 0)),
         orderBy: (t, { desc }) => desc(t.create_at),
       });
-      return logs.map(mapRow);
+      return rows.filter((r) => r.points != null && r.points !== 0).map(mapRow);
     },
 
     async myPointsBalance(_source: unknown, _args: unknown, ctx: GQLContext) {
@@ -84,13 +96,14 @@ export const pointsResolvers = {
         .where(drizzle.eq(userInfoTable.id, input.userId));
 
       const [record] = await tdb
-        .insert(userPointsLogTable)
+        .insert(userMembershipPlansTable)
         .values({
           user_id: input.userId,
-          amount: input.amount,
-          balance_after: newBalance,
+          plan_type: "stored_value",
+          amount: 0,
+          points: input.amount,
           note: input.note ?? null,
-          created_by: ctx.userId ?? null,
+          start_date: new Date(),
         })
         .returning();
 
@@ -120,13 +133,14 @@ export const pointsResolvers = {
         .where(drizzle.eq(userInfoTable.id, input.userId));
 
       const [record] = await tdb
-        .insert(userPointsLogTable)
+        .insert(userMembershipPlansTable)
         .values({
           user_id: input.userId,
-          amount: -input.amount,
-          balance_after: newBalance,
+          plan_type: "stored_value",
+          amount: 0,
+          points: -input.amount,
           note: input.note ?? null,
-          created_by: ctx.userId ?? null,
+          start_date: new Date(),
         })
         .returning();
 
