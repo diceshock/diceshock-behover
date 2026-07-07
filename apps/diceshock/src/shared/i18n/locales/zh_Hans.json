@@ -456,7 +456,12 @@
     "batchPause": "批量暂停 ({count})",
     "batchResume": "批量继续 ({count})",
     "batchSettle": "批量结算 ({count})",
-    "duration": "时长"
+    "duration": "时长",
+    "notFound": "订单不存在",
+    "noSelection": "未选择订单",
+    "backToList": "返回订单列表",
+    "allSettled": "所有订单处理完成",
+    "backToHome": "返回主页"
   },
   "dashTables": {
     "fixedTable": "固定桌",

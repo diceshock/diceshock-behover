@@ -1081,11 +1081,18 @@ export const ordersResolvers = {
       const orderIds = input.orderIds ?? input.ids;
       if (!orderIds) throw validationError("orderIds", "orderIds is required");
       const tdb = dbFactory(ctx.env.DB);
-      const previews = await Promise.all(
+      const results = await Promise.allSettled(
         orderIds.map((id) =>
           buildSettlementData(tdb, id).then(toGqlSettlementPreview),
         ),
       );
+      const previews = results
+        .filter((r): r is PromiseFulfilledResult<ReturnType<typeof toGqlSettlementPreview>> => r.status === "fulfilled")
+        .map((r) => r.value);
+      if (previews.length === 0) {
+        const firstErr = results.find((r) => r.status === "rejected") as PromiseRejectedResult | undefined;
+        throw firstErr?.reason ?? notFound("Order not found");
+      }
       return previews;
     },
     async startOrder(_source: unknown, args: unknown, ctx: GQLContext) {

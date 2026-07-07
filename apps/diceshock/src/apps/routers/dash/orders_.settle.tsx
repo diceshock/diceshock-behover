@@ -89,6 +89,7 @@ function BatchSettlePage() {
 
   const [previews, setPreviews] = useState<SettlementPreviewItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [userStates, setUserStates] = useState<Map<string, UserCardState>>(new Map());
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -110,8 +111,14 @@ function BatchSettlePage() {
   const fetchData = useCallback(async () => {
     if (ids.length === 0) return;
     setLoading(true);
+    setErrorMsg(null);
     try {
       const result = await fetchPreview({ variables: { ids } });
+      if (result.errors?.length) {
+        const errText = result.errors[0].message ?? "加载失败";
+        setErrorMsg(errText);
+        msg.error(errText);
+      }
       if (result.data?.batchSettlementPreview) {
         const items = result.data.batchSettlementPreview;
         setPreviews(items);
@@ -148,7 +155,9 @@ function BatchSettlePage() {
         });
       }
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "加载失败");
+      const errText = err instanceof Error ? err.message : "加载失败";
+      setErrorMsg(errText);
+      msg.error(errText);
     } finally {
       setLoading(false);
     }
@@ -315,10 +324,15 @@ function BatchSettlePage() {
   if (previews.length === 0) {
     return (
       <main className="size-full flex flex-col items-center justify-center gap-4">
-        <p className="text-base-content/60">订单不存在</p>
-        <Link to="/dash/orders" search={{ q: "", sortBy: "start_at", sortOrder: "desc", groupBy: "none", page: "1" }} className="btn btn-primary btn-sm">
-          返回订单列表
-        </Link>
+        <p className="text-base-content/60">{errorMsg ?? "订单不存在"}</p>
+        <div className="flex gap-2">
+          <button type="button" className="btn btn-outline btn-sm" onClick={() => void fetchData()}>
+            重试
+          </button>
+          <Link to="/dash/orders" search={{ q: "", sortBy: "start_at", sortOrder: "desc", groupBy: "none", page: "1" }} className="btn btn-primary btn-sm">
+            返回订单列表
+          </Link>
+        </div>
       </main>
     );
   }
