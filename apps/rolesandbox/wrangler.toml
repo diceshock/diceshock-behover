@@ -1,0 +1,15 @@
+"$schema" = "node_modules/wrangler/config-schema.json"
+
+name = "rolesandbox"
+compatibility_date = "2025-06-02"
+main = "./src/main.tsx"
+compatibility_flags = ["nodejs_compat_v2"]
+workers_dev = true
+
+[[durable_objects.bindings]]
+name = "VOXEL_SYNC"
+class_name = "VoxelSyncDO"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["VoxelSyncDO"]

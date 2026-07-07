@@ -40,6 +40,7 @@ import { formatMessage } from "@/shared/i18n";
 import dayjs from "@/shared/utils/dayjs-config";
 import {
   calculatePrice,
+  formatDualPrice,
   formatPrice,
   type SnapshotData,
 } from "@/shared/utils/pricing";
@@ -59,6 +60,9 @@ interface OrderItem {
   startAt: string;
   endAt: string | null;
   finalPrice: number | null;
+  finalPoints: number | null;
+  settledPrice: number | null;
+  settledPoints: number | null;
   pricingSnapshotId: string | null;
   deductedAmount: number | null;
   table: { id: string; name: string; code: string; scope: string } | null;
@@ -150,6 +154,14 @@ function orderCalculatedAmount(
   order: OrderItem,
   pricingSnapshot: SnapshotData | null,
 ) {
+  // If settled, show actual settlement values
+  if (order.status === "SETTLED") {
+    const price = order.finalPrice ?? order.settledPrice ?? 0;
+    const points = order.finalPoints ?? order.settledPoints ?? 0;
+    if (price === 0 && points === 0) return "—";
+    return formatDualPrice(price, points);
+  }
+
   if (!pricingSnapshot) return "—";
 
   const startAt = order.startAt
@@ -157,24 +169,24 @@ function orderCalculatedAmount(
     : Date.now();
   const endAt = order.endAt ? new Date(order.endAt).getTime() : Date.now();
 
-  const price = calculatePrice(
+  const result = calculatePrice(
     startAt,
     endAt,
     order.table?.scope ?? "boardgame",
     pricingSnapshot,
   );
 
-  if (!price) return "—";
+  if (!result) return "—";
 
   if (order.status === "ACTIVE" || order.status === "PAUSED") {
     return (
       <span className="text-base-content/50">
-        ~{formatPrice(price.finalPrice)}
+        ~{formatDualPrice(result.finalPrice, result.finalPoints)}
       </span>
     );
   }
 
-  return formatPrice(price.finalPrice);
+  return formatDualPrice(result.finalPrice, result.finalPoints);
 }
 
 function RouteComponent() {
@@ -316,7 +328,7 @@ function RouteComponent() {
       if (orderStatus === "ACTIVE") await pauseOrder({ variables: { id } });
     } finally {
       setActionPending(null);
-      void navigate({ to: "/dash/orders/$id/settle", params: { id } });
+      void navigate({ to: "/dash/orders/settle", search: { ids: [id] } });
     }
   };
 
@@ -600,7 +612,7 @@ function RouteComponent() {
             </>
           )}
           <li>
-            <Link to="/dash/orders/$id/settle" params={{ id: order.id }}>
+            <Link to="/dash/orders/settle" search={{ ids: [order.id] }}>
               <EyeIcon className="size-3" />
               {t("dashOrders.details")}
             </Link>
@@ -666,8 +678,8 @@ function RouteComponent() {
           </>
         )}
         <Link
-          to="/dash/orders/$id/settle"
-          params={{ id: order.id }}
+          to="/dash/orders/settle"
+          search={{ ids: [order.id] }}
           className="btn btn-xs btn-ghost"
         >
           <EyeIcon className="size-3" />

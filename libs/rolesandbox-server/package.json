@@ -1,0 +1,13 @@
+{
+  "name": "rolesandbox-server",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./do": "./src/VoxelSyncDO.ts"
+  },
+  "dependencies": {
+    "hono": "^4.12.8",
+    "yjs": "^13.6.27"
+  }
+}

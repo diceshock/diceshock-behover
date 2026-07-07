@@ -433,6 +433,10 @@ export const tableOccupancyTable = sqlite.sqliteTable("table_occupancy", {
   end_at: sqlite.integer("end_at", { mode: "timestamp_ms" }),
   settled_at: sqlite.integer("settled_at", { mode: "timestamp_ms" }),
   pricing_snapshot_id: sqlite.text("pricing_snapshot_id"),
+  final_price: sqlite.int("final_price"),
+  final_points: sqlite.int("final_points"),
+  settled_price: sqlite.int("settled_price"),
+  settled_points: sqlite.int("settled_points"),
   note: sqlite.text("note"),
 });
 
@@ -592,11 +596,15 @@ export const pricingSnapshotsTable = sqlite.sqliteTable(
         conditions: unknown;
         billing_type: "hourly" | "fixed";
         price: number;
+        points: number;
         cap_enabled: boolean;
         cap_unit: "per_day" | "split_day_night" | null;
         cap_price: number | null;
         cap_price_day: number | null;
         cap_price_night: number | null;
+        cap_points: number | null;
+        cap_points_day: number | null;
+        cap_points_night: number | null;
       }>;
     }>(),
     status: sqlite

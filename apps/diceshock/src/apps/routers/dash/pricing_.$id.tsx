@@ -90,6 +90,16 @@ function yuanToCents(yuan: string): number {
   return Math.round(n * 100);
 }
 
+function pointsToDisplay(points: number | null | undefined): string {
+  if (points == null) return "";
+  return points.toString();
+}
+
+function displayToPoints(val: string): number {
+  const n = Number.parseInt(val, 10);
+  return Number.isNaN(n) ? 0 : n;
+}
+
 const IDENTITY_OPTIONS: {
   value: Identity;
   label: string;
@@ -139,6 +149,10 @@ function PricingDetailPage() {
   const [capPrice, setCapPrice] = useState("");
   const [capPriceDay, setCapPriceDay] = useState("");
   const [capPriceNight, setCapPriceNight] = useState("");
+  const [points, setPoints] = useState("");
+  const [capPoints, setCapPoints] = useState("");
+  const [capPointsDay, setCapPointsDay] = useState("");
+  const [capPointsNight, setCapPointsNight] = useState("");
 
   useEffect(() => {
     if (plan) {
@@ -151,6 +165,10 @@ function PricingDetailPage() {
       setCapPrice(centsToYuan(p.cap_price as number));
       setCapPriceDay(centsToYuan(p.cap_price_day as number));
       setCapPriceNight(centsToYuan(p.cap_price_night as number));
+      setPoints(pointsToDisplay(p.points as number));
+      setCapPoints(pointsToDisplay(p.cap_points as number));
+      setCapPointsDay(pointsToDisplay(p.cap_points_day as number));
+      setCapPointsNight(pointsToDisplay(p.cap_points_night as number));
     }
   }, [plan]);
 
@@ -167,19 +185,32 @@ function PricingDetailPage() {
       conditions,
       billing_type: billingType,
       price: yuanToCents(price),
+      points: displayToPoints(points),
       cap_enabled: billingType === "hourly",
       cap_unit: billingType === "hourly" ? capUnit : null,
       cap_price:
         billingType === "hourly" && capUnit === "per_day"
           ? yuanToCents(capPrice)
           : null,
+      cap_points:
+        billingType === "hourly" && capUnit === "per_day"
+          ? displayToPoints(capPoints)
+          : null,
       cap_price_day:
         billingType === "hourly" && capUnit === "split_day_night"
           ? yuanToCents(capPriceDay)
           : null,
+      cap_points_day:
+        billingType === "hourly" && capUnit === "split_day_night"
+          ? displayToPoints(capPointsDay)
+          : null,
       cap_price_night:
         billingType === "hourly" && capUnit === "split_day_night"
           ? yuanToCents(capPriceNight)
+          : null,
+      cap_points_night:
+        billingType === "hourly" && capUnit === "split_day_night"
+          ? displayToPoints(capPointsNight)
           : null,
     };
 
@@ -236,14 +267,22 @@ function PricingDetailPage() {
               setBillingType={setBillingType}
               price={price}
               setPrice={setPrice}
+              points={points}
+              setPoints={setPoints}
               capUnit={capUnit}
               setCapUnit={setCapUnit}
               capPrice={capPrice}
               setCapPrice={setCapPrice}
+              capPoints={capPoints}
+              setCapPoints={setCapPoints}
               capPriceDay={capPriceDay}
               setCapPriceDay={setCapPriceDay}
+              capPointsDay={capPointsDay}
+              setCapPointsDay={setCapPointsDay}
               capPriceNight={capPriceNight}
               setCapPriceNight={setCapPriceNight}
+              capPointsNight={capPointsNight}
+              setCapPointsNight={setCapPointsNight}
             />
 
             <div className="flex justify-end gap-3 mt-4">
@@ -402,6 +441,54 @@ function PriceInput({
   );
 }
 
+function DualPriceInput({
+  label,
+  priceValue,
+  pointsValue,
+  onPriceChange,
+  onPointsChange,
+}: {
+  label: string;
+  priceValue: string;
+  pointsValue: string;
+  onPriceChange: (v: string) => void;
+  onPointsChange: (v: string) => void;
+}) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-sm text-base-content/60">{label}</span>
+      <div className="flex gap-2">
+        <div className="join w-full max-w-xs">
+          <span className="join-item btn btn-sm no-animation pointer-events-none">
+            ¥
+          </span>
+          <input
+            type="number"
+            className="join-item input input-bordered input-sm flex-1"
+            value={priceValue}
+            onChange={(e) => onPriceChange(e.target.value)}
+            min={0}
+            step={0.01}
+          />
+        </div>
+        <div className="join w-full max-w-xs">
+          <span className="join-item btn btn-sm no-animation pointer-events-none">
+            点
+          </span>
+          <input
+            type="number"
+            className="join-item input input-bordered input-sm flex-1"
+            value={pointsValue}
+            onChange={(e) => onPointsChange(e.target.value)}
+            min={0}
+            step={1}
+          />
+        </div>
+      </div>
+    </label>
+  );
+}
+
 function ConditionFormFields({
   conditions,
   setConditions,
@@ -409,14 +496,22 @@ function ConditionFormFields({
   setBillingType,
   price,
   setPrice,
+  points,
+  setPoints,
   capUnit,
   setCapUnit,
   capPrice,
   setCapPrice,
+  capPoints,
+  setCapPoints,
   capPriceDay,
   setCapPriceDay,
+  capPointsDay,
+  setCapPointsDay,
   capPriceNight,
   setCapPriceNight,
+  capPointsNight,
+  setCapPointsNight,
 }: {
   conditions: Conditions;
   setConditions: (c: Conditions) => void;
@@ -424,14 +519,22 @@ function ConditionFormFields({
   setBillingType: (t: "hourly" | "fixed") => void;
   price: string;
   setPrice: (v: string) => void;
+  points: string;
+  setPoints: (v: string) => void;
   capUnit: "per_day" | "split_day_night";
   setCapUnit: (u: "per_day" | "split_day_night") => void;
   capPrice: string;
   setCapPrice: (v: string) => void;
+  capPoints: string;
+  setCapPoints: (v: string) => void;
   capPriceDay: string;
   setCapPriceDay: (v: string) => void;
+  capPointsDay: string;
+  setCapPointsDay: (v: string) => void;
   capPriceNight: string;
   setCapPriceNight: (v: string) => void;
+  capPointsNight: string;
+  setCapPointsNight: (v: string) => void;
 }) {
   const updateDate = (date: Conditions["date"]) =>
     setConditions({ ...conditions, date });
@@ -894,12 +997,14 @@ function ConditionFormFields({
           </div>
 
           <SubOptions>
-            <PriceInput
+            <DualPriceInput
               label={
-                billingType === "fixed" ? "固定价格（元）" : "每小时价格（元）"
+                billingType === "fixed" ? "固定价格（元/点）" : "每小时价格（元/点）"
               }
-              value={price}
-              onChange={setPrice}
+              priceValue={price}
+              pointsValue={points}
+              onPriceChange={setPrice}
+              onPointsChange={setPoints}
             />
 
             {billingType === "hourly" && (
@@ -925,22 +1030,28 @@ function ConditionFormFields({
                   />
                 </div>
                 {capUnit === "per_day" ? (
-                  <PriceInput
-                    label="封顶价格（元）"
-                    value={capPrice}
-                    onChange={setCapPrice}
+                  <DualPriceInput
+                    label="封顶价格（元/点）"
+                    priceValue={capPrice}
+                    pointsValue={capPoints}
+                    onPriceChange={setCapPrice}
+                    onPointsChange={setCapPoints}
                   />
                 ) : (
                   <div className="flex gap-4">
-                    <PriceInput
-                      label="白天封顶（元）"
-                      value={capPriceDay}
-                      onChange={setCapPriceDay}
+                    <DualPriceInput
+                      label="白天封顶（元/点）"
+                      priceValue={capPriceDay}
+                      pointsValue={capPointsDay}
+                      onPriceChange={setCapPriceDay}
+                      onPointsChange={setCapPointsDay}
                     />
-                    <PriceInput
-                      label="晚上封顶（元）"
-                      value={capPriceNight}
-                      onChange={setCapPriceNight}
+                    <DualPriceInput
+                      label="晚上封顶（元/点）"
+                      priceValue={capPriceNight}
+                      pointsValue={capPointsNight}
+                      onPriceChange={setCapPriceNight}
+                      onPointsChange={setCapPointsNight}
                     />
                   </div>
                 )}

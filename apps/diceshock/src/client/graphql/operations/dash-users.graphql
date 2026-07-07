@@ -111,6 +111,7 @@ query MembershipPlansByUser($userId: ID!) {
     planType
     amount
     note
+    orderId
     startDate
     endDate
     createdAt
@@ -178,6 +179,9 @@ query OccupanciesByUser($userId: ID!) {
     startAt
     endAt
     finalPrice
+    finalPoints
+    settledPrice
+    settledPoints
     table {
       id
       name

@@ -312,16 +312,26 @@ const settleOrderSchema = z.object({
   input: z.object({
     id: z.string().min(1),
     deductFromStoredValue: z.boolean().default(false),
-    deductAmount: z.number().int().nonnegative().nullable().optional(),
+    deductAmount: z.number().int().nullable().optional(),
+    deductPoints: z.number().int().nullable().optional(),
+    pointsChange: z.number().int().default(0),
     paymentMethod: z.string().nullable().optional(),
+    note: z.string().nullable().optional(),
   }),
 });
 const batchSettleSchema = z.object({
   input: z.object({
     ids: z.array(z.string().min(1)).min(1),
+    items: z.array(z.object({
+      orderId: z.string().min(1),
+      deductFromStoredValue: z.boolean().default(false),
+      deductAmount: z.number().int().nullable().optional(),
+      deductPoints: z.number().int().nullable().optional(),
+      pointsChange: z.number().int().default(0),
+      note: z.string().nullable().optional(),
+    })).nullable().optional(),
     deductFromStoredValue: z.boolean().default(false),
-    deductAmount: z.number().int().nonnegative().nullable().optional(),
-    paymentMethod: z.string().nullable().optional(),
+    deductAmount: z.number().int().nullable().optional(),
     note: z.string().nullable().optional(),
   }),
 });
@@ -371,6 +381,7 @@ function toGqlTable(table: TableRow | null | undefined) {
 }
 
 function toGqlOrder(order: OccupancyRow) {
+  const raw = order as Record<string, unknown>;
   return {
     id: order.id,
     tableId: order.table_id,
@@ -383,7 +394,10 @@ function toGqlOrder(order: OccupancyRow) {
     status: normalizeStatus(order),
     startAt: toIso(order.start_at),
     endAt: toIso(order.end_at),
-    finalPrice: null,
+    finalPrice: (raw.final_price as number | null) ?? null,
+    finalPoints: (raw.final_points as number | null) ?? null,
+    settledPrice: (raw.settled_price as number | null) ?? null,
+    settledPoints: (raw.settled_points as number | null) ?? null,
     pricingSnapshotId: order.pricing_snapshot_id ?? null,
     priceBreakdown: null,
     settlementSnapshot: null,
@@ -504,6 +518,7 @@ async function buildSettlementData(
   pausedMinutes: number;
   billableMinutes: number;
   finalPrice: number;
+  finalPoints: number;
   priceBreakdown: PriceBreakdown | null;
   snapshotId: string | null;
   pauseLogs: Array<{ pausedAt: number; resumedAt: number | null }>;
@@ -512,6 +527,7 @@ async function buildSettlementData(
     planType: string;
     billingType: string;
     price: number;
+    points: number;
     matched: boolean;
   }>;
   membership: Awaited<ReturnType<typeof buildMembershipInfo>>;
@@ -548,6 +564,7 @@ async function buildSettlementData(
     pausedMinutes: Math.max(0, pausedMinutes),
     billableMinutes: Math.max(0, totalMinutes - Math.max(0, pausedMinutes)),
     finalPrice: priceBreakdown?.finalPrice ?? 0,
+    finalPoints: priceBreakdown?.finalPoints ?? 0,
     priceBreakdown,
     snapshotId: publishedSnapshot?.id ?? null,
     pauseLogs: mappedLogs,
@@ -556,6 +573,7 @@ async function buildSettlementData(
       planType: plan.plan_type,
       billingType: plan.billing_type,
       price: plan.price,
+      points: plan.points ?? 0,
       matched: priceBreakdown?.planName === plan.name,
     })),
     membership,
@@ -571,6 +589,7 @@ async function buildMembershipInfo(
   timePlanType: string | null;
   timePlanEndDate: number | null | undefined;
   storedValueBalance: number;
+  pointsBalance: number;
 }> {
   if (!userId) {
     return {
@@ -579,6 +598,7 @@ async function buildMembershipInfo(
       timePlanType: null,
       timePlanEndDate: null,
       storedValueBalance: 0,
+      pointsBalance: 0,
     };
   }
 
@@ -598,12 +618,20 @@ async function buildMembershipInfo(
     .filter((p) => p.plan_type === "stored_value")
     .reduce((sum, p) => sum + (p.amount ?? 0), 0);
 
+  // Get points balance from user_info
+  const userInfo = await tdb.query.userInfoTable.findFirst({
+    where: (t, { eq }) => eq(t.id, userId),
+    columns: { points: true },
+  });
+  const pointsBalance = userInfo?.points ?? 0;
+
   return {
     hasTimePlan: timePlans.length > 0,
     timePlanActive: Boolean(activeTimePlan),
     timePlanType: activeTimePlan?.plan_type ?? null,
     timePlanEndDate: asMs(activeTimePlan?.end_date),
     storedValueBalance,
+    pointsBalance,
   };
 }
 
@@ -619,6 +647,7 @@ function toGqlSettlementPreview(
     pausedMinutes: data.pausedMinutes,
     billableMinutes: data.billableMinutes,
     finalPrice: data.finalPrice,
+    finalPoints: data.finalPoints,
     priceBreakdown: data.priceBreakdown,
     membership: {
       hasTimePlan: data.membership.hasTimePlan,
@@ -626,6 +655,7 @@ function toGqlSettlementPreview(
       timePlanType: data.membership.timePlanType,
       timePlanEndDate: toIso(data.membership.timePlanEndDate),
       storedValueBalance: data.membership.storedValueBalance,
+      pointsBalance: data.membership.pointsBalance,
     },
     pauseLogs: data.pauseLogs.map((log) => ({
       pausedAt: toIso(log.pausedAt),
@@ -695,6 +725,52 @@ async function applyStoredValueDeduction(
   };
 }
 
+async function applyPointsDeduction(
+  tdb: Database,
+  userId: string | null,
+  amount: number,
+  note: string,
+): Promise<{
+  deducted: boolean;
+  amount: number;
+  note: string;
+  balanceBefore: number;
+  balanceAfter: number;
+} | null> {
+  if (!userId || amount <= 0) return null;
+  const info = await tdb.query.userInfoTable.findFirst({
+    where: (t, { eq }) => eq(t.id, userId),
+    columns: { points: true },
+  });
+  const balanceBefore = info?.points ?? 0;
+  if (balanceBefore <= 0) return null;
+
+  const deductAmount = Math.min(balanceBefore, amount);
+  const balanceAfter = balanceBefore - deductAmount;
+
+  await tdb
+    .update(userInfoTable)
+    .set({ points: balanceAfter })
+    .where(drizzle.eq(userInfoTable.id, userId));
+
+  const { userPointsLogTable } = await import("@lib/db");
+  await tdb.insert(userPointsLogTable).values({
+    user_id: userId,
+    amount: -deductAmount,
+    balance_after: balanceAfter,
+    note,
+    created_by: "system",
+  });
+
+  return {
+    deducted: true,
+    amount: deductAmount,
+    note,
+    balanceBefore,
+    balanceAfter,
+  };
+}
+
 async function settleOrderById(
   tdb: Database,
   ctx: GQLContext,
@@ -702,6 +778,8 @@ async function settleOrderById(
     id: string;
     deductFromStoredValue?: boolean;
     deductAmount?: number | null;
+    deductPoints?: number | null;
+    pointsChange?: number;
     paymentMethod?: string | null;
     note?: string | null;
   },
@@ -724,6 +802,8 @@ async function settleOrderById(
     endAt: settlementEnd,
   });
   const note = `${input.paymentMethod ?? "settlement"} · ${new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })}`;
+
+  // Stored value deduction
   const deductTarget = input.deductFromStoredValue
     ? (input.deductAmount != null ? input.deductAmount : data.finalPrice)
     : 0;
@@ -737,6 +817,37 @@ async function settleOrderById(
       )
     : null;
 
+  // Points deduction
+  const pointsDeductTarget = input.deductPoints != null ? input.deductPoints : 0;
+  const pointsDeduction = pointsDeductTarget > 0
+    ? await applyPointsDeduction(tdb, existing.user_id, pointsDeductTarget, note)
+    : null;
+
+  // Points change (bonus/penalty, separate from deduction)
+  if (input.pointsChange && input.pointsChange !== 0 && existing.user_id) {
+    const { userPointsLogTable } = await import("@lib/db");
+    const info = await tdb.query.userInfoTable.findFirst({
+      where: (t, { eq }) => eq(t.id, existing.user_id!),
+      columns: { points: true },
+    });
+    const currentPts = info?.points ?? 0;
+    const newPts = currentPts + input.pointsChange;
+    await tdb
+      .update(userInfoTable)
+      .set({ points: newPts })
+      .where(drizzle.eq(userInfoTable.id, existing.user_id!));
+    await tdb.insert(userPointsLogTable).values({
+      user_id: existing.user_id!,
+      amount: input.pointsChange,
+      balance_after: newPts,
+      note: `积分变动 · ${input.note ?? "结算"}`,
+      created_by: "system",
+    });
+  }
+
+  const settledPrice = storedValueDeduction?.amount ?? 0;
+  const settledPoints = pointsDeduction?.amount ?? 0;
+
   await tdb
     .update(tableOccupancyTable)
     .set({
@@ -744,6 +855,10 @@ async function settleOrderById(
       end_at: settlementEnd,
       settled_at: now,
       pricing_snapshot_id: data.snapshotId,
+      final_price: data.finalPrice,
+      final_points: data.finalPoints,
+      settled_price: settledPrice,
+      settled_points: settledPoints,
       note: input.note ?? null,
     })
     .where(drizzle.eq(tableOccupancyTable.id, input.id));
@@ -754,13 +869,16 @@ async function settleOrderById(
     previousStatus: normalizeStatus(existing),
     status: "SETTLED",
     amount: data.finalPrice,
+    points: data.finalPoints,
   });
 
   return {
     order: toGqlOrder(updated),
     price: data.finalPrice,
+    points: data.finalPoints,
     snapshot: null,
     storedValueDeduction,
+    pointsDeduction,
   };
 }
 

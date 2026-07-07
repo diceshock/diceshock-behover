@@ -172,7 +172,6 @@ custom_domain = true
 crons = ["*/5 * * * *", "0 4-22 * * *", "0 16 * * *"]
 
 [vars]
-AUTH_URL = "https://diceshock.com"
 CAPTCHA_PREFIX = "1bqoki"
 CAPTCHA_SCENE_ID = "1iwji8e9"
 

@@ -21,7 +21,6 @@ import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
-import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import MembershipBadge, {
   getPlanConfig,
   getStoredValueBalance,
@@ -37,13 +36,16 @@ import {
   SendWechatTemplateTestDocument,
   UserRole,
   type useActiveMahjongMatchesQuery,
+  useAddPointsMutation,
   useBatchPauseOrdersMutation,
   useBatchResumeOrdersMutation,
   useCreateMembershipPlanMutation,
+  useDeductPointsMutation,
   useDeductStoredValueMutation,
   useMembershipPlansByUserQuery,
   useOccupanciesByUserQuery,
   usePauseOrderMutation,
+  usePointsLogByUserQuery,
   useRemoveMembershipPlanMutation,
   useResumeOrderMutation,
   useUpdateMembershipPlanMutation,
@@ -54,7 +56,7 @@ import {
 import type { Wind } from "@/shared/mahjong/constants";
 import { WIND_LABELS } from "@/shared/mahjong/constants";
 import dayjs from "@/shared/utils/dayjs-config";
-import { formatPrice } from "@/shared/utils/pricing";
+import { formatDualPrice, formatPoints, formatPrice } from "@/shared/utils/pricing";
 
 export const Route = createFileRoute("/dash/users_/$id")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -234,6 +236,13 @@ function UserDetailPage() {
       })),
     [plansQlData],
   );
+  const rawPlansById = useMemo(
+    () =>
+      new Map(
+        (plansQlData?.membershipPlansByUser ?? []).map((p: any) => [p.id, p]),
+      ),
+    [plansQlData],
+  );
 
   const [serverConflictIds, setServerConflictIds] = useState<Set<string>>(
     new Set(),
@@ -254,6 +263,7 @@ function UserDetailPage() {
   const [addForm, setAddForm] = useState({
     planType: "monthly" as PlanType,
     amount: "",
+    pointsChange: "",
     startDate: dayjs().format("YYYY-MM-DD"),
     endDate: dayjs().add(30, "day").format("YYYY-MM-DD"),
   });
@@ -262,6 +272,7 @@ function UserDetailPage() {
 
   const deductDialogRef = useRef<HTMLDialogElement>(null);
   const [deductAmount, setDeductAmount] = useState("");
+  const [deductPointsAmount, setDeductPointsAmount] = useState("");
   const [deductNote, setDeductNote] = useState("");
   const [deductDate, setDeductDate] = useState(dayjs().format("YYYY-MM-DD"));
   const [deductPending, setDeductPending] = useState(false);
@@ -294,6 +305,12 @@ function UserDetailPage() {
   const [deductStoredValue] = useDeductStoredValueMutation({
     refetchQueries: ["MembershipPlansByUser"],
   });
+  const [addPoints] = useAddPointsMutation({
+    refetchQueries: ["User", "PointsLogByUser"],
+  });
+  const [deductPoints] = useDeductPointsMutation({
+    refetchQueries: ["User", "PointsLogByUser"],
+  });
   const [pauseOrder] = usePauseOrderMutation({
     refetchQueries: ["OccupanciesByUser"],
   });
@@ -312,6 +329,12 @@ function UserDetailPage() {
     skip: !id,
   });
   const rawOccupancies = occupanciesQlData?.occupanciesByUser ?? [];
+
+  const { data: pointsLogData } = usePointsLogByUserQuery({
+    variables: { userId: id },
+    skip: !id,
+  });
+  const pointsLog = pointsLogData?.pointsLogByUser ?? [];
 
   const [orderActionPending, setOrderActionPending] = useState<string | null>(
     null,
@@ -630,11 +653,26 @@ function UserDetailPage() {
           },
         },
       });
-      msg.success("会员计划已添加");
+      const ptsChange = addForm.pointsChange
+        ? Math.round(Number.parseFloat(addForm.pointsChange))
+        : 0;
+      if (ptsChange > 0) {
+        await addPoints({
+          variables: { input: { userId: id, amount: ptsChange, note: "添加计划附带积分" } },
+        });
+      } else if (ptsChange < 0) {
+        await deductPoints({
+          variables: { input: { userId: id, amount: Math.abs(ptsChange), note: "添加计划附带积分扣除" } },
+        });
+      }
+      const successParts = ["会员计划已添加"];
+      if (ptsChange !== 0) successParts.push(`积分${ptsChange > 0 ? "+" : ""}${ptsChange}`);
+      msg.success(successParts.join("，"));
       addDialogRef.current?.close();
       setAddForm({
         planType: "monthly",
         amount: "",
+        pointsChange: "",
         startDate: dayjs().format("YYYY-MM-DD"),
         endDate: dayjs().add(30, "day").format("YYYY-MM-DD"),
       });
@@ -655,34 +693,56 @@ function UserDetailPage() {
 
   const handleDeduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cents = Math.round(Number.parseFloat(deductAmount) * 100);
-    if (!cents || cents <= 0) {
-      msg.error("请输入有效扣费金额");
+    const cents = deductAmount
+      ? Math.round(Number.parseFloat(deductAmount) * 100)
+      : 0;
+    const pts = deductPointsAmount
+      ? Math.round(Number.parseFloat(deductPointsAmount))
+      : 0;
+    if (cents <= 0 && pts <= 0) {
+      msg.error("请输入有效划扣金额或积分");
       return;
     }
     if (!deductNote.trim()) {
-      msg.error("请输入扣费说明");
+      msg.error("请输入划扣说明");
       return;
     }
     setDeductPending(true);
     try {
-      await deductStoredValue({
-        variables: {
-          input: {
-            userId: id,
-            amount: cents,
-            note: deductNote.trim(),
-            date: new Date(dayjs(deductDate).valueOf()).toISOString(),
+      const parts: string[] = [];
+      if (cents > 0) {
+        await deductStoredValue({
+          variables: {
+            input: {
+              userId: id,
+              amount: cents,
+              note: deductNote.trim(),
+              date: new Date(dayjs(deductDate).valueOf()).toISOString(),
+            },
           },
-        },
-      });
-      msg.success(`已扣费 ¥${(cents / 100).toFixed(0)}`);
+        });
+        parts.push(`¥${(cents / 100).toFixed(0)}`);
+      }
+      if (pts > 0) {
+        await deductPoints({
+          variables: {
+            input: {
+              userId: id,
+              amount: pts,
+              note: deductNote.trim(),
+            },
+          },
+        });
+        parts.push(`${pts}点`);
+      }
+      msg.success(`已划扣 ${parts.join(" + ")}`);
       deductDialogRef.current?.close();
       setDeductAmount("");
+      setDeductPointsAmount("");
       setDeductNote("");
       setDeductDate(dayjs().format("YYYY-MM-DD"));
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "扣费失败");
+      msg.error(err instanceof Error ? err.message : "划扣失败");
     } finally {
       setDeductPending(false);
     }
@@ -796,7 +856,7 @@ function UserDetailPage() {
         <p className="text-base-content/60">用户不存在</p>
         <Link
           to="/dash/users"
-          search={{ q: "", page: 1 }}
+          search={{ q: "", page: "1" }}
           className="btn btn-primary btn-sm"
         >
           返回用户列表
@@ -810,13 +870,26 @@ function UserDetailPage() {
   return (
     <ClientOnly>
       <main className="size-full overflow-y-auto">
-        <div className="px-4 pt-4">
-          <DashBackButton to="/dash/users" />
-        </div>
-
-        <div className="mx-auto w-full max-w-3xl px-4 pb-24">
-          <div className="flex items-center gap-4 mb-6">
-            <div>
+        <div className="mx-auto w-full max-w-3xl px-4 pb-24 pt-6">
+          <div className="flex items-center gap-4 mb-2">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 text-sm text-base-content/60 mb-1">
+                <Link
+                  to="/dash/users"
+                  search={{ q: "", page: "1" }}
+                  className="hover:underline"
+                >
+                  用户
+                </Link>
+                <span>/</span>
+                <button
+                  type="button"
+                  className="hover:underline"
+                  onClick={() => setActiveTab("basic")}
+                >
+                  个人({user.nickname || user.name || "用户"})
+                </button>
+              </div>
               <h1 className="text-2xl font-bold">
                 {user.nickname || user.name || "未命名用户"}
               </h1>
@@ -964,7 +1037,7 @@ function UserDetailPage() {
                     onClick={() =>
                       navigate({
                         to: "/dash/users",
-                        search: { q: "", page: 1 },
+                        search: { q: "", page: "1" },
                       })
                     }
                   >
@@ -982,6 +1055,21 @@ function UserDetailPage() {
                   </button>
                 </div>
               </form>
+
+              <div className="stats stats-horizontal shadow w-full">
+                <div className="stat">
+                  <div className="stat-title">储值余额</div>
+                  <div className="stat-value text-lg">
+                    ¥{(getStoredValueBalance(membershipPlans) / 100).toFixed(0)}
+                  </div>
+                </div>
+                <div className="stat">
+                  <div className="stat-title">积分余额</div>
+                  <div className="stat-value text-lg">
+                    {formatPoints(rawUser?.points ?? 0)}
+                  </div>
+                </div>
+              </div>
 
               <div className="divider" />
 
@@ -1042,6 +1130,11 @@ function UserDetailPage() {
                       )}
                     </span>
                   )}
+                  {(rawUser?.points ?? 0) > 0 && (
+                    <span className="badge badge-info badge-lg">
+                      积分余额: {formatPoints(rawUser?.points ?? 0)}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -1049,11 +1142,12 @@ function UserDetailPage() {
                     className="btn btn-accent btn-sm"
                     onClick={() => {
                       setDeductAmount("");
+                      setDeductPointsAmount("");
                       deductDialogRef.current?.showModal();
                     }}
                   >
                     <CurrencyDollarIcon />
-                    扣费
+                    划扣
                   </button>
                   <button
                     type="button"
@@ -1064,6 +1158,7 @@ function UserDetailPage() {
                       setAddForm({
                         planType: "monthly",
                         amount: "",
+                        pointsChange: "",
                         startDate,
                         endDate,
                       });
@@ -1090,8 +1185,10 @@ function UserDetailPage() {
                         <th>状态</th>
                         <th>计划类型</th>
                         <th>金额</th>
+                        <th>积分</th>
                         <th>开始日期</th>
                         <th>结束日期</th>
+                        <th>关联</th>
                         <th>操作</th>
                       </tr>
                     </thead>
@@ -1159,6 +1256,7 @@ function UserDetailPage() {
                                   "—"
                                 )}
                               </td>
+                              <td>—</td>
                               <td>
                                 <input
                                   type="date"
@@ -1197,6 +1295,7 @@ function UserDetailPage() {
                                   "—"
                                 )}
                               </td>
+                              <td>—</td>
                               <td>
                                 <div className="flex flex-col gap-1">
                                   <div className="flex items-center gap-2">
@@ -1277,6 +1376,22 @@ function UserDetailPage() {
                                 : "—"}
                             </td>
                             <td>
+                              {(() => {
+                                const raw = rawPlansById.get(plan.id) as any;
+                                const note = raw?.note ?? "";
+                                const pointsMatch = note.match(/积分[+\-]?(\d+)/);
+                                if (pointsMatch) {
+                                  return (
+                                    <span className="text-sm">
+                                      {note.includes("-") ? "-" : "+"}
+                                      {pointsMatch[1]}点
+                                    </span>
+                                  );
+                                }
+                                return "—";
+                              })()}
+                            </td>
+                            <td>
                               {plan.start_date
                                 ? dayjs(plan.start_date).format("YYYY/MM/DD")
                                 : "—"}
@@ -1285,6 +1400,25 @@ function UserDetailPage() {
                               {plan.end_date
                                 ? dayjs(plan.end_date).format("YYYY/MM/DD")
                                 : "—"}
+                            </td>
+                            <td>
+                              {(() => {
+                                const raw = rawPlansById.get(plan.id);
+                                const orderId = (raw as any)?.orderId;
+                                if (orderId) {
+                                  return (
+                                    <Link
+                                      to="/dash/orders/settle"
+                                      search={{ ids: [orderId] }}
+                                      className="btn btn-xs btn-ghost btn-primary"
+                                    >
+                                      <EyeIcon className="size-3" />
+                                      订单
+                                    </Link>
+                                  );
+                                }
+                                return "—";
+                              })()}
                             </td>
                             <td>
                               <div className="flex items-center gap-2">
@@ -1307,6 +1441,61 @@ function UserDetailPage() {
                           </tr>
                         );
                       })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Points Log / Bill Deductions */}
+              <div className="divider" />
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">积分流水</h3>
+              </div>
+              {pointsLog.length === 0 ? (
+                <div className="py-6 text-center text-base-content/60">
+                  暂无积分流水记录
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="table table-sm">
+                    <thead>
+                      <tr>
+                        <th>时间</th>
+                        <th>变动</th>
+                        <th>余额</th>
+                        <th>说明</th>
+                        <th>操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pointsLog.map((log: any) => (
+                        <tr key={log.id}>
+                          <td className="text-sm">
+                            {log.createdAt ? dayjs(log.createdAt).format("MM/DD HH:mm") : "—"}
+                          </td>
+                          <td className={clsx("font-mono text-sm", log.amount > 0 ? "text-success" : "text-error")}>
+                            {log.amount > 0 ? "+" : ""}{log.amount}点
+                          </td>
+                          <td className="font-mono text-sm">
+                            {formatPoints(log.balanceAfter)}
+                          </td>
+                          <td className="text-sm max-w-[200px] truncate">
+                            {log.note ?? "—"}
+                          </td>
+                          <td>
+                            {log.note?.includes("订单结算") && (
+                              <Link
+                                to="/dash/orders"
+                                search={{ q: "", sortBy: "start_at", sortOrder: "desc", groupBy: "none", page: "1" }}
+                                className="btn btn-xs btn-ghost btn-primary"
+                              >
+                                <EyeIcon className="size-3.5" />
+                                查看订单
+                              </Link>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -1374,7 +1563,7 @@ function UserDetailPage() {
                     sortBy: "start_at",
                     sortOrder: "desc",
                     groupBy: "none",
-                    page: 1,
+                    page: "1",
                   }}
                   className="btn btn-xs btn-ghost btn-primary"
                 >
@@ -1498,9 +1687,11 @@ function UserDetailPage() {
                               </td>
                               <td className="text-sm">{durationStr}</td>
                               <td className="font-mono text-sm">
-                                {occ.finalPrice != null
-                                  ? formatPrice(occ.finalPrice)
-                                  : "—"}
+                                {occ.finalPrice != null || (occ as any).finalPoints != null
+                                  ? formatDualPrice(occ.finalPrice ?? null, (occ as any).finalPoints ?? null)
+                                  : occ.settledPrice != null || (occ as any).settledPoints != null
+                                    ? formatDualPrice(occ.settledPrice ?? null, (occ as any).settledPoints ?? null)
+                                    : "—"}
                               </td>
                               <th>
                                 <div className="flex items-center gap-1">
@@ -1673,6 +1864,25 @@ function UserDetailPage() {
               )}
 
               <label className="flex flex-col gap-2">
+                <span className="label text-sm font-semibold">
+                  积分变动 (正数增加，负数扣除)
+                </span>
+                <input
+                  type="number"
+                  className="input input-bordered w-full"
+                  value={addForm.pointsChange}
+                  onChange={(e) =>
+                    setAddForm((p) => ({
+                      ...p,
+                      pointsChange: e.target.value,
+                    }))
+                  }
+                  placeholder="例: 100 或 -50"
+                  step="1"
+                />
+              </label>
+
+              <label className="flex flex-col gap-2">
                 <span className="label text-sm font-semibold">开始日期</span>
                 <input
                   type="date"
@@ -1735,7 +1945,7 @@ function UserDetailPage() {
         <dialog ref={deductDialogRef} className="modal">
           <form method="dialog" className="modal-box" onSubmit={handleDeduct}>
             <div className="modal-action flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg">储值扣费</h3>
+              <h3 className="font-bold text-lg">划扣</h3>
               <button
                 type="button"
                 className="btn btn-ghost btn-square"
@@ -1746,28 +1956,50 @@ function UserDetailPage() {
             </div>
 
             <div className="flex flex-col gap-4">
-              <p className="text-sm text-base-content/70">
-                当前储值余额:{" "}
-                <span className="font-mono font-bold text-accent">
-                  ¥{(getStoredValueBalance(membershipPlans) / 100).toFixed(0)}
-                </span>
-              </p>
+              <div className="flex gap-4 text-sm text-base-content/70">
+                <p>
+                  储值余额:{" "}
+                  <span className="font-mono font-bold text-accent">
+                    ¥{(getStoredValueBalance(membershipPlans) / 100).toFixed(0)}
+                  </span>
+                </p>
+                <p>
+                  积分余额:{" "}
+                  <span className="font-mono font-bold text-info">
+                    {formatPoints(rawUser?.points ?? 0)}
+                  </span>
+                </p>
+              </div>
               <label className="flex flex-col gap-2">
                 <span className="label text-sm font-semibold">
-                  扣费金额 (元)
+                  划扣金额 (元)
                 </span>
                 <input
                   type="number"
                   className="input input-bordered w-full"
                   value={deductAmount}
                   onChange={(e) => setDeductAmount(e.target.value)}
-                  placeholder="输入扣费金额"
+                  placeholder="输入划扣金额（可留空）"
                   min="0"
                   step="1"
                 />
               </label>
               <label className="flex flex-col gap-2">
-                <span className="label text-sm font-semibold">扣费说明</span>
+                <span className="label text-sm font-semibold">
+                  划扣积分
+                </span>
+                <input
+                  type="number"
+                  className="input input-bordered w-full"
+                  value={deductPointsAmount}
+                  onChange={(e) => setDeductPointsAmount(e.target.value)}
+                  placeholder="输入划扣积分（可留空）"
+                  min="0"
+                  step="1"
+                />
+              </label>
+              <label className="flex flex-col gap-2">
+                <span className="label text-sm font-semibold">划扣说明</span>
                 <input
                   type="text"
                   className="input input-bordered w-full"
@@ -1777,7 +2009,7 @@ function UserDetailPage() {
                 />
               </label>
               <label className="flex flex-col gap-2">
-                <span className="label text-sm font-semibold">扣费日期</span>
+                <span className="label text-sm font-semibold">划扣日期</span>
                 <input
                   type="date"
                   className="input input-bordered w-full"
@@ -1793,7 +2025,7 @@ function UserDetailPage() {
                 className="btn btn-accent"
                 disabled={deductPending || !deductNote.trim() || !deductDate}
               >
-                {deductPending ? "扣费中..." : "确认扣费"}
+                {deductPending ? "划扣中..." : "确认划扣"}
               </button>
             </div>
           </form>

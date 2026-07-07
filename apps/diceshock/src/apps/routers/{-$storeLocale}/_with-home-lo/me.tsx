@@ -42,6 +42,7 @@ import {
   type MyMahjongRegistrationQuery,
   type UpdateMyUserInfoMutation,
   useGetMyMembershipPlansQuery,
+  useGetMyPointsBalanceQuery,
   useUpdateMyPreferencesMutation,
   useUpdateMyUserInfoMutation,
 } from "@/client/graphql/__generated__";
@@ -223,6 +224,9 @@ function RouteComponent() {
   const myPlans: MembershipPlan[] = (
     membershipPlansData?.myMembershipPlans ?? []
   ).map(toLocalPlan);
+
+  const { data: pointsData } = useGetMyPointsBalanceQuery();
+  const myPointsBalance = pointsData?.myPointsBalance ?? 0;
 
   const [updateMyUserInfo] = useUpdateMyUserInfoMutation();
   const [updateMyPreferences] = useUpdateMyPreferencesMutation();
@@ -712,13 +716,23 @@ function RouteComponent() {
                   )}
 
                   <div className="flex items-center justify-between pt-3 border-t border-primary/10">
-                    <div>
-                      <span className="text-xs text-base-content/60">
-                        储值余额
-                      </span>
-                      <span className="text-lg font-bold text-primary ml-2">
-                        ¥{(totalBalance / 100).toFixed(0)}
-                      </span>
+                    <div className="flex items-center gap-4">
+                      <div>
+                        <span className="text-xs text-base-content/60">
+                          储值余额
+                        </span>
+                        <span className="text-lg font-bold text-primary ml-2">
+                          ¥{(totalBalance / 100).toFixed(0)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-base-content/60">
+                          积分
+                        </span>
+                        <span className="text-lg font-bold text-primary ml-2">
+                          {myPointsBalance}点
+                        </span>
+                      </div>
                     </div>
                     <Link
                       to="/{-$storeLocale}/diceshock-agents"

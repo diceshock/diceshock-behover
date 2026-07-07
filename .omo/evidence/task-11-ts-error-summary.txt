@@ -1,0 +1,2 @@
+@ts-ignore lines: 0
+@ts-expect-error lines: 39

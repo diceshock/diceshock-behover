@@ -12,14 +12,30 @@ import DashQRScannerDialog from "@/client/components/diceshock/DashQRScannerDial
 import StoreSelectorModal from "@/client/components/StoreSelectorModal";
 import { useAdminStoreFilter } from "@/client/hooks/useAdminStoreFilter";
 import { useRouteFilters } from "@/client/hooks/useRouteFilters";
+import { useTranslation } from "@/client/hooks/useTranslation";
+import type { TranslationKey } from "@/shared/i18n";
 import { STORES } from "@/shared/store-locale";
 import { launcherOpenAtom, launcherToggleAtom } from "./launcher/atoms";
 import { getCategoryByRoute } from "./launcher/categories";
 import { formatFilterChipLabel } from "./launcher/types";
 
+/** Maps URL path segments to dashNav translation keys */
+const SEGMENT_LABEL_KEY: Record<string, TranslationKey> = {
+  users: "dashNav.users",
+  actives: "dashNav.actives",
+  events: "dashNav.events",
+  tables: "dashNav.tables",
+  orders: "dashNav.orders",
+  gsz: "dashNav.mahjong",
+  pricing: "dashNav.pricing",
+  media: "dashNav.media",
+  "wechat-menu": "dashNav.wechatMenu",
+};
+
 export function DashHeader() {
   const router = useRouter();
   const matches = useMatches();
+  const { t } = useTranslation();
   const { storeFilter, setStoreFilter } = useAdminStoreFilter();
   const [storeModalOpen, setStoreModalOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
@@ -45,10 +61,11 @@ export function DashHeader() {
   // Breadcrumbs from route matches
   const crumbs = matches
     .filter((m) => m.pathname !== "/" && m.pathname !== "/dash")
-    .map((m) => ({
-      label: m.pathname.split("/").pop() ?? "",
-      path: m.pathname,
-    }));
+    .map((m) => {
+      const segment = m.pathname.split("/").pop() ?? "";
+      const key = SEGMENT_LABEL_KEY[segment];
+      return { label: key ? t(key) : segment, path: m.pathname };
+    });
 
   // Global Ctrl/Cmd+K hotkey to open launcher
   useEffect(() => {
@@ -89,7 +106,7 @@ export function DashHeader() {
           <DashNavMenuButton />
           <nav className="hidden sm:flex items-center gap-1 text-xs text-base-content/60 min-w-0">
             <Link to="/dash" className="hover:text-base-content transition-colors">
-              Dash
+              {t("dashNav.dashboard")}
             </Link>
             {crumbs.map((c) => (
               <span key={c.path} className="flex items-center gap-1">

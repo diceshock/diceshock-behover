@@ -401,7 +401,8 @@
     "theme": "Tema",
     "logout": "Sair",
     "navigation": "Navegação",
-    "menuLabel": "Menu de navegação"
+    "menuLabel": "Menu de navegação",
+    "wechatMenu": "Menu WeChat"
   },
   "dashOrders": {
     "loadFailed": "Falha ao carregar pedidos",

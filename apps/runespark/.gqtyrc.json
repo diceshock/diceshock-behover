@@ -1,8 +1,0 @@
-{
-    "destination": "./src/shared/gqty",
-    "react": true,
-    "subscriptions": true,
-    "introspection": {
-        "endpoint": "http://localhost:5173/graphql"
-    }
-}

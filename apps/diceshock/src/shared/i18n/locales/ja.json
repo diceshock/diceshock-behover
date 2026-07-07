@@ -401,7 +401,8 @@
     "theme": "テーマ",
     "logout": "ログアウト",
     "navigation": "ナビゲーション",
-    "menuLabel": "ナビゲーションメニュー"
+    "menuLabel": "ナビゲーションメニュー",
+    "wechatMenu": "WeChatメニュー"
   },
   "dashOrders": {
     "loadFailed": "注文一覧の取得に失敗しました",

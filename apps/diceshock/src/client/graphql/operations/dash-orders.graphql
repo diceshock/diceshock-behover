@@ -13,6 +13,9 @@ query Orders($input: OrderListInput = {}, $filter: OrderFilterInput) {
       startAt
       endAt
       finalPrice
+      finalPoints
+      settledPrice
+      settledPoints
       pricingSnapshotId
       table {
         id
@@ -45,6 +48,9 @@ query Order($id: ID!) {
     startAt
     endAt
     finalPrice
+    finalPoints
+    settledPrice
+    settledPoints
     pricingSnapshotId
     priceBreakdown
     settlementSnapshot
@@ -77,6 +83,7 @@ query SettlementPreview($id: ID!) {
       startAt
       endAt
       finalPrice
+      finalPoints
       table {
         id
         name
@@ -88,17 +95,21 @@ query SettlementPreview($id: ID!) {
     pausedMinutes
     billableMinutes
     finalPrice
+    finalPoints
     priceBreakdown {
       planName
       planType
       billingType
       unitPrice
+      unitPoints
       totalMinutes
       billableHalfHours
       rawPrice
+      rawPoints
       capApplied
       capType
       finalPrice
+      finalPoints
     }
     membership {
       hasTimePlan
@@ -106,6 +117,7 @@ query SettlementPreview($id: ID!) {
       timePlanType
       timePlanEndDate
       storedValueBalance
+      pointsBalance
     }
     pauseLogs {
       pausedAt
@@ -116,6 +128,7 @@ query SettlementPreview($id: ID!) {
       planType
       billingType
       price
+      points
       matched
     }
     recentOrders {
@@ -142,6 +155,7 @@ mutation BatchSettlementPreview($ids: [ID!]!) {
       startAt
       endAt
       finalPrice
+      finalPoints
       table {
         id
         name
@@ -153,17 +167,21 @@ mutation BatchSettlementPreview($ids: [ID!]!) {
     pausedMinutes
     billableMinutes
     finalPrice
+    finalPoints
     priceBreakdown {
       planName
       planType
       billingType
       unitPrice
+      unitPoints
       totalMinutes
       billableHalfHours
       rawPrice
+      rawPoints
       capApplied
       capType
       finalPrice
+      finalPoints
     }
     membership {
       hasTimePlan
@@ -171,6 +189,7 @@ mutation BatchSettlementPreview($ids: [ID!]!) {
       timePlanType
       timePlanEndDate
       storedValueBalance
+      pointsBalance
     }
     pauseLogs {
       pausedAt
@@ -181,6 +200,7 @@ mutation BatchSettlementPreview($ids: [ID!]!) {
       planType
       billingType
       price
+      points
       matched
     }
     recentOrders {
@@ -222,10 +242,21 @@ mutation SettleOrder($input: SettleOrderInput!) {
       id
       status
       finalPrice
+      finalPoints
+      settledPrice
+      settledPoints
     }
     price
+    points
     snapshot
     storedValueDeduction {
+      deducted
+      amount
+      note
+      balanceBefore
+      balanceAfter
+    }
+    pointsDeduction {
       deducted
       amount
       note

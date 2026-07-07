@@ -1,0 +1,5 @@
+apps/diceshock/e2e/fullstack/dash-chat.spec.ts:        contextPage = (body.context as any)?.page ?? "";
+apps/diceshock/e2e/fullstack/dash-chat.spec.ts:        mutationIds.push((route.request().postDataJSON() as any).mutationId);
+apps/diceshock/e2e/fullstack/dash-chat.spec.ts:        await mockChatStream(page, ({ body }) => ({ text: `当前页面 ${(body.context as any)?.page}` }));
+apps/diceshock/e2e/fullstack/dash-integration.spec.ts:      pages.push((body.context as any)?.page ?? "");
+apps/diceshock/src/types/env-augment.d.ts: * Merges into Cloudflare.Env so c.env resolves without `as any`.

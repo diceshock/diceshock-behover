@@ -24,7 +24,7 @@ import {
   usePublishedPricingQuery,
 } from "@/client/graphql/__generated__";
 import dayjs from "@/shared/utils/dayjs-config";
-import { calculatePrice, formatPrice, type SnapshotData } from "@/shared/utils/pricing";
+import { calculatePrice, formatPrice, formatDualPrice, formatPoints, type SnapshotData } from "@/shared/utils/pricing";
 
 const ReactECharts = lazy(() => import("echarts-for-react"));
 
@@ -50,7 +50,9 @@ type SettlementPreviewItem = NonNullable<
 >["batchSettlementPreview"][number];
 
 interface UserCardState {
+  paymentPreset: 'stored_value' | 'points' | 'external' | 'custom';
   deductAmount: number; // cents
+  deductPoints: number; // integer
   pointsChange: number;
   note: string;
   settled: boolean;
@@ -121,9 +123,19 @@ function BatchSettlePage() {
             if (existing) {
               next.set(p.order.id, { ...existing, settled: p.order.status === "SETTLED" });
             } else {
-              const autoDeduct = Math.min(p.membership.storedValueBalance, p.finalPrice);
+              const finalPts = (p as unknown as { finalPoints: number }).finalPoints ?? 0;
+              const ptsBalance = (p.membership as unknown as { pointsBalance: number }).pointsBalance ?? 0;
+              // Default to first non-disabled preset
+              let defaultPreset: UserCardState['paymentPreset'] = 'external';
+              if (p.membership.storedValueBalance >= p.finalPrice) {
+                defaultPreset = 'stored_value';
+              } else if (ptsBalance >= finalPts) {
+                defaultPreset = 'points';
+              }
               next.set(p.order.id, {
-                deductAmount: autoDeduct,
+                paymentPreset: defaultPreset,
+                deductAmount: defaultPreset === 'stored_value' ? p.finalPrice : 0,
+                deductPoints: defaultPreset === 'points' ? finalPts : 0,
                 pointsChange: 0,
                 note: "",
                 settled: p.order.status === "SETTLED",
@@ -184,15 +196,53 @@ function BatchSettlePage() {
   const handleSettleUser = useCallback(async (orderId: string) => {
     const state = userStates.get(orderId);
     if (!state) return;
+
+    // Build effective values based on preset
+    let effectiveDeductAmount = 0;
+    let effectiveDeductPoints = 0;
+    let effectiveNote = state.note.trim();
+
+    switch (state.paymentPreset) {
+      case 'stored_value':
+        effectiveDeductAmount = state.deductAmount;
+        break;
+      case 'points':
+        effectiveDeductPoints = state.deductPoints;
+        break;
+      case 'external':
+        effectiveNote = effectiveNote ? `使用外部付款; ${effectiveNote}` : "使用外部付款";
+        break;
+      case 'custom':
+        effectiveDeductAmount = state.deductAmount;
+        effectiveDeductPoints = state.deductPoints;
+        effectiveNote = effectiveNote ? `使用自定义付款; ${effectiveNote}` : "使用自定义付款";
+        break;
+    }
+
+    // Confirm if resulting balance would go below -1元 or below 1点
+    const preview = previews.find((p) => p.order.id === orderId);
+    const currentSvBalance = preview?.membership.storedValueBalance ?? 0;
+    const currentPtsBalance = (preview?.membership as unknown as { pointsBalance: number })?.pointsBalance ?? 0;
+    const resultingSv = currentSvBalance - effectiveDeductAmount;
+    const resultingPts = currentPtsBalance - effectiveDeductPoints;
+    if (resultingSv < -100 || resultingPts < 1) {
+      const warnings: string[] = [];
+      if (resultingSv < -100) warnings.push(`储值余额将降至 ¥${(resultingSv / 100).toFixed(2)}`);
+      if (resultingPts < 1) warnings.push(`积分余额将降至 ${resultingPts}点`);
+      const confirmMsg = `${warnings.join("，")}，确认结算？`;
+      if (!confirm(confirmMsg)) return;
+    }
+
     try {
       await settleOrder({
         variables: {
           input: {
             id: orderId,
-            deductFromStoredValue: state.deductAmount > 0,
-            deductAmount: state.deductAmount > 0 ? state.deductAmount : null,
+            deductFromStoredValue: state.paymentPreset === 'stored_value',
+            deductAmount: effectiveDeductAmount !== 0 ? effectiveDeductAmount : null,
+            deductPoints: effectiveDeductPoints !== 0 ? effectiveDeductPoints : null,
             pointsChange: state.pointsChange || 0,
-            note: state.note.trim() || null,
+            note: effectiveNote || null,
           },
         },
       });
@@ -457,6 +507,13 @@ function OverviewSection({
 
 // === Per-User Billing Card ===
 
+const PAYMENT_PRESETS = [
+  { key: 'stored_value', label: '储值划扣' },
+  { key: 'points', label: '积分划扣' },
+  { key: 'external', label: '外部付款' },
+  { key: 'custom', label: '自定义' },
+] as const;
+
 const UserBillingCard = forwardRef<HTMLDivElement, {
   preview: SettlementPreviewItem;
   state: UserCardState;
@@ -470,6 +527,30 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
     () => computePrice(preview, state.selectedPlan),
     [preview, state.selectedPlan, computePrice],
   );
+
+  // Extract finalPoints and pointsBalance from preview with type assertion
+  const finalPoints = (preview as unknown as { finalPoints: number }).finalPoints ?? 0;
+  const pointsBalance = (preview.membership as unknown as { pointsBalance: number }).pointsBalance ?? 0;
+  const storedValueBalance = preview.membership.storedValueBalance;
+
+  // Determine which presets are disabled
+  const presetDisabled = useMemo(() => ({
+    stored_value: storedValueBalance < calculatedPrice,
+    points: pointsBalance < finalPoints,
+    external: false,
+    custom: false,
+  }), [storedValueBalance, calculatedPrice, pointsBalance, finalPoints]);
+
+  const presetDisabledReason = useMemo(() => ({
+    stored_value: storedValueBalance < calculatedPrice
+      ? `储值余额不足 (余额: ¥${(storedValueBalance / 100).toFixed(2)})`
+      : null,
+    points: pointsBalance < finalPoints
+      ? `积分不足 (余额: ${pointsBalance}点)`
+      : null,
+    external: null,
+    custom: null,
+  }), [storedValueBalance, calculatedPrice, pointsBalance, finalPoints]);
 
   // Bar chart for 30min intervals with event annotations
   const barChartOption = useMemo(() => {
@@ -576,6 +657,45 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
     };
   }, [preview, pricingSnapshot]);
 
+  // Handle preset selection
+  const handlePresetSelect = (preset: UserCardState['paymentPreset']) => {
+    if (presetDisabled[preset]) return;
+    const patch: Partial<UserCardState> = { paymentPreset: preset };
+    switch (preset) {
+      case 'stored_value':
+        patch.deductAmount = calculatedPrice;
+        patch.deductPoints = 0;
+        break;
+      case 'points':
+        patch.deductAmount = 0;
+        patch.deductPoints = finalPoints;
+        break;
+      case 'external':
+        patch.deductAmount = 0;
+        patch.deductPoints = 0;
+        break;
+      case 'custom':
+        patch.deductAmount = calculatedPrice;
+        patch.deductPoints = finalPoints;
+        break;
+    }
+    onStateChange(patch);
+  };
+
+  // Preset card description
+  const getPresetDescription = (key: UserCardState['paymentPreset']): string => {
+    switch (key) {
+      case 'stored_value':
+        return `-¥${(calculatedPrice / 100).toFixed(2)}`;
+      case 'points':
+        return `-${finalPoints}点`;
+      case 'external':
+        return "不扣除任何储值或积分";
+      case 'custom':
+        return "自定义扣费金额";
+    }
+  };
+
   // Settled receipt view
   if (state.settled) {
     return (
@@ -586,12 +706,13 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
             <span className="font-bold">{preview.order.nickname ?? preview.order.uid ?? "用户"}</span>
             <span className="badge badge-success badge-sm">已结算</span>
           </div>
-          <span className="font-mono text-lg font-bold">{formatPrice(preview.finalPrice)}</span>
+          <span className="font-mono text-lg font-bold">{formatDualPrice(preview.finalPrice, finalPoints)}</span>
         </div>
         <div className="text-sm text-base-content/60 space-y-1">
           <div>时长: {formatMinutes(preview.billableMinutes)} (暂停 {formatMinutes(preview.pausedMinutes)})</div>
           <div>桌台: {preview.order.table?.name ?? "-"}</div>
           {state.deductAmount > 0 && <div>储值扣费: {formatPrice(state.deductAmount)}</div>}
+          {state.deductPoints > 0 && <div>积分扣费: {formatPoints(state.deductPoints)}</div>}
           {state.pointsChange !== 0 && <div>积分变更: {state.pointsChange > 0 ? "+" : ""}{state.pointsChange}</div>}
           {state.note && <div>备注: {state.note}</div>}
         </div>
@@ -636,35 +757,74 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
         </Suspense>
       </div>
 
-      {/* Price display */}
+      {/* Price display - dual format */}
       <div className="flex items-center justify-between mb-4">
         <span className="text-sm text-base-content/60">计费金额</span>
-        <span className="font-mono text-2xl font-bold text-primary">{formatPrice(calculatedPrice)}</span>
+        <span className="font-mono text-2xl font-bold text-primary">{formatDualPrice(calculatedPrice, finalPoints)}</span>
       </div>
 
-      {/* Inputs */}
+      {/* Payment preset cards - 2x2 grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-        <label className="form-control">
-          <div className="label"><span className="label-text text-xs">储值扣费</span></div>
-          <input
-            type="number"
-            className="input input-bordered input-sm font-mono"
-            value={state.deductAmount / 100}
-            min={0}
-            step={0.01}
-            onChange={(e) => onStateChange({ deductAmount: Math.round(Number(e.target.value) * 100) })}
-          />
-        </label>
-        <label className="form-control">
-          <div className="label"><span className="label-text text-xs">积分变更</span></div>
-          <input
-            type="number"
-            className="input input-bordered input-sm font-mono"
-            value={state.pointsChange}
-            onChange={(e) => onStateChange({ pointsChange: Number(e.target.value) || 0 })}
-          />
-        </label>
+        {PAYMENT_PRESETS.map(({ key, label }) => {
+          const disabled = presetDisabled[key];
+          const selected = state.paymentPreset === key;
+          const reason = presetDisabledReason[key];
+          return (
+            <button
+              key={key}
+              type="button"
+              disabled={disabled}
+              onClick={() => handlePresetSelect(key)}
+              className={[
+                "rounded-lg p-3 text-left transition-all border-2",
+                selected ? "ring-2 ring-primary border-primary bg-primary/5" : "border-base-300 bg-base-100",
+                disabled ? "opacity-40 cursor-not-allowed" : "hover:border-primary/50 cursor-pointer",
+              ].join(" ")}
+            >
+              <div className="font-semibold text-sm mb-1">{label}</div>
+              {disabled && reason ? (
+                <div className="text-xs text-error">{reason}</div>
+              ) : (
+                <div className="text-xs text-base-content/60 font-mono">{getPresetDescription(key)}</div>
+              )}
+            </button>
+          );
+        })}
       </div>
+
+      {/* Custom preset form */}
+      {state.paymentPreset === 'custom' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 p-3 bg-base-100 rounded-lg border border-base-300">
+          <label className="form-control">
+            <div className="label"><span className="label-text text-xs">储值扣费</span></div>
+            <div className="join">
+              <span className="join-item btn btn-sm btn-disabled font-mono">-</span>
+              <input
+                type="number"
+                className="input input-bordered input-sm font-mono join-item w-full"
+                value={Math.abs(state.deductAmount) / 100}
+                min={0}
+                step={0.01}
+                onChange={(e) => onStateChange({ deductAmount: Math.round(Math.abs(Number(e.target.value)) * 100) })}
+              />
+            </div>
+          </label>
+          <label className="form-control">
+            <div className="label"><span className="label-text text-xs">积分扣费</span></div>
+            <div className="join">
+              <span className="join-item btn btn-sm btn-disabled font-mono">-</span>
+              <input
+                type="number"
+                className="input input-bordered input-sm font-mono join-item w-full"
+                value={Math.abs(state.deductPoints)}
+                min={0}
+                step={1}
+                onChange={(e) => onStateChange({ deductPoints: Math.abs(Math.round(Number(e.target.value))) })}
+              />
+            </div>
+          </label>
+        </div>
+      )}
 
       {/* Quick links */}
       <div className="flex gap-2 mb-3">

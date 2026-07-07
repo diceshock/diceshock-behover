@@ -1212,24 +1212,42 @@ function FallbackSection({
           </span>
         </div>
         <div className="flex flex-col gap-4">
-          <label className="flex flex-col gap-2">
-            <span className="label text-sm font-semibold">
-              {t("dashPricing.hourlyPriceYuan")}
-            </span>
-            <input
-              type="number"
-              className="input input-bordered w-full max-w-xs"
-              value={centsToYuan(
-                (plan as Record<string, unknown>).price as number,
-              )}
-              onChange={(e) => {
-                const n = Number.parseFloat(e.target.value);
-                onChange({ price: Number.isNaN(n) ? 0 : Math.round(n * 100) });
-              }}
-              min={0}
-              step={0.01}
-            />
-          </label>
+          <div className="flex gap-4">
+            <label className="flex flex-col gap-2 flex-1">
+              <span className="label text-sm font-semibold">
+                {t("dashPricing.hourlyPriceYuan")}
+              </span>
+              <input
+                type="number"
+                className="input input-bordered w-full max-w-xs"
+                value={centsToYuan(
+                  (plan as Record<string, unknown>).price as number,
+                )}
+                onChange={(e) => {
+                  const n = Number.parseFloat(e.target.value);
+                  onChange({ price: Number.isNaN(n) ? 0 : Math.round(n * 100) });
+                }}
+                min={0}
+                step={0.01}
+              />
+            </label>
+            <label className="flex flex-col gap-2 flex-1">
+              <span className="label text-sm font-semibold">
+                点/小时
+              </span>
+              <input
+                type="number"
+                className="input input-bordered w-full max-w-xs"
+                value={((plan as Record<string, unknown>).points as number) ?? 0}
+                onChange={(e) => {
+                  const n = Number.parseInt(e.target.value, 10);
+                  onChange({ points: Number.isNaN(n) ? 0 : n });
+                }}
+                min={0}
+                step={1}
+              />
+            </label>
+          </div>
 
           <div className="flex flex-col gap-2">
             <span className="label text-sm font-semibold">
@@ -1249,6 +1267,8 @@ function FallbackSection({
                       cap_unit: "per_day",
                       cap_price_day: null,
                       cap_price_night: null,
+                      cap_points_day: null,
+                      cap_points_night: null,
                     })
                   }
                 />
@@ -1267,6 +1287,7 @@ function FallbackSection({
                     onChange({
                       cap_unit: "split_day_night",
                       cap_price: null,
+                      cap_points: null,
                     })
                   }
                 />
@@ -1277,44 +1298,21 @@ function FallbackSection({
             </div>
 
             {(plan as Record<string, unknown>).cap_unit === "per_day" ? (
-              <label className="flex flex-col gap-1">
-                <span className="text-sm text-base-content/60">
-                  {t("dashPricing.capPriceYuan")}
-                </span>
-                <input
-                  type="number"
-                  className="input input-bordered input-sm w-full max-w-xs"
-                  value={centsToYuan(
-                    (plan as Record<string, unknown>).cap_price as number,
-                  )}
-                  onChange={(e) => {
-                    const n = Number.parseFloat(e.target.value);
-                    onChange({
-                      cap_price: Number.isNaN(n) ? 0 : Math.round(n * 100),
-                    });
-                  }}
-                  min={0}
-                  step={0.01}
-                />
-              </label>
-            ) : (
               <div className="flex gap-4">
                 <label className="flex flex-col gap-1 flex-1 max-w-xs">
                   <span className="text-sm text-base-content/60">
-                    {t("dashPricing.daytimeCapYuan")}
+                    {t("dashPricing.capPriceYuan")}
                   </span>
                   <input
                     type="number"
                     className="input input-bordered input-sm w-full"
                     value={centsToYuan(
-                      (plan as Record<string, unknown>).cap_price_day as number,
+                      (plan as Record<string, unknown>).cap_price as number,
                     )}
                     onChange={(e) => {
                       const n = Number.parseFloat(e.target.value);
                       onChange({
-                        cap_price_day: Number.isNaN(n)
-                          ? 0
-                          : Math.round(n * 100),
+                        cap_price: Number.isNaN(n) ? 0 : Math.round(n * 100),
                       });
                     }}
                     min={0}
@@ -1323,27 +1321,110 @@ function FallbackSection({
                 </label>
                 <label className="flex flex-col gap-1 flex-1 max-w-xs">
                   <span className="text-sm text-base-content/60">
-                    {t("dashPricing.nighttimeCapYuan")}
+                    封顶点数
                   </span>
                   <input
                     type="number"
                     className="input input-bordered input-sm w-full"
-                    value={centsToYuan(
-                      (plan as Record<string, unknown>)
-                        .cap_price_night as number,
-                    )}
+                    value={((plan as Record<string, unknown>).cap_points as number) ?? 0}
                     onChange={(e) => {
-                      const n = Number.parseFloat(e.target.value);
+                      const n = Number.parseInt(e.target.value, 10);
                       onChange({
-                        cap_price_night: Number.isNaN(n)
-                          ? 0
-                          : Math.round(n * 100),
+                        cap_points: Number.isNaN(n) ? 0 : n,
                       });
                     }}
                     min={0}
-                    step={0.01}
+                    step={1}
                   />
                 </label>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-4">
+                  <label className="flex flex-col gap-1 flex-1 max-w-xs">
+                    <span className="text-sm text-base-content/60">
+                      {t("dashPricing.daytimeCapYuan")}
+                    </span>
+                    <input
+                      type="number"
+                      className="input input-bordered input-sm w-full"
+                      value={centsToYuan(
+                        (plan as Record<string, unknown>).cap_price_day as number,
+                      )}
+                      onChange={(e) => {
+                        const n = Number.parseFloat(e.target.value);
+                        onChange({
+                          cap_price_day: Number.isNaN(n)
+                            ? 0
+                            : Math.round(n * 100),
+                        });
+                      }}
+                      min={0}
+                      step={0.01}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 flex-1 max-w-xs">
+                    <span className="text-sm text-base-content/60">
+                      白天封顶点数
+                    </span>
+                    <input
+                      type="number"
+                      className="input input-bordered input-sm w-full"
+                      value={((plan as Record<string, unknown>).cap_points_day as number) ?? 0}
+                      onChange={(e) => {
+                        const n = Number.parseInt(e.target.value, 10);
+                        onChange({
+                          cap_points_day: Number.isNaN(n) ? 0 : n,
+                        });
+                      }}
+                      min={0}
+                      step={1}
+                    />
+                  </label>
+                </div>
+                <div className="flex gap-4">
+                  <label className="flex flex-col gap-1 flex-1 max-w-xs">
+                    <span className="text-sm text-base-content/60">
+                      {t("dashPricing.nighttimeCapYuan")}
+                    </span>
+                    <input
+                      type="number"
+                      className="input input-bordered input-sm w-full"
+                      value={centsToYuan(
+                        (plan as Record<string, unknown>)
+                          .cap_price_night as number,
+                      )}
+                      onChange={(e) => {
+                        const n = Number.parseFloat(e.target.value);
+                        onChange({
+                          cap_price_night: Number.isNaN(n)
+                            ? 0
+                            : Math.round(n * 100),
+                        });
+                      }}
+                      min={0}
+                      step={0.01}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 flex-1 max-w-xs">
+                    <span className="text-sm text-base-content/60">
+                      晚上封顶点数
+                    </span>
+                    <input
+                      type="number"
+                      className="input input-bordered input-sm w-full"
+                      value={((plan as Record<string, unknown>).cap_points_night as number) ?? 0}
+                      onChange={(e) => {
+                        const n = Number.parseInt(e.target.value, 10);
+                        onChange({
+                          cap_points_night: Number.isNaN(n) ? 0 : n,
+                        });
+                      }}
+                      min={0}
+                      step={1}
+                    />
+                  </label>
+                </div>
               </div>
             )}
           </div>

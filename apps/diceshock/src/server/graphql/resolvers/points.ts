@@ -21,13 +21,13 @@ function mapRow(row: PointsRow) {
 
 const addPointsSchema = z.object({
   userId: z.string().min(1),
-  amount: z.number().int().positive(),
+  amount: z.number().int(),
   note: z.string().nullable().optional(),
 });
 
 const deductPointsSchema = z.object({
   userId: z.string().min(1),
-  amount: z.number().int().positive(),
+  amount: z.number().int(),
   note: z.string().nullable().optional(),
 });
 
@@ -111,13 +111,7 @@ export const pointsResolvers = {
       const tdb = dbFactory(ctx.env.DB);
 
       const currentBalance = await getCurrentBalance(tdb, input.userId);
-      if (currentBalance < input.amount) {
-        throw validationError(
-          "input.amount",
-          `Insufficient points (current: ${currentBalance}, deduct: ${input.amount})`,
-        );
-      }
-
+      // Allow negative balance (赊 a small amount is ok per requirements)
       const newBalance = currentBalance - input.amount;
 
       await tdb

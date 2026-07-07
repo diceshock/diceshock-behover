@@ -76,6 +76,7 @@ function mapRow(row: PlanRow) {
     planType: planTypeToEnum(row.plan_type),
     amount: row.amount,
     note: row.note,
+    orderId: row.order_id ?? null,
     startDate: row.start_date ? toIsoString(row.start_date) : null,
     endDate: row.end_date ? toIsoString(row.end_date) : null,
     createdAt: row.create_at ? toIsoString(row.create_at) : null,

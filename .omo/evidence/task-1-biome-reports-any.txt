@@ -1,0 +1,16 @@
+=== Evidence: noExplicitAny errors detected in source file ===
+File: apps/diceshock/src/server/apis/wechat/messageHandler.ts
+Rule: suspicious/noExplicitAny (severity: error)
+
+Result: Found 9 noExplicitAny errors (plus 1 noUnusedImports warning)
+  - Line 70:  const env = c.env as any;
+  - Line 100: const env = c.env as any;
+  - Line 125: const env = c.env as any;
+  - Line 235: const aiSearch = (c.env as any).AI_SEARCH;
+  - Line 609: const env = c.env as any;
+  - Line 617: const env = c.env as any;
+  - Line 628: const env = c.env as any;
+  - Line 638: const env = c.env as any;
+  - Line 724: const env = c.env as any;
+
+Status: PASS — noExplicitAny rule is active and reporting errors correctly.

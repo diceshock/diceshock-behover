@@ -336,6 +336,9 @@ type TableOccupancy {
   startAt: String!
   endAt: String
   finalPrice: Int
+  finalPoints: Int
+  settledPrice: Int
+  settledPoints: Int
   pricingSnapshotId: ID
   priceBreakdown: String
   settlementSnapshot: String
@@ -379,12 +382,15 @@ type PriceBreakdown {
   planType: String!
   billingType: String!
   unitPrice: Int!
+  unitPoints: Int!
   totalMinutes: Int!
   billableHalfHours: Int!
   rawPrice: Int!
+  rawPoints: Int!
   capApplied: Boolean!
   capType: String
   finalPrice: Int!
+  finalPoints: Int!
 }
 
 type OrderPauseLogView {
@@ -398,6 +404,7 @@ type SettlementMembershipInfo {
   timePlanType: String
   timePlanEndDate: String
   storedValueBalance: Int!
+  pointsBalance: Int!
 }
 
 type StoredValueDeduction {
@@ -413,6 +420,7 @@ type PricingPlanMatch {
   planType: String!
   billingType: String!
   price: Int!
+  points: Int!
   matched: Boolean!
 }
 
@@ -431,6 +439,7 @@ type SettlementPreview {
   pausedMinutes: Int!
   billableMinutes: Int!
   finalPrice: Int!
+  finalPoints: Int!
   priceBreakdown: PriceBreakdown
   membership: SettlementMembershipInfo!
   pauseLogs: [OrderPauseLogView!]!
@@ -441,8 +450,18 @@ type SettlementPreview {
 type SettlementResult {
   order: TableOccupancy!
   price: Int!
+  points: Int!
   snapshot: String
   storedValueDeduction: StoredValueDeduction
+  pointsDeduction: PointsDeduction
+}
+
+type PointsDeduction {
+  deducted: Boolean!
+  amount: Int!
+  note: String!
+  balanceBefore: Int!
+  balanceAfter: Int!
 }
 
 type BatchOrderResult {
@@ -524,6 +543,7 @@ input SettleOrderInput {
   id: ID!
   deductFromStoredValue: Boolean = false
   deductAmount: Int
+  deductPoints: Int
   pointsChange: Int = 0
   note: String
 }
@@ -532,6 +552,7 @@ input PerUserSettleInput {
   orderId: ID!
   deductFromStoredValue: Boolean = false
   deductAmount: Int
+  deductPoints: Int
   pointsChange: Int = 0
   note: String
 }
@@ -634,6 +655,7 @@ type MembershipPlan {
   planType: MembershipPlanType!
   amount: Int
   note: String
+  orderId: ID
   startDate: String!
   endDate: String
   createdAt: String

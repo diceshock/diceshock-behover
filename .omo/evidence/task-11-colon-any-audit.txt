@@ -1,0 +1,33 @@
+apps/diceshock/e2e/fullstack/dash-tables.spec.ts:function connection<T>(items: T[], pagination: any, defaultLimit: number) {
+apps/diceshock/e2e/fullstack/dash-tables.spec.ts:function filterOrders(rows: typeof orders, filter: any) {
+apps/diceshock/e2e/fullstack/dash-tables.spec.ts:function filterUsers(rows: typeof users, filter: any) {
+apps/diceshock/e2e/fullstack/dash-tables.spec.ts:function filterTables(rows: typeof tables, filter: any) {
+apps/diceshock/e2e/fullstack/dash-tables.spec.ts:function filterActives(rows: typeof actives, filter: any) {
+apps/diceshock/e2e/fullstack/dash-tables.spec.ts:function filterEvents(rows: typeof events, filter: any) {
+apps/diceshock/e2e/fullstack/dash-tables.spec.ts:function filterMatches(rows: typeof matches, filter: any) {
+apps/diceshock/src/client/components/diceshock/Footer.tsx:            params={(prev: any) => prev}
+apps/diceshock/src/client/components/diceshock/Footer.tsx:            params={(prev: any) => prev}
+apps/diceshock/src/client/components/diceshock/Footer.tsx:            params={(prev: any) => prev}
+apps/diceshock/src/client/components/diceshock/Footer.tsx:            params={(prev: any) => prev}
+apps/diceshock/src/client/components/diceshock/Footer.tsx:            params={(prev: any) => prev}
+apps/diceshock/src/client/components/diceshock/Footer.tsx:            params={(prev: any) => prev}
+apps/diceshock/src/client/components/diceshock/GameList/RawList.tsx:          params={(prev: any) => ({ ...prev, id: dbId })}
+apps/diceshock/src/client/components/diceshock/HomePage/BoardGame.tsx:            params={(prev: any) => prev}
+apps/diceshock/src/client/components/diceshock/Agents.tsx:                    params={(prev: any) => prev}
+apps/diceshock/src/client/components/diceshock/Agents.tsx:                    params={(prev: any) => prev}
+apps/diceshock/src/client/components/diceshock/Agents.tsx:                    params={(prev: any) => prev}
+apps/diceshock/src/server/middlewares/auth.ts:      error(code: any, ...message: any[]) {
+apps/diceshock/src/server/middlewares/auth.ts:      warn(code: any) {
+apps/diceshock/src/server/middlewares/auth.ts:            where: (u: any, { eq }: any) => eq(u.id, token.sub),
+apps/diceshock/src/server/middlewares/auth.ts:          where: (acc: any, { eq, and }: any) =>
+apps/diceshock/src/server/middlewares/auth.ts:            where: (user: any, { eq }: any) =>
+apps/diceshock/src/server/middlewares/auth.ts:          where: (userInfo: any, { eq }: any) => eq(userInfo.phone, phone),
+apps/diceshock/src/server/middlewares/auth.ts:            where: (user: any, { eq }: any) => eq(user.id, existingUserInfo.id),
+apps/diceshock/src/server/middlewares/auth.ts:              where: (user: any, { eq }: any) =>
+apps/diceshock/src/server/middlewares/auth.ts:            where: (acc: any, { eq, and }: any) =>
+apps/diceshock/src/server/middlewares/auth.ts:            } catch (error: any) {
+apps/diceshock/src/server/middlewares/auth.ts:    where: (user: any, { eq }: any) => eq(user.id, id),
+apps/diceshock/src/server/middlewares/auth.ts:    where: (userInfo: any, { eq }: any) => eq(userInfo.id, id),
+apps/diceshock/src/server/middlewares/auth.ts:        where: (s: any, { eq }: any) => eq(s.code, storeCode),
+apps/diceshock/scripts/test-agent.ts:let mutateLog: Array<{action: string; params: any; description: string}> = [];
+apps/diceshock/scripts/test-agent.ts:function executeMutate(action: string, params: any, description: string): string {

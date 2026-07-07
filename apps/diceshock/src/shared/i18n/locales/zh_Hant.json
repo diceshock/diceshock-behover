@@ -401,7 +401,8 @@
     "theme": "主題",
     "logout": "登出",
     "navigation": "導覽",
-    "menuLabel": "導覽選單"
+    "menuLabel": "導覽選單",
+    "wechatMenu": "微信選單"
   },
   "dashOrders": {
     "loadFailed": "取得訂單列表失敗",

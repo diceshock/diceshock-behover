@@ -1,0 +1,11 @@
+=== Evidence: Generated files excluded from noExplicitAny ===
+File: apps/diceshock/src/apps/routeTree.gen.ts
+Rule: suspicious/noExplicitAny (disabled via overrides)
+
+Result: ZERO noExplicitAny errors detected.
+The generated file contains `as any` casts but is correctly excluded via overrides:
+  - Pattern: **/routeTree.gen.ts
+  - Pattern: **/__generated__/**
+  - Pattern: **/worker-configuration.d.ts
+
+Status: PASS — Override exclusion is working correctly.

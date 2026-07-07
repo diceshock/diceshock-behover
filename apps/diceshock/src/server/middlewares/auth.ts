@@ -484,12 +484,8 @@ export const userInjMiddleware = FACTORY.createMiddleware(async (c, next) => {
 
   const authUser = await getAuthUser(c);
 
-  console.log("authUser", authUser);
-
   // 在 JWT 策略下，用户 ID 存储在 token.sub 中
   const id = authUser?.token?.sub || authUser?.user?.id;
-
-  console.log("user id:", id);
 
   if (!authUser || !id) return next();
 
@@ -633,10 +629,19 @@ export const dashGuard = FACTORY.createMiddleware(async (c, next) => {
     }
   }
 
-  const authUser = await getAuthUser(c);
+  const authUser = await getAuthUser(c).catch((err) => {
+    console.warn("[dashGuard] getAuthUser failed:", err?.message ?? err);
+    return null;
+  });
   const role = (authUser?.token?.role as UserRole) ?? "customer";
 
   if (role !== "admin" && role !== "staff") {
+    console.warn("[dashGuard] rejected:", {
+      path: c.req.path,
+      role,
+      hasToken: !!authUser?.token,
+      sub: authUser?.token?.sub ?? null,
+    });
     return c.redirect("/");
   }
 

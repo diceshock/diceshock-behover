@@ -401,7 +401,8 @@
     "theme": "Design",
     "logout": "Abmelden",
     "navigation": "Navigation",
-    "menuLabel": "Navigationsmenü"
+    "menuLabel": "Navigationsmenü",
+    "wechatMenu": "WeChat-Menü"
   },
   "dashOrders": {
     "loadFailed": "Bestellungen konnten nicht geladen werden",

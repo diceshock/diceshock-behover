@@ -401,7 +401,8 @@
     "theme": "Тема",
     "logout": "Выйти",
     "navigation": "Навигация",
-    "menuLabel": "Меню навигации"
+    "menuLabel": "Меню навигации",
+    "wechatMenu": "Меню WeChat"
   },
   "dashOrders": {
     "loadFailed": "Не удалось загрузить заказы",

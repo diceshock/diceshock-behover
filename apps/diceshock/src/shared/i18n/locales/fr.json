@@ -401,7 +401,8 @@
     "theme": "Thème",
     "logout": "Déconnexion",
     "navigation": "Navigation",
-    "menuLabel": "Menu de navigation"
+    "menuLabel": "Menu de navigation",
+    "wechatMenu": "Menu WeChat"
   },
   "dashOrders": {
     "loadFailed": "Échec du chargement des commandes",

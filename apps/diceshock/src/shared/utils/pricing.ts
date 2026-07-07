@@ -30,11 +30,15 @@ interface PlanEntry {
   conditions?: unknown;
   billing_type: "hourly" | "fixed";
   price: number;
+  points: number;
   cap_enabled: boolean;
   cap_unit: "per_day" | "split_day_night" | null;
   cap_price: number | null;
   cap_price_day: number | null;
   cap_price_night: number | null;
+  cap_points: number | null;
+  cap_points_day: number | null;
+  cap_points_night: number | null;
 }
 
 export interface SnapshotData {
@@ -50,12 +54,15 @@ export interface PriceBreakdown {
   planType: "fallback" | "conditional";
   billingType: "hourly" | "fixed";
   unitPrice: number;
+  unitPoints: number;
   totalMinutes: number;
   billableHalfHours: number;
   rawPrice: number;
+  rawPoints: number;
   capApplied: boolean;
   capType: string | null;
   finalPrice: number;
+  finalPoints: number;
 }
 
 function timeToMinutes(hhmm: string): number {
@@ -176,21 +183,31 @@ export function calculatePrice(
   if (!plan) return null;
 
   let rawPrice: number;
+  let rawPoints: number;
   if (plan.billing_type === "fixed") {
     rawPrice = plan.price;
+    rawPoints = plan.points ?? 0;
   } else {
     const pricePerHalfHour = Math.round(plan.price / 2);
     rawPrice = pricePerHalfHour * billableHalfHours;
+    const pointsPerHalfHour = Math.round((plan.points ?? 0) / 2);
+    rawPoints = pointsPerHalfHour * billableHalfHours;
   }
 
   let finalPrice = rawPrice;
+  let finalPoints = rawPoints;
   let capApplied = false;
   let capType: string | null = null;
 
   if (plan.billing_type === "hourly" && plan.cap_enabled) {
-    if (plan.cap_unit === "per_day" && plan.cap_price != null) {
-      if (finalPrice > plan.cap_price) {
+    if (plan.cap_unit === "per_day") {
+      if (plan.cap_price != null && finalPrice > plan.cap_price) {
         finalPrice = plan.cap_price;
+        capApplied = true;
+        capType = "per_day";
+      }
+      if (plan.cap_points != null && finalPoints > plan.cap_points) {
+        finalPoints = plan.cap_points;
         capApplied = true;
         capType = "per_day";
       }
@@ -202,6 +219,12 @@ export function calculatePrice(
         capApplied = true;
         capType = isDay ? "daytime" : "nighttime";
       }
+      const capPts = isDay ? plan.cap_points_day : plan.cap_points_night;
+      if (capPts != null && finalPoints > capPts) {
+        finalPoints = capPts;
+        capApplied = true;
+        capType = isDay ? "daytime" : "nighttime";
+      }
     }
   }
 
@@ -210,15 +233,36 @@ export function calculatePrice(
     planType: plan.plan_type,
     billingType: plan.billing_type,
     unitPrice: plan.price,
+    unitPoints: plan.points ?? 0,
     totalMinutes,
     billableHalfHours,
     rawPrice,
+    rawPoints,
     capApplied,
     capType,
     finalPrice,
+    finalPoints,
   };
 }
 
 export function formatPrice(cents: number): string {
   return `¥${(cents / 100).toFixed(2)}`;
+}
+
+export function formatPoints(points: number): string {
+  return `${points}点`;
+}
+
+/**
+ * Format dual price display: shows whichever is non-zero, or both if both are present.
+ * Supports negative values for deductions.
+ */
+export function formatDualPrice(cents: number | null | undefined, points: number | null | undefined): string {
+  const c = cents ?? 0;
+  const p = points ?? 0;
+  const parts: string[] = [];
+  if (c !== 0) parts.push(formatPrice(c));
+  if (p !== 0) parts.push(formatPoints(p));
+  if (parts.length === 0) return "¥0.00";
+  return parts.join(" ");
 }

@@ -1,0 +1,39 @@
+apps/diceshock/src/client/hooks/useCrossData.tsx:  // @ts-expect-error server-injected global variable
+apps/diceshock/src/client/components/diceshock/Swing.tsx:      // @ts-expect-error requestPermission is iOS-only API not in standard DOM types
+apps/diceshock/src/client/components/diceshock/TiptapEditor/index.tsx:      // @ts-expect-error tiptap-markdown extension storage not typed
+apps/diceshock/src/server/middlewares/auth.ts:          // @ts-expect-error - WeChat OAuth profile fields (unionid, nickname) not in auth.js Profile type
+apps/diceshock/src/server/middlewares/auth.ts:          // @ts-expect-error - WeChat OAuth profile fields not in auth.js Profile type
+apps/diceshock/src/server/middlewares/auth.ts:          // @ts-expect-error - WeChat OAuth profile fields not in auth.js Profile type
+apps/diceshock/src/server/middlewares/auth.ts:              // @ts-expect-error - credentials provider type not in AdapterAccount union
+apps/diceshock/src/server/apis/wechat/__tests__/regression.test.ts:  // @ts-expect-error // partial mock for regression test — DB/KV are stubs
+apps/diceshock/src/server/apis/wechat/__tests__/mutate.test.ts:        // @ts-expect-error // testing invalid action value
+apps/diceshock/src/server/apis/wechat/__tests__/mutate.test.ts:        // @ts-expect-error // testing invalid action value
+apps/diceshock/src/server/apis/wechat/__tests__/mutate.test.ts:        // @ts-expect-error // testing invalid action value
+apps/diceshock/src/server/apis/wechat/__tests__/mutate.test.ts:          // @ts-expect-error // testing missing required field
+apps/diceshock/src/server/apis/wechat/__tests__/mutate.test.ts:          // @ts-expect-error // testing missing required field
+apps/diceshock/src/server/apis/wechat/__tests__/mutate.test.ts:          // @ts-expect-error // testing missing required field
+apps/diceshock/src/server/apis/wechat/__tests__/mutate.test.ts:          // @ts-expect-error // testing missing required field
+apps/diceshock/src/server/apis/wechat/__tests__/mutate.test.ts:          // @ts-expect-error // testing missing required field
+apps/diceshock/src/server/apis/wechat/__tests__/mutate.test.ts:        // @ts-expect-error // testing missing required field
+apps/diceshock/src/server/apis/wechat/__tests__/mutate.test.ts:        // @ts-expect-error // testing missing required field
+apps/diceshock/src/server/apis/wechat/__tests__/mutate.test.ts:        // @ts-expect-error // testing missing required field
+apps/diceshock/src/server/apis/wechat/__tests__/mutate.test.ts:        // @ts-expect-error // testing missing required field
+apps/diceshock/src/server/apis/wechat/__tests__/mutate.test.ts:        // @ts-expect-error // testing missing required field
+apps/diceshock/src/server/apis/wechat/__tests__/mutate.test.ts:        // @ts-expect-error // testing missing required field
+apps/diceshock/src/server/apis/wechat/__tests__/mutate.test.ts:          // @ts-expect-error // testing missing required field
+apps/diceshock/src/server/apis/wechat/__tests__/mutate.test.ts:        // @ts-expect-error // testing missing required field
+apps/diceshock/src/server/apis/wechat/__tests__/mutate.test.ts:        // @ts-expect-error // testing empty params for action with no required params
+apps/diceshock/src/server/apis/wechat/tools/searchRules.ts:  // @ts-expect-error // AI_SEARCH not in ToolContext.env type from query.ts
+apps/diceshock/src/server/apis/wechat/tools/mutate.ts:    // @ts-expect-error - Drizzle column $type restricts to AdapterAccountType
+apps/diceshock/src/server/apis/avatarUpload.ts:  // @ts-expect-error // Hono variable not typed in this route
+apps/diceshock/src/server/graphql/resolvers/admin.ts:        // @ts-expect-error - PricingPlan has [key: string]: unknown index signature,
+apps/diceshock/src/apps/routers/dash/users.tsx:      // @ts-expect-error cast to lowercase string for GraphQL PlanType enum
+apps/diceshock/src/apps/routers/dash/users_.$id.tsx:            // @ts-expect-error role is a runtime string not matching the GraphQL enum type
+apps/diceshock/src/apps/routers/dash/users_.$id.tsx:            // @ts-expect-error cast to uppercase string for GraphQL enum
+apps/diceshock/src/apps/routers/dash/users_.$id.tsx:            // @ts-expect-error cast to uppercase string for GraphQL enum
+apps/diceshock/src/apps/routers/dash/users_.$id.tsx:                    // @ts-expect-error TanStack Router requires search params; nav-only
+apps/diceshock/src/apps/routers/dash/users_.$id.tsx:                        // @ts-expect-error TanStack Router requires search params; nav-only link
+apps/diceshock/src/apps/routers/dash/users_.$id.tsx:                  // @ts-expect-error TanStack Router requires search params; nav-only link
+apps/runespark/src/client/hooks/useCrossData.tsx:  // @ts-expect-error server-injected global variable
+apps/runespark/src/client/components/GraphiQL.tsx:        // @ts-expect-error - MonacoEnvironment is not typed
+apps/runespark/src/shared/gqty/index.ts:    // @ts-expect-error - gqty types are not compatible with cloudflare workers
