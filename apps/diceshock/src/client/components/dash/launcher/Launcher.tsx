@@ -40,6 +40,7 @@ import {
   type FilterOperator,
   type FilterValue,
   type SearchHistoryEntry,
+  type SearchResultItem,
   OPERATOR_LABELS,
   filtersEqual,
   filtersToSearchParams,
@@ -123,7 +124,7 @@ export function Launcher() {
   // Flatten server results for Fuse.js re-ranking
   const globalResults = useMemo(() => {
     if (!globalSearchData?.dashGlobalSearch) return [];
-    return globalSearchData.dashGlobalSearch.flatMap((g) => g.items);
+    return globalSearchData.dashGlobalSearch.flatMap((g: { items: SearchResultItem[] }) => g.items);
   }, [globalSearchData]);
 
   // Re-focus input on mode change
@@ -143,8 +144,13 @@ export function Launcher() {
         e.preventDefault();
         if (origin === "header") {
           reset();
-        } else if (mode.type === "search") {
+        } else if (mode.type === "search" || mode.type === "field-select") {
           reset();
+        } else if (mode.type === "sort-field-select" || mode.type === "group-field-select") {
+          // Go back to field-select
+          setMode({ type: "field-select" });
+          setQuery("");
+          setFocusIndex(0);
         } else {
           exitToSearch();
         }
@@ -158,16 +164,60 @@ export function Launcher() {
   const menuItems = useMemo((): MenuItemData[] => {
     // ── Field-select: show all fields for the current category
     if (mode.type === "field-select" && activeCategory) {
+      const items: MenuItemData[] = [];
       const filtered = query
         ? activeCategory.fields.filter((f) =>
             f.label.toLowerCase().includes(query.toLowerCase()),
           )
         : activeCategory.fields;
+      for (const f of filtered) {
+        items.push({
+          id: `field:${f.key}`,
+          label: f.label,
+          subtitle: f.type === "enum" ? `${f.options.length} 选项` : undefined,
+          fieldDef: f,
+        });
+      }
+      // Add "排序" meta-item if category has sortFields
+      if (activeCategory.sortFields && activeCategory.sortFields.length > 0) {
+        if (!query || "排序".includes(query.toLowerCase())) {
+          items.push({ id: "meta:sort", label: "排序", isSortMeta: true });
+        }
+      }
+      // Add "分组" meta-item if category has groupFields
+      if (activeCategory.groupFields && activeCategory.groupFields.length > 0) {
+        if (!query || "分组".includes(query.toLowerCase())) {
+          items.push({ id: "meta:group", label: "分组", isGroupMeta: true });
+        }
+      }
+      return items;
+    }
+
+    // ── Sort-field-select: show available sort fields
+    if (mode.type === "sort-field-select" && activeCategory?.sortFields) {
+      const filtered = query
+        ? activeCategory.sortFields.filter((f) =>
+            f.label.toLowerCase().includes(query.toLowerCase()),
+          )
+        : activeCategory.sortFields;
       return filtered.map((f) => ({
-        id: `field:${f.key}`,
+        id: `sort:${f.key}`,
         label: f.label,
-        subtitle: f.type === "enum" ? `${f.options.length} 选项` : undefined,
-        fieldDef: f,
+        sortFieldKey: f.key,
+      }));
+    }
+
+    // ── Group-field-select: show available group fields
+    if (mode.type === "group-field-select" && activeCategory?.groupFields) {
+      const filtered = query
+        ? activeCategory.groupFields.filter((f) =>
+            f.label.toLowerCase().includes(query.toLowerCase()),
+          )
+        : activeCategory.groupFields;
+      return filtered.map((f) => ({
+        id: `group:${f.key}`,
+        label: f.label,
+        groupFieldKey: f.key,
       }));
     }
 
@@ -198,8 +248,8 @@ export function Launcher() {
       }
       if (field.type === "boolean") {
         return [
-          { id: "val:true", label: "是", enumValue: "true" },
-          { id: "val:false", label: "否", enumValue: "false" },
+          { id: "val:true", label: "是", enumValue: "1" },
+          { id: "val:false", label: "否", enumValue: "0" },
         ];
       }
       // Text/number: show autocomplete from results
@@ -342,6 +392,34 @@ export function Launcher() {
       return;
     }
 
+    // ── Sort meta-item: switch to sort-field-select
+    if ("isSortMeta" in item && item.isSortMeta) {
+      setMode({ type: "sort-field-select" });
+      setQuery("");
+      setFocusIndex(0);
+      return;
+    }
+
+    // ── Group meta-item: switch to group-field-select
+    if ("isGroupMeta" in item && item.isGroupMeta) {
+      setMode({ type: "group-field-select" });
+      setQuery("");
+      setFocusIndex(0);
+      return;
+    }
+
+    // ── Sort field selection: apply sort_asc immediately
+    if ("sortFieldKey" in item && item.sortFieldKey) {
+      addFilter({ key: item.sortFieldKey, operator: "sort_asc", value: "" });
+      return;
+    }
+
+    // ── Group field selection: apply group filter
+    if ("groupFieldKey" in item && item.groupFieldKey) {
+      addFilter({ key: "__group", operator: "eq", value: item.groupFieldKey });
+      return;
+    }
+
     // ── Operator selection
     if ("operator" in item && item.operator) {
       const field = mode.type === "operator-select" ? mode.field : null;
@@ -458,7 +536,7 @@ export function Launcher() {
 
   if (!open) return null;
 
-  const isFieldSelect = mode.type === "field-select";
+  const isFieldSelect = mode.type === "field-select" || mode.type === "sort-field-select" || mode.type === "group-field-select";
   const isSubMode =
     mode.type === "operator-select" || mode.type === "value-input";
 
@@ -700,6 +778,10 @@ interface MenuItemData {
   avatar?: string;
   resultType?: string;
   detail?: Record<string, string | number | null>;
+  isSortMeta?: boolean;
+  isGroupMeta?: boolean;
+  sortFieldKey?: string;
+  groupFieldKey?: string;
 }
 
 // ─── MenuItem component ──────────────────────────────────────────────────────

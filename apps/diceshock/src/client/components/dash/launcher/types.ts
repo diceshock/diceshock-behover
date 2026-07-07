@@ -118,6 +118,10 @@ export interface CategoryDef {
   fields: FieldDef[];
   /** Fuse.js search keys when searching items in this category */
   searchKeys: string[];
+  /** Fields available for sorting (shown under "排序" in field-select) */
+  sortFields?: { key: string; label: string }[];
+  /** Fields available for grouping (shown under "分组" in field-select) */
+  groupFields?: { key: string; label: string }[];
 }
 
 // ─── Search Result Item ──────────────────────────────────────────────────────
@@ -154,6 +158,8 @@ export interface SearchHistoryEntry {
 export type LauncherMode =
   | { type: "search" }
   | { type: "field-select" } // showing all fields for current category
+  | { type: "sort-field-select" } // picking a sort field
+  | { type: "group-field-select" } // picking a group field
   | { type: "operator-select"; field: FieldDef } // picking an operator for a field
   | { type: "value-input"; field: FieldDef; operator: FilterOperator }; // entering value
 
@@ -170,8 +176,9 @@ export interface LauncherState {
 
 /**
  * Serialize filters to URL search params.
- * Format: f.<key>=<op>:<value>  (range uses f.<key>=range:<from>|<to>)
+ * Format: f.<key>=<value> for eq (default), f.<key>=<op>:<value> for others
  * Sort: sort=<key>:<asc|desc>
+ * Group: group=<value>
  */
 export function filtersToSearchParams(
   filters: FilterValue[],
@@ -185,7 +192,13 @@ export function filtersToSearchParams(
       params.sort = `${f.key}:asc`;
     } else if (f.operator === "sort_desc") {
       params.sort = `${f.key}:desc`;
+    } else if (f.key === "__group") {
+      params.group = f.value;
+    } else if (f.operator === "eq") {
+      // eq is the default — no prefix needed
+      params[`f.${f.key}`] = f.value;
     } else {
+      // Non-default operators: prefix with op
       params[`f.${f.key}`] = `${f.operator}:${f.value}`;
     }
   }
@@ -202,18 +215,25 @@ export function searchParamsToFilters(
 
   if (!category) return { filters, query };
 
-  // Parse f.<key>=<op>:<value>
+  // Parse f.<key>=<value> (eq default) or f.<key>=<op>:<value>
   for (const [paramKey, paramVal] of Object.entries(params)) {
     if (paramKey.startsWith("f.")) {
       const fieldKey = paramKey.slice(2); // strip "f."
+      if (!category.fields.some((f) => f.key === fieldKey)) continue;
+
       const colonIdx = paramVal.indexOf(":");
-      if (colonIdx === -1) continue;
-      const opRaw = paramVal.slice(0, colonIdx);
-      const val = paramVal.slice(colonIdx + 1);
-      if (!isFilterOperator(opRaw)) continue;
-      // Validate field exists in category
-      if (category.fields.some((f) => f.key === fieldKey)) {
-        filters.push({ key: fieldKey, operator: opRaw, value: val });
+      if (colonIdx === -1) {
+        // No colon → default operator (eq)
+        filters.push({ key: fieldKey, operator: "eq", value: paramVal });
+      } else {
+        const opRaw = paramVal.slice(0, colonIdx);
+        if (isFilterOperator(opRaw)) {
+          const val = paramVal.slice(colonIdx + 1);
+          filters.push({ key: fieldKey, operator: opRaw, value: val });
+        } else {
+          // Not a valid operator prefix — treat entire value as eq
+          filters.push({ key: fieldKey, operator: "eq", value: paramVal });
+        }
       }
     }
   }
@@ -225,6 +245,11 @@ export function searchParamsToFilters(
       const op: FilterOperator = dir === "asc" ? "sort_asc" : "sort_desc";
       filters.push({ key, operator: op, value: "" });
     }
+  }
+
+  // Parse group=<field>
+  if (params.group) {
+    filters.push({ key: "__group", operator: "eq", value: params.group });
   }
 
   return { filters, query };

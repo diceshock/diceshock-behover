@@ -1,1024 +1,715 @@
 /**
- * Launcher E2E — Full Coverage Spec
+ * Launcher E2E — Full-Flow Filter System Tests
  *
- * Tests every category (用户/订单/桌台/约局/活动/雀庄) with every filter kind
- * (kv, option, boolean, date, sort, group) in multiple permutations.
+ * Tests the field-first filter UX across all dash categories:
+ *   搜索 → 选字段 → 选操作符 → 输入值 → 导航
  *
- * Simulates real admin usage:
- * 1. Open launcher via "/" hotkey or click
- * 2. Select category
- * 3. Apply single/multiple filters in various combinations
- * 4. Verify URL params update correctly
- * 5. Verify table data reflects the filter
- * 6. Clear filters, apply different combos
- * 7. Use search to find items and navigate to detail pages
+ * Structure:
+ *   1. UX fundamentals (open/close, mode transitions, keyboard nav)
+ *   2. Per-category filter coverage (Users, Orders, Tables, Actives, Events, GSZ)
+ *   3. Date filters
+ *   4. Cross-category & combination tests
+ *   5. Data rendering (infinite scroll, filter effect on rows)
  *
- * Prerequisites: Run `pnpm exec tsx scripts/seed-launcher-e2e.ts` first.
+ * Prerequisites:
+ *   - Dev server running with seeded D1 data
+ *   - Auth mocked via route intercept (no real login needed)
  */
-import { expect, type Page, test } from "@playwright/test";
+import { test, expect } from "@playwright/test";
+import { LauncherPage } from "../pages/launcher.page";
 
-// ─── Test Fixtures ───────────────────────────────────────────────────────────
+const BASE = "/dash";
 
-const BASE_URL = "/dash";
+// ─── Shared Setup ─────────────────────────────────────────────────────────────
 
-async function setupAdmin(page: Page) {
-  await page.route("/api/auth/session", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        user: {
-          id: "lnch-admin-001",
-          name: "赵管理",
-          role: "admin",
-          preferredStoreId: "store-lnch-gg",
-        },
-        expires: new Date(Date.now() + 86400000).toISOString(),
-      }),
-    });
-  });
-  await page.setExtraHTTPHeaders({ "X-Test-Role": "admin" });
-}
+let lp: LauncherPage;
 
-// ─── Launcher Interaction Helpers ────────────────────────────────────────────
+test.beforeEach(async ({ page }) => {
+  lp = new LauncherPage(page);
+  await lp.setupAdmin();
+});
 
-async function openLauncher(page: Page) {
-  // Press "/" to open
-  await page.keyboard.press("/");
-  await expect(page.locator("[data-testid='launcher-dialog']")).toBeVisible({ timeout: 3000 });
-}
+// ═══════════════════════════════════════════════════════════════════════════════
+// 1. UX FUNDAMENTALS
+// ═══════════════════════════════════════════════════════════════════════════════
 
-async function openLauncherViaClick(page: Page) {
-  const trigger = page.locator("button", { hasText: "搜索…" });
-  await trigger.click();
-  await expect(page.locator("[data-testid='launcher-dialog']")).toBeVisible({ timeout: 3000 });
-}
-
-async function getLauncherInput(page: Page) {
-  return page.locator("[data-testid='launcher-dialog'] input[type='text']");
-}
-
-async function closeLauncher(page: Page) {
-  await page.keyboard.press("Escape");
-  await expect(page.locator("[data-testid='launcher-dialog']")).not.toBeVisible({ timeout: 2000 });
-}
-
-async function enterFilterMenu(page: Page) {
-  const filterBtn = page.locator("[data-testid='launcher-dialog'] button[title='筛选器']");
-  await filterBtn.click();
-}
-
-async function selectMenuItem(page: Page, label: string) {
-  const item = page.locator("[data-testid='launcher-dialog'] [role='option'], [data-testid='launcher-dialog'] .overflow-y-auto > div").filter({ hasText: label }).first();
-  await item.click();
-}
-
-async function selectMenuItemByIndex(page: Page, presses: number) {
-  for (let i = 0; i < presses; i++) {
-    await page.keyboard.press("ArrowDown");
-  }
-  await page.keyboard.press("Enter");
-}
-
-async function typeAndSubmit(page: Page, text: string) {
-  const input = await getLauncherInput(page);
-  await input.fill(text);
-  await page.keyboard.press("Enter");
-}
-
-async function waitForTable(page: Page) {
-  await page.waitForSelector("table.table, [data-testid='infinite-table']", { timeout: 10000 });
-}
-
-async function getUrlParams(page: Page): Promise<URLSearchParams> {
-  const url = new URL(page.url());
-  return url.searchParams;
-}
-
-async function expectUrlParam(page: Page, key: string, value: string) {
-  await expect.poll(async () => {
-    const params = await getUrlParams(page);
-    return params.get(key);
-  }, { timeout: 5000, message: `URL param ${key}=${value}` }).toBe(value);
-}
-
-async function expectUrlContains(page: Page, substring: string) {
-  await expect.poll(
-    () => {
-      // Decode URL and strip TanStack Router's JSON quotes around values
-      const decoded = decodeURIComponent(page.url()).replace(/="|"(&|$)/g, (m) =>
-        m === '="' ? "=" : m.endsWith("&") ? "&" : "",
-      );
-      return decoded;
-    },
-    { timeout: 5000, message: `URL contains ${substring}` },
-  ).toContain(substring);
-}
-
-async function expectNoUrlParam(page: Page, key: string) {
-  await expect.poll(async () => {
-    const params = await getUrlParams(page);
-    return params.has(key);
-  }, { timeout: 3000, message: `URL param ${key} absent` }).toBe(false);
-}
-
-async function navigateToCategory(page: Page, route: string) {
-  // Retry navigation in case workerd restarted
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      await page.goto(route, { timeout: 15000 });
-      await waitForTable(page);
-      return;
-    } catch {
-      if (attempt === 2) throw new Error(`Failed to navigate to ${route} after 3 attempts`);
-      await page.waitForTimeout(2000);
-    }
-  }
-}
-
-/** Apply a kv filter: open launcher → filter menu → select kv filter → type value → submit */
-async function applyKvFilter(page: Page, filterLabel: string, value: string) {
-  await openLauncher(page);
-  await enterFilterMenu(page);
-  await selectMenuItem(page, filterLabel);
-  // Wait for input to be focused after mode switch
-  const kvInput = page.locator("[data-testid='launcher-dialog'] input[type='text']");
-  await kvInput.focus();
-  await kvInput.fill(value);
-  await page.keyboard.press("Enter"); // Adds filter, returns to search mode
-  await page.waitForTimeout(200);
-  await page.keyboard.press("Enter"); // Navigates with the filter applied
-  await page.waitForTimeout(300);
-}
-
-/** Apply an option filter: open launcher → filter menu → select option → pick value */
-async function applyOptionFilter(page: Page, filterLabel: string, optionLabel: string) {
-  await openLauncher(page);
-  await enterFilterMenu(page);
-  await selectMenuItem(page, filterLabel);
-  // Now in option-select mode, use keyboard or click
-  await selectMenuItem(page, optionLabel);
-  await page.waitForTimeout(200);
-  await page.keyboard.press("Enter"); // Navigate with filter applied
-  await page.waitForTimeout(300);
-}
-
-/** Apply a sort: open launcher → filter menu → select sort → pick field */
-async function applySort(page: Page, sortLabel: string, fieldLabel: string) {
-  await openLauncher(page);
-  await enterFilterMenu(page);
-  await selectMenuItem(page, sortLabel);
-  await selectMenuItem(page, fieldLabel);
-  await page.waitForTimeout(200);
-  await page.keyboard.press("Enter"); // Navigate with sort applied
-  await page.waitForTimeout(300);
-}
-
-/** Verify a filter chip is visible in the launcher */
-async function expectFilterChip(page: Page, text: string) {
-  await openLauncher(page);
-  const chip = page.locator("[data-testid='launcher-dialog']").getByText(text, { exact: false });
-  await expect(chip).toBeVisible({ timeout: 3000 });
-  await closeLauncher(page);
-}
-
-// ─── Tests ───────────────────────────────────────────────────────────────────
-
-test.describe("Launcher E2E — Full Filter Coverage", () => {
-  test.beforeEach(async ({ page }) => {
-    await setupAdmin(page);
+test.describe("启动器 UX", () => {
+  test.beforeEach(async () => {
+    await lp.goto(`${BASE}/users`);
   });
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CATEGORY: 用户 (Users)
-  // Filters: name(kv), uid(kv), phone(kv), role(option), store(option),
-  //          disabled(boolean), created(date), sort(sort)
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  test.describe("用户 — Users Category", () => {
-    test.beforeEach(async ({ page }) => {
-      await navigateToCategory(page, `${BASE_URL}/users`);
-    });
-
-    test("KV filter: 昵称搜索", async ({ page }) => {
-      await applyKvFilter(page, "昵称", "张三");
-      await expectUrlContains(page, "f.name=");
-    });
-
-    test("KV filter: UID搜索", async ({ page }) => {
-      await applyKvFilter(page, "UID", "thx1138");
-      await expectUrlContains(page, "f.uid=thx1138");
-    });
-
-    test("KV filter: 手机号搜索", async ({ page }) => {
-      await applyKvFilter(page, "手机号", "13800001");
-      await expectUrlContains(page, "f.phone=13800001");
-    });
-
-    test("Option filter: 角色=管理员", async ({ page }) => {
-      await applyOptionFilter(page, "角色", "管理员");
-      await expectUrlContains(page, "f.role=admin");
-    });
-
-    test("Option filter: 角色=店员", async ({ page }) => {
-      await applyOptionFilter(page, "角色", "店员");
-      await expectUrlContains(page, "f.role=staff");
-    });
-
-    test("Option filter: 角色=顾客", async ({ page }) => {
-      await applyOptionFilter(page, "角色", "顾客");
-      await expectUrlContains(page, "f.role=authenticated");
-    });
-
-    test("Option filter: 门店=光谷", async ({ page }) => {
-      await applyOptionFilter(page, "门店", "光谷");
-      await expectUrlContains(page, "f.store=gg");
-    });
-
-    test("Option filter: 门店=街道口", async ({ page }) => {
-      await applyOptionFilter(page, "门店", "街道口");
-      await expectUrlContains(page, "f.store=jdk");
-    });
-
-    test("Boolean filter: 已禁用", async ({ page }) => {
-      await openLauncher(page);
-      await enterFilterMenu(page);
-      await selectMenuItem(page, "已禁用");
-      await page.waitForTimeout(200);
-      await page.keyboard.press("Enter"); // Navigate with boolean filter
-      await page.waitForTimeout(300);
-      await expectUrlContains(page, "f.disabled=1");
-    });
-
-    test("Sort: 按注册时间排序", async ({ page }) => {
-      await applySort(page, "排序", "注册时间");
-      await expectUrlContains(page, "sort=created_at");
-    });
-
-    test("Sort: 按昵称排序", async ({ page }) => {
-      await applySort(page, "排序", "昵称");
-      await expectUrlContains(page, "sort=nickname");
-    });
-
-    test("Sort: 按储值余额排序", async ({ page }) => {
-      await applySort(page, "排序", "储值余额");
-      await expectUrlContains(page, "sort=stored_value");
-    });
-
-    // ─── Multi-filter Permutations ─────────────────────────────────────────
-
-    test("组合: 角色+门店", async ({ page }) => {
-      await applyOptionFilter(page, "角色", "顾客");
-      await applyOptionFilter(page, "门店", "光谷");
-      await expectUrlContains(page, "f.role=authenticated");
-      await expectUrlContains(page, "f.store=gg");
-    });
-
-    test("组合: 昵称+角色+排序", async ({ page }) => {
-      await applyKvFilter(page, "昵称", "李");
-      await applyOptionFilter(page, "角色", "顾客");
-      await applySort(page, "排序", "注册时间");
-      await expectUrlContains(page, "f.name=");
-      await expectUrlContains(page, "f.role=authenticated");
-      await expectUrlContains(page, "sort=created_at");
-    });
-
-    test("组合: UID+门店+排序", async ({ page }) => {
-      await applyKvFilter(page, "UID", "uid");
-      await applyOptionFilter(page, "门店", "街道口");
-      await applySort(page, "排序", "储值余额");
-      await expectUrlContains(page, "f.uid=uid");
-      await expectUrlContains(page, "f.store=jdk");
-      await expectUrlContains(page, "sort=stored_value");
-    });
-
-    // ─── Free-text search & navigate to detail ─────────────────────────────
-
-    test("搜索跳转详情: 输入用户名搜索并跳转", async ({ page }) => {
-      await openLauncher(page);
-      const input = await getLauncherInput(page);
-      await input.fill("张三丰");
-      // Wait for results
-      await page.waitForTimeout(500);
-      // Select first result (should navigate to detail)
-      await page.keyboard.press("Enter");
-      // Should land on a detail page or have filtered results
-      await page.waitForTimeout(1000);
-    });
-
-    // ─── Clear filters ─────────────────────────────────────────────────────
-
-    test("清除筛选器: Esc关闭后参数保留, 重新打开移除", async ({ page }) => {
-      await applyOptionFilter(page, "角色", "管理员");
-      await expectUrlContains(page, "f.role=admin");
-      // Reopen launcher and verify chip shows
-      await openLauncher(page);
-      const chip = page.locator("[data-testid='launcher-dialog']").getByText("admin", { exact: false });
-      await expect(chip).toBeVisible();
-      await closeLauncher(page);
-    });
+  test("热键 / 打开启动器", async () => {
+    await lp.open();
+    await expect(lp.dialog).toBeVisible();
   });
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CATEGORY: 订单 (Orders)
-  // Filters: table(kv), user(kv), status(option), store(option),
-  //          date(date), sort(sort), group(group)
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  test.describe("订单 — Orders Category", () => {
-    test.beforeEach(async ({ page }) => {
-      await navigateToCategory(page, `${BASE_URL}/orders`);
-    });
-
-    test("KV filter: 桌台名搜索", async ({ page }) => {
-      await applyKvFilter(page, "桌台", "大厅");
-      await expectUrlContains(page, "f.table=");
-    });
-
-    test("KV filter: 用户搜索", async ({ page }) => {
-      await applyKvFilter(page, "用户", "张三");
-      await expectUrlContains(page, "f.user=");
-    });
-
-    test("Option filter: 状态=进行中", async ({ page }) => {
-      await applyOptionFilter(page, "状态", "进行中");
-      await expectUrlContains(page, "f.status=active");
-    });
-
-    test("Option filter: 状态=暂停", async ({ page }) => {
-      await applyOptionFilter(page, "状态", "暂停");
-      await expectUrlContains(page, "f.status=paused");
-    });
-
-    test("Option filter: 状态=已结束", async ({ page }) => {
-      await applyOptionFilter(page, "状态", "已结束");
-      await expectUrlContains(page, "f.status=ended");
-    });
-
-    test("Option filter: 门店=光谷", async ({ page }) => {
-      await applyOptionFilter(page, "门店", "光谷");
-      await expectUrlContains(page, "f.store=gg");
-    });
-
-    test("Sort: 按开始时间排序", async ({ page }) => {
-      await applySort(page, "排序", "开始时间");
-      await expectUrlContains(page, "sort=start_at");
-    });
-
-    test("Sort: 按结束时间排序", async ({ page }) => {
-      await applySort(page, "排序", "结束时间");
-      await expectUrlContains(page, "sort=end_at");
-    });
-
-    // Group filter
-    test("分组: 按桌台分组", async ({ page }) => {
-      await openLauncher(page);
-      await enterFilterMenu(page);
-      await selectMenuItem(page, "分组");
-      await selectMenuItem(page, "桌台");
-      await page.waitForTimeout(200);
-      await page.keyboard.press("Enter");
-      await page.waitForTimeout(300);
-      await expectUrlContains(page, "group=table");
-    });
-
-    test("分组: 按用户分组", async ({ page }) => {
-      await openLauncher(page);
-      await enterFilterMenu(page);
-      await selectMenuItem(page, "分组");
-      await selectMenuItem(page, "用户");
-      await page.waitForTimeout(200);
-      await page.keyboard.press("Enter");
-      await page.waitForTimeout(300);
-      await expectUrlContains(page, "group=user");
-    });
-
-    test("分组: 按日期分组", async ({ page }) => {
-      await openLauncher(page);
-      await enterFilterMenu(page);
-      await selectMenuItem(page, "分组");
-      await selectMenuItem(page, "日期");
-      await page.waitForTimeout(200);
-      await page.keyboard.press("Enter");
-      await page.waitForTimeout(300);
-      await expectUrlContains(page, "group=date");
-    });
-
-    // ─── Multi-filter Permutations ─────────────────────────────────────────
-
-    test("组合: 状态+门店+排序", async ({ page }) => {
-      await applyOptionFilter(page, "状态", "已结束");
-      await applyOptionFilter(page, "门店", "光谷");
-      await applySort(page, "排序", "开始时间");
-      await expectUrlContains(page, "f.status=ended");
-      await expectUrlContains(page, "f.store=gg");
-      await expectUrlContains(page, "sort=start_at");
-    });
-
-    test("组合: 桌台+状态+分组", async ({ page }) => {
-      await applyKvFilter(page, "桌台", "A1");
-      await applyOptionFilter(page, "状态", "进行中");
-      await openLauncher(page);
-      await enterFilterMenu(page);
-      await selectMenuItem(page, "分组");
-      await selectMenuItem(page, "桌台");
-      await page.waitForTimeout(200);
-      await page.keyboard.press("Enter");
-      await expectUrlContains(page, "f.table=");
-      await expectUrlContains(page, "f.status=active");
-      await expectUrlContains(page, "group=table");
-    });
-
-    test("组合: 用户+日期+排序+分组 (全筛选器)", async ({ page }) => {
-      await applyKvFilter(page, "用户", "张");
-      await applyOptionFilter(page, "状态", "已结束");
-      await applySort(page, "排序", "结束时间");
-      await openLauncher(page);
-      await enterFilterMenu(page);
-      await selectMenuItem(page, "分组");
-      await selectMenuItem(page, "用户");
-      await page.waitForTimeout(200);
-      await page.keyboard.press("Enter");
-      await expectUrlContains(page, "f.user=");
-      await expectUrlContains(page, "f.status=ended");
-      await expectUrlContains(page, "sort=end_at");
-      await expectUrlContains(page, "group=user");
-    });
+  test("点击触发按钮打开启动器", async () => {
+    await lp.openViaClick();
+    await expect(lp.dialog).toBeVisible();
   });
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CATEGORY: 桌台 (Tables)
-  // Filters: name(kv), type(option), status(option), store(option), sort(sort)
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  test.describe("桌台 — Tables Category", () => {
-    test.beforeEach(async ({ page }) => {
-      await navigateToCategory(page, `${BASE_URL}/tables`);
-    });
-
-    test("KV filter: 桌台名搜索", async ({ page }) => {
-      await applyKvFilter(page, "桌台名", "大厅");
-      await expectUrlContains(page, "f.name=");
-    });
-
-    test("Option filter: 类型=固定桌", async ({ page }) => {
-      await applyOptionFilter(page, "类型", "固定桌");
-      await expectUrlContains(page, "f.type=fixed");
-    });
-
-    test("Option filter: 类型=拼桌", async ({ page }) => {
-      await applyOptionFilter(page, "类型", "拼桌");
-      await expectUrlContains(page, "f.type=solo");
-    });
-
-    test("Option filter: 状态=启用", async ({ page }) => {
-      await applyOptionFilter(page, "状态", "启用");
-      await expectUrlContains(page, "f.status=active");
-    });
-
-    test("Option filter: 状态=停用", async ({ page }) => {
-      await applyOptionFilter(page, "状态", "停用");
-      await expectUrlContains(page, "f.status=inactive");
-    });
-
-    test("Option filter: 门店=光谷", async ({ page }) => {
-      await applyOptionFilter(page, "门店", "光谷");
-      await expectUrlContains(page, "f.store=gg");
-    });
-
-    test("Option filter: 门店=街道口", async ({ page }) => {
-      await applyOptionFilter(page, "门店", "街道口");
-      await expectUrlContains(page, "f.store=jdk");
-    });
-
-    test("Sort: 按创建时间排序", async ({ page }) => {
-      await applySort(page, "排序", "创建时间");
-      await expectUrlContains(page, "sort=created_at");
-    });
-
-    test("Sort: 按名称排序", async ({ page }) => {
-      await applySort(page, "排序", "名称");
-      await expectUrlContains(page, "sort=name");
-    });
-
-    // ─── Multi-filter Permutations ─────────────────────────────────────────
-
-    test("组合: 类型+状态+门店", async ({ page }) => {
-      await applyOptionFilter(page, "类型", "固定桌");
-      await applyOptionFilter(page, "状态", "启用");
-      await applyOptionFilter(page, "门店", "光谷");
-      await expectUrlContains(page, "f.type=fixed");
-      await expectUrlContains(page, "f.status=active");
-      await expectUrlContains(page, "f.store=gg");
-    });
-
-    test("组合: 桌台名+类型+排序", async ({ page }) => {
-      await applyKvFilter(page, "桌台名", "街道口");
-      await applyOptionFilter(page, "类型", "拼桌");
-      await applySort(page, "排序", "名称");
-      await expectUrlContains(page, "f.name=");
-      await expectUrlContains(page, "f.type=solo");
-      await expectUrlContains(page, "sort=name");
-    });
-
-    test("组合: 全部 (名称+类型+状态+门店+排序)", async ({ page }) => {
-      await applyKvFilter(page, "桌台名", "M");
-      await applyOptionFilter(page, "类型", "固定桌");
-      await applyOptionFilter(page, "状态", "启用");
-      await applyOptionFilter(page, "门店", "光谷");
-      await applySort(page, "排序", "创建时间");
-      await expectUrlContains(page, "f.name=");
-      await expectUrlContains(page, "f.type=fixed");
-      await expectUrlContains(page, "f.status=active");
-      await expectUrlContains(page, "f.store=gg");
-      await expectUrlContains(page, "sort=created_at");
-    });
+  test("Esc 关闭启动器", async () => {
+    await lp.open();
+    await lp.close();
   });
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CATEGORY: 约局 (Actives)
-  // Filters: creator(kv), type(kv), status(option), store(option),
-  //          date(date), sort(sort)
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  test.describe("约局 — Actives Category", () => {
-    test.beforeEach(async ({ page }) => {
-      await navigateToCategory(page, `${BASE_URL}/actives`);
-    });
-
-    test("KV filter: 发起人搜索", async ({ page }) => {
-      await applyKvFilter(page, "发起人", "张三");
-      await expectUrlContains(page, "f.creator=");
-    });
-
-    test("KV filter: 类型搜索", async ({ page }) => {
-      await applyKvFilter(page, "类型", "桌游");
-      await expectUrlContains(page, "f.type=");
-    });
-
-    test("Option filter: 状态=进行中", async ({ page }) => {
-      await applyOptionFilter(page, "状态", "进行中");
-      await expectUrlContains(page, "f.status=active");
-    });
-
-    test("Option filter: 状态=已过期", async ({ page }) => {
-      await applyOptionFilter(page, "状态", "已过期");
-      await expectUrlContains(page, "f.status=expired");
-    });
-
-    test("Option filter: 门店=光谷", async ({ page }) => {
-      await applyOptionFilter(page, "门店", "光谷");
-      await expectUrlContains(page, "f.store=gg");
-    });
-
-    test("Option filter: 门店=街道口", async ({ page }) => {
-      await applyOptionFilter(page, "门店", "街道口");
-      await expectUrlContains(page, "f.store=jdk");
-    });
-
-    test("Sort: 按创建时间排序", async ({ page }) => {
-      await applySort(page, "排序", "创建时间");
-      await expectUrlContains(page, "sort=created_at");
-    });
-
-    test("Sort: 按开始时间排序", async ({ page }) => {
-      await applySort(page, "排序", "开始时间");
-      await expectUrlContains(page, "sort=start_time");
-    });
-
-    // ─── Multi-filter Permutations ─────────────────────────────────────────
-
-    test("组合: 状态+门店+排序", async ({ page }) => {
-      await applyOptionFilter(page, "状态", "进行中");
-      await applyOptionFilter(page, "门店", "光谷");
-      await applySort(page, "排序", "开始时间");
-      await expectUrlContains(page, "f.status=active");
-      await expectUrlContains(page, "f.store=gg");
-      await expectUrlContains(page, "sort=start_time");
-    });
-
-    test("组合: 发起人+状态+门店", async ({ page }) => {
-      await applyKvFilter(page, "发起人", "孙");
-      await applyOptionFilter(page, "状态", "进行中");
-      await applyOptionFilter(page, "门店", "光谷");
-      await expectUrlContains(page, "f.creator=");
-      await expectUrlContains(page, "f.status=active");
-      await expectUrlContains(page, "f.store=gg");
-    });
+  test("点击背景关闭启动器", async () => {
+    await lp.open();
+    await lp.closeViaBackdrop();
   });
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CATEGORY: 活动 (Events)
-  // Filters: title(kv), status(option), store(option), date(date), sort(sort)
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  test.describe("活动 — Events Category", () => {
-    test.beforeEach(async ({ page }) => {
-      await navigateToCategory(page, `${BASE_URL}/events`);
-    });
-
-    test("KV filter: 标题搜索", async ({ page }) => {
-      await applyKvFilter(page, "标题", "桌游");
-      await expectUrlContains(page, "f.title=");
-    });
-
-    test("Option filter: 状态=进行中", async ({ page }) => {
-      await applyOptionFilter(page, "状态", "进行中");
-      await expectUrlContains(page, "f.status=active");
-    });
-
-    test("Option filter: 状态=已结束", async ({ page }) => {
-      await applyOptionFilter(page, "状态", "已结束");
-      await expectUrlContains(page, "f.status=ended");
-    });
-
-    test("Option filter: 状态=即将开始", async ({ page }) => {
-      await applyOptionFilter(page, "状态", "即将开始");
-      await expectUrlContains(page, "f.status=upcoming");
-    });
-
-    test("Option filter: 门店=光谷", async ({ page }) => {
-      await applyOptionFilter(page, "门店", "光谷");
-      await expectUrlContains(page, "f.store=gg");
-    });
-
-    test("Option filter: 门店=街道口", async ({ page }) => {
-      await applyOptionFilter(page, "门店", "街道口");
-      await expectUrlContains(page, "f.store=jdk");
-    });
-
-    test("Sort: 按创建时间排序", async ({ page }) => {
-      await applySort(page, "排序", "创建时间");
-      await expectUrlContains(page, "sort=created_at");
-    });
-
-    test("Sort: 按开始日期排序", async ({ page }) => {
-      await applySort(page, "排序", "开始日期");
-      await expectUrlContains(page, "sort=start_date");
-    });
-
-    // ─── Multi-filter Permutations ─────────────────────────────────────────
-
-    test("组合: 标题+状态+门店+排序", async ({ page }) => {
-      await applyKvFilter(page, "标题", "麻将");
-      await applyOptionFilter(page, "状态", "进行中");
-      await applyOptionFilter(page, "门店", "光谷");
-      await applySort(page, "排序", "创建时间");
-      await expectUrlContains(page, "f.title=");
-      await expectUrlContains(page, "f.status=active");
-      await expectUrlContains(page, "f.store=gg");
-      await expectUrlContains(page, "sort=created_at");
-    });
-
-    test("组合: 状态切换 (进行中 → 已结束)", async ({ page }) => {
-      await applyOptionFilter(page, "状态", "进行中");
-      await expectUrlContains(page, "f.status=active");
-      // Apply a different status — should replace
-      await applyOptionFilter(page, "状态", "已结束");
-      await expectUrlContains(page, "f.status=ended");
-    });
+  test("模式切换: 搜索 → 筛选器菜单 → 返回搜索", async () => {
+    await lp.open();
+    await lp.expectPlaceholder(/搜索/);
+    await lp.enterFilterMenu();
+    await lp.expectPlaceholder(/筛选器/);
+    await lp.exitFilterMenu();
+    await lp.expectPlaceholder(/搜索/);
   });
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CATEGORY: 雀庄 (GSZ / Mahjong)
-  // Filters: table(kv), mode(option), format(option), completion(option),
-  //          date(date), sort(sort)
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  test.describe("雀庄 — GSZ/Mahjong Category", () => {
-    test.beforeEach(async ({ page }) => {
-      await navigateToCategory(page, `${BASE_URL}/gsz`);
-    });
-
-    test("KV filter: 桌台搜索", async ({ page }) => {
-      await applyKvFilter(page, "桌台", "M1");
-      await expectUrlContains(page, "f.table=");
-    });
-
-    test("Option filter: 模式=三麻", async ({ page }) => {
-      await applyOptionFilter(page, "模式", "三麻");
-      await expectUrlContains(page, "f.mode=3p");
-    });
-
-    test("Option filter: 模式=四麻", async ({ page }) => {
-      await applyOptionFilter(page, "模式", "四麻");
-      await expectUrlContains(page, "f.mode=4p");
-    });
-
-    test("Option filter: 局数=东风", async ({ page }) => {
-      await applyOptionFilter(page, "局数", "东风");
-      await expectUrlContains(page, "f.format=tonpuu");
-    });
-
-    test("Option filter: 局数=半庄", async ({ page }) => {
-      await applyOptionFilter(page, "局数", "半庄");
-      await expectUrlContains(page, "f.format=hanchan");
-    });
-
-    test("Option filter: 完成度=已完成", async ({ page }) => {
-      await applyOptionFilter(page, "完成度", "已完成");
-      await expectUrlContains(page, "f.completion=completed");
-    });
-
-    test("Option filter: 完成度=未完成", async ({ page }) => {
-      await applyOptionFilter(page, "完成度", "未完成");
-      await expectUrlContains(page, "f.completion=incomplete");
-    });
-
-    test("Sort: 按创建时间排序", async ({ page }) => {
-      await applySort(page, "排序", "创建时间");
-      await expectUrlContains(page, "sort=created_at");
-    });
-
-    test("Sort: 按结束时间排序", async ({ page }) => {
-      await applySort(page, "排序", "结束时间");
-      await expectUrlContains(page, "sort=ended_at");
-    });
-
-    // ─── Multi-filter Permutations ─────────────────────────────────────────
-
-    test("组合: 模式+局数", async ({ page }) => {
-      await applyOptionFilter(page, "模式", "四麻");
-      await applyOptionFilter(page, "局数", "半庄");
-      await expectUrlContains(page, "f.mode=4p");
-      await expectUrlContains(page, "f.format=hanchan");
-    });
-
-    test("组合: 模式+局数+完成度", async ({ page }) => {
-      await applyOptionFilter(page, "模式", "三麻");
-      await applyOptionFilter(page, "局数", "东风");
-      await applyOptionFilter(page, "完成度", "已完成");
-      await expectUrlContains(page, "f.mode=3p");
-      await expectUrlContains(page, "f.format=tonpuu");
-      await expectUrlContains(page, "f.completion=completed");
-    });
-
-    test("组合: 桌台+模式+局数+完成度+排序 (全筛选器)", async ({ page }) => {
-      await applyKvFilter(page, "桌台", "M1");
-      await applyOptionFilter(page, "模式", "四麻");
-      await applyOptionFilter(page, "局数", "半庄");
-      await applyOptionFilter(page, "完成度", "已完成");
-      await applySort(page, "排序", "结束时间");
-      await expectUrlContains(page, "f.table=");
-      await expectUrlContains(page, "f.mode=4p");
-      await expectUrlContains(page, "f.format=hanchan");
-      await expectUrlContains(page, "f.completion=completed");
-      await expectUrlContains(page, "sort=ended_at");
-    });
-
-    test("组合: 切换模式 (四麻→三麻)", async ({ page }) => {
-      await applyOptionFilter(page, "模式", "四麻");
-      await expectUrlContains(page, "f.mode=4p");
-      await applyOptionFilter(page, "模式", "三麻");
-      await expectUrlContains(page, "f.mode=3p");
-    });
+  test("键盘导航: 上下选择 + Enter", async () => {
+    await lp.open();
+    await lp.enterFilterMenu();
+    await lp.selectByArrows(2);
+    // Should enter a sub-mode (operator-select or value-input)
+    await lp.page.waitForTimeout(300);
   });
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CROSS-CATEGORY & LAUNCHER UX TESTS
-  // ═══════════════════════════════════════════════════════════════════════════
+  test("从不同页面打开会自动检测类别", async () => {
+    // Orders page
+    await lp.goto(`${BASE}/orders`);
+    await lp.open();
+    await lp.enterFilterMenu();
+    const statusItem = lp.listArea.getByText("状态");
+    await expect(statusItem).toBeVisible();
+    await lp.close();
 
-  test.describe("Launcher UX — Cross-Category", () => {
-    test("热键 / 打开启动器", async ({ page }) => {
-      await page.goto(`${BASE_URL}/users`);
-      await waitForTable(page);
-      await openLauncher(page);
-      const dialog = page.locator("[data-testid='launcher-dialog']");
-      await expect(dialog).toBeVisible();
-    });
-
-    test("点击触发按钮打开启动器", async ({ page }) => {
-      await page.goto(`${BASE_URL}/users`);
-      await waitForTable(page);
-      await openLauncherViaClick(page);
-      const dialog = page.locator("[data-testid='launcher-dialog']");
-      await expect(dialog).toBeVisible();
-    });
-
-    test("Esc 关闭启动器", async ({ page }) => {
-      await page.goto(`${BASE_URL}/users`);
-      await waitForTable(page);
-      await openLauncher(page);
-      await closeLauncher(page);
-    });
-
-    test("点击背景关闭启动器", async ({ page }) => {
-      await page.goto(`${BASE_URL}/users`);
-      await waitForTable(page);
-      await openLauncher(page);
-      // Click the backdrop
-      const backdrop = page.locator("[data-testid='launcher-dialog']").first();
-      await backdrop.click({ position: { x: 10, y: 10 } });
-      await expect(page.locator(".fixed.inset-0.z-50 .max-w-lg")).not.toBeVisible({ timeout: 2000 });
-    });
-
-    test("筛选器模式切换: 搜索 → 筛选器菜单 → 返回", async ({ page }) => {
-      await page.goto(`${BASE_URL}/users`);
-      await waitForTable(page);
-      await openLauncher(page);
-      // Default: search mode
-      const input = await getLauncherInput(page);
-      await expect(input).toHaveAttribute("placeholder", /搜索/);
-      // Switch to filter menu
-      await enterFilterMenu(page);
-      await expect(input).toHaveAttribute("placeholder", /筛选器/);
-      // Switch back
-      const backBtn = page.locator(".fixed.inset-0.z-50 button[title='返回搜索']");
-      await backBtn.click();
-      await expect(input).toHaveAttribute("placeholder", /搜索/);
-    });
-
-    test("键盘导航: 上下选择 + Enter 确认", async ({ page }) => {
-      await page.goto(`${BASE_URL}/users`);
-      await waitForTable(page);
-      await openLauncher(page);
-      await enterFilterMenu(page);
-      // Arrow down twice then enter
-      await page.keyboard.press("ArrowDown");
-      await page.keyboard.press("ArrowDown");
-      await page.keyboard.press("Enter");
-      // Should be in a sub-mode now (depends on which filter)
-      await page.waitForTimeout(300);
-    });
-
-    test("从不同页面打开会自动检测类别", async ({ page }) => {
-      // Start on orders page
-      await page.goto(`${BASE_URL}/orders`);
-      await waitForTable(page);
-      await openLauncher(page);
-      await enterFilterMenu(page);
-      // Should show order-specific filters
-      const statusItem = page.locator(".fixed.inset-0.z-50 .overflow-y-auto").getByText("状态");
-      await expect(statusItem).toBeVisible();
-      await closeLauncher(page);
-
-      // Navigate to tables
-      await page.goto(`${BASE_URL}/tables`);
-      await waitForTable(page);
-      await openLauncher(page);
-      await enterFilterMenu(page);
-      // Should show table-specific filters
-      const typeItem = page.locator(".fixed.inset-0.z-50 .overflow-y-auto").getByText("类型");
-      await expect(typeItem).toBeVisible();
-    });
-
-    test("跨页面: users筛选后切换到orders筛选", async ({ page }) => {
-      await page.goto(`${BASE_URL}/users`);
-      await waitForTable(page);
-      await applyOptionFilter(page, "角色", "管理员");
-      await expectUrlContains(page, "f.role=admin");
-
-      // Navigate to orders
-      await page.goto(`${BASE_URL}/orders`);
-      await waitForTable(page);
-      // Orders should NOT have the users filter
-      await expectNoUrlParam(page, "f.role");
-      // Apply orders filter
-      await applyOptionFilter(page, "状态", "进行中");
-      await expectUrlContains(page, "f.status=active");
-    });
-
-    test("Input不在焦点时 / 键有效, Input焦点时 / 无效", async ({ page }) => {
-      await page.goto(`${BASE_URL}/users`);
-      await waitForTable(page);
-      // First: focus NOT on input, "/" should open
-      await openLauncher(page);
-      await closeLauncher(page);
-      // Now focus an input on the page (if any exist) — test that "/" doesn't trigger
-      // This is hard to test generically, so just verify the hotkey works from body
-    });
-
-    test("筛选器覆盖: 同一key多次设值覆盖", async ({ page }) => {
-      await page.goto(`${BASE_URL}/orders`);
-      await waitForTable(page);
-      await applyOptionFilter(page, "状态", "进行中");
-      await expectUrlContains(page, "f.status=active");
-      // Apply different value for same key
-      await applyOptionFilter(page, "状态", "暂停");
-      await expectUrlContains(page, "f.status=paused");
-      // Should not have both
-      const url = page.url();
-      expect(url).not.toContain("f.status=active");
-    });
+    // Tables page
+    await lp.goto(`${BASE}/tables`);
+    await lp.open();
+    await lp.enterFilterMenu();
+    const typeItem = lp.listArea.getByText("类型");
+    await expect(typeItem).toBeVisible();
   });
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // DATE FILTER TESTS
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  test.describe("日期筛选器", () => {
-    test("用户: 注册时间日期筛选器打开日期面板", async ({ page }) => {
-      await page.goto(`${BASE_URL}/users`);
-      await waitForTable(page);
-      await openLauncher(page);
-      await enterFilterMenu(page);
-      await selectMenuItem(page, "注册时间");
-      // Should show date pick panel
-      const datePanel = page.locator(".fixed.inset-0.z-50 input[type='date']");
-      await expect(datePanel.first()).toBeVisible({ timeout: 3000 });
-    });
-
-    test("订单: 日期筛选器", async ({ page }) => {
-      await page.goto(`${BASE_URL}/orders`);
-      await waitForTable(page);
-      await openLauncher(page);
-      await enterFilterMenu(page);
-      await selectMenuItem(page, "日期");
-      const datePanel = page.locator(".fixed.inset-0.z-50 input[type='date']");
-      await expect(datePanel.first()).toBeVisible({ timeout: 3000 });
-    });
-
-    test("约局: 日期筛选器", async ({ page }) => {
-      await page.goto(`${BASE_URL}/actives`);
-      await waitForTable(page);
-      await openLauncher(page);
-      await enterFilterMenu(page);
-      await selectMenuItem(page, "日期");
-      const datePanel = page.locator(".fixed.inset-0.z-50 input[type='date']");
-      await expect(datePanel.first()).toBeVisible({ timeout: 3000 });
-    });
-
-    test("活动: 日期筛选器", async ({ page }) => {
-      await page.goto(`${BASE_URL}/events`);
-      await waitForTable(page);
-      await openLauncher(page);
-      await enterFilterMenu(page);
-      await selectMenuItem(page, "日期");
-      const datePanel = page.locator(".fixed.inset-0.z-50 input[type='date']");
-      await expect(datePanel.first()).toBeVisible({ timeout: 3000 });
-    });
-
-    test("雀庄: 日期筛选器", async ({ page }) => {
-      await page.goto(`${BASE_URL}/gsz`);
-      await waitForTable(page);
-      await openLauncher(page);
-      await enterFilterMenu(page);
-      await selectMenuItem(page, "日期");
-      const datePanel = page.locator(".fixed.inset-0.z-50 input[type='date']");
-      await expect(datePanel.first()).toBeVisible({ timeout: 3000 });
-    });
-
-    test("日期范围: 填写起止日期并提交", async ({ page }) => {
-      await page.goto(`${BASE_URL}/orders`);
-      await waitForTable(page);
-      await openLauncher(page);
-      await enterFilterMenu(page);
-      await selectMenuItem(page, "日期");
-      // Fill from date
-      const dateInputs = page.locator(".fixed.inset-0.z-50 input[type='date']");
-      await dateInputs.nth(0).fill("2025-01-01");
-      await dateInputs.nth(1).fill("2025-12-31");
-      // Submit
-      const confirmBtn = page.locator(".fixed.inset-0.z-50 button", { hasText: /确|应用|确认/ });
-      if (await confirmBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await confirmBtn.click();
-      } else {
-        await page.keyboard.press("Enter");
-      }
-      await page.waitForTimeout(500);
-      await expectUrlContains(page, "f.date");
-    });
+  test("Input 不在焦点时 / 键有效", async () => {
+    await lp.open();
+    await lp.close();
+    // "/" again should reopen
+    await lp.open();
+    await expect(lp.dialog).toBeVisible();
   });
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // INFINITE SCROLL TESTS
-  // ═══════════════════════════════════════════════════════════════════════════
+  test("筛选器覆盖: 同一 key 多次设值只保留最新", async () => {
+    await lp.goto(`${BASE}/orders`);
+    await lp.applyOptionFilter("状态", "进行中");
+    await lp.expectUrlContains("f.status=active");
+    await lp.applyOptionFilter("状态", "暂停");
+    await lp.expectUrlContains("f.status=paused");
+    const url = lp.page.url();
+    expect(url).not.toContain("f.status=active");
+  });
+});
 
-  test.describe("无限滚动", () => {
-    test("用户列表: 数据存在时表格可见", async ({ page }) => {
-      await page.goto(`${BASE_URL}/users`);
-      await waitForTable(page);
-      const rows = page.locator("table.table tbody tr, [data-testid='infinite-table'] tbody tr");
-      await expect.poll(() => rows.count(), { timeout: 10000 }).toBeGreaterThan(0);
-    });
+// ═══════════════════════════════════════════════════════════════════════════════
+// 2. PER-CATEGORY FILTERS
+// ═══════════════════════════════════════════════════════════════════════════════
 
-    test("订单列表: 数据存在时表格可见", async ({ page }) => {
-      await page.goto(`${BASE_URL}/orders`);
-      await waitForTable(page);
-      const rows = page.locator("table.table tbody tr, [data-testid='infinite-table'] tbody tr");
-      await expect.poll(() => rows.count(), { timeout: 10000 }).toBeGreaterThan(0);
-    });
+// ─── 用户 (Users) ────────────────────────────────────────────────────────────
 
-    test("桌台列表: 数据存在时表格可见", async ({ page }) => {
-      await page.goto(`${BASE_URL}/tables`);
-      await waitForTable(page);
-      const rows = page.locator("table.table tbody tr, [data-testid='infinite-table'] tbody tr");
-      await expect.poll(() => rows.count(), { timeout: 10000 }).toBeGreaterThan(0);
-    });
+test.describe("用户筛选", () => {
+  test.beforeEach(async () => {
+    await lp.goto(`${BASE}/users`);
+  });
 
-    test("筛选后: 数据更新", async ({ page }) => {
-      await page.goto(`${BASE_URL}/users`);
-      await waitForTable(page);
-      const rowsBefore = await page.locator("table.table tbody tr").count();
-      // Apply a restrictive filter
-      await applyOptionFilter(page, "角色", "管理员");
-      await page.waitForTimeout(1000);
-      // Rows should change (fewer for admin-only)
-      const rowsAfter = await page.locator("table.table tbody tr").count();
-      // At minimum the table should still exist
-      await expect(page.locator("table.table")).toBeVisible();
-      // Admin rows should be fewer than all users (or equal if dataset is tiny)
-      expect(rowsAfter).toBeLessThanOrEqual(rowsBefore);
-    });
+  test("KV: 昵称", async () => {
+    await lp.applyKvFilter("昵称", "张三");
+    await lp.expectUrlContains("f.name=");
+  });
+
+  test("KV: UID", async () => {
+    await lp.applyKvFilter("UID", "thx1138");
+    await lp.expectUrlContains("f.uid=thx1138");
+  });
+
+  test("KV: 手机号", async () => {
+    await lp.applyKvFilter("手机号", "13800001");
+    await lp.expectUrlContains("f.phone=13800001");
+  });
+
+  test("Option: 角色=管理员", async () => {
+    await lp.applyOptionFilter("角色", "管理员");
+    await lp.expectUrlContains("f.role=admin");
+  });
+
+  test("Option: 角色=店员", async () => {
+    await lp.applyOptionFilter("角色", "店员");
+    await lp.expectUrlContains("f.role=staff");
+  });
+
+  test("Option: 角色=顾客", async () => {
+    await lp.applyOptionFilter("角色", "顾客");
+    await lp.expectUrlContains("f.role=authenticated");
+  });
+
+  test("Option: 门店=光谷", async () => {
+    await lp.applyOptionFilter("门店", "光谷");
+    await lp.expectUrlContains("f.store=gg");
+  });
+
+  test("Option: 门店=街道口", async () => {
+    await lp.applyOptionFilter("门店", "街道口");
+    await lp.expectUrlContains("f.store=jdk");
+  });
+
+  test("Boolean: 已禁用", async () => {
+    await lp.applyBooleanFilter("已禁用");
+    await lp.expectUrlContains("f.disabled=1");
+  });
+
+  test("Sort: 注册时间", async () => {
+    await lp.applySort("排序", "注册时间");
+    await lp.expectUrlContains("sort=created_at");
+  });
+
+  test("Sort: 昵称", async () => {
+    await lp.applySort("排序", "昵称");
+    await lp.expectUrlContains("sort=nickname");
+  });
+
+  test("Sort: 储值余额", async () => {
+    await lp.applySort("排序", "储值余额");
+    await lp.expectUrlContains("sort=stored_value");
+  });
+
+  test("组合: 角色+门店", async () => {
+    await lp.applyOptionFilter("角色", "顾客");
+    await lp.applyOptionFilter("门店", "光谷");
+    await lp.expectUrlContains("f.role=authenticated");
+    await lp.expectUrlContains("f.store=gg");
+  });
+
+  test("组合: 昵称+角色+排序", async () => {
+    await lp.applyKvFilter("昵称", "李");
+    await lp.applyOptionFilter("角色", "顾客");
+    await lp.applySort("排序", "注册时间");
+    await lp.expectUrlContains("f.name=");
+    await lp.expectUrlContains("f.role=authenticated");
+    await lp.expectUrlContains("sort=created_at");
+  });
+
+  test("组合: UID+门店+排序", async () => {
+    await lp.applyKvFilter("UID", "uid");
+    await lp.applyOptionFilter("门店", "街道口");
+    await lp.applySort("排序", "储值余额");
+    await lp.expectUrlContains("f.uid=uid");
+    await lp.expectUrlContains("f.store=jdk");
+    await lp.expectUrlContains("sort=stored_value");
+  });
+
+  test("搜索跳转详情", async () => {
+    await lp.open();
+    await lp.input.fill("张三丰");
+    await lp.page.waitForTimeout(500);
+    await lp.page.keyboard.press("Enter");
+    await lp.page.waitForTimeout(1000);
+  });
+
+  test("清除筛选器: Esc 关闭后参数保留", async () => {
+    await lp.applyOptionFilter("角色", "管理员");
+    await lp.expectUrlContains("f.role=admin");
+    await lp.open();
+    const chip = lp.dialog.getByText("admin", { exact: false });
+    await expect(chip).toBeVisible();
+    await lp.close();
+  });
+});
+
+// ─── 订单 (Orders) ───────────────────────────────────────────────────────────
+
+test.describe("订单筛选", () => {
+  test.beforeEach(async () => {
+    await lp.goto(`${BASE}/orders`);
+  });
+
+  test("KV: 桌台", async () => {
+    await lp.applyKvFilter("桌台", "大厅");
+    await lp.expectUrlContains("f.table=");
+  });
+
+  test("KV: 用户", async () => {
+    await lp.applyKvFilter("用户", "张三");
+    await lp.expectUrlContains("f.user=");
+  });
+
+  test("Option: 状态=进行中", async () => {
+    await lp.applyOptionFilter("状态", "进行中");
+    await lp.expectUrlContains("f.status=active");
+  });
+
+  test("Option: 状态=暂停", async () => {
+    await lp.applyOptionFilter("状态", "暂停");
+    await lp.expectUrlContains("f.status=paused");
+  });
+
+  test("Option: 状态=已结束", async () => {
+    await lp.applyOptionFilter("状态", "已结束");
+    await lp.expectUrlContains("f.status=ended");
+  });
+
+  test("Option: 门店=光谷", async () => {
+    await lp.applyOptionFilter("门店", "光谷");
+    await lp.expectUrlContains("f.store=gg");
+  });
+
+  test("Sort: 开始时间", async () => {
+    await lp.applySort("排序", "开始时间");
+    await lp.expectUrlContains("sort=start_at");
+  });
+
+  test("Sort: 结束时间", async () => {
+    await lp.applySort("排序", "结束时间");
+    await lp.expectUrlContains("sort=end_at");
+  });
+
+  test("Group: 桌台", async () => {
+    await lp.applyGroup("分组", "桌台");
+    await lp.expectUrlContains("group=table");
+  });
+
+  test("Group: 用户", async () => {
+    await lp.applyGroup("分组", "用户");
+    await lp.expectUrlContains("group=user");
+  });
+
+  test("Group: 日期", async () => {
+    await lp.applyGroup("分组", "日期");
+    await lp.expectUrlContains("group=date");
+  });
+
+  test("组合: 状态+门店+排序", async () => {
+    await lp.applyOptionFilter("状态", "已结束");
+    await lp.applyOptionFilter("门店", "光谷");
+    await lp.applySort("排序", "开始时间");
+    await lp.expectUrlContains("f.status=ended");
+    await lp.expectUrlContains("f.store=gg");
+    await lp.expectUrlContains("sort=start_at");
+  });
+
+  test("组合: 桌台+状态+分组", async () => {
+    await lp.applyKvFilter("桌台", "A1");
+    await lp.applyOptionFilter("状态", "进行中");
+    await lp.applyGroup("分组", "桌台");
+    await lp.expectUrlContains("f.table=");
+    await lp.expectUrlContains("f.status=active");
+    await lp.expectUrlContains("group=table");
+  });
+
+  test("组合: 全筛选器 (用户+状态+排序+分组)", async () => {
+    await lp.applyKvFilter("用户", "张");
+    await lp.applyOptionFilter("状态", "已结束");
+    await lp.applySort("排序", "结束时间");
+    await lp.applyGroup("分组", "用户");
+    await lp.expectUrlContains("f.user=");
+    await lp.expectUrlContains("f.status=ended");
+    await lp.expectUrlContains("sort=end_at");
+    await lp.expectUrlContains("group=user");
+  });
+});
+
+// ─── 桌台 (Tables) ───────────────────────────────────────────────────────────
+
+test.describe("桌台筛选", () => {
+  test.beforeEach(async () => {
+    await lp.goto(`${BASE}/tables`);
+  });
+
+  test("KV: 桌台名", async () => {
+    await lp.applyKvFilter("桌台名", "大厅");
+    await lp.expectUrlContains("f.name=");
+  });
+
+  test("Option: 类型=固定桌", async () => {
+    await lp.applyOptionFilter("类型", "固定桌");
+    await lp.expectUrlContains("f.type=fixed");
+  });
+
+  test("Option: 类型=拼桌", async () => {
+    await lp.applyOptionFilter("类型", "拼桌");
+    await lp.expectUrlContains("f.type=solo");
+  });
+
+  test("Option: 状态=启用", async () => {
+    await lp.applyOptionFilter("状态", "启用");
+    await lp.expectUrlContains("f.status=active");
+  });
+
+  test("Option: 状态=停用", async () => {
+    await lp.applyOptionFilter("状态", "停用");
+    await lp.expectUrlContains("f.status=inactive");
+  });
+
+  test("Option: 门店=光谷", async () => {
+    await lp.applyOptionFilter("门店", "光谷");
+    await lp.expectUrlContains("f.store=gg");
+  });
+
+  test("Option: 门店=街道口", async () => {
+    await lp.applyOptionFilter("门店", "街道口");
+    await lp.expectUrlContains("f.store=jdk");
+  });
+
+  test("Sort: 创建时间", async () => {
+    await lp.applySort("排序", "创建时间");
+    await lp.expectUrlContains("sort=created_at");
+  });
+
+  test("Sort: 名称", async () => {
+    await lp.applySort("排序", "名称");
+    await lp.expectUrlContains("sort=name");
+  });
+
+  test("组合: 类型+状态+门店", async () => {
+    await lp.applyOptionFilter("类型", "固定桌");
+    await lp.applyOptionFilter("状态", "启用");
+    await lp.applyOptionFilter("门店", "光谷");
+    await lp.expectUrlContains("f.type=fixed");
+    await lp.expectUrlContains("f.status=active");
+    await lp.expectUrlContains("f.store=gg");
+  });
+
+  test("组合: 桌台名+类型+排序", async () => {
+    await lp.applyKvFilter("桌台名", "街道口");
+    await lp.applyOptionFilter("类型", "拼桌");
+    await lp.applySort("排序", "名称");
+    await lp.expectUrlContains("f.name=");
+    await lp.expectUrlContains("f.type=solo");
+    await lp.expectUrlContains("sort=name");
+  });
+
+  test("组合: 全部 (名称+类型+状态+门店+排序)", async () => {
+    await lp.applyKvFilter("桌台名", "M");
+    await lp.applyOptionFilter("类型", "固定桌");
+    await lp.applyOptionFilter("状态", "启用");
+    await lp.applyOptionFilter("门店", "光谷");
+    await lp.applySort("排序", "创建时间");
+    await lp.expectUrlContains("f.name=");
+    await lp.expectUrlContains("f.type=fixed");
+    await lp.expectUrlContains("f.status=active");
+    await lp.expectUrlContains("f.store=gg");
+    await lp.expectUrlContains("sort=created_at");
+  });
+});
+
+// ─── 约局 (Actives) ──────────────────────────────────────────────────────────
+
+test.describe("约局筛选", () => {
+  test.beforeEach(async () => {
+    await lp.goto(`${BASE}/actives`);
+  });
+
+  test("KV: 发起人", async () => {
+    await lp.applyKvFilter("发起人", "张三");
+    await lp.expectUrlContains("f.creator=");
+  });
+
+  test("KV: 类型", async () => {
+    await lp.applyKvFilter("类型", "桌游");
+    await lp.expectUrlContains("f.type=");
+  });
+
+  test("Option: 状态=进行中", async () => {
+    await lp.applyOptionFilter("状态", "进行中");
+    await lp.expectUrlContains("f.status=active");
+  });
+
+  test("Option: 状态=已过期", async () => {
+    await lp.applyOptionFilter("状态", "已过期");
+    await lp.expectUrlContains("f.status=expired");
+  });
+
+  test("Option: 门店=光谷", async () => {
+    await lp.applyOptionFilter("门店", "光谷");
+    await lp.expectUrlContains("f.store=gg");
+  });
+
+  test("Option: 门店=街道口", async () => {
+    await lp.applyOptionFilter("门店", "街道口");
+    await lp.expectUrlContains("f.store=jdk");
+  });
+
+  test("Sort: 创建时间", async () => {
+    await lp.applySort("排序", "创建时间");
+    await lp.expectUrlContains("sort=created_at");
+  });
+
+  test("Sort: 开始时间", async () => {
+    await lp.applySort("排序", "开始时间");
+    await lp.expectUrlContains("sort=start_time");
+  });
+
+  test("组合: 状态+门店+排序", async () => {
+    await lp.applyOptionFilter("状态", "进行中");
+    await lp.applyOptionFilter("门店", "光谷");
+    await lp.applySort("排序", "开始时间");
+    await lp.expectUrlContains("f.status=active");
+    await lp.expectUrlContains("f.store=gg");
+    await lp.expectUrlContains("sort=start_time");
+  });
+
+  test("组合: 发起人+状态+门店", async () => {
+    await lp.applyKvFilter("发起人", "孙");
+    await lp.applyOptionFilter("状态", "进行中");
+    await lp.applyOptionFilter("门店", "光谷");
+    await lp.expectUrlContains("f.creator=");
+    await lp.expectUrlContains("f.status=active");
+    await lp.expectUrlContains("f.store=gg");
+  });
+});
+
+// ─── 活动 (Events) ───────────────────────────────────────────────────────────
+
+test.describe("活动筛选", () => {
+  test.beforeEach(async () => {
+    await lp.goto(`${BASE}/events`);
+  });
+
+  test("KV: 标题", async () => {
+    await lp.applyKvFilter("标题", "桌游");
+    await lp.expectUrlContains("f.title=");
+  });
+
+  test("Option: 状态=进行中", async () => {
+    await lp.applyOptionFilter("状态", "进行中");
+    await lp.expectUrlContains("f.status=active");
+  });
+
+  test("Option: 状态=已结束", async () => {
+    await lp.applyOptionFilter("状态", "已结束");
+    await lp.expectUrlContains("f.status=ended");
+  });
+
+  test("Option: 状态=即将开始", async () => {
+    await lp.applyOptionFilter("状态", "即将开始");
+    await lp.expectUrlContains("f.status=upcoming");
+  });
+
+  test("Option: 门店=光谷", async () => {
+    await lp.applyOptionFilter("门店", "光谷");
+    await lp.expectUrlContains("f.store=gg");
+  });
+
+  test("Option: 门店=街道口", async () => {
+    await lp.applyOptionFilter("门店", "街道口");
+    await lp.expectUrlContains("f.store=jdk");
+  });
+
+  test("Sort: 创建时间", async () => {
+    await lp.applySort("排序", "创建时间");
+    await lp.expectUrlContains("sort=created_at");
+  });
+
+  test("Sort: 开始日期", async () => {
+    await lp.applySort("排序", "开始日期");
+    await lp.expectUrlContains("sort=start_date");
+  });
+
+  test("组合: 标题+状态+门店+排序", async () => {
+    await lp.applyKvFilter("标题", "麻将");
+    await lp.applyOptionFilter("状态", "进行中");
+    await lp.applyOptionFilter("门店", "光谷");
+    await lp.applySort("排序", "创建时间");
+    await lp.expectUrlContains("f.title=");
+    await lp.expectUrlContains("f.status=active");
+    await lp.expectUrlContains("f.store=gg");
+    await lp.expectUrlContains("sort=created_at");
+  });
+
+  test("Option 覆盖: 状态切换 (进行中→已结束)", async () => {
+    await lp.applyOptionFilter("状态", "进行中");
+    await lp.expectUrlContains("f.status=active");
+    await lp.applyOptionFilter("状态", "已结束");
+    await lp.expectUrlContains("f.status=ended");
+  });
+});
+
+// ─── 雀庄 (GSZ / Mahjong) ────────────────────────────────────────────────────
+
+test.describe("雀庄筛选", () => {
+  test.beforeEach(async () => {
+    await lp.goto(`${BASE}/gsz`);
+  });
+
+  test("KV: 桌台", async () => {
+    await lp.applyKvFilter("桌台", "M1");
+    await lp.expectUrlContains("f.table=");
+  });
+
+  test("Option: 模式=三麻", async () => {
+    await lp.applyOptionFilter("模式", "三麻");
+    await lp.expectUrlContains("f.mode=3p");
+  });
+
+  test("Option: 模式=四麻", async () => {
+    await lp.applyOptionFilter("模式", "四麻");
+    await lp.expectUrlContains("f.mode=4p");
+  });
+
+  test("Option: 局数=东风", async () => {
+    await lp.applyOptionFilter("局数", "东风");
+    await lp.expectUrlContains("f.format=tonpuu");
+  });
+
+  test("Option: 局数=半庄", async () => {
+    await lp.applyOptionFilter("局数", "半庄");
+    await lp.expectUrlContains("f.format=hanchan");
+  });
+
+  test("Option: 完成度=已完成", async () => {
+    await lp.applyOptionFilter("完成度", "已完成");
+    await lp.expectUrlContains("f.completion=completed");
+  });
+
+  test("Option: 完成度=未完成", async () => {
+    await lp.applyOptionFilter("完成度", "未完成");
+    await lp.expectUrlContains("f.completion=incomplete");
+  });
+
+  test("Sort: 创建时间", async () => {
+    await lp.applySort("排序", "创建时间");
+    await lp.expectUrlContains("sort=created_at");
+  });
+
+  test("Sort: 结束时间", async () => {
+    await lp.applySort("排序", "结束时间");
+    await lp.expectUrlContains("sort=ended_at");
+  });
+
+  test("组合: 模式+局数", async () => {
+    await lp.applyOptionFilter("模式", "四麻");
+    await lp.applyOptionFilter("局数", "半庄");
+    await lp.expectUrlContains("f.mode=4p");
+    await lp.expectUrlContains("f.format=hanchan");
+  });
+
+  test("组合: 模式+局数+完成度", async () => {
+    await lp.applyOptionFilter("模式", "三麻");
+    await lp.applyOptionFilter("局数", "东风");
+    await lp.applyOptionFilter("完成度", "已完成");
+    await lp.expectUrlContains("f.mode=3p");
+    await lp.expectUrlContains("f.format=tonpuu");
+    await lp.expectUrlContains("f.completion=completed");
+  });
+
+  test("组合: 全筛选器 (桌台+模式+局数+完成度+排序)", async () => {
+    await lp.applyKvFilter("桌台", "M1");
+    await lp.applyOptionFilter("模式", "四麻");
+    await lp.applyOptionFilter("局数", "半庄");
+    await lp.applyOptionFilter("完成度", "已完成");
+    await lp.applySort("排序", "结束时间");
+    await lp.expectUrlContains("f.table=");
+    await lp.expectUrlContains("f.mode=4p");
+    await lp.expectUrlContains("f.format=hanchan");
+    await lp.expectUrlContains("f.completion=completed");
+    await lp.expectUrlContains("sort=ended_at");
+  });
+
+  test("Option 覆盖: 模式切换 (四麻→三麻)", async () => {
+    await lp.applyOptionFilter("模式", "四麻");
+    await lp.expectUrlContains("f.mode=4p");
+    await lp.applyOptionFilter("模式", "三麻");
+    await lp.expectUrlContains("f.mode=3p");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 3. DATE FILTERS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.describe("日期筛选器", () => {
+  test("用户: 注册时间", async () => {
+    await lp.goto(`${BASE}/users`);
+    await lp.openDateFilter("注册时间");
+    await lp.expectDatePanelVisible();
+  });
+
+  test("订单: 日期", async () => {
+    await lp.goto(`${BASE}/orders`);
+    await lp.openDateFilter("日期");
+    await lp.expectDatePanelVisible();
+  });
+
+  test("约局: 日期", async () => {
+    await lp.goto(`${BASE}/actives`);
+    await lp.openDateFilter("日期");
+    await lp.expectDatePanelVisible();
+  });
+
+  test("活动: 日期", async () => {
+    await lp.goto(`${BASE}/events`);
+    await lp.openDateFilter("日期");
+    await lp.expectDatePanelVisible();
+  });
+
+  test("雀庄: 日期", async () => {
+    await lp.goto(`${BASE}/gsz`);
+    await lp.openDateFilter("日期");
+    await lp.expectDatePanelVisible();
+  });
+
+  test("日期范围: 填写起止日期并提交", async () => {
+    await lp.goto(`${BASE}/orders`);
+    await lp.openDateFilter("日期");
+    await lp.fillDateRange("2025-01-01", "2025-12-31");
+    await lp.expectUrlContains("f.date");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 4. CROSS-CATEGORY
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.describe("跨页面", () => {
+  test("users 筛选后切换到 orders 筛选互不干扰", async () => {
+    await lp.goto(`${BASE}/users`);
+    await lp.applyOptionFilter("角色", "管理员");
+    await lp.expectUrlContains("f.role=admin");
+
+    await lp.goto(`${BASE}/orders`);
+    await lp.expectNoUrlParam("f.role");
+    await lp.applyOptionFilter("状态", "进行中");
+    await lp.expectUrlContains("f.status=active");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 5. DATA RENDERING
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.describe("数据渲染", () => {
+  test("用户列表: 表格可见", async () => {
+    await lp.goto(`${BASE}/users`);
+    await lp.expectTableRows();
+  });
+
+  test("订单列表: 表格可见", async () => {
+    await lp.goto(`${BASE}/orders`);
+    await lp.expectTableRows();
+  });
+
+  test("桌台列表: 表格可见", async () => {
+    await lp.goto(`${BASE}/tables`);
+    await lp.expectTableRows();
+  });
+
+  test("筛选后: 数据更新 (管理员过滤)", async () => {
+    await lp.goto(`${BASE}/users`);
+    const rows = lp.page.locator("table.table tbody tr");
+    const rowsBefore = await rows.count();
+    await lp.applyOptionFilter("角色", "管理员");
+    await lp.page.waitForTimeout(1000);
+    await expect(lp.page.locator("table.table")).toBeVisible();
+    const rowsAfter = await rows.count();
+    expect(rowsAfter).toBeLessThanOrEqual(rowsBefore);
   });
 });

@@ -29,6 +29,11 @@ export const CATEGORIES: CategoryDef[] = [
       { type: "number", key: "stored_value", label: "储值余额", unit: "元" },
       { type: "date", key: "created", label: "注册时间", granularity: "day" },
     ],
+    sortFields: [
+      { key: "created_at", label: "注册时间" },
+      { key: "nickname", label: "昵称" },
+      { key: "stored_value", label: "储值余额" },
+    ],
   },
   {
     id: "orders",
@@ -56,6 +61,15 @@ export const CATEGORIES: CategoryDef[] = [
       { type: "date", key: "date", label: "日期", granularity: "day" },
       { type: "date", key: "start_at", label: "开始时间", granularity: "hour" },
       { type: "date", key: "end_at", label: "结束时间", granularity: "hour" },
+    ],
+    sortFields: [
+      { key: "start_at", label: "开始时间" },
+      { key: "end_at", label: "结束时间" },
+    ],
+    groupFields: [
+      { key: "table", label: "桌台" },
+      { key: "user", label: "用户" },
+      { key: "date", label: "日期" },
     ],
   },
   {
@@ -90,6 +104,10 @@ export const CATEGORIES: CategoryDef[] = [
       ]},
       { type: "date", key: "created_at", label: "创建时间", granularity: "day" },
     ],
+    sortFields: [
+      { key: "created_at", label: "创建时间" },
+      { key: "name", label: "名称" },
+    ],
   },
   {
     id: "actives",
@@ -116,6 +134,10 @@ export const CATEGORIES: CategoryDef[] = [
       { type: "date", key: "date", label: "日期", granularity: "day" },
       { type: "date", key: "start_time", label: "开始时间", granularity: "hour" },
     ],
+    sortFields: [
+      { key: "created_at", label: "创建时间" },
+      { key: "start_time", label: "开始时间" },
+    ],
   },
   {
     id: "events",
@@ -141,6 +163,10 @@ export const CATEGORIES: CategoryDef[] = [
       ]},
       { type: "date", key: "date", label: "日期", granularity: "day" },
       { type: "date", key: "start_date", label: "开始日期", granularity: "day" },
+    ],
+    sortFields: [
+      { key: "created_at", label: "创建时间" },
+      { key: "start_date", label: "开始日期" },
     ],
   },
   {
@@ -180,6 +206,10 @@ export const CATEGORIES: CategoryDef[] = [
       },
       { type: "date", key: "date", label: "日期", granularity: "day" },
       { type: "date", key: "created_at", label: "创建时间", granularity: "day" },
+    ],
+    sortFields: [
+      { key: "created_at", label: "创建时间" },
+      { key: "ended_at", label: "结束时间" },
     ],
   },
 ];
