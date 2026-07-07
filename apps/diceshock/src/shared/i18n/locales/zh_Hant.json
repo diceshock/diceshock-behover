@@ -456,7 +456,12 @@
     "batchPause": "批量暫停 ({count})",
     "batchResume": "批量繼續 ({count})",
     "batchSettle": "批量結算 ({count})",
-    "duration": "時長"
+    "duration": "時長",
+    "notFound": "訂單不存在",
+    "noSelection": "未選擇訂單",
+    "backToList": "返回訂單列表",
+    "allSettled": "所有訂單處理完成",
+    "backToHome": "返回主頁"
   },
   "dashTables": {
     "fixedTable": "固定桌",
@@ -507,7 +512,9 @@
     "scope": "營業範圍",
     "operationSuccess": "操作成功",
     "enable": "啟用",
-    "disable": "停用"
+    "disable": "停用",
+    "notFound": "桌台不存在",
+    "backToList": "返回桌台列表"
   },
   "dashMedia": {
     "sortNewest": "最新上傳",
@@ -679,7 +686,9 @@
     "exportCsv": "匯出 CSV",
     "restore": "恢復",
     "restoreSuccess": "已恢復用戶",
-    "restoreFailed": "恢復失敗"
+    "restoreFailed": "恢復失敗",
+    "notFound": "用戶不存在",
+    "backToList": "返回用戶列表"
   },
   "dashDateFilter": {
     "selectRange": "日期範圍",
@@ -881,7 +890,9 @@
     "capSplitDayNight": "白天/晚上分别封頂",
     "capPriceYuan": "封頂价格 (元)",
     "daytimeCapYuan": "白天封頂 (元)",
-    "nighttimeCapYuan": "晚上封頂 (元)"
+    "nighttimeCapYuan": "晚上封頂 (元)",
+    "notFound": "計劃不存在或數據未加載",
+    "backToList": "返回價格計劃"
   },
   "dashGsz": {
     "modes": {
@@ -957,7 +968,9 @@
     "noBoundPhone": "未綁定手机号",
     "close": "關閉",
     "activeWithCount": "進行中 ({count})",
-    "terminate": "終止"
+    "terminate": "終止",
+    "notFound": "對局不存在",
+    "backToList": "返回列表"
   },
   "dashTable": {
     "actions": "操作",

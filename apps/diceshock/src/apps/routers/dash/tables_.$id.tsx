@@ -24,6 +24,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import { useTranslation } from "@/client/hooks/useTranslation";
 import type { ActiveMahjongMatchesQuery } from "@/client/graphql/__generated__";
 import {
   ActiveMahjongMatchesDocument,
@@ -119,6 +120,7 @@ function TableDetailPage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const msg = useMsg();
+  const { t } = useTranslation();
   const client = useApolloClient();
 
   const [table, setTable] = useState<TableDetail | null>(null);
@@ -449,13 +451,13 @@ function TableDetailPage() {
   if (!table) {
     return (
       <main className="size-full flex flex-col items-center justify-center gap-4">
-        <p className="text-base-content/60">桌台不存在</p>
+        <p className="text-base-content/60">{t("dashTables.notFound")}</p>
         <Link
           to="/dash/tables"
           search={{ q: "", page: 1 }}
           className="btn btn-primary btn-sm"
         >
-          返回桌台列表
+          {t("dashTables.backToList")}
         </Link>
       </main>
     );

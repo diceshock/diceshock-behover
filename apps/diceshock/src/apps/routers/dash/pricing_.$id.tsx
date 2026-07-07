@@ -6,6 +6,7 @@ import {
 import { atom, useAtom } from "jotai";
 import { useCallback, useEffect, useState } from "react";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import { useTranslation } from "@/client/hooks/useTranslation";
 
 export const Route = createFileRoute("/dash/pricing_/$id")({
   component: PricingDetailPage,
@@ -134,6 +135,7 @@ function PricingDetailPage() {
   const planIndex = Number(id);
   const navigate = useNavigate();
   const msg = useMsg();
+  const { t } = useTranslation();
   const [pricingData, setPricingData] = useAtom(pricingDataAtom);
 
   const plan = pricingData?.plans[planIndex] ?? null;
@@ -224,13 +226,13 @@ function PricingDetailPage() {
   if (!pricingData || !plan) {
     return (
       <main className="size-full flex flex-col items-center justify-center gap-4">
-        <p className="text-base-content/60">计划不存在或数据未加载</p>
+        <p className="text-base-content/60">{t("dashPricing.notFound")}</p>
         <button
           type="button"
           className="btn btn-primary btn-sm"
           onClick={() => navigate({ to: "/dash/pricing" })}
         >
-          返回价格计划
+          {t("dashPricing.backToList")}
         </button>
       </main>
     );

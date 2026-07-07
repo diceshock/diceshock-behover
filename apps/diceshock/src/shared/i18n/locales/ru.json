@@ -456,7 +456,12 @@
     "batchPause": "Пауза для выбранных ({count})",
     "batchResume": "Продолжить выбранные ({count})",
     "batchSettle": "Рассчитать выбранные ({count})",
-    "duration": "Длительность"
+    "duration": "Длительность",
+    "notFound": "Заказ не найден",
+    "noSelection": "Заказы не выбраны",
+    "backToList": "Вернуться к заказам",
+    "allSettled": "Все заказы рассчитаны",
+    "backToHome": "Вернуться на главную"
   },
   "dashTables": {
     "fixedTable": "Закрытый стол",
@@ -507,7 +512,9 @@
     "scope": "Область",
     "operationSuccess": "Операция выполнена",
     "enable": "Включить",
-    "disable": "Отключить"
+    "disable": "Отключить",
+    "notFound": "Стол не найден",
+    "backToList": "Вернуться к столам"
   },
   "dashMedia": {
     "sortNewest": "Сначала новые",
@@ -679,7 +686,9 @@
     "exportCsv": "Экспорт CSV",
     "restore": "Восстановить",
     "restoreSuccess": "Пользователь восстановлен",
-    "restoreFailed": "Не удалось восстановить"
+    "restoreFailed": "Не удалось восстановить",
+    "notFound": "Пользователь не найден",
+    "backToList": "Вернуться к пользователям"
   },
   "dashDateFilter": {
     "selectRange": "Диапазон дат",
@@ -881,7 +890,9 @@
     "capSplitDayNight": "Separate daytime/night caps",
     "capPriceYuan": "Cap price (CNY)",
     "daytimeCapYuan": "Daytime cap (CNY)",
-    "nighttimeCapYuan": "Nighttime cap (CNY)"
+    "nighttimeCapYuan": "Nighttime cap (CNY)",
+    "notFound": "План не найден или данные не загружены",
+    "backToList": "Вернуться к ценам"
   },
   "dashGsz": {
     "modes": {
@@ -957,7 +968,9 @@
     "noBoundPhone": "No bound phone",
     "close": "Close",
     "activeWithCount": "In progress ({count})",
-    "terminate": "Terminate"
+    "terminate": "Terminate",
+    "notFound": "Матч не найден",
+    "backToList": "Вернуться к списку"
   },
   "dashTable": {
     "actions": "Действия",

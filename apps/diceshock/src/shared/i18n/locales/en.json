@@ -456,7 +456,12 @@
     "batchPause": "Batch pause ({count})",
     "batchResume": "Batch resume ({count})",
     "batchSettle": "Batch settle ({count})",
-    "duration": "Duration"
+    "duration": "Duration",
+    "notFound": "Order not found",
+    "noSelection": "No orders selected",
+    "backToList": "Back to orders",
+    "allSettled": "All orders settled",
+    "backToHome": "Back to home"
   },
   "dashTables": {
     "fixedTable": "Fixed Table",
@@ -507,7 +512,9 @@
     "scope": "Scope",
     "operationSuccess": "Operation successful",
     "enable": "Enable",
-    "disable": "Disable"
+    "disable": "Disable",
+    "notFound": "Table not found",
+    "backToList": "Back to tables"
   },
   "dashMedia": {
     "sortNewest": "Newest upload",
@@ -679,7 +686,9 @@
     "exportCsv": "Export CSV",
     "restore": "Restore",
     "restoreSuccess": "User restored",
-    "restoreFailed": "Restore failed"
+    "restoreFailed": "Restore failed",
+    "notFound": "User not found",
+    "backToList": "Back to users"
   },
   "dashDateFilter": {
     "selectRange": "Date range",
@@ -881,7 +890,9 @@
     "capSplitDayNight": "Separate daytime/night caps",
     "capPriceYuan": "Cap price (CNY)",
     "daytimeCapYuan": "Daytime cap (CNY)",
-    "nighttimeCapYuan": "Nighttime cap (CNY)"
+    "nighttimeCapYuan": "Nighttime cap (CNY)",
+    "notFound": "Plan not found or data not loaded",
+    "backToList": "Back to pricing"
   },
   "dashGsz": {
     "modes": {
@@ -957,7 +968,9 @@
     "noBoundPhone": "No bound phone",
     "close": "Close",
     "activeWithCount": "In progress ({count})",
-    "terminate": "Terminate"
+    "terminate": "Terminate",
+    "notFound": "Match not found",
+    "backToList": "Back to list"
   },
   "dashTable": {
     "actions": "Actions",

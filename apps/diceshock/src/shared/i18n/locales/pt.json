@@ -456,7 +456,12 @@
     "batchPause": "Pausar em lote ({count})",
     "batchResume": "Retomar em lote ({count})",
     "batchSettle": "Liquidar em lote ({count})",
-    "duration": "Duração"
+    "duration": "Duração",
+    "notFound": "Pedido não encontrado",
+    "noSelection": "Nenhum pedido selecionado",
+    "backToList": "Voltar para pedidos",
+    "allSettled": "Todos os pedidos liquidados",
+    "backToHome": "Voltar ao início"
   },
   "dashTables": {
     "fixedTable": "Mesa fixa",
@@ -507,7 +512,9 @@
     "scope": "Âmbito",
     "operationSuccess": "Operação bem-sucedida",
     "enable": "Ativar",
-    "disable": "Desativar"
+    "disable": "Desativar",
+    "notFound": "Mesa não encontrada",
+    "backToList": "Voltar para mesas"
   },
   "dashMedia": {
     "sortNewest": "Upload mais recente",
@@ -679,7 +686,9 @@
     "exportCsv": "Exportar CSV",
     "restore": "Restaurar",
     "restoreSuccess": "Usuário restaurado",
-    "restoreFailed": "Falha ao restaurar"
+    "restoreFailed": "Falha ao restaurar",
+    "notFound": "Usuário não encontrado",
+    "backToList": "Voltar para usuários"
   },
   "dashDateFilter": {
     "selectRange": "Intervalo de datas",
@@ -881,7 +890,9 @@
     "capSplitDayNight": "Separate daytime/night caps",
     "capPriceYuan": "Cap price (CNY)",
     "daytimeCapYuan": "Daytime cap (CNY)",
-    "nighttimeCapYuan": "Nighttime cap (CNY)"
+    "nighttimeCapYuan": "Nighttime cap (CNY)",
+    "notFound": "Plano não encontrado ou dados não carregados",
+    "backToList": "Voltar para preços"
   },
   "dashGsz": {
     "modes": {
@@ -957,7 +968,9 @@
     "noBoundPhone": "No bound phone",
     "close": "Close",
     "activeWithCount": "In progress ({count})",
-    "terminate": "Terminate"
+    "terminate": "Terminate",
+    "notFound": "Partida não encontrada",
+    "backToList": "Voltar para a lista"
   },
   "dashTable": {
     "actions": "Ações",

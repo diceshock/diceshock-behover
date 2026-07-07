@@ -456,7 +456,12 @@
     "batchPause": "一括一時停止 ({count})",
     "batchResume": "一括再開 ({count})",
     "batchSettle": "一括精算 ({count})",
-    "duration": "時間"
+    "duration": "時間",
+    "notFound": "注文が見つかりません",
+    "noSelection": "注文が選択されていません",
+    "backToList": "注文一覧に戻る",
+    "allSettled": "すべての注文が精算されました",
+    "backToHome": "ホームに戻る"
   },
   "dashTables": {
     "fixedTable": "固定卓",
@@ -507,7 +512,9 @@
     "scope": "利用範囲",
     "operationSuccess": "操作が完了しました",
     "enable": "有効化",
-    "disable": "無効化"
+    "disable": "無効化",
+    "notFound": "テーブルが見つかりません",
+    "backToList": "テーブル一覧に戻る"
   },
   "dashMedia": {
     "sortNewest": "最新アップロード",
@@ -679,7 +686,9 @@
     "exportCsv": "CSVエクスポート",
     "restore": "復元",
     "restoreSuccess": "ユーザーを復元しました",
-    "restoreFailed": "復元に失敗しました"
+    "restoreFailed": "復元に失敗しました",
+    "notFound": "ユーザーが見つかりません",
+    "backToList": "ユーザー一覧に戻る"
   },
   "dashDateFilter": {
     "selectRange": "日付範囲",
@@ -881,7 +890,9 @@
     "capSplitDayNight": "Separate daytime/night caps",
     "capPriceYuan": "Cap price (CNY)",
     "daytimeCapYuan": "Daytime cap (CNY)",
-    "nighttimeCapYuan": "Nighttime cap (CNY)"
+    "nighttimeCapYuan": "Nighttime cap (CNY)",
+    "notFound": "プランが見つからないかデータが未読み込みです",
+    "backToList": "料金プランに戻る"
   },
   "dashGsz": {
     "modes": {
@@ -957,7 +968,9 @@
     "noBoundPhone": "No bound phone",
     "close": "Close",
     "activeWithCount": "In progress ({count})",
-    "terminate": "Terminate"
+    "terminate": "Terminate",
+    "notFound": "対局が見つかりません",
+    "backToList": "一覧に戻る"
   },
   "dashTable": {
     "actions": "操作",

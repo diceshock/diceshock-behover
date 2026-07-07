@@ -512,7 +512,9 @@
     "scope": "营业范围",
     "operationSuccess": "操作成功",
     "enable": "启用",
-    "disable": "禁用"
+    "disable": "禁用",
+    "notFound": "桌台不存在",
+    "backToList": "返回桌台列表"
   },
   "dashMedia": {
     "sortNewest": "最新上传",
@@ -684,7 +686,9 @@
     "exportCsv": "导出 CSV",
     "restore": "恢复",
     "restoreSuccess": "已恢复用户",
-    "restoreFailed": "恢复失败"
+    "restoreFailed": "恢复失败",
+    "notFound": "用户不存在",
+    "backToList": "返回用户列表"
   },
   "dashDateFilter": {
     "selectRange": "日期范围",
@@ -886,7 +890,9 @@
     "capSplitDayNight": "白天/晚上分别封顶",
     "capPriceYuan": "封顶价格 (元)",
     "daytimeCapYuan": "白天封顶 (元)",
-    "nighttimeCapYuan": "晚上封顶 (元)"
+    "nighttimeCapYuan": "晚上封顶 (元)",
+    "notFound": "计划不存在或数据未加载",
+    "backToList": "返回价格计划"
   },
   "dashGsz": {
     "modes": {
@@ -962,7 +968,9 @@
     "noBoundPhone": "未绑定手机号",
     "close": "关闭",
     "activeWithCount": "进行中 ({count})",
-    "terminate": "终止"
+    "terminate": "终止",
+    "notFound": "对局不存在",
+    "backToList": "返回列表"
   },
   "dashTable": {
     "actions": "操作",

@@ -16,6 +16,7 @@ import type { EChartsOption } from "echarts";
 import { forwardRef, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import confetti from "canvas-confetti";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import { useTranslation } from "@/client/hooks/useTranslation";
 import {
   useBatchSettlementPreviewMutation,
   useSettleOrderMutation,
@@ -87,6 +88,7 @@ function BatchSettlePage() {
   const navigate = useNavigate();
   const msg = useMsg();
 
+  const { t } = useTranslation();
   const [previews, setPreviews] = useState<SettlementPreviewItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -305,9 +307,9 @@ function BatchSettlePage() {
   if (ids.length === 0) {
     return (
       <main className="size-full flex flex-col items-center justify-center gap-4">
-        <p className="text-base-content/60">未选择订单</p>
+        <p className="text-base-content/60">{t("dashOrders.noSelection")}</p>
         <Link to="/dash/orders" search={{ q: "", sortBy: "start_at", sortOrder: "desc", groupBy: "none", page: "1" }} className="btn btn-primary btn-sm">
-          返回订单列表
+          {t("dashOrders.backToList")}
         </Link>
       </main>
     );
@@ -324,13 +326,13 @@ function BatchSettlePage() {
   if (previews.length === 0) {
     return (
       <main className="size-full flex flex-col items-center justify-center gap-4">
-        <p className="text-base-content/60">{errorMsg ?? "订单不存在"}</p>
+        <p className="text-base-content/60">{errorMsg ?? t("dashOrders.notFound")}</p>
         <div className="flex gap-2">
           <button type="button" className="btn btn-outline btn-sm" onClick={() => void fetchData()}>
-            重试
+            {t("common.retry")}
           </button>
           <Link to="/dash/orders" search={{ q: "", sortBy: "start_at", sortOrder: "desc", groupBy: "none", page: "1" }} className="btn btn-primary btn-sm">
-            返回订单列表
+            {t("dashOrders.backToList")}
           </Link>
         </div>
       </main>
@@ -376,14 +378,14 @@ function BatchSettlePage() {
           {allSettled && (
             <div ref={bottomRef} className="flex flex-col items-center justify-center gap-4 py-12">
               <CheckCircleIcon className="size-12 text-success animate-bounce" />
-              <p className="text-lg font-bold text-success">所有订单处理完成</p>
+              <p className="text-lg font-bold text-success">{t("dashOrders.allSettled")}</p>
               <button
                 type="button"
                 className="btn btn-primary gap-2"
                 onClick={() => void navigate({ to: "/dash" })}
               >
                 <HouseIcon className="size-4" />
-                返回主页
+                {t("dashOrders.backToHome")}
               </button>
             </div>
           )}

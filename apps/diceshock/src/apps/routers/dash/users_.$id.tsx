@@ -29,6 +29,7 @@ import MembershipBadge, {
   type PlanType,
 } from "@/client/components/diceshock/MembershipBadge";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import { useTranslation } from "@/client/hooks/useTranslation";
 import {
   ActiveMahjongMatchesDocument,
   MembershipPlanType,
@@ -198,6 +199,7 @@ function UserDetailPage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const msg = useMsg();
+  const { t } = useTranslation();
   const client = useApolloClient();
 
   const { data: userQlData, loading } = useUserQuery({
@@ -853,13 +855,13 @@ function UserDetailPage() {
   if (!rawUser) {
     return (
       <main className="size-full flex flex-col items-center justify-center gap-4">
-        <p className="text-base-content/60">用户不存在</p>
+        <p className="text-base-content/60">{t("dashUsers.notFound")}</p>
         <Link
           to="/dash/users"
           search={{ q: "", page: "1" }}
           className="btn btn-primary btn-sm"
         >
-          返回用户列表
+          {t("dashUsers.backToList")}
         </Link>
       </main>
     );

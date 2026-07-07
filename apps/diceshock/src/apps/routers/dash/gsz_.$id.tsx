@@ -4,6 +4,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import { useTranslation } from "@/client/hooks/useTranslation";
 import type { MahjongMatchQuery } from "@/client/graphql/__generated__";
 import {
   MahjongFormat,
@@ -69,6 +70,7 @@ function MatchDetailPage() {
   const { id } = Route.useParams();
   const msg = useMsg();
   const client = useApolloClient();
+  const { t } = useTranslation();
 
   const [match, setMatch] = useState<MatchDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -126,8 +128,8 @@ function MatchDetailPage() {
   if (!match) {
     return (
       <main className="size-full flex flex-col items-center justify-center gap-4">
-        <p className="text-base-content/60">对局不存在</p>
-        <Link to="/dash/gsz" search={{ q: "", page: 1 }} className="btn btn-primary btn-sm">返回列表</Link>
+        <p className="text-base-content/60">{t("dashGsz.notFound")}</p>
+        <Link to="/dash/gsz" search={{ q: "", page: 1 }} className="btn btn-primary btn-sm">{t("dashGsz.backToList")}</Link>
       </main>
     );
   }
