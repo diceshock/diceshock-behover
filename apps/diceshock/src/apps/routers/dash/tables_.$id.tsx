@@ -23,7 +23,6 @@ import clsx from "clsx";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
-import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import type { ActiveMahjongMatchesQuery } from "@/client/graphql/__generated__";
 import {
@@ -467,9 +466,6 @@ function TableDetailPage() {
   return (
     <ClientOnly>
       <main className="size-full overflow-y-auto">
-        <div className="px-4 pt-4">
-          <DashBackButton to="/dash/tables" />
-        </div>
 
         <div className="mx-auto w-full max-w-3xl px-4 pb-24">
           <div className="flex items-center gap-4 mb-6">

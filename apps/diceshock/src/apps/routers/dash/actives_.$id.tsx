@@ -6,7 +6,6 @@ import {
 } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useEffect, useRef, useState } from "react";
-import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import TiptapEditor from "@/client/components/diceshock/TiptapEditor";
 import {
@@ -185,9 +184,6 @@ function ActiveEditorPage() {
   return (
     <ClientOnly>
       <main className="size-full overflow-y-auto">
-        <div className="px-4 pt-4">
-          <DashBackButton to="/dash/actives" />
-        </div>
 
         <div className="mx-auto w-full max-w-2xl px-4 pb-20">
           <div className="flex items-center justify-between mb-6">

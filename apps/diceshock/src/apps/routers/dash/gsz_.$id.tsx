@@ -1,9 +1,8 @@
 import { useApolloClient } from "@apollo/client";
 import { ArrowsClockwiseIcon } from "@phosphor-icons/react/dist/ssr";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
-import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import type { MahjongMatchQuery } from "@/client/graphql/__generated__";
 import {
@@ -128,7 +127,7 @@ function MatchDetailPage() {
     return (
       <main className="size-full flex flex-col items-center justify-center gap-4">
         <p className="text-base-content/60">对局不存在</p>
-        <DashBackButton to="/dash/gsz" />
+        <Link to="/dash/gsz" search={{ q: "", page: 1 }} className="btn btn-primary btn-sm">返回列表</Link>
       </main>
     );
   }
@@ -147,9 +146,6 @@ function MatchDetailPage() {
 
   return (
     <main className="size-full overflow-y-auto">
-      <div className="px-4 pt-4">
-        <DashBackButton to="/dash/gsz" />
-      </div>
 
       <div className="mx-auto w-full max-w-4xl px-4 pb-20">
         <h1 className="text-2xl font-bold mb-2">立直麻将详情</h1>

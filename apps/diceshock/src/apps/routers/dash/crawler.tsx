@@ -14,7 +14,6 @@ import {
   useMemo,
   useState,
 } from "react";
-import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import type {
   CrawlerErrorsQuery,
@@ -99,7 +98,6 @@ function RouteComponent() {
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <DashBackButton />
             <div>
               <h1 className="text-2xl font-bold">Gstone 桌游爬虫</h1>
               <p className="text-sm text-base-content/60">

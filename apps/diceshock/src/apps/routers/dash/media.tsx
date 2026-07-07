@@ -14,7 +14,6 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import {
   MediaObjectsDocument,
@@ -327,8 +326,7 @@ function RouteComponent() {
 
   return (
     <main className="flex-1 min-h-0 flex flex-col">
-      <div className="px-4 pt-4 flex items-center justify-between">
-        <DashBackButton />
+      <div className="px-4 pt-4 flex items-center justify-end">
         <button
           type="button"
           className="btn btn-primary btn-sm gap-1"

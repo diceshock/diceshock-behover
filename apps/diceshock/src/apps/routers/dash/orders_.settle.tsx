@@ -15,7 +15,6 @@ import {
 import type { EChartsOption } from "echarts";
 import { forwardRef, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import confetti from "canvas-confetti";
-import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import {
   useBatchSettlementPreviewMutation,
@@ -225,10 +224,12 @@ function BatchSettlePage() {
     const currentPtsBalance = (preview?.membership as unknown as { pointsBalance: number })?.pointsBalance ?? 0;
     const resultingSv = currentSvBalance - effectiveDeductAmount;
     const resultingPts = currentPtsBalance - effectiveDeductPoints;
-    if (resultingSv < -100 || resultingPts < 1) {
+    const svWarning = effectiveDeductAmount > 0 && resultingSv < -100;
+    const ptsWarning = effectiveDeductPoints > 0 && resultingPts < 1;
+    if (svWarning || ptsWarning) {
       const warnings: string[] = [];
-      if (resultingSv < -100) warnings.push(`储值余额将降至 ¥${(resultingSv / 100).toFixed(2)}`);
-      if (resultingPts < 1) warnings.push(`积分余额将降至 ${resultingPts}点`);
+      if (svWarning) warnings.push(`储值余额将降至 ¥${(resultingSv / 100).toFixed(2)}`);
+      if (ptsWarning) warnings.push(`积分余额将降至 ${resultingPts}点`);
       const confirmMsg = `${warnings.join("，")}，确认结算？`;
       if (!confirm(confirmMsg)) return;
     }
@@ -478,7 +479,6 @@ function OverviewSection({
 
       <div className="relative z-10 px-4 pt-4 pb-6">
         <div className="flex items-center gap-2 mb-4">
-          <DashBackButton to="/dash/orders" />
           <h1 className="text-xl font-bold">批量结算</h1>
         </div>
 

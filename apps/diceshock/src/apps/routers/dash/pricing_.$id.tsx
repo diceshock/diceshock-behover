@@ -5,7 +5,6 @@ import {
 } from "@tanstack/react-router";
 import { atom, useAtom } from "jotai";
 import { useCallback, useEffect, useState } from "react";
-import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 
 export const Route = createFileRoute("/dash/pricing_/$id")({
@@ -240,9 +239,6 @@ function PricingDetailPage() {
   return (
     <ClientOnly>
       <main className="size-full overflow-y-auto">
-        <div className="px-4 pt-4">
-          <DashBackButton to="/dash/pricing" />
-        </div>
 
         <div className="mx-auto w-full max-w-3xl px-4 pb-20">
           <h1 className="text-2xl font-bold mb-6">编辑条件计划</h1>

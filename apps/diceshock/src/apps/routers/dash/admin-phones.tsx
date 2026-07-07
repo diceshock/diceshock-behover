@@ -2,7 +2,6 @@ import { useApolloClient, gql } from "@apollo/client";
 import { ShieldCheckIcon, TrashIcon } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 
 const ADMIN_PHONES_QUERY = gql`
@@ -168,9 +167,6 @@ function AdminPhonesPage() {
 
   return (
     <main className="min-h-screen bg-base-200/50 pb-20">
-      <div className="px-4 pt-4">
-        <DashBackButton to="/dash" />
-      </div>
 
       <div className="mx-auto w-full max-w-lg px-4">
         <h1 className="flex items-center gap-2 text-xl font-bold mt-4 mb-6">

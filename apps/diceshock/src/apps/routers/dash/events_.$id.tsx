@@ -6,7 +6,6 @@ import {
 } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useRef, useState } from "react";
-import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import MarkdownTextEditor from "@/client/components/diceshock/MarkdownEditor/MarkdownTextEditor";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import {
@@ -131,9 +130,6 @@ function EventEditorPage() {
   return (
     <ClientOnly>
       <main className="size-full overflow-y-auto">
-        <div className="px-4 pt-4">
-          <DashBackButton to="/dash/events" />
-        </div>
 
         <div className="mx-auto w-full max-w-2xl px-4 pb-20">
           <div className="flex items-center justify-between mb-8">

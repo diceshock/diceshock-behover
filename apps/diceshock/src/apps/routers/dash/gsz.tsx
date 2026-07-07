@@ -19,7 +19,6 @@ import { getCategoryById } from "@/client/components/dash/launcher/categories";
 import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
-import DashBackButton from "@/client/components/diceshock/DashBackButton";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import {
   MahjongMatchType,
@@ -549,7 +548,6 @@ function RouteComponent() {
     <main className="flex-1 min-h-0 flex flex-col">
       <div className="px-4 pt-4 flex flex-col gap-3">
         <div className="flex items-center gap-3">
-          <DashBackButton />
           <TableToolbar
             searchBar={{
               grammar: GSZ_SEARCH_GRAMMAR,
