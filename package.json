@@ -8,7 +8,6 @@
     "x": "./x.sh",
     "deploy-diceshock": "pnpm --filter diceshock run deploy",
     "deploy-diceshock:update": "pnpm --filter diceshock run deploy:update",
-    "deploy-runespark": "pnpm --filter runespark run deploy",
     "drizzle": "./target/release/ty-jk --run drizzle drizzle-kit",
     "lint": "./target/release/ty-jk --run lint biome check",
     "build": "./target/release/ty-jk --run build nx run-many --target=build",
