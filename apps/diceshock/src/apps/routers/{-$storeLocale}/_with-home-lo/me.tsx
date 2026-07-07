@@ -738,7 +738,7 @@ function RouteComponent() {
                       to="/{-$storeLocale}/diceshock-agents"
                       className="btn btn-primary btn-sm"
                     >
-                      查看会员&消费
+                      查看会员计划
                     </Link>
                   </div>
                 </div>
