@@ -1,5 +1,5 @@
 import type { AdapterAccountType } from "@auth/core/adapters";
-import dbFactory, { accounts, drizzle, userInfoTable, users } from "@lib/db";
+import dbFactory, { accounts, drizzle, storesTable, userInfoTable, users } from "@lib/db";
 import { customAlphabet } from "nanoid";
 import { z } from "zod";
 import { getSmsTmpCodeKey } from "@/server/utils/auth";
@@ -37,8 +37,7 @@ const updatePreferencesSchema = z.object({
   preferredStoreId: z
     .string()
     .nullable()
-    .optional()
-    .refine((value) => value == null || value in STORES, "Invalid store"),
+    .optional(),
   preferredTheme: z
     .enum(["light", "dark"])
     .nullable()
@@ -233,6 +232,28 @@ export const authTypeDefs = `
     removeAdminPhone(input: AdminPhoneInput!): [String!]!
   }
 `;
+
+/**
+ * Resolve a store code (e.g. "gg") or UUID to the actual store UUID.
+ * Returns null if the value doesn't match any store.
+ */
+async function resolveStoreIdFromCodeOrId(
+  tdb: ReturnType<typeof dbFactory>,
+  value: string,
+): Promise<string | null> {
+  // Try by code first (most common case from client)
+  const byCode = await tdb.query.storesTable.findFirst({
+    where: drizzle.eq(storesTable.code, value),
+    columns: { id: true },
+  });
+  if (byCode) return byCode.id;
+  // Fall back to direct ID lookup
+  const byId = await tdb.query.storesTable.findFirst({
+    where: drizzle.eq(storesTable.id, value),
+    columns: { id: true },
+  });
+  return byId?.id ?? null;
+}
 
 export const authResolvers = {
   Query: {
@@ -468,8 +489,12 @@ export const authResolvers = {
       const setFields: Record<string, unknown> = {};
       if ("preferredLocale" in input)
         setFields.preferred_locale = input.preferredLocale ?? null;
-      if ("preferredStoreId" in input)
-        setFields.preferred_store_id = input.preferredStoreId ?? null;
+      if ("preferredStoreId" in input) {
+        const storeValue = input.preferredStoreId;
+        setFields.preferred_store_id = storeValue
+          ? await resolveStoreIdFromCodeOrId(tdb, storeValue)
+          : null;
+      }
       if ("preferredTheme" in input)
         setFields.preferred_theme = input.preferredTheme ?? null;
 
@@ -498,8 +523,12 @@ export const authResolvers = {
       const setFields: Record<string, unknown> = {};
       if ("preferredLocale" in input)
         setFields.preferred_locale = input.preferredLocale ?? null;
-      if ("preferredStoreId" in input)
-        setFields.preferred_store_id = input.preferredStoreId ?? null;
+      if ("preferredStoreId" in input) {
+        const storeValue = input.preferredStoreId;
+        setFields.preferred_store_id = storeValue
+          ? await resolveStoreIdFromCodeOrId(tdb, storeValue)
+          : null;
+      }
       if ("preferredTheme" in input)
         setFields.preferred_theme = input.preferredTheme ?? null;
 
