@@ -1116,9 +1116,6 @@ export const ordersResolvers = {
       if (!orderId) throw validationError("orderId", "orderId is required");
       const tdb = dbFactory(ctx.env.DB);
       const order = await fetchOrderOrThrow(tdb, orderId);
-      if (normalizeStatus(order) === "SETTLED") {
-        throw validationError("orderId", "Order is already settled");
-      }
       return toGqlSettlementPreview(tdb, await buildSettlementData(tdb, orderId));
     },
   },
