@@ -108,7 +108,14 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
   const pricingSnapshot = useMemo<SnapshotData | null>(() => {
     const d = pricingData?.publishedPricing?.data;
     if (!d) return null;
-    try { return typeof d === "string" ? JSON.parse(d) : d; } catch { return null; }
+    try {
+      const plans = typeof d.plans === "string" ? JSON.parse(d.plans) : d.plans;
+      if (!Array.isArray(plans)) return null;
+      return {
+        config: { daytime_start: d.config?.daytimeStart ?? "10:00", daytime_end: d.config?.daytimeEnd ?? "18:00" },
+        plans,
+      };
+    } catch { return null; }
   }, [pricingData]);
 
   // Settlement form state
