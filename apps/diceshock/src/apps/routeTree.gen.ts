@@ -50,7 +50,6 @@ import { Route as Char123StoreLocaleChar125WithHomeLoInventoryIdRouteImport } fr
 import { Route as Char123StoreLocaleChar125WithHomeLoEventsIdRouteImport } from './routers/{-$storeLocale}/_with-home-lo/events_.$id'
 import { Route as Char123StoreLocaleChar125WithHomeLoActivesNewRouteImport } from './routers/{-$storeLocale}/_with-home-lo/actives_.new'
 import { Route as Char123StoreLocaleChar125WithHomeLoActivesIdRouteImport } from './routers/{-$storeLocale}/_with-home-lo/actives_.$id'
-import { Route as DashOrdersIdSettleRouteImport } from './routers/dash/orders_.$id.settle'
 
 const Char123StoreLocaleChar125Route =
   Char123StoreLocaleChar125RouteImport.update({
@@ -276,11 +275,6 @@ const Char123StoreLocaleChar125WithHomeLoActivesIdRoute =
     path: '/actives/$id',
     getParentRoute: () => Char123StoreLocaleChar125WithHomeLoRoute,
   } as any)
-const DashOrdersIdSettleRoute = DashOrdersIdSettleRouteImport.update({
-  id: '/orders_/$id/settle',
-  path: '/orders/$id/settle',
-  getParentRoute: () => DashRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/dash': typeof DashRouteWithChildren
@@ -319,7 +313,6 @@ export interface FileRoutesByFullPath {
   '/{-$storeLocale}/ready/$code': typeof Char123StoreLocaleChar125ReadyCodeRoute
   '/{-$storeLocale}/t/$code': typeof Char123StoreLocaleChar125TCodeRoute
   '/{-$storeLocale}/': typeof Char123StoreLocaleChar125WithHomeLoIndexRoute
-  '/dash/orders/$id/settle': typeof DashOrdersIdSettleRoute
   '/{-$storeLocale}/actives/$id': typeof Char123StoreLocaleChar125WithHomeLoActivesIdRoute
   '/{-$storeLocale}/actives/new': typeof Char123StoreLocaleChar125WithHomeLoActivesNewRoute
   '/{-$storeLocale}/events/$id': typeof Char123StoreLocaleChar125WithHomeLoEventsIdRoute
@@ -360,7 +353,6 @@ export interface FileRoutesByTo {
   '/{-$storeLocale}/my-riichi/$id': typeof Char123StoreLocaleChar125MyRiichiIdRoute
   '/{-$storeLocale}/ready/$code': typeof Char123StoreLocaleChar125ReadyCodeRoute
   '/{-$storeLocale}/t/$code': typeof Char123StoreLocaleChar125TCodeRoute
-  '/dash/orders/$id/settle': typeof DashOrdersIdSettleRoute
   '/{-$storeLocale}/actives/$id': typeof Char123StoreLocaleChar125WithHomeLoActivesIdRoute
   '/{-$storeLocale}/actives/new': typeof Char123StoreLocaleChar125WithHomeLoActivesNewRoute
   '/{-$storeLocale}/events/$id': typeof Char123StoreLocaleChar125WithHomeLoEventsIdRoute
@@ -405,7 +397,6 @@ export interface FileRoutesById {
   '/{-$storeLocale}/ready/$code': typeof Char123StoreLocaleChar125ReadyCodeRoute
   '/{-$storeLocale}/t/$code': typeof Char123StoreLocaleChar125TCodeRoute
   '/{-$storeLocale}/_with-home-lo/': typeof Char123StoreLocaleChar125WithHomeLoIndexRoute
-  '/dash/orders_/$id/settle': typeof DashOrdersIdSettleRoute
   '/{-$storeLocale}/_with-home-lo/actives_/$id': typeof Char123StoreLocaleChar125WithHomeLoActivesIdRoute
   '/{-$storeLocale}/_with-home-lo/actives_/new': typeof Char123StoreLocaleChar125WithHomeLoActivesNewRoute
   '/{-$storeLocale}/_with-home-lo/events_/$id': typeof Char123StoreLocaleChar125WithHomeLoEventsIdRoute
@@ -450,7 +441,6 @@ export interface FileRouteTypes {
     | '/{-$storeLocale}/ready/$code'
     | '/{-$storeLocale}/t/$code'
     | '/{-$storeLocale}/'
-    | '/dash/orders/$id/settle'
     | '/{-$storeLocale}/actives/$id'
     | '/{-$storeLocale}/actives/new'
     | '/{-$storeLocale}/events/$id'
@@ -491,7 +481,6 @@ export interface FileRouteTypes {
     | '/{-$storeLocale}/my-riichi/$id'
     | '/{-$storeLocale}/ready/$code'
     | '/{-$storeLocale}/t/$code'
-    | '/dash/orders/$id/settle'
     | '/{-$storeLocale}/actives/$id'
     | '/{-$storeLocale}/actives/new'
     | '/{-$storeLocale}/events/$id'
@@ -535,7 +524,6 @@ export interface FileRouteTypes {
     | '/{-$storeLocale}/ready/$code'
     | '/{-$storeLocale}/t/$code'
     | '/{-$storeLocale}/_with-home-lo/'
-    | '/dash/orders_/$id/settle'
     | '/{-$storeLocale}/_with-home-lo/actives_/$id'
     | '/{-$storeLocale}/_with-home-lo/actives_/new'
     | '/{-$storeLocale}/_with-home-lo/events_/$id'
@@ -837,13 +825,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char123StoreLocaleChar125WithHomeLoActivesIdRouteImport
       parentRoute: typeof Char123StoreLocaleChar125WithHomeLoRoute
     }
-    '/dash/orders_/$id/settle': {
-      id: '/dash/orders_/$id/settle'
-      path: '/orders/$id/settle'
-      fullPath: '/dash/orders/$id/settle'
-      preLoaderRoute: typeof DashOrdersIdSettleRouteImport
-      parentRoute: typeof DashRoute
-    }
   }
 }
 
@@ -867,7 +848,6 @@ interface DashRouteChildren {
   DashPricingIdRoute: typeof DashPricingIdRoute
   DashTablesIdRoute: typeof DashTablesIdRoute
   DashUsersIdRoute: typeof DashUsersIdRoute
-  DashOrdersIdSettleRoute: typeof DashOrdersIdSettleRoute
 }
 
 const DashRouteChildren: DashRouteChildren = {
@@ -890,7 +870,6 @@ const DashRouteChildren: DashRouteChildren = {
   DashPricingIdRoute: DashPricingIdRoute,
   DashTablesIdRoute: DashTablesIdRoute,
   DashUsersIdRoute: DashUsersIdRoute,
-  DashOrdersIdSettleRoute: DashOrdersIdSettleRoute,
 }
 
 const DashRouteWithChildren = DashRoute._addFileChildren(DashRouteChildren)

@@ -799,14 +799,14 @@ export type SettlementPreviewQueryVariables = Exact<{
 }>;
 
 
-export type SettlementPreviewQuery = { settlementPreview: { totalMinutes: number, pausedMinutes: number, billableMinutes: number, finalPrice: number, finalPoints: number, order: { id: string, tableId: string, userId: string | null, tempId: string | null, nickname: string | null, uid: string | null, status: Types.OrderStatus, startAt: string, endAt: string | null, finalPrice: number | null, finalPoints: number | null, table: { id: string, name: string, code: string, scope: Types.TableScope } | null }, priceBreakdown: { planName: string, planType: string, billingType: string, unitPrice: number, unitPoints: number, totalMinutes: number, billableHalfHours: number, rawPrice: number, rawPoints: number, capApplied: boolean, capType: string | null, finalPrice: number, finalPoints: number } | null, membership: { hasTimePlan: boolean, timePlanActive: boolean, timePlanType: string | null, timePlanEndDate: string | null, storedValueBalance: number, pointsBalance: number }, pauseLogs: Array<{ pausedAt: string, resumedAt: string | null }>, pricingPlans: Array<{ name: string, planType: string, billingType: string, price: number, points: number, matched: boolean }>, recentOrders: Array<{ id: string, tableName: string, startAt: string, endAt: string | null, finalPrice: number | null, status: Types.OrderStatus }> } };
+export type SettlementPreviewQuery = { settlementPreview: { totalMinutes: number, pausedMinutes: number, billableMinutes: number, finalPrice: number, finalPoints: number, order: { id: string, tableId: string, userId: string | null, tempId: string | null, nickname: string | null, uid: string | null, status: Types.OrderStatus, startAt: string, endAt: string | null, finalPrice: number | null, finalPoints: number | null, settledPrice: number | null, settledPoints: number | null, settlementSnapshot: string | null, table: { id: string, name: string, code: string, scope: Types.TableScope } | null }, priceBreakdown: { planName: string, planType: string, billingType: string, unitPrice: number, unitPoints: number, totalMinutes: number, billableHalfHours: number, rawPrice: number, rawPoints: number, capApplied: boolean, capType: string | null, finalPrice: number, finalPoints: number } | null, membership: { hasTimePlan: boolean, timePlanActive: boolean, timePlanType: string | null, timePlanEndDate: string | null, storedValueBalance: number, pointsBalance: number }, pauseLogs: Array<{ pausedAt: string, resumedAt: string | null }>, pricingPlans: Array<{ name: string, planType: string, billingType: string, price: number, points: number, matched: boolean }>, recentOrders: Array<{ id: string, tableName: string, startAt: string, endAt: string | null, finalPrice: number | null, status: Types.OrderStatus }> } };
 
 export type BatchSettlementPreviewMutationVariables = Exact<{
   ids: Array<string | number> | string | number;
 }>;
 
 
-export type BatchSettlementPreviewMutation = { batchSettlementPreview: Array<{ totalMinutes: number, pausedMinutes: number, billableMinutes: number, finalPrice: number, finalPoints: number, order: { id: string, tableId: string, userId: string | null, tempId: string | null, nickname: string | null, uid: string | null, status: Types.OrderStatus, startAt: string, endAt: string | null, finalPrice: number | null, finalPoints: number | null, table: { id: string, name: string, code: string, scope: Types.TableScope } | null }, priceBreakdown: { planName: string, planType: string, billingType: string, unitPrice: number, unitPoints: number, totalMinutes: number, billableHalfHours: number, rawPrice: number, rawPoints: number, capApplied: boolean, capType: string | null, finalPrice: number, finalPoints: number } | null, membership: { hasTimePlan: boolean, timePlanActive: boolean, timePlanType: string | null, timePlanEndDate: string | null, storedValueBalance: number, pointsBalance: number }, pauseLogs: Array<{ pausedAt: string, resumedAt: string | null }>, pricingPlans: Array<{ name: string, planType: string, billingType: string, price: number, points: number, matched: boolean }>, recentOrders: Array<{ id: string, tableName: string, startAt: string, endAt: string | null, finalPrice: number | null, status: Types.OrderStatus }> }> };
+export type BatchSettlementPreviewMutation = { batchSettlementPreview: Array<{ totalMinutes: number, pausedMinutes: number, billableMinutes: number, finalPrice: number, finalPoints: number, order: { id: string, tableId: string, userId: string | null, tempId: string | null, nickname: string | null, uid: string | null, status: Types.OrderStatus, startAt: string, endAt: string | null, finalPrice: number | null, finalPoints: number | null, settledPrice: number | null, settledPoints: number | null, settlementSnapshot: string | null, table: { id: string, name: string, code: string, scope: Types.TableScope } | null }, priceBreakdown: { planName: string, planType: string, billingType: string, unitPrice: number, unitPoints: number, totalMinutes: number, billableHalfHours: number, rawPrice: number, rawPoints: number, capApplied: boolean, capType: string | null, finalPrice: number, finalPoints: number } | null, membership: { hasTimePlan: boolean, timePlanActive: boolean, timePlanType: string | null, timePlanEndDate: string | null, storedValueBalance: number, pointsBalance: number }, pauseLogs: Array<{ pausedAt: string, resumedAt: string | null }>, pricingPlans: Array<{ name: string, planType: string, billingType: string, price: number, points: number, matched: boolean }>, recentOrders: Array<{ id: string, tableName: string, startAt: string, endAt: string | null, finalPrice: number | null, status: Types.OrderStatus }> }> };
 
 export type PauseOrderMutationVariables = Exact<{
   id: string | number;
@@ -3634,6 +3634,9 @@ export const SettlementPreviewDocument = gql`
       endAt
       finalPrice
       finalPoints
+      settledPrice
+      settledPoints
+      settlementSnapshot
       table {
         id
         name
@@ -3743,6 +3746,9 @@ export const BatchSettlementPreviewDocument = gql`
       endAt
       finalPrice
       finalPoints
+      settledPrice
+      settledPoints
+      settlementSnapshot
       table {
         id
         name

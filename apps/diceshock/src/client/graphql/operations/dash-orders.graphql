@@ -84,6 +84,9 @@ query SettlementPreview($id: ID!) {
       endAt
       finalPrice
       finalPoints
+      settledPrice
+      settledPoints
+      settlementSnapshot
       table {
         id
         name
@@ -156,6 +159,9 @@ mutation BatchSettlementPreview($ids: [ID!]!) {
       endAt
       finalPrice
       finalPoints
+      settledPrice
+      settledPoints
+      settlementSnapshot
       table {
         id
         name

@@ -20,10 +20,12 @@ import { useMsg } from "@/client/components/diceshock/Msg";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import {
   useBatchSettlementPreviewMutation,
+  useSettlementPreviewQuery,
   useSettleOrderMutation,
   useResumeOrderMutation,
   usePublishedPricingQuery,
 } from "@/client/graphql/__generated__";
+import type { SettlementPreviewQuery } from "@/client/graphql/__generated__/operations";
 import dayjs from "@/shared/utils/dayjs-config";
 import { calculatePrice, formatPrice, formatDualPrice, formatPoints, type SnapshotData } from "@/shared/utils/pricing";
 
@@ -61,6 +63,7 @@ class SettleErrorBoundary extends Component<
 }
 
 function SettlePageWithBoundary() {
+  const { ids } = Route.useSearch();
   const { t } = useTranslation();
   return (
     <SettleErrorBoundary
@@ -75,8 +78,404 @@ function SettlePageWithBoundary() {
         </main>
       )}
     >
-      <BatchSettlePage />
+      {ids.length === 1 ? <SingleOrderReceipt orderId={ids[0]} /> : <BatchSettlePage />}
     </SettleErrorBoundary>
+  );
+}
+
+// === Single Order Receipt View (小票) ===
+
+type SinglePreview = SettlementPreviewQuery["settlementPreview"];
+
+const SINGLE_PAYMENT_PRESETS = [
+  { value: "external", label: "外部支付" },
+  { value: "stored_value", label: "储值余额" },
+  { value: "points", label: "积分" },
+] as const;
+
+function SingleOrderReceipt({ orderId }: { orderId: string }) {
+  const navigate = useNavigate();
+  const msg = useMsg();
+
+  const { data, loading, error, refetch } = useSettlementPreviewQuery({
+    variables: { id: orderId },
+    fetchPolicy: "network-only",
+  });
+  const [settleOrder] = useSettleOrderMutation();
+  const [resumeOrder] = useResumeOrderMutation();
+  const { data: pricingData } = usePublishedPricingQuery();
+
+  const pricingSnapshot = useMemo<SnapshotData | null>(() => {
+    const d = pricingData?.publishedPricing?.data;
+    if (!d) return null;
+    try { return typeof d === "string" ? JSON.parse(d) : d; } catch { return null; }
+  }, [pricingData]);
+
+  // Settlement form state
+  const [paymentPreset, setPaymentPreset] = useState<string>("external");
+  const [deductAmount, setDeductAmount] = useState(0);
+  const [deductPoints, setDeductPoints] = useState(0);
+  const [pointsChange, setPointsChange] = useState(0);
+  const [note, setNote] = useState("");
+  const [settling, setSettling] = useState(false);
+
+  const preview = data?.settlementPreview;
+  const isSettled = preview?.order.status === "SETTLED";
+
+  // Build per-half-hour line items for the receipt
+  const lineItems = useMemo(() => {
+    if (!preview) return [];
+    const startAt = new Date(preview.order.startAt).getTime();
+    const endAt = preview.order.endAt ? new Date(preview.order.endAt).getTime() : Date.now();
+    const duration = endAt - startAt;
+    const intervals = Math.min(96, Math.max(1, Math.ceil(duration / HALF_HOUR_MS)));
+    const scope = preview.order.table?.scope ?? "boardgame";
+    const pauseLogs = preview.pauseLogs.map((l: { pausedAt: string; resumedAt: string | null }) => ({
+      pausedAt: new Date(l.pausedAt).getTime(),
+      resumedAt: l.resumedAt ? new Date(l.resumedAt).getTime() : null,
+    }));
+
+    const items: Array<{ time: string; cumPrice: number; increment: number; paused: boolean }> = [];
+    let prevPrice = 0;
+    for (let i = 1; i <= intervals; i++) {
+      const segEnd = Math.min(startAt + i * HALF_HOUR_MS, endAt);
+      const segStart = startAt + (i - 1) * HALF_HOUR_MS;
+      // Check if this segment was fully paused
+      const segPaused = pauseLogs.some((l: { pausedAt: number; resumedAt: number | null }) => {
+        const ps = Math.max(l.pausedAt, segStart);
+        const pe = Math.min(l.resumedAt ?? endAt, segEnd);
+        return (pe - ps) >= (segEnd - segStart) * 0.9; // >90% paused
+      });
+      if (pricingSnapshot) {
+        const result = calculatePrice(startAt, segEnd, scope, pricingSnapshot, pauseLogs);
+        const cumPrice = result?.finalPrice ?? 0;
+        items.push({ time: dayjs(segEnd).format("HH:mm"), cumPrice, increment: cumPrice - prevPrice, paused: segPaused });
+        prevPrice = cumPrice;
+      } else {
+        const pct = Math.min(1, (i * HALF_HOUR_MS) / Math.max(1, duration));
+        const cum = Math.round(preview.finalPrice * pct);
+        items.push({ time: dayjs(segEnd).format("HH:mm"), cumPrice: cum, increment: cum - prevPrice, paused: segPaused });
+        prevPrice = cum;
+      }
+    }
+    return items;
+  }, [preview, pricingSnapshot]);
+
+  const handleSettle = useCallback(async () => {
+    if (!preview || settling) return;
+    setSettling(true);
+    try {
+      await settleOrder({
+        variables: {
+          input: {
+            id: orderId,
+            deductAmount: paymentPreset === "stored_value" ? deductAmount : 0,
+            deductFromStoredValue: paymentPreset === "stored_value",
+            deductPoints: paymentPreset === "points" ? deductPoints : 0,
+            pointsChange: pointsChange || 0,
+            note: note || null,
+          },
+        },
+      });
+      msg.success("结算成功");
+      void refetch();
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "结算失败");
+    } finally {
+      setSettling(false);
+    }
+  }, [preview, settling, orderId, deductAmount, deductPoints, pointsChange, note, paymentPreset, settleOrder, msg, refetch]);
+
+  const handleResume = useCallback(async () => {
+    try {
+      await resumeOrder({ variables: { id: orderId } });
+      msg.success("已恢复计时");
+      void refetch();
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "恢复失败");
+    }
+  }, [orderId, resumeOrder, msg, refetch]);
+
+  if (loading) {
+    return <main className="size-full flex items-center justify-center"><span className="loading loading-spinner loading-lg" /></main>;
+  }
+  if (error || !preview) {
+    return (
+      <main className="size-full flex flex-col items-center justify-center gap-4">
+        <p className="text-base-content/60">{error?.message ?? "订单未找到"}</p>
+        <Link to="/dash/orders" search={{ q: "", sortBy: "start_at", sortOrder: "desc", groupBy: "none", page: "1" }} className="btn btn-primary btn-sm">返回订单列表</Link>
+      </main>
+    );
+  }
+
+  const bd = preview.priceBreakdown;
+  const storedValueBalance = preview.membership.storedValueBalance;
+  const pointsBalance = preview.membership.pointsBalance;
+
+  return (
+    <ClientOnly>
+      <main className="size-full overflow-y-auto">
+        <div className="mx-auto max-w-md px-4 py-6">
+          {/* Receipt container */}
+          <div className="bg-base-100 border border-base-300 rounded-xl shadow-sm overflow-hidden">
+            {/* Receipt header */}
+            <div className="bg-base-200 px-5 py-4 border-b border-base-300">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-lg font-bold flex items-center gap-2">
+                    <ReceiptIcon className="size-5" />
+                    {preview.order.nickname ?? preview.order.uid ?? "匿名"}
+                  </h1>
+                  <p className="text-xs text-base-content/50 mt-0.5">
+                    {preview.order.table?.name ?? "未知桌台"} · {dayjs(preview.order.startAt).format("MM/DD HH:mm")}
+                    {preview.order.endAt ? ` — ${dayjs(preview.order.endAt).format("HH:mm")}` : " — 进行中"}
+                  </p>
+                </div>
+                {isSettled && <span className="badge badge-success">已结算</span>}
+                {preview.order.status === "PAUSED" && <span className="badge badge-warning">暂停中</span>}
+                {preview.order.status === "ACTIVE" && <span className="badge badge-info">进行中</span>}
+              </div>
+            </div>
+
+            {/* Time summary bar */}
+            <div className="grid grid-cols-3 text-center py-3 border-b border-base-300 text-xs">
+              <div><span className="font-mono text-base font-bold">{preview.totalMinutes}</span><br/>总分钟</div>
+              <div><span className="font-mono text-base font-bold text-warning">{preview.pausedMinutes}</span><br/>暂停</div>
+              <div><span className="font-mono text-base font-bold text-success">{preview.billableMinutes}</span><br/>计费</div>
+            </div>
+
+            {/* Line items (receipt body) */}
+            <div className="px-5 py-3 border-b border-base-300">
+              <div className="flex items-center justify-between text-xs text-base-content/50 mb-2 px-1">
+                <span>时段</span>
+                <span>增量 / 累计</span>
+              </div>
+              <div className="space-y-0.5 max-h-64 overflow-y-auto">
+                {lineItems.map((item, i) => (
+                  <div key={i} className={`flex items-center justify-between text-sm font-mono px-1 py-0.5 rounded ${item.paused ? "text-base-content/30 line-through" : ""}`}>
+                    <span className="text-xs">{i === 0 ? dayjs(preview.order.startAt).format("HH:mm") : lineItems[i - 1].time} — {item.time}</span>
+                    <span className={item.increment > 0 ? "" : "text-base-content/30"}>
+                      {item.increment > 0 ? `+¥${(item.increment / 100).toFixed(1)}` : "—"}
+                      <span className="text-base-content/40 ml-2">¥{(item.cumPrice / 100).toFixed(1)}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Pricing plan info */}
+            {bd && (
+              <div className="px-5 py-3 border-b border-base-300 text-sm space-y-1">
+                <div className="flex justify-between"><span className="text-base-content/60">计费计划</span><span className="font-semibold">{bd.planName}</span></div>
+                <div className="flex justify-between"><span className="text-base-content/60">单价</span><span>{formatPrice(bd.unitPrice)}/半小时</span></div>
+                <div className="flex justify-between"><span className="text-base-content/60">计费时段数</span><span>{bd.billableHalfHours}个半小时</span></div>
+                {bd.capApplied && <div className="flex justify-between text-warning"><span>封顶({bd.capType})</span><span>已触发</span></div>}
+              </div>
+            )}
+
+            {/* Subtotal: 应付金额 */}
+            <div className="px-5 py-4 border-b border-base-300 bg-base-200/50">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-base-content/60">应付金额</span>
+                <span className="text-2xl font-bold font-mono">{formatPrice(preview.finalPrice)}</span>
+              </div>
+              {preview.finalPoints > 0 && (
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-sm text-base-content/60">或积分</span>
+                  <span className="text-lg font-semibold">{formatPoints(preview.finalPoints)}</span>
+                </div>
+              )}
+            </div>
+
+            {/* SETTLED: prominent actual payment display */}
+            {isSettled && (
+              <div className="px-5 py-5 bg-success/5">
+                <div className="text-center">
+                  <CheckCircleIcon className="size-8 text-success mx-auto mb-2" />
+                  <div className="text-3xl font-bold font-mono">
+                    {preview.order.settledPrice != null && preview.order.settledPrice > 0
+                      ? formatPrice(preview.order.settledPrice)
+                      : preview.order.settledPoints != null && preview.order.settledPoints > 0
+                        ? formatPoints(preview.order.settledPoints)
+                        : formatPrice(preview.order.finalPrice ?? preview.finalPrice)}
+                  </div>
+                  <div className="text-sm text-base-content/60 mt-1">
+                    {preview.order.settledPrice != null && preview.order.settledPrice > 0
+                      ? "储值余额支付"
+                      : preview.order.settledPoints != null && preview.order.settledPoints > 0
+                        ? "积分支付"
+                        : "外部支付"}
+                  </div>
+                  <div className="text-xs text-base-content/40 mt-2">
+                    {preview.order.endAt ? dayjs(preview.order.endAt).format("YYYY-MM-DD HH:mm") : ""} 结算
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* NOT SETTLED: payment controls */}
+            {!isSettled && (
+              <div className="px-5 py-4 space-y-4">
+                {/* Payment method selector */}
+                <div>
+                  <label className="text-xs text-base-content/50 mb-1.5 block">支付方式</label>
+                  <div className="flex gap-2">
+                    {SINGLE_PAYMENT_PRESETS.map((p) => (
+                      <button
+                        key={p.value}
+                        type="button"
+                        className={`btn btn-sm flex-1 ${paymentPreset === p.value ? "btn-primary" : "btn-ghost border-base-300"}`}
+                        onClick={() => setPaymentPreset(p.value)}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Stored value input */}
+                {paymentPreset === "stored_value" && (
+                  <div>
+                    <label className="text-xs text-base-content/50 mb-1 block">
+                      储值扣除 (余额: {formatPrice(storedValueBalance)})
+                    </label>
+                    <input
+                      type="number"
+                      className="input input-sm input-bordered w-full"
+                      placeholder={`最多 ${(storedValueBalance / 100).toFixed(0)} 元`}
+                      value={deductAmount || ""}
+                      onChange={(e) => setDeductAmount(Number(e.target.value))}
+                    />
+                  </div>
+                )}
+
+                {/* Points input */}
+                {paymentPreset === "points" && (
+                  <div>
+                    <label className="text-xs text-base-content/50 mb-1 block">
+                      积分扣除 (余额: {pointsBalance}点)
+                    </label>
+                    <input
+                      type="number"
+                      className="input input-sm input-bordered w-full"
+                      placeholder={`最多 ${pointsBalance} 点`}
+                      value={deductPoints || ""}
+                      onChange={(e) => setDeductPoints(Number(e.target.value))}
+                    />
+                  </div>
+                )}
+
+                {/* Points change */}
+                <div>
+                  <label className="text-xs text-base-content/50 mb-1 block">积分变动 (正=奖励, 负=扣除)</label>
+                  <input
+                    type="number"
+                    className="input input-sm input-bordered w-full"
+                    placeholder="0"
+                    value={pointsChange || ""}
+                    onChange={(e) => setPointsChange(Number(e.target.value))}
+                  />
+                </div>
+
+                {/* Note */}
+                <div>
+                  <label className="text-xs text-base-content/50 mb-1 block">备注</label>
+                  <textarea
+                    className="textarea textarea-sm textarea-bordered w-full"
+                    placeholder="备注(可选)"
+                    rows={2}
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    className="btn btn-primary flex-1 gap-1"
+                    disabled={settling}
+                    onClick={() => void handleSettle()}
+                  >
+                    {settling ? <span className="loading loading-spinner loading-xs" /> : <CheckCircleIcon className="size-4" />}
+                    确认结算
+                  </button>
+                  {preview.order.status === "PAUSED" && (
+                    <button type="button" className="btn btn-ghost gap-1" onClick={() => void handleResume()}>
+                      <ClockIcon className="size-4" /> 恢复
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Pause logs */}
+            {preview.pauseLogs.length > 0 && (
+              <div className="px-5 py-3 border-t border-base-300 text-xs text-base-content/50">
+                <div className="font-semibold text-base-content/70 mb-1">暂停记录</div>
+                {preview.pauseLogs.map((log: { pausedAt: string; resumedAt: string | null }, i: number) => (
+                  <div key={i} className="flex justify-between">
+                    <span>{dayjs(log.pausedAt).format("HH:mm")}</span>
+                    <span>{log.resumedAt ? dayjs(log.resumedAt).format("HH:mm") : "进行中"}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Membership */}
+            {(preview.membership.hasTimePlan || storedValueBalance > 0 || pointsBalance > 0) && (
+              <div className="px-5 py-3 border-t border-base-300 text-xs text-base-content/50">
+                <div className="font-semibold text-base-content/70 mb-1">会员信息</div>
+                {preview.membership.hasTimePlan && (
+                  <div className="flex justify-between">
+                    <span>时间计划</span>
+                    <span>{preview.membership.timePlanType} ({preview.membership.timePlanActive ? "有效" : "已过期"})</span>
+                  </div>
+                )}
+                {storedValueBalance > 0 && (
+                  <div className="flex justify-between"><span>储值余额</span><span>{formatPrice(storedValueBalance)}</span></div>
+                )}
+                {pointsBalance > 0 && (
+                  <div className="flex justify-between"><span>积分余额</span><span>{pointsBalance}点</span></div>
+                )}
+              </div>
+            )}
+
+            {/* Footer */}
+            <div className="px-5 py-3 border-t border-base-300 flex gap-2 justify-center">
+              <Link to="/dash/orders" search={{ q: "", sortBy: "start_at", sortOrder: "desc", groupBy: "none", page: "1" }} className="btn btn-ghost btn-xs gap-1">
+                <HouseIcon className="size-3" /> 订单列表
+              </Link>
+              {preview.order.userId && (
+                <Link to="/dash/users/$id" params={{ id: preview.order.userId }} search={{ tab: "basic" }} className="btn btn-ghost btn-xs gap-1">
+                  <UserIcon className="size-3" /> 用户详情
+                </Link>
+              )}
+            </div>
+          </div>
+
+          {/* Recent orders below the receipt */}
+          {preview.recentOrders.length > 0 && (
+            <div className="mt-6">
+              <h3 className="text-sm font-semibold text-base-content/60 mb-2">近期订单</h3>
+              <div className="space-y-1">
+                {preview.recentOrders.map((o: { id: string; tableName: string; startAt: string; endAt: string | null; finalPrice: number | null; status: string }) => (
+                  <Link
+                    key={o.id}
+                    to="/dash/orders/settle"
+                    search={{ ids: [o.id] }}
+                    className="flex items-center justify-between text-sm p-2 rounded-lg hover:bg-base-200 transition-colors"
+                  >
+                    <span>{o.tableName} · {dayjs(o.startAt).format("MM/DD HH:mm")}</span>
+                    <span className="font-mono">{formatPrice(o.finalPrice ?? 0)}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+    </ClientOnly>
   );
 }
 
@@ -796,7 +1195,7 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
               <UserIcon className="size-3" /> 用户详情
             </Link>
           )}
-          <Link to="/dash/orders/$id/settle" params={{ id: preview.order.id }} className="btn btn-xs btn-ghost gap-1">
+          <Link to="/dash/orders/settle" search={{ ids: [preview.order.id] }} className="btn btn-xs btn-ghost gap-1">
             <ReceiptIcon className="size-3" /> 订单详情
           </Link>
         </div>
@@ -812,7 +1211,7 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
           <UserIcon className="size-5" />
           <span className="font-bold text-lg">{preview.order.nickname ?? preview.order.uid ?? "用户"}</span>
           <span className="text-sm text-base-content/50">{preview.order.table?.name}</span>
-          <Link to="/dash/orders/$id/settle" params={{ id: preview.order.id }} className="btn btn-xs btn-ghost gap-0.5 ml-1">
+          <Link to="/dash/orders/settle" search={{ ids: [preview.order.id] }} className="btn btn-xs btn-ghost gap-0.5 ml-1">
             <LinkIcon className="size-3" /> 详情
           </Link>
         </div>
