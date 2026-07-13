@@ -256,7 +256,10 @@ function BatchSettlePage() {
   // Settle single user
   const handleSettleUser = useCallback(async (orderId: string) => {
     const state = userStates.get(orderId);
-    if (!state) return;
+    if (!state) {
+      console.warn("[settle] no state found for orderId:", orderId, "map size:", userStates.size);
+      return;
+    }
 
     // Build effective values based on preset
     let effectiveDeductAmount = 0;
@@ -320,6 +323,7 @@ function BatchSettlePage() {
         }, 500);
       }
     } catch (err) {
+      console.error("[settle] settleOrder failed:", err);
       msgRef.current.error(err instanceof Error ? err.message : "结算失败");
     }
   }, [userStates, settleOrder, updateUserState, settledCount, previews.length]);

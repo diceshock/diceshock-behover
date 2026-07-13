@@ -87,6 +87,7 @@ export type CreateMembershipPlanInput = {
   amount?: number | null | undefined;
   endDate?: string | null | undefined;
   planType: MembershipPlanType;
+  points?: number | null | undefined;
   startDate: string;
   userId: string | number;
 };
@@ -277,6 +278,7 @@ export type PaginationInput = {
 export type PerUserSettleInput = {
   deductAmount?: number | null | undefined;
   deductFromStoredValue?: boolean | null | undefined;
+  deductPoints?: number | null | undefined;
   note?: string | null | undefined;
   orderId: string | number;
   pointsChange?: number | null | undefined;
@@ -337,6 +339,7 @@ export type SendSmsCodeInput = {
 export type SettleOrderInput = {
   deductAmount?: number | null | undefined;
   deductFromStoredValue?: boolean | null | undefined;
+  deductPoints?: number | null | undefined;
   id: string | number;
   note?: string | null | undefined;
   pointsChange?: number | null | undefined;
@@ -410,6 +413,7 @@ export type UpdateMembershipPlanInput = {
   endDate?: string | null | undefined;
   id: string | number;
   planType?: MembershipPlanType | null | undefined;
+  points?: number | null | undefined;
   startDate?: string | null | undefined;
 };
 
@@ -781,28 +785,28 @@ export type OrdersQueryVariables = Exact<{
 }>;
 
 
-export type OrdersQuery = { orders: { items: Array<{ id: string, tableId: string, userId: string | null, tempId: string | null, nickname: string | null, uid: string | null, phone: string | null, seats: number, status: Types.OrderStatus, startAt: string, endAt: string | null, finalPrice: number | null, pricingSnapshotId: string | null, table: { id: string, name: string, code: string, scope: Types.TableScope } | null }>, pageInfo: { offset: number, limit: number, total: number | null, nextCursor: string | null, hasMore: boolean } } };
+export type OrdersQuery = { orders: { items: Array<{ id: string, tableId: string, userId: string | null, tempId: string | null, nickname: string | null, uid: string | null, phone: string | null, seats: number, status: Types.OrderStatus, startAt: string, endAt: string | null, finalPrice: number | null, finalPoints: number | null, settledPrice: number | null, settledPoints: number | null, pricingSnapshotId: string | null, table: { id: string, name: string, code: string, scope: Types.TableScope } | null }>, pageInfo: { offset: number, limit: number, total: number | null, nextCursor: string | null, hasMore: boolean } } };
 
 export type OrderQueryVariables = Exact<{
   id: string | number;
 }>;
 
 
-export type OrderQuery = { order: { id: string, tableId: string, userId: string | null, tempId: string | null, nickname: string | null, uid: string | null, phone: string | null, seats: number, status: Types.OrderStatus, startAt: string, endAt: string | null, finalPrice: number | null, pricingSnapshotId: string | null, priceBreakdown: string | null, settlementSnapshot: string | null, table: { id: string, name: string, code: string, scope: Types.TableScope } | null, user: { id: string, uid: string | null, name: string | null, nickname: string | null, role: Types.UserRole } | null } };
+export type OrderQuery = { order: { id: string, tableId: string, userId: string | null, tempId: string | null, nickname: string | null, uid: string | null, phone: string | null, seats: number, status: Types.OrderStatus, startAt: string, endAt: string | null, finalPrice: number | null, finalPoints: number | null, settledPrice: number | null, settledPoints: number | null, pricingSnapshotId: string | null, priceBreakdown: string | null, settlementSnapshot: string | null, table: { id: string, name: string, code: string, scope: Types.TableScope } | null, user: { id: string, uid: string | null, name: string | null, nickname: string | null, role: Types.UserRole } | null } };
 
 export type SettlementPreviewQueryVariables = Exact<{
   id: string | number;
 }>;
 
 
-export type SettlementPreviewQuery = { settlementPreview: { totalMinutes: number, pausedMinutes: number, billableMinutes: number, finalPrice: number, order: { id: string, tableId: string, userId: string | null, tempId: string | null, nickname: string | null, uid: string | null, status: Types.OrderStatus, startAt: string, endAt: string | null, finalPrice: number | null, table: { id: string, name: string, code: string, scope: Types.TableScope } | null }, priceBreakdown: { planName: string, planType: string, billingType: string, unitPrice: number, totalMinutes: number, billableHalfHours: number, rawPrice: number, capApplied: boolean, capType: string | null, finalPrice: number } | null, membership: { hasTimePlan: boolean, timePlanActive: boolean, timePlanType: string | null, timePlanEndDate: string | null, storedValueBalance: number }, pauseLogs: Array<{ pausedAt: string, resumedAt: string | null }>, pricingPlans: Array<{ name: string, planType: string, billingType: string, price: number, matched: boolean }>, recentOrders: Array<{ id: string, tableName: string, startAt: string, endAt: string | null, finalPrice: number | null, status: Types.OrderStatus }> } };
+export type SettlementPreviewQuery = { settlementPreview: { totalMinutes: number, pausedMinutes: number, billableMinutes: number, finalPrice: number, finalPoints: number, order: { id: string, tableId: string, userId: string | null, tempId: string | null, nickname: string | null, uid: string | null, status: Types.OrderStatus, startAt: string, endAt: string | null, finalPrice: number | null, finalPoints: number | null, table: { id: string, name: string, code: string, scope: Types.TableScope } | null }, priceBreakdown: { planName: string, planType: string, billingType: string, unitPrice: number, unitPoints: number, totalMinutes: number, billableHalfHours: number, rawPrice: number, rawPoints: number, capApplied: boolean, capType: string | null, finalPrice: number, finalPoints: number } | null, membership: { hasTimePlan: boolean, timePlanActive: boolean, timePlanType: string | null, timePlanEndDate: string | null, storedValueBalance: number, pointsBalance: number }, pauseLogs: Array<{ pausedAt: string, resumedAt: string | null }>, pricingPlans: Array<{ name: string, planType: string, billingType: string, price: number, points: number, matched: boolean }>, recentOrders: Array<{ id: string, tableName: string, startAt: string, endAt: string | null, finalPrice: number | null, status: Types.OrderStatus }> } };
 
 export type BatchSettlementPreviewMutationVariables = Exact<{
   ids: Array<string | number> | string | number;
 }>;
 
 
-export type BatchSettlementPreviewMutation = { batchSettlementPreview: Array<{ totalMinutes: number, pausedMinutes: number, billableMinutes: number, finalPrice: number, order: { id: string, tableId: string, userId: string | null, tempId: string | null, nickname: string | null, uid: string | null, status: Types.OrderStatus, startAt: string, endAt: string | null, finalPrice: number | null, table: { id: string, name: string, code: string, scope: Types.TableScope } | null }, priceBreakdown: { planName: string, planType: string, billingType: string, unitPrice: number, totalMinutes: number, billableHalfHours: number, rawPrice: number, capApplied: boolean, capType: string | null, finalPrice: number } | null, membership: { hasTimePlan: boolean, timePlanActive: boolean, timePlanType: string | null, timePlanEndDate: string | null, storedValueBalance: number }, pauseLogs: Array<{ pausedAt: string, resumedAt: string | null }>, pricingPlans: Array<{ name: string, planType: string, billingType: string, price: number, matched: boolean }>, recentOrders: Array<{ id: string, tableName: string, startAt: string, endAt: string | null, finalPrice: number | null, status: Types.OrderStatus }> }> };
+export type BatchSettlementPreviewMutation = { batchSettlementPreview: Array<{ totalMinutes: number, pausedMinutes: number, billableMinutes: number, finalPrice: number, finalPoints: number, order: { id: string, tableId: string, userId: string | null, tempId: string | null, nickname: string | null, uid: string | null, status: Types.OrderStatus, startAt: string, endAt: string | null, finalPrice: number | null, finalPoints: number | null, table: { id: string, name: string, code: string, scope: Types.TableScope } | null }, priceBreakdown: { planName: string, planType: string, billingType: string, unitPrice: number, unitPoints: number, totalMinutes: number, billableHalfHours: number, rawPrice: number, rawPoints: number, capApplied: boolean, capType: string | null, finalPrice: number, finalPoints: number } | null, membership: { hasTimePlan: boolean, timePlanActive: boolean, timePlanType: string | null, timePlanEndDate: string | null, storedValueBalance: number, pointsBalance: number }, pauseLogs: Array<{ pausedAt: string, resumedAt: string | null }>, pricingPlans: Array<{ name: string, planType: string, billingType: string, price: number, points: number, matched: boolean }>, recentOrders: Array<{ id: string, tableName: string, startAt: string, endAt: string | null, finalPrice: number | null, status: Types.OrderStatus }> }> };
 
 export type PauseOrderMutationVariables = Exact<{
   id: string | number;
@@ -830,7 +834,7 @@ export type SettleOrderMutationVariables = Exact<{
 }>;
 
 
-export type SettleOrderMutation = { settleOrder: { price: number, snapshot: string | null, order: { id: string, status: Types.OrderStatus, finalPrice: number | null }, storedValueDeduction: { deducted: boolean, amount: number, note: string, balanceBefore: number, balanceAfter: number } | null } };
+export type SettleOrderMutation = { settleOrder: { price: number, points: number, snapshot: string | null, order: { id: string, status: Types.OrderStatus, finalPrice: number | null, finalPoints: number | null, settledPrice: number | null, settledPoints: number | null }, storedValueDeduction: { deducted: boolean, amount: number, note: string, balanceBefore: number, balanceAfter: number } | null, pointsDeduction: { deducted: boolean, amount: number, note: string, balanceBefore: number, balanceAfter: number } | null } };
 
 export type BatchSettleOrdersMutationVariables = Exact<{
   input: Types.BatchSettleInput;
@@ -1017,14 +1021,14 @@ export type UsersQueryVariables = Exact<{
 }>;
 
 
-export type UsersQuery = { managedUsers: { items: Array<{ id: string, uid: string | null, name: string | null, email: string | null, image: string | null, role: Types.UserRole, disabled: boolean | null, nickname: string | null, phone: string | null, points: number | null, preferredLocale: string | null, preferredStoreId: string | null, preferredTheme: string | null, meta: string | null, createdAt: string | null, membershipPlans: Array<{ id: string, userId: string, planType: Types.MembershipPlanType, amount: number | null, note: string | null, startDate: string, endDate: string | null, createdAt: string | null, updatedAt: string | null }> }>, pageInfo: { offset: number, limit: number, total: number | null, nextCursor: string | null, hasMore: boolean } } };
+export type UsersQuery = { managedUsers: { items: Array<{ id: string, uid: string | null, name: string | null, email: string | null, image: string | null, role: Types.UserRole, disabled: boolean | null, nickname: string | null, phone: string | null, points: number | null, preferredLocale: string | null, preferredStoreId: string | null, preferredTheme: string | null, meta: string | null, createdAt: string | null, membershipPlans: Array<{ id: string, userId: string, planType: Types.MembershipPlanType, amount: number | null, points: number | null, note: string | null, startDate: string, endDate: string | null, createdAt: string | null, updatedAt: string | null }> }>, pageInfo: { offset: number, limit: number, total: number | null, nextCursor: string | null, hasMore: boolean } } };
 
 export type UserQueryVariables = Exact<{
   id: string | number;
 }>;
 
 
-export type UserQuery = { user: { id: string, uid: string | null, name: string | null, email: string | null, image: string | null, role: Types.UserRole, disabled: boolean | null, nickname: string | null, phone: string | null, points: number | null, preferredLocale: string | null, preferredStoreId: string | null, preferredTheme: string | null, meta: string | null, createdAt: string | null, membershipPlans: Array<{ id: string, userId: string, planType: Types.MembershipPlanType, amount: number | null, note: string | null, startDate: string, endDate: string | null, createdAt: string | null, updatedAt: string | null }> } | null };
+export type UserQuery = { user: { id: string, uid: string | null, name: string | null, email: string | null, image: string | null, role: Types.UserRole, disabled: boolean | null, nickname: string | null, phone: string | null, points: number | null, preferredLocale: string | null, preferredStoreId: string | null, preferredTheme: string | null, meta: string | null, createdAt: string | null, membershipPlans: Array<{ id: string, userId: string, planType: Types.MembershipPlanType, amount: number | null, points: number | null, note: string | null, startDate: string, endDate: string | null, createdAt: string | null, updatedAt: string | null }> } | null };
 
 export type DisableUserMutationVariables = Exact<{
   id: string | number;
@@ -1059,21 +1063,21 @@ export type MembershipPlansByUserQueryVariables = Exact<{
 }>;
 
 
-export type MembershipPlansByUserQuery = { membershipPlansByUser: Array<{ id: string, userId: string, planType: Types.MembershipPlanType, amount: number | null, note: string | null, startDate: string, endDate: string | null, createdAt: string | null, updatedAt: string | null }> };
+export type MembershipPlansByUserQuery = { membershipPlansByUser: Array<{ id: string, userId: string, planType: Types.MembershipPlanType, amount: number | null, points: number | null, note: string | null, orderId: string | null, startDate: string, endDate: string | null, createdAt: string | null, updatedAt: string | null }> };
 
 export type CreateMembershipPlanMutationVariables = Exact<{
   input: Types.CreateMembershipPlanInput;
 }>;
 
 
-export type CreateMembershipPlanMutation = { createMembershipPlan: { id: string, userId: string, planType: Types.MembershipPlanType, amount: number | null, note: string | null, startDate: string, endDate: string | null, createdAt: string | null, updatedAt: string | null } };
+export type CreateMembershipPlanMutation = { createMembershipPlan: { id: string, userId: string, planType: Types.MembershipPlanType, amount: number | null, points: number | null, note: string | null, startDate: string, endDate: string | null, createdAt: string | null, updatedAt: string | null } };
 
 export type UpdateMembershipPlanMutationVariables = Exact<{
   input: Types.UpdateMembershipPlanInput;
 }>;
 
 
-export type UpdateMembershipPlanMutation = { updateMembershipPlan: { id: string, userId: string, planType: Types.MembershipPlanType, amount: number | null, note: string | null, startDate: string, endDate: string | null, createdAt: string | null, updatedAt: string | null } };
+export type UpdateMembershipPlanMutation = { updateMembershipPlan: { id: string, userId: string, planType: Types.MembershipPlanType, amount: number | null, points: number | null, note: string | null, startDate: string, endDate: string | null, createdAt: string | null, updatedAt: string | null } };
 
 export type RemoveMembershipPlanMutationVariables = Exact<{
   id: string | number;
@@ -1094,28 +1098,28 @@ export type OccupanciesByUserQueryVariables = Exact<{
 }>;
 
 
-export type OccupanciesByUserQuery = { occupanciesByUser: Array<{ id: string, tableId: string, userId: string | null, tempId: string | null, nickname: string | null, uid: string | null, phone: string | null, seats: number, status: Types.OrderStatus, startAt: string, endAt: string | null, finalPrice: number | null, table: { id: string, name: string, code: string, scope: Types.TableScope } | null }> };
+export type OccupanciesByUserQuery = { occupanciesByUser: Array<{ id: string, tableId: string, userId: string | null, tempId: string | null, nickname: string | null, uid: string | null, phone: string | null, seats: number, status: Types.OrderStatus, startAt: string, endAt: string | null, finalPrice: number | null, finalPoints: number | null, settledPrice: number | null, settledPoints: number | null, table: { id: string, name: string, code: string, scope: Types.TableScope } | null }> };
 
 export type PointsLogByUserQueryVariables = Exact<{
   userId: string | number;
 }>;
 
 
-export type PointsLogByUserQuery = { pointsLogByUser: Array<{ id: string, userId: string, amount: number, balanceAfter: number, note: string | null, createdBy: string | null, createdAt: string | null }> };
+export type PointsLogByUserQuery = { pointsLogByUser: Array<{ id: string, userId: string, planType: Types.MembershipPlanType, amount: number | null, points: number | null, note: string | null, orderId: string | null, startDate: string, createdAt: string | null }> };
 
 export type AddPointsMutationVariables = Exact<{
   input: Types.AddPointsInput;
 }>;
 
 
-export type AddPointsMutation = { addPoints: { id: string, userId: string, amount: number, balanceAfter: number, note: string | null, createdBy: string | null, createdAt: string | null } };
+export type AddPointsMutation = { addPoints: { id: string, userId: string, planType: Types.MembershipPlanType, amount: number | null, points: number | null, note: string | null, startDate: string, createdAt: string | null } };
 
 export type DeductPointsMutationVariables = Exact<{
   input: Types.DeductPointsInput;
 }>;
 
 
-export type DeductPointsMutation = { deductPoints: { id: string, userId: string, amount: number, balanceAfter: number, note: string | null, createdBy: string | null, createdAt: string | null } };
+export type DeductPointsMutation = { deductPoints: { id: string, userId: string, planType: Types.MembershipPlanType, amount: number | null, points: number | null, note: string | null, startDate: string, createdAt: string | null } };
 
 export type VerifyTotpDashMutationVariables = Exact<{
   input: Types.VerifyTotpInput;
@@ -3484,6 +3488,9 @@ export const OrdersDocument = gql`
       startAt
       endAt
       finalPrice
+      finalPoints
+      settledPrice
+      settledPoints
       pricingSnapshotId
       table {
         id
@@ -3554,6 +3561,9 @@ export const OrderDocument = gql`
     startAt
     endAt
     finalPrice
+    finalPoints
+    settledPrice
+    settledPoints
     pricingSnapshotId
     priceBreakdown
     settlementSnapshot
@@ -3623,6 +3633,7 @@ export const SettlementPreviewDocument = gql`
       startAt
       endAt
       finalPrice
+      finalPoints
       table {
         id
         name
@@ -3634,17 +3645,21 @@ export const SettlementPreviewDocument = gql`
     pausedMinutes
     billableMinutes
     finalPrice
+    finalPoints
     priceBreakdown {
       planName
       planType
       billingType
       unitPrice
+      unitPoints
       totalMinutes
       billableHalfHours
       rawPrice
+      rawPoints
       capApplied
       capType
       finalPrice
+      finalPoints
     }
     membership {
       hasTimePlan
@@ -3652,6 +3667,7 @@ export const SettlementPreviewDocument = gql`
       timePlanType
       timePlanEndDate
       storedValueBalance
+      pointsBalance
     }
     pauseLogs {
       pausedAt
@@ -3662,6 +3678,7 @@ export const SettlementPreviewDocument = gql`
       planType
       billingType
       price
+      points
       matched
     }
     recentOrders {
@@ -3725,6 +3742,7 @@ export const BatchSettlementPreviewDocument = gql`
       startAt
       endAt
       finalPrice
+      finalPoints
       table {
         id
         name
@@ -3736,17 +3754,21 @@ export const BatchSettlementPreviewDocument = gql`
     pausedMinutes
     billableMinutes
     finalPrice
+    finalPoints
     priceBreakdown {
       planName
       planType
       billingType
       unitPrice
+      unitPoints
       totalMinutes
       billableHalfHours
       rawPrice
+      rawPoints
       capApplied
       capType
       finalPrice
+      finalPoints
     }
     membership {
       hasTimePlan
@@ -3754,6 +3776,7 @@ export const BatchSettlementPreviewDocument = gql`
       timePlanType
       timePlanEndDate
       storedValueBalance
+      pointsBalance
     }
     pauseLogs {
       pausedAt
@@ -3764,6 +3787,7 @@ export const BatchSettlementPreviewDocument = gql`
       planType
       billingType
       price
+      points
       matched
     }
     recentOrders {
@@ -3913,10 +3937,21 @@ export const SettleOrderDocument = gql`
       id
       status
       finalPrice
+      finalPoints
+      settledPrice
+      settledPoints
     }
     price
+    points
     snapshot
     storedValueDeduction {
+      deducted
+      amount
+      note
+      balanceBefore
+      balanceAfter
+    }
+    pointsDeduction {
       deducted
       amount
       note
@@ -5097,6 +5132,7 @@ export const UsersDocument = gql`
         userId
         planType
         amount
+        points
         note
         startDate
         endDate
@@ -5173,6 +5209,7 @@ export const UserDocument = gql`
       userId
       planType
       amount
+      points
       note
       startDate
       endDate
@@ -5368,7 +5405,9 @@ export const MembershipPlansByUserDocument = gql`
     userId
     planType
     amount
+    points
     note
+    orderId
     startDate
     endDate
     createdAt
@@ -5419,6 +5458,7 @@ export const CreateMembershipPlanDocument = gql`
     userId
     planType
     amount
+    points
     note
     startDate
     endDate
@@ -5460,6 +5500,7 @@ export const UpdateMembershipPlanDocument = gql`
     userId
     planType
     amount
+    points
     note
     startDate
     endDate
@@ -5581,6 +5622,9 @@ export const OccupanciesByUserDocument = gql`
     startAt
     endAt
     finalPrice
+    finalPoints
+    settledPrice
+    settledPoints
     table {
       id
       name
@@ -5631,10 +5675,12 @@ export const PointsLogByUserDocument = gql`
   pointsLogByUser(userId: $userId) {
     id
     userId
+    planType
     amount
-    balanceAfter
+    points
     note
-    createdBy
+    orderId
+    startDate
     createdAt
   }
 }
@@ -5680,10 +5726,11 @@ export const AddPointsDocument = gql`
   addPoints(input: $input) {
     id
     userId
+    planType
     amount
-    balanceAfter
+    points
     note
-    createdBy
+    startDate
     createdAt
   }
 }
@@ -5719,10 +5766,11 @@ export const DeductPointsDocument = gql`
   deductPoints(input: $input) {
     id
     userId
+    planType
     amount
-    balanceAfter
+    points
     note
-    createdBy
+    startDate
     createdAt
   }
 }

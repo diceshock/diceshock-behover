@@ -4,6 +4,7 @@ import dbFactory, {
   type pricingSnapshotsTable,
   tableOccupancyTable,
   tablesTable,
+  tempIdentitiesTable,
   userInfoTable,
   userMembershipPlansTable,
   users,
@@ -641,14 +642,41 @@ async function buildMembershipInfo(
   };
 }
 
-function toGqlSettlementPreview(
+async function toGqlSettlementPreview(
+  tdb: Database,
   data: Awaited<ReturnType<typeof buildSettlementData>>,
 ) {
+  // Resolve user nickname/uid/phone for the order
+  let nickname: string | null = null;
+  let uid: string | null = null;
+  let phone: string | null = null;
+
+  if (data.order.user_id) {
+    const info = await tdb.query.userInfoTable.findFirst({
+      where: (i, { eq }) => eq(i.id, data.order.user_id!),
+      columns: { nickname: true, uid: true, phone: true },
+    });
+    nickname = info?.nickname ?? null;
+    uid = info?.uid ?? null;
+    phone = info?.phone ?? null;
+  } else if (data.order.temp_id) {
+    try {
+      const tempInfo = await tdb.query.tempIdentitiesTable.findFirst({
+        where: (t, { eq }) => eq(t.id, data.order.temp_id!),
+        columns: { nickname: true },
+      });
+      nickname = tempInfo?.nickname ?? null;
+    } catch { /* ignore lookup error for temp identity */ }
+    uid = data.order.temp_id ? `temp:${data.order.temp_id}` : null;
+  }
+
+  const order = toGqlOrder({
+    ...data.order,
+    pauseLogs: data.order.pauseLogs ?? [],
+  });
+
   return {
-    order: toGqlOrder({
-      ...data.order,
-      pauseLogs: data.order.pauseLogs ?? [],
-    }),
+    order: { ...order, nickname, uid, phone },
     totalMinutes: data.totalMinutes,
     pausedMinutes: data.pausedMinutes,
     billableMinutes: data.billableMinutes,
@@ -1075,7 +1103,7 @@ export const ordersResolvers = {
       if (normalizeStatus(order) === "SETTLED") {
         throw validationError("orderId", "Order is already settled");
       }
-      return toGqlSettlementPreview(await buildSettlementData(tdb, orderId));
+      return toGqlSettlementPreview(tdb, await buildSettlementData(tdb, orderId));
     },
   },
   Mutation: {
@@ -1091,11 +1119,11 @@ export const ordersResolvers = {
       const tdb = dbFactory(ctx.env.DB);
       const results = await Promise.allSettled(
         orderIds.map((id) =>
-          buildSettlementData(tdb, id).then(toGqlSettlementPreview),
+          buildSettlementData(tdb, id).then((data) => toGqlSettlementPreview(tdb, data)),
         ),
       );
       const previews = results
-        .filter((r): r is PromiseFulfilledResult<ReturnType<typeof toGqlSettlementPreview>> => r.status === "fulfilled")
+        .filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof toGqlSettlementPreview>>> => r.status === "fulfilled")
         .map((r) => r.value);
       if (previews.length === 0) {
         const firstErr = results.find((r) => r.status === "rejected") as PromiseRejectedResult | undefined;

@@ -275,6 +275,7 @@ export type CreateMembershipPlanInput = {
   amount?: InputMaybe<Scalars['Int']['input']>;
   endDate?: InputMaybe<Scalars['String']['input']>;
   planType: MembershipPlanType;
+  points?: InputMaybe<Scalars['Int']['input']>;
   startDate: Scalars['String']['input'];
   userId: Scalars['ID']['input'];
 };
@@ -692,7 +693,9 @@ export type MembershipPlan = {
   endDate?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   note?: Maybe<Scalars['String']['output']>;
+  orderId?: Maybe<Scalars['ID']['output']>;
   planType: MembershipPlanType;
+  points?: Maybe<Scalars['Int']['output']>;
   startDate: Scalars['String']['output'];
   updatedAt?: Maybe<Scalars['String']['output']>;
   userId: Scalars['ID']['output'];
@@ -708,7 +711,7 @@ export enum MembershipPlanType {
 export type Mutation = {
   __typename?: 'Mutation';
   addAdminPhone: Array<Scalars['String']['output']>;
-  addPoints: UserPointsLog;
+  addPoints: MembershipPlan;
   addTableOccupancy: TableOccupancy;
   addWechatTemplateFromLibrary: WechatTemplateAssignment;
   assignWechatTemplateSlot: WechatTemplateSlot;
@@ -732,7 +735,7 @@ export type Mutation = {
   createShortlink: Shortlink;
   createTable: Table;
   createTempIdentity: TempIdentity;
-  deductPoints: UserPointsLog;
+  deductPoints: MembershipPlan;
   deductStoredValue: MembershipDeductionResult;
   deletePreference: DeletePreferenceResult;
   disableUser: UserProfile;
@@ -1416,9 +1419,19 @@ export type PaginationInput = {
 export type PerUserSettleInput = {
   deductAmount?: InputMaybe<Scalars['Int']['input']>;
   deductFromStoredValue?: InputMaybe<Scalars['Boolean']['input']>;
+  deductPoints?: InputMaybe<Scalars['Int']['input']>;
   note?: InputMaybe<Scalars['String']['input']>;
   orderId: Scalars['ID']['input'];
   pointsChange?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type PointsDeduction = {
+  __typename?: 'PointsDeduction';
+  amount: Scalars['Int']['output'];
+  balanceAfter: Scalars['Int']['output'];
+  balanceBefore: Scalars['Int']['output'];
+  deducted: Scalars['Boolean']['output'];
+  note: Scalars['String']['output'];
 };
 
 export type PreferenceParseError = {
@@ -1444,11 +1457,14 @@ export type PriceBreakdown = {
   billingType: Scalars['String']['output'];
   capApplied: Scalars['Boolean']['output'];
   capType?: Maybe<Scalars['String']['output']>;
+  finalPoints: Scalars['Int']['output'];
   finalPrice: Scalars['Int']['output'];
   planName: Scalars['String']['output'];
   planType: Scalars['String']['output'];
+  rawPoints: Scalars['Int']['output'];
   rawPrice: Scalars['Int']['output'];
   totalMinutes: Scalars['Int']['output'];
+  unitPoints: Scalars['Int']['output'];
   unitPrice: Scalars['Int']['output'];
 };
 
@@ -1472,6 +1488,7 @@ export type PricingPlanMatch = {
   matched: Scalars['Boolean']['output'];
   name: Scalars['String']['output'];
   planType: Scalars['String']['output'];
+  points: Scalars['Int']['output'];
   price: Scalars['Int']['output'];
 };
 
@@ -1563,7 +1580,7 @@ export type Query = {
   ownedBoardGameCount: BoardGameCounts;
   ownedBoardGames: Array<BoardGameSummary>;
   participantBusinessCards: Array<BusinessCard>;
-  pointsLogByUser: Array<UserPointsLog>;
+  pointsLogByUser: Array<MembershipPlan>;
   pricingDraft: PricingDraft;
   pricingSnapshot: PricingSnapshot;
   pricingSnapshots: Array<PricingSnapshot>;
@@ -1960,6 +1977,7 @@ export type SendSmsCodeInput = {
 export type SettleOrderInput = {
   deductAmount?: InputMaybe<Scalars['Int']['input']>;
   deductFromStoredValue?: InputMaybe<Scalars['Boolean']['input']>;
+  deductPoints?: InputMaybe<Scalars['Int']['input']>;
   id: Scalars['ID']['input'];
   note?: InputMaybe<Scalars['String']['input']>;
   pointsChange?: InputMaybe<Scalars['Int']['input']>;
@@ -1968,6 +1986,7 @@ export type SettleOrderInput = {
 export type SettlementMembershipInfo = {
   __typename?: 'SettlementMembershipInfo';
   hasTimePlan: Scalars['Boolean']['output'];
+  pointsBalance: Scalars['Int']['output'];
   storedValueBalance: Scalars['Int']['output'];
   timePlanActive: Scalars['Boolean']['output'];
   timePlanEndDate?: Maybe<Scalars['String']['output']>;
@@ -1977,6 +1996,7 @@ export type SettlementMembershipInfo = {
 export type SettlementPreview = {
   __typename?: 'SettlementPreview';
   billableMinutes: Scalars['Int']['output'];
+  finalPoints: Scalars['Int']['output'];
   finalPrice: Scalars['Int']['output'];
   membership: SettlementMembershipInfo;
   order: TableOccupancy;
@@ -1991,6 +2011,8 @@ export type SettlementPreview = {
 export type SettlementResult = {
   __typename?: 'SettlementResult';
   order: TableOccupancy;
+  points: Scalars['Int']['output'];
+  pointsDeduction?: Maybe<PointsDeduction>;
   price: Scalars['Int']['output'];
   snapshot?: Maybe<Scalars['String']['output']>;
   storedValueDeduction?: Maybe<StoredValueDeduction>;
@@ -2128,6 +2150,7 @@ export type TableOccupancy = {
   amount?: Maybe<Scalars['Int']['output']>;
   duration: Scalars['Int']['output'];
   endAt?: Maybe<Scalars['String']['output']>;
+  finalPoints?: Maybe<Scalars['Int']['output']>;
   finalPrice?: Maybe<Scalars['Int']['output']>;
   id: Scalars['ID']['output'];
   nickname?: Maybe<Scalars['String']['output']>;
@@ -2135,6 +2158,8 @@ export type TableOccupancy = {
   priceBreakdown?: Maybe<Scalars['String']['output']>;
   pricingSnapshotId?: Maybe<Scalars['ID']['output']>;
   seats: Scalars['Int']['output'];
+  settledPoints?: Maybe<Scalars['Int']['output']>;
+  settledPrice?: Maybe<Scalars['Int']['output']>;
   settlementSnapshot?: Maybe<Scalars['String']['output']>;
   startAt: Scalars['String']['output'];
   status: OrderStatus;
@@ -2246,6 +2271,7 @@ export type UpdateMembershipPlanInput = {
   endDate?: InputMaybe<Scalars['String']['input']>;
   id: Scalars['ID']['input'];
   planType?: InputMaybe<MembershipPlanType>;
+  points?: InputMaybe<Scalars['Int']['input']>;
   startDate?: InputMaybe<Scalars['String']['input']>;
 };
 
@@ -2321,17 +2347,6 @@ export type UserListResult = {
   __typename?: 'UserListResult';
   items: Array<UserProfile>;
   pageInfo: PageInfo;
-};
-
-export type UserPointsLog = {
-  __typename?: 'UserPointsLog';
-  amount: Scalars['Int']['output'];
-  balanceAfter: Scalars['Int']['output'];
-  createdAt?: Maybe<Scalars['String']['output']>;
-  createdBy?: Maybe<Scalars['String']['output']>;
-  id: Scalars['ID']['output'];
-  note?: Maybe<Scalars['String']['output']>;
-  userId: Scalars['ID']['output'];
 };
 
 export type UserPreference = {
