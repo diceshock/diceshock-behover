@@ -553,6 +553,17 @@ async function buildSettlementData(
     order.table?.store_id,
   );
   const snapshotData = publishedSnapshot?.data as SnapshotData | null;
+  console.log("[settle:pricing]", {
+    orderId,
+    tableStoreId: order.table?.store_id ?? null,
+    tableScope: order.table?.scope ?? "boardgame",
+    snapshotFound: !!publishedSnapshot,
+    snapshotId: publishedSnapshot?.id ?? null,
+    plansCount: snapshotData?.plans?.length ?? 0,
+    startAt,
+    endAt,
+    durationMin: Math.floor((endAt - startAt) / 60000),
+  });
   const priceBreakdown = calculatePrice(
     startAt,
     endAt,
@@ -560,6 +571,13 @@ async function buildSettlementData(
     snapshotData,
     mappedLogs,
   );
+  if (!priceBreakdown) {
+    console.warn("[settle:pricing] calculatePrice returned null!", {
+      snapshotNull: !snapshotData,
+      plansEmpty: !snapshotData?.plans?.length,
+      plans: snapshotData?.plans?.map((p) => ({ name: p.name, type: p.plan_type, enabled: p.enabled })),
+    });
+  }
   const totalMinutes = Math.floor(Math.max(0, endAt - startAt) / 60000);
   const pausedMinutes =
     totalMinutes - calculateActiveMinutes(order, logs, endAt);
