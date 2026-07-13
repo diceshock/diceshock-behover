@@ -796,6 +796,9 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
               <UserIcon className="size-3" /> 用户详情
             </Link>
           )}
+          <Link to="/dash/orders/$id/settle" params={{ id: preview.order.id }} className="btn btn-xs btn-ghost gap-1">
+            <ReceiptIcon className="size-3" /> 订单详情
+          </Link>
         </div>
       </div>
     );
@@ -809,6 +812,9 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
           <UserIcon className="size-5" />
           <span className="font-bold text-lg">{preview.order.nickname ?? preview.order.uid ?? "用户"}</span>
           <span className="text-sm text-base-content/50">{preview.order.table?.name}</span>
+          <Link to="/dash/orders/$id/settle" params={{ id: preview.order.id }} className="btn btn-xs btn-ghost gap-0.5 ml-1">
+            <LinkIcon className="size-3" /> 详情
+          </Link>
         </div>
         <select
           className="select select-sm select-bordered"
