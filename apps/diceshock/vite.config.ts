@@ -14,6 +14,9 @@ import path from "node:path";
 function workerRequireShim() {
   return {
     name: "worker-require-shim",
+    applyToEnvironment(environment: { name: string }) {
+      return environment.name !== "client";
+    },
     renderChunk(code: string) {
       if (!code.includes("__require")) return null;
       const shim = `import{createRequire as __cr}from"node:module";var require=__cr("file:///worker.mjs");\n`;
