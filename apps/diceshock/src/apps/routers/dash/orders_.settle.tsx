@@ -13,7 +13,8 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import type { EChartsOption } from "echarts";
-import { forwardRef, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Component, forwardRef, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ErrorInfo, ReactNode } from "react";
 import confetti from "canvas-confetti";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import { useTranslation } from "@/client/hooks/useTranslation";
@@ -29,7 +30,7 @@ import { calculatePrice, formatPrice, formatDualPrice, formatPoints, type Snapsh
 const ReactECharts = lazy(() => import("echarts-for-react"));
 
 export const Route = createFileRoute("/dash/orders_/settle")({
-  component: BatchSettlePage,
+  component: SettlePageWithBoundary,
   validateSearch: (search: Record<string, unknown>) => {
     const raw = search.ids;
     if (Array.isArray(raw)) return { ids: raw.filter(Boolean) as string[] };
@@ -42,6 +43,42 @@ export const Route = createFileRoute("/dash/orders_/settle")({
     return { ids: [] };
   },
 });
+
+// --- Local Error Boundary (prevents crash from bubbling to DashError/500 page) ---
+
+class SettleErrorBoundary extends Component<
+  { children: ReactNode; fallback: (error: Error, reset: () => void) => ReactNode },
+  { error: Error | null }
+> {
+  state: { error: Error | null } = { error: null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidCatch(error: Error, info: ErrorInfo) { console.error("[SettlePage crash]", error, info); }
+  reset = () => this.setState({ error: null });
+  render() {
+    if (this.state.error) return this.props.fallback(this.state.error, this.reset);
+    return this.props.children;
+  }
+}
+
+function SettlePageWithBoundary() {
+  const { t } = useTranslation();
+  return (
+    <SettleErrorBoundary
+      fallback={(error, reset) => (
+        <main className="size-full flex flex-col items-center justify-center gap-4 p-8">
+          <p className="text-lg font-bold text-error">{t("dashLayout.errorTitle")}</p>
+          <pre className="text-xs text-error/80 max-w-lg whitespace-pre-wrap break-all">{error.message}</pre>
+          <div className="flex gap-2">
+            <button type="button" className="btn btn-sm btn-primary" onClick={reset}>{t("common.retry")}</button>
+            <a href="/dash/orders" className="btn btn-sm btn-ghost">{t("dashOrders.backToList")}</a>
+          </div>
+        </main>
+      )}
+    >
+      <BatchSettlePage />
+    </SettleErrorBoundary>
+  );
+}
 
 // --- Types ---
 
@@ -108,10 +145,16 @@ function BatchSettlePage() {
   const pricingSnapshot = useMemo<SnapshotData | null>(() => {
     const d = pricingData?.publishedPricing?.data;
     if (!d) return null;
-    return {
-      config: { daytime_start: d.config.daytimeStart, daytime_end: d.config.daytimeEnd },
-      plans: d.plans as SnapshotData["plans"],
-    };
+    try {
+      const plans = typeof d.plans === "string" ? JSON.parse(d.plans) : d.plans;
+      if (!Array.isArray(plans)) return null;
+      return {
+        config: { daytime_start: d.config?.daytimeStart ?? "10:00", daytime_end: d.config?.daytimeEnd ?? "18:00" },
+        plans,
+      };
+    } catch {
+      return null;
+    }
   }, [pricingData]);
 
   const fetchData = useCallback(async () => {
@@ -424,7 +467,7 @@ function OverviewSection({
       p.order.endAt ? new Date(p.order.endAt).getTime() : Date.now(),
     ));
     const duration = globalEnd - globalStart;
-    const intervals = Math.max(1, Math.ceil(duration / HALF_HOUR_MS));
+    const intervals = Math.min(48, Math.max(1, Math.ceil(duration / HALF_HOUR_MS)));
 
     const timePoints: string[] = [];
     for (let i = 0; i <= intervals; i++) {
@@ -581,7 +624,7 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
     const startAt = new Date(preview.order.startAt).getTime();
     const endAt = preview.order.endAt ? new Date(preview.order.endAt).getTime() : Date.now();
     const duration = endAt - startAt;
-    const intervals = Math.max(1, Math.ceil(duration / HALF_HOUR_MS));
+    const intervals = Math.min(48, Math.max(1, Math.ceil(duration / HALF_HOUR_MS)));
     const scope = preview.order.table?.scope ?? "basic";
 
     const pauseLogs = preview.pauseLogs.map((l: { pausedAt: string; resumedAt: string | null }) => ({
