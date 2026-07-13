@@ -87,8 +87,12 @@ function BatchSettlePage() {
   const { ids } = Route.useSearch();
   const navigate = useNavigate();
   const msg = useMsg();
+  const msgRef = useRef(msg);
+  msgRef.current = msg;
 
   const { t } = useTranslation();
+  const tRef = useRef(t);
+  tRef.current = t;
   const [previews, setPreviews] = useState<SettlementPreviewItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -119,9 +123,9 @@ function BatchSettlePage() {
       if (result.errors?.length) {
         const firstErr = result.errors[0];
         const isNotFound = firstErr.extensions?.code === "NOT_FOUND";
-        const errText = isNotFound ? t("dashOrders.notFound") : (firstErr.message ?? t("dashOrders.loadFailed"));
+        const errText = isNotFound ? tRef.current("dashOrders.notFound") : (firstErr.message ?? tRef.current("dashOrders.loadFailed"));
         setErrorMsg(errText);
-        msg.error(errText);
+        msgRef.current.error(errText);
       }
       if (result.data?.batchSettlementPreview) {
         const items = result.data.batchSettlementPreview;
@@ -161,13 +165,13 @@ function BatchSettlePage() {
     } catch (err) {
       const isNotFound = err instanceof Error &&
         (err.message === "Order not found" || (err as { graphQLErrors?: Array<{ extensions?: { code?: string } }> }).graphQLErrors?.some(e => e.extensions?.code === "NOT_FOUND"));
-      const errText = isNotFound ? t("dashOrders.notFound") : (err instanceof Error ? err.message : t("dashOrders.loadFailed"));
+      const errText = isNotFound ? tRef.current("dashOrders.notFound") : (err instanceof Error ? err.message : tRef.current("dashOrders.loadFailed"));
       setErrorMsg(errText);
-      msg.error(errText);
+      msgRef.current.error(errText);
     } finally {
       setLoading(false);
     }
-  }, [ids, fetchPreview, msg, t]);
+  }, [ids, fetchPreview]);
 
   useEffect(() => { void fetchData(); }, [fetchData]);
 
@@ -263,7 +267,7 @@ function BatchSettlePage() {
         },
       });
       updateUserState(orderId, { settled: true });
-      msg.success("结算完成");
+      msgRef.current.success("结算完成");
       // Check if all settled
       const newSettledCount = settledCount + 1;
       if (newSettledCount === previews.length) {
@@ -273,16 +277,16 @@ function BatchSettlePage() {
         }, 500);
       }
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "结算失败");
+      msgRef.current.error(err instanceof Error ? err.message : "结算失败");
     }
-  }, [userStates, settleOrder, updateUserState, msg, settledCount, previews.length]);
+  }, [userStates, settleOrder, updateUserState, settledCount, previews.length]);
 
   // Resume order
   const handleResumeUser = useCallback(async (orderId: string) => {
     if (!confirm("确定恢复计费？该用户将从批量结算中移除并继续计费。")) return;
     try {
       await resumeOrder({ variables: { id: orderId } });
-      msg.success("已恢复计费");
+      msgRef.current.success("已恢复计费");
       const remaining = ids.filter((id) => id !== orderId);
       if (remaining.length === 0) {
         void navigate({ to: "/dash/orders", search: { q: "", sortBy: "start_at", sortOrder: "desc", groupBy: "none", page: "1" } });
@@ -290,9 +294,9 @@ function BatchSettlePage() {
         void navigate({ to: "/dash/orders/settle", search: { ids: remaining } });
       }
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "恢复失败");
+      msgRef.current.error(err instanceof Error ? err.message : "恢复失败");
     }
-  }, [ids, resumeOrder, navigate, msg]);
+  }, [ids, resumeOrder, navigate]);
 
   // Scroll to next pending card
   const scrollToNextPending = useCallback(() => {
