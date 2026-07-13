@@ -129,7 +129,7 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
   const preview = data?.settlementPreview;
   const isSettled = preview?.order.status === "SETTLED";
 
-  // Build per-half-hour line items for the receipt
+  // Build per-half-hour line items, then merge consecutive segments with same rate
   const lineItems = useMemo(() => {
     if (!preview) return [];
     const startAt = new Date(preview.order.startAt).getTime();
@@ -142,30 +142,44 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
       resumedAt: l.resumedAt ? new Date(l.resumedAt).getTime() : null,
     }));
 
-    const items: Array<{ time: string; cumPrice: number; increment: number; paused: boolean }> = [];
+    // Step 1: compute raw per-half-hour items
+    const raw: Array<{ startTime: string; endTime: string; cumPrice: number; increment: number; paused: boolean }> = [];
     let prevPrice = 0;
     for (let i = 1; i <= intervals; i++) {
       const segEnd = Math.min(startAt + i * HALF_HOUR_MS, endAt);
       const segStart = startAt + (i - 1) * HALF_HOUR_MS;
-      // Check if this segment was fully paused
       const segPaused = pauseLogs.some((l: { pausedAt: number; resumedAt: number | null }) => {
         const ps = Math.max(l.pausedAt, segStart);
         const pe = Math.min(l.resumedAt ?? endAt, segEnd);
-        return (pe - ps) >= (segEnd - segStart) * 0.9; // >90% paused
+        return (pe - ps) >= (segEnd - segStart) * 0.9;
       });
       if (pricingSnapshot) {
         const result = calculatePrice(startAt, segEnd, scope, pricingSnapshot, pauseLogs);
         const cumPrice = result?.finalPrice ?? 0;
-        items.push({ time: dayjs(segEnd).format("HH:mm"), cumPrice, increment: cumPrice - prevPrice, paused: segPaused });
+        raw.push({ startTime: dayjs(segStart).format("HH:mm"), endTime: dayjs(segEnd).format("HH:mm"), cumPrice, increment: cumPrice - prevPrice, paused: segPaused });
         prevPrice = cumPrice;
       } else {
         const pct = Math.min(1, (i * HALF_HOUR_MS) / Math.max(1, duration));
         const cum = Math.round(preview.finalPrice * pct);
-        items.push({ time: dayjs(segEnd).format("HH:mm"), cumPrice: cum, increment: cum - prevPrice, paused: segPaused });
+        raw.push({ startTime: dayjs(segStart).format("HH:mm"), endTime: dayjs(segEnd).format("HH:mm"), cumPrice: cum, increment: cum - prevPrice, paused: segPaused });
         prevPrice = cum;
       }
     }
-    return items;
+
+    // Step 2: merge consecutive segments with same increment and paused status
+    const merged: Array<{ startTime: string; endTime: string; cumPrice: number; totalIncrement: number; count: number; paused: boolean; unitIncrement: number }> = [];
+    for (const item of raw) {
+      const last = merged[merged.length - 1];
+      if (last && last.unitIncrement === item.increment && last.paused === item.paused) {
+        last.endTime = item.endTime;
+        last.cumPrice = item.cumPrice;
+        last.totalIncrement += item.increment;
+        last.count += 1;
+      } else {
+        merged.push({ startTime: item.startTime, endTime: item.endTime, cumPrice: item.cumPrice, totalIncrement: item.increment, count: 1, paused: item.paused, unitIncrement: item.increment });
+      }
+    }
+    return merged;
   }, [preview, pricingSnapshot]);
 
   const handleSettle = useCallback(async () => {
@@ -251,18 +265,21 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
               <div><span className="font-mono text-base font-bold text-success">{preview.billableMinutes}</span><br/>计费</div>
             </div>
 
-            {/* Line items (receipt body) */}
+            {/* Line items (receipt body) — merged by rate */}
             <div className="px-5 py-3 border-b border-base-300">
               <div className="flex items-center justify-between text-xs text-base-content/50 mb-2 px-1">
                 <span>时段</span>
-                <span>增量 / 累计</span>
+                <span>费用 / 累计</span>
               </div>
               <div className="space-y-0.5 max-h-64 overflow-y-auto">
                 {lineItems.map((item, i) => (
                   <div key={i} className={`flex items-center justify-between text-sm font-mono px-1 py-0.5 rounded ${item.paused ? "text-base-content/30 line-through" : ""}`}>
-                    <span className="text-xs">{i === 0 ? dayjs(preview.order.startAt).format("HH:mm") : lineItems[i - 1].time} — {item.time}</span>
-                    <span className={item.increment > 0 ? "" : "text-base-content/30"}>
-                      {item.increment > 0 ? `+¥${(item.increment / 100).toFixed(1)}` : "—"}
+                    <span className="text-xs">
+                      {item.startTime} — {item.endTime}
+                      {item.count > 1 && <span className="text-base-content/40 ml-1">×{item.count}</span>}
+                    </span>
+                    <span className={item.totalIncrement > 0 ? "" : "text-base-content/30"}>
+                      {item.totalIncrement > 0 ? `+¥${(item.totalIncrement / 100).toFixed(1)}` : "—"}
                       <span className="text-base-content/40 ml-2">¥{(item.cumPrice / 100).toFixed(1)}</span>
                     </span>
                   </div>
@@ -304,14 +321,14 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
                       ? formatPrice(preview.order.settledPrice)
                       : preview.order.settledPoints != null && preview.order.settledPoints > 0
                         ? formatPoints(preview.order.settledPoints)
-                        : formatPrice(preview.order.finalPrice ?? preview.finalPrice)}
+                        : "外部支付"}
                   </div>
                   <div className="text-sm text-base-content/60 mt-1">
                     {preview.order.settledPrice != null && preview.order.settledPrice > 0
                       ? "储值余额支付"
                       : preview.order.settledPoints != null && preview.order.settledPoints > 0
                         ? "积分支付"
-                        : "外部支付"}
+                        : `应付 ${formatPrice(preview.order.finalPrice ?? preview.finalPrice)}`}
                   </div>
                   <div className="text-xs text-base-content/40 mt-2">
                     {preview.order.endAt ? dayjs(preview.order.endAt).format("YYYY-MM-DD HH:mm") : ""} 结算
