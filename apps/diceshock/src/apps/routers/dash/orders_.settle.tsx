@@ -117,7 +117,9 @@ function BatchSettlePage() {
     try {
       const result = await fetchPreview({ variables: { ids } });
       if (result.errors?.length) {
-        const errText = result.errors[0].message ?? "加载失败";
+        const firstErr = result.errors[0];
+        const isNotFound = firstErr.extensions?.code === "NOT_FOUND";
+        const errText = isNotFound ? t("dashOrders.notFound") : (firstErr.message ?? t("dashOrders.loadFailed"));
         setErrorMsg(errText);
         msg.error(errText);
       }
@@ -157,13 +159,15 @@ function BatchSettlePage() {
         });
       }
     } catch (err) {
-      const errText = err instanceof Error ? err.message : "加载失败";
+      const isNotFound = err instanceof Error &&
+        (err.message === "Order not found" || (err as { graphQLErrors?: Array<{ extensions?: { code?: string } }> }).graphQLErrors?.some(e => e.extensions?.code === "NOT_FOUND"));
+      const errText = isNotFound ? t("dashOrders.notFound") : (err instanceof Error ? err.message : t("dashOrders.loadFailed"));
       setErrorMsg(errText);
       msg.error(errText);
     } finally {
       setLoading(false);
     }
-  }, [ids, fetchPreview, msg]);
+  }, [ids, fetchPreview, msg, t]);
 
   useEffect(() => { void fetchData(); }, [fetchData]);
 

@@ -84,14 +84,19 @@ async function generateUniqueCode(tdb: Database, len = 6): Promise<string> {
 
 // ─── GQL Field Mappers ─────────────────────────────────────────────────────
 
+const VALID_SCOPES = new Set(["TRPG", "BOARDGAME", "CONSOLE", "MAHJONG"]);
+const VALID_TABLE_TYPES = new Set(["FIXED", "SOLO"]);
+
 function toGqlTable(
   row: typeof tablesTable.$inferSelect,
 ): Record<string, unknown> {
+  const scope = row.scope.toUpperCase();
+  const type = row.type.toUpperCase();
   return {
     id: row.id,
     name: row.name,
-    type: row.type.toUpperCase(),
-    scope: row.scope.toUpperCase(),
+    type: VALID_TABLE_TYPES.has(type) ? type : "FIXED",
+    scope: VALID_SCOPES.has(scope) ? scope : "BOARDGAME",
     status: row.status.toUpperCase(),
     capacity: row.capacity,
     code: row.code,

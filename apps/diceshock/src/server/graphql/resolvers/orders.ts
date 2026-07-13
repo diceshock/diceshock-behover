@@ -363,13 +363,18 @@ function normalizeStatus(
   return "ENDED";
 }
 
+const VALID_SCOPES = new Set(["TRPG", "BOARDGAME", "CONSOLE", "MAHJONG"]);
+const VALID_TABLE_TYPES = new Set(["FIXED", "SOLO"]);
+
 function toGqlTable(table: TableRow | null | undefined) {
   if (!table) return null;
+  const scope = table.scope.toUpperCase();
+  const type = table.type.toUpperCase();
   return {
     id: table.id,
     name: table.name,
-    type: table.type.toUpperCase(),
-    scope: table.scope.toUpperCase(),
+    type: VALID_TABLE_TYPES.has(type) ? type : "FIXED",
+    scope: VALID_SCOPES.has(scope) ? scope : "BOARDGAME",
     status: table.status.toUpperCase(),
     capacity: table.capacity,
     code: table.code,
