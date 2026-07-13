@@ -15,7 +15,7 @@ import {
 import type { EChartsOption } from "echarts";
 import { Component, forwardRef, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ErrorInfo, ReactNode } from "react";
-import confetti from "canvas-confetti";
+
 import { useMsg } from "@/client/components/diceshock/Msg";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import {
@@ -314,7 +314,7 @@ function BatchSettlePage() {
       // Check if all settled
       const newSettledCount = settledCount + 1;
       if (newSettledCount === previews.length) {
-        void confetti({ particleCount: 150, spread: 80, origin: { y: 0.7 } });
+        void import("canvas-confetti").then((m) => m.default({ particleCount: 150, spread: 80, origin: { y: 0.7 } }));
         setTimeout(() => {
           bottomRef.current?.scrollIntoView({ behavior: "smooth" });
         }, 500);
