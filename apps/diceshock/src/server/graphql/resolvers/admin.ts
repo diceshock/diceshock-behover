@@ -786,7 +786,7 @@ export const adminResolvers = {
         where: (s, { and, eq }) =>
           and(
             eq(s.status, "published"),
-            storeCondition(s.store_id, storeId) ?? eq(s.store_id, ""),
+            storeCondition(s.store_id, storeId) ?? isNull(s.store_id),
           ),
         orderBy: (s, { desc }) => desc(s.created_at),
       });
@@ -1450,7 +1450,7 @@ export const adminResolvers = {
         where: (s, { and, eq }) =>
           and(
             eq(s.status, "draft"),
-            storeCondition(s.store_id, storeId) ?? eq(s.store_id, ""),
+            storeCondition(s.store_id, storeId) ?? isNull(s.store_id),
           ),
         orderBy: (s, { desc }) => desc(s.created_at),
       });
