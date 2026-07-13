@@ -99,6 +99,14 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
     logger: {
       error(code: unknown, ...message: unknown[]) {
         console.error("[Auth.js]", code, ...message);
+        for (const m of message) {
+          if (m && typeof m === "object") {
+            const err = m as { cause?: unknown; message?: string; name?: string };
+            if (err.cause) console.error("[Auth.js] cause:", JSON.stringify(err.cause, null, 2));
+            if (err.message) console.error("[Auth.js] message:", err.message);
+            if (err.name) console.error("[Auth.js] name:", err.name);
+          }
+        }
       },
       warn(code: unknown) {
         console.warn("[Auth.js]", code);
@@ -114,65 +122,74 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
         }
 
         if (account && profile && token.sub) {
-          const unionid = getWechatProfileString(profile, "unionid");
-          if (unionid) {
-            // Full unionid-based merge: absorbs source user data, disables source
-            const unionidResult = await mergeByUnionid(
-              c.env.DB,
-              c.env.KV,
-              token.sub as string,
-              unionid,
-            );
-            if (unionidResult.merged) {
-              console.log("[auth:unionid-merge]", {
-                userId: (token.sub as string).slice(-8),
-                unionid: unionid.slice(0, 8),
-                mergedUserIds: unionidResult.mergedUserIds,
-              });
+          try {
+            const unionid = getWechatProfileString(profile, "unionid");
+            if (unionid) {
+              // Full unionid-based merge: absorbs source user data, disables source
+              const unionidResult = await mergeByUnionid(
+                c.env.DB,
+                c.env.KV,
+                token.sub as string,
+                unionid,
+              );
+              if (unionidResult.merged) {
+                console.log("[auth:unionid-merge]", {
+                  userId: (token.sub as string).slice(-8),
+                  unionid: unionid.slice(0, 8),
+                  mergedUserIds: unionidResult.mergedUserIds,
+                });
+              }
             }
-          }
 
-          // After unionid merge, check if user has a phone → trigger phone merge
-          const tdbPhone = db(c.env.DB);
-          const userInfoForMerge = await tdbPhone.query.userInfoTable.findFirst({
-            where: (ui, { eq }) => eq(ui.id, token.sub as string),
-            columns: { phone: true },
-          });
-          if (userInfoForMerge?.phone) {
-            const phoneResult = await mergeByPhone(
-              c.env.DB,
-              c.env.KV,
-              token.sub as string,
-              userInfoForMerge.phone,
-            );
-            if (phoneResult.merged) {
-              console.log("[auth:wechat-phone-merge]", {
-                userId: (token.sub as string).slice(-8),
-                phone: userInfoForMerge.phone,
-                mergedUserIds: phoneResult.mergedUserIds,
+            // After unionid merge, check if user has a phone → trigger phone merge
+            const tdbPhone = db(c.env.DB);
+            const userInfoForMerge =
+              await tdbPhone.query.userInfoTable.findFirst({
+                where: (ui, { eq }) => eq(ui.id, token.sub as string),
+                columns: { phone: true },
               });
+            if (userInfoForMerge?.phone) {
+              const phoneResult = await mergeByPhone(
+                c.env.DB,
+                c.env.KV,
+                token.sub as string,
+                userInfoForMerge.phone,
+              );
+              if (phoneResult.merged) {
+                console.log("[auth:wechat-phone-merge]", {
+                  userId: (token.sub as string).slice(-8),
+                  phone: userInfoForMerge.phone,
+                  mergedUserIds: phoneResult.mergedUserIds,
+                });
+              }
             }
+          } catch (mergeErr) {
+            console.error("[auth:merge-failed] Non-fatal merge error during OAuth callback:", mergeErr);
           }
         }
 
         // Phone-based merge for SMS login
         if (account?.provider === "SMS" && token.sub && token.phone) {
-          const phone = token.phone as string;
-          const mergeResult = await mergeByPhone(
-            c.env.DB,
-            c.env.KV,
-            token.sub as string,
-            phone,
-          );
-          if (mergeResult.merged) {
-            console.log("[auth:phone-merge] SMS login triggered merge", {
-              userId: (token.sub as string).slice(-8),
+          try {
+            const phone = token.phone as string;
+            const mergeResult = await mergeByPhone(
+              c.env.DB,
+              c.env.KV,
+              token.sub as string,
               phone,
-              mergedUserIds: mergeResult.mergedUserIds,
-              finalRole: mergeResult.role,
-            });
+            );
+            if (mergeResult.merged) {
+              console.log("[auth:phone-merge] SMS login triggered merge", {
+                userId: (token.sub as string).slice(-8),
+                phone,
+                mergedUserIds: mergeResult.mergedUserIds,
+                finalRole: mergeResult.role,
+              });
+            }
+            token.role = mergeResult.role as UserRole;
+          } catch (mergeErr) {
+            console.error("[auth:sms-merge-failed] Non-fatal merge error during SMS login:", mergeErr);
           }
-          token.role = mergeResult.role as UserRole;
         }
 
         if (token.sub) {

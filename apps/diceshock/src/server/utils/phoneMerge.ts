@@ -172,17 +172,25 @@ async function mergeUsersInto(
         .where(eq(mahjongRegistrationsTable.user_id, sourceUserId));
     }
 
-    // f. Move badges
-    await d
-      .update(userBadgesTable)
-      .set({ user_id: targetUserId })
-      .where(eq(userBadgesTable.user_id, sourceUserId));
+    // f. Move badges (table may not exist in some environments)
+    try {
+      await d
+        .update(userBadgesTable)
+        .set({ user_id: targetUserId })
+        .where(eq(userBadgesTable.user_id, sourceUserId));
+    } catch {
+      // user_badges table may not be migrated yet
+    }
 
-    // g. Move preferences
-    await d
-      .update(userPreferencesTable)
-      .set({ user_id: targetUserId })
-      .where(eq(userPreferencesTable.user_id, sourceUserId));
+    // g. Move preferences (table may not exist in some environments)
+    try {
+      await d
+        .update(userPreferencesTable)
+        .set({ user_id: targetUserId })
+        .where(eq(userPreferencesTable.user_id, sourceUserId));
+    } catch {
+      // user_preferences table may not be migrated yet
+    }
 
     // h. Merge user_info fields (fill missing on target)
     if (targetInfo) {
