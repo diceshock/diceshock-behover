@@ -842,10 +842,8 @@ async function settleOrderById(
     throw validationError("id", "Order is already settled");
   }
   if (existing.status === "paused") {
-    throw validationError(
-      "id",
-      "Paused orders must be resumed or ended before settlement",
-    );
+    // Auto-close the pause so we can settle directly
+    await closeOpenPauseLog(tdb, input.id, new Date());
   }
 
   const now = new Date();
