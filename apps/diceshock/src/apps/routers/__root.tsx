@@ -7,6 +7,7 @@ import { MessagesContainer } from "@/client/hooks/useMessages";
 import usePreferenceInit from "@/client/hooks/usePreferenceInit";
 import { StoreProvider } from "@/client/hooks/useStoreContext";
 import { I18nProvider } from "@/client/providers/I18nProvider";
+import { NavigationProgress } from "@/client/components/NavigationProgress";
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -22,15 +23,18 @@ function RootComponent() {
   useCrossDataRegister();
   useAuthRegister();
   return (
-    <GraphQLProvider>
-      <StoreProvider>
-        <I18nProvider>
-          <PreferenceInitializer />
-          <Outlet />
-          <Scripts />
-          <MessagesContainer />
-        </I18nProvider>
-      </StoreProvider>
-    </GraphQLProvider>
+    <>
+      <NavigationProgress />
+      <GraphQLProvider>
+        <StoreProvider>
+          <I18nProvider>
+            <PreferenceInitializer />
+            <Outlet />
+            <Scripts />
+            <MessagesContainer />
+          </I18nProvider>
+        </StoreProvider>
+      </GraphQLProvider>
+    </>
   );
 }
