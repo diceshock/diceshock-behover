@@ -881,6 +881,8 @@
     "conditional": "条件",
     "billingLabel": "計費:",
     "firstThirtyFree": "前30分鐘免費",
+    "freePeriodPlanName": "免費時段",
+    "freePeriodPlanDesc": "前30分鐘不計費，超過30分鐘後從第一分鐘開始計費",
     "noCap": "無封頂",
     "snapshotNoPlans": "此快照無任何計劃",
     "alwaysActive": "始終生效",

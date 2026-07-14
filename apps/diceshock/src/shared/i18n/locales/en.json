@@ -881,6 +881,8 @@
     "conditional": "Conditional",
     "billingLabel": "Billing:",
     "firstThirtyFree": "First 30 minutes free",
+    "freePeriodPlanName": "Free Period",
+    "freePeriodPlanDesc": "First 30 minutes are free; if exceeded, billing starts from minute one",
     "noCap": "No cap",
     "snapshotNoPlans": "This snapshot has no plans",
     "alwaysActive": "Always active",

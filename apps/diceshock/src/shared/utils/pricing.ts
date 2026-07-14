@@ -1,5 +1,4 @@
 const HALF_HOUR_MS = 30 * 60 * 1000;
-const FREE_PERIOD_MS = HALF_HOUR_MS;
 
 interface PlanConditions {
   date:
@@ -175,65 +174,162 @@ export function calculatePrice(
   }
 
   const effectiveMs = Math.max(0, totalMs - pausedMs);
-  const billableMs = Math.max(0, effectiveMs - FREE_PERIOD_MS);
-  const billableHalfHours = Math.ceil(billableMs / HALF_HOUR_MS);
 
-  const startDate = new Date(startAt);
-  const plan = findMatchingPlan(startDate, tableScope, snapshot);
-  if (!plan) return null;
-
-  let rawPrice: number;
-  let rawPoints: number;
-  if (plan.billing_type === "fixed") {
-    rawPrice = plan.price;
-    rawPoints = plan.points ?? 0;
-  } else {
-    const pricePerHalfHour = Math.round(plan.price / 2);
-    rawPrice = pricePerHalfHour * billableHalfHours;
-    const pointsPerHalfHour = Math.round((plan.points ?? 0) / 2);
-    rawPoints = pointsPerHalfHour * billableHalfHours;
+  // Free period: if effective time ≤ 30 min, entire session is free.
+  // Once it exceeds 30 min, ALL time is billed (no deduction for the first half hour).
+  if (effectiveMs <= HALF_HOUR_MS) {
+    // Find any matching plan just for metadata
+    const startDate = new Date(startAt);
+    const plan = findMatchingPlan(startDate, tableScope, snapshot);
+    if (!plan) return null;
+    return {
+      planName: plan.name,
+      planType: plan.plan_type,
+      billingType: plan.billing_type,
+      unitPrice: plan.price,
+      unitPoints: plan.points ?? 0,
+      totalMinutes,
+      billableHalfHours: 0,
+      rawPrice: 0,
+      rawPoints: 0,
+      capApplied: false,
+      capType: null,
+      finalPrice: 0,
+      finalPoints: 0,
+    };
   }
 
-  let finalPrice = rawPrice;
-  let finalPoints = rawPoints;
-  let capApplied = false;
-  let capType: string | null = null;
+  // Beyond 30 min: bill every half-hour segment independently.
+  // Each segment matches conditions based on its own start timestamp.
+  const billableHalfHours = Math.ceil(effectiveMs / HALF_HOUR_MS);
 
-  if (plan.billing_type === "hourly" && plan.cap_enabled) {
-    if (plan.cap_unit === "per_day") {
-      if (plan.cap_price != null && finalPrice > plan.cap_price) {
-        finalPrice = plan.cap_price;
-        capApplied = true;
-        capType = "per_day";
+  // Build active (non-paused) segments by removing paused intervals
+  // We need to map each billable half-hour back to a real timestamp for plan matching.
+  const activeSegmentStarts = computeActiveSegmentStarts(
+    startAt,
+    endAt,
+    billableHalfHours,
+    pauseLogs,
+  );
+
+  let rawPrice = 0;
+  let rawPoints = 0;
+  // Track per-plan accumulation for cap enforcement
+  const planAccum = new Map<string, { price: number; points: number; plan: PlanEntry }>();
+
+  for (const segTs of activeSegmentStarts) {
+    const segDate = new Date(segTs);
+    const plan = findMatchingPlan(segDate, tableScope, snapshot);
+    if (!plan) continue;
+
+    if (plan.billing_type === "fixed") {
+      // Fixed plans charge once regardless of segments; handled after loop
+      if (!planAccum.has(plan.name)) {
+        planAccum.set(plan.name, { price: plan.price, points: plan.points ?? 0, plan });
       }
-      if (plan.cap_points != null && finalPoints > plan.cap_points) {
-        finalPoints = plan.cap_points;
-        capApplied = true;
-        capType = "per_day";
-      }
-    } else if (plan.cap_unit === "split_day_night") {
-      const isDay = isDaytime(startDate, snapshot.config);
-      const capVal = isDay ? plan.cap_price_day : plan.cap_price_night;
-      if (capVal != null && finalPrice > capVal) {
-        finalPrice = capVal;
-        capApplied = true;
-        capType = isDay ? "daytime" : "nighttime";
-      }
-      const capPts = isDay ? plan.cap_points_day : plan.cap_points_night;
-      if (capPts != null && finalPoints > capPts) {
-        finalPoints = capPts;
-        capApplied = true;
-        capType = isDay ? "daytime" : "nighttime";
+    } else {
+      const pricePerHalfHour = Math.round(plan.price / 2);
+      const pointsPerHalfHour = Math.round((plan.points ?? 0) / 2);
+      const existing = planAccum.get(plan.name);
+      if (existing) {
+        existing.price += pricePerHalfHour;
+        existing.points += pointsPerHalfHour;
+      } else {
+        planAccum.set(plan.name, { price: pricePerHalfHour, points: pointsPerHalfHour, plan });
       }
     }
   }
 
+  // Apply caps per plan, then sum
+  let capApplied = false;
+  let capType: string | null = null;
+  let dominantPlan: PlanEntry | null = null;
+  let maxContribution = -1;
+
+  for (const [, entry] of planAccum) {
+    let price = entry.price;
+    let points = entry.points;
+    const plan = entry.plan;
+
+    if (plan.billing_type === "hourly" && plan.cap_enabled) {
+      if (plan.cap_unit === "per_day") {
+        if (plan.cap_price != null && price > plan.cap_price) {
+          price = plan.cap_price;
+          capApplied = true;
+          capType = "per_day";
+        }
+        if (plan.cap_points != null && points > plan.cap_points) {
+          points = plan.cap_points;
+          capApplied = true;
+          capType = "per_day";
+        }
+      } else if (plan.cap_unit === "split_day_night") {
+        // Use the first segment's time context for cap determination
+        const refDate = new Date(activeSegmentStarts[0]);
+        const isDay = isDaytime(refDate, snapshot.config);
+        const capVal = isDay ? plan.cap_price_day : plan.cap_price_night;
+        if (capVal != null && price > capVal) {
+          price = capVal;
+          capApplied = true;
+          capType = isDay ? "daytime" : "nighttime";
+        }
+        const capPts = isDay ? plan.cap_points_day : plan.cap_points_night;
+        if (capPts != null && points > capPts) {
+          points = capPts;
+          capApplied = true;
+          capType = isDay ? "daytime" : "nighttime";
+        }
+      }
+    }
+
+    rawPrice += entry.price;
+    rawPoints += entry.points;
+
+    if (price > maxContribution) {
+      maxContribution = price;
+      dominantPlan = plan;
+    }
+  }
+
+  // Compute final totals after caps
+  let finalPrice = 0;
+  let finalPoints = 0;
+  for (const [, entry] of planAccum) {
+    let price = entry.price;
+    let points = entry.points;
+    const plan = entry.plan;
+
+    if (plan.billing_type === "hourly" && plan.cap_enabled) {
+      if (plan.cap_unit === "per_day") {
+        if (plan.cap_price != null && price > plan.cap_price) price = plan.cap_price;
+        if (plan.cap_points != null && points > plan.cap_points) points = plan.cap_points;
+      } else if (plan.cap_unit === "split_day_night") {
+        const refDate = new Date(activeSegmentStarts[0]);
+        const isDay = isDaytime(refDate, snapshot.config);
+        const capVal = isDay ? plan.cap_price_day : plan.cap_price_night;
+        if (capVal != null && price > capVal) price = capVal;
+        const capPts = isDay ? plan.cap_points_day : plan.cap_points_night;
+        if (capPts != null && points > capPts) points = capPts;
+      }
+    }
+
+    finalPrice += price;
+    finalPoints += points;
+  }
+
+  // Use the dominant plan (highest contribution) for metadata
+  if (!dominantPlan) {
+    const startDate = new Date(startAt);
+    dominantPlan = findMatchingPlan(startDate, tableScope, snapshot);
+    if (!dominantPlan) return null;
+  }
+
   return {
-    planName: plan.name,
-    planType: plan.plan_type,
-    billingType: plan.billing_type,
-    unitPrice: plan.price,
-    unitPoints: plan.points ?? 0,
+    planName: dominantPlan.name,
+    planType: dominantPlan.plan_type,
+    billingType: dominantPlan.billing_type,
+    unitPrice: dominantPlan.price,
+    unitPoints: dominantPlan.points ?? 0,
     totalMinutes,
     billableHalfHours,
     rawPrice,
@@ -243,6 +339,77 @@ export function calculatePrice(
     finalPrice,
     finalPoints,
   };
+}
+
+/**
+ * Compute the real-time start timestamp for each active half-hour segment,
+ * skipping paused intervals. Used for per-segment plan matching.
+ */
+function computeActiveSegmentStarts(
+  startAt: number,
+  endAt: number,
+  billableHalfHours: number,
+  pauseLogs?: Array<{ pausedAt: number; resumedAt: number | null }>,
+): number[] {
+  if (!pauseLogs || pauseLogs.length === 0) {
+    // No pauses: segments are contiguous from startAt
+    const starts: number[] = [];
+    for (let i = 0; i < billableHalfHours; i++) {
+      starts.push(startAt + i * HALF_HOUR_MS);
+    }
+    return starts;
+  }
+
+  // Sort pauses and build list of active intervals
+  const sortedPauses = pauseLogs
+    .map((l) => ({
+      start: Math.max(l.pausedAt, startAt),
+      end: Math.min(l.resumedAt ?? endAt, endAt),
+    }))
+    .filter((p) => p.end > p.start)
+    .sort((a, b) => a.start - b.start);
+
+  // Walk through time, accumulating active half-hours
+  const starts: number[] = [];
+  let cursor = startAt;
+  let pauseIdx = 0;
+  let activeAccum = 0;
+
+  while (starts.length < billableHalfHours && cursor < endAt) {
+    // Skip into any pause that covers cursor
+    while (pauseIdx < sortedPauses.length && sortedPauses[pauseIdx].end <= cursor) {
+      pauseIdx++;
+    }
+    if (pauseIdx < sortedPauses.length && sortedPauses[pauseIdx].start <= cursor) {
+      cursor = sortedPauses[pauseIdx].end;
+      pauseIdx++;
+      continue;
+    }
+
+    // Find end of current active chunk
+    const chunkEnd = pauseIdx < sortedPauses.length
+      ? Math.min(sortedPauses[pauseIdx].start, endAt)
+      : endAt;
+
+    // Walk this active chunk in half-hour segments
+    while (cursor < chunkEnd && starts.length < billableHalfHours) {
+      if (activeAccum === 0) {
+        starts.push(cursor);
+      }
+      const remaining = HALF_HOUR_MS - activeAccum;
+      const available = chunkEnd - cursor;
+      if (available >= remaining) {
+        cursor += remaining;
+        activeAccum = 0;
+      } else {
+        cursor += available;
+        activeAccum += available;
+        break; // chunk exhausted, move to next active chunk
+      }
+    }
+  }
+
+  return starts;
 }
 
 export function formatPrice(cents: number): string {

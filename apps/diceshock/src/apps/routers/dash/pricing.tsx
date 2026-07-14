@@ -583,6 +583,29 @@ function PricingPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
+            {/* Virtual free-period plan — display only, not persisted */}
+            <div className="card bg-base-100 shadow-sm border border-dashed border-base-content/20 opacity-80">
+              <div className="card-body p-4">
+                <div className="flex items-center gap-3">
+                  <div className="text-base-content/30">
+                    <ClockIcon className="size-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-base-content/70">
+                        {t("dashPricing.freePeriodPlanName")}
+                      </span>
+                      <span className="badge badge-ghost badge-xs">
+                        {t("dashPricing.firstThirtyFree")}
+                      </span>
+                    </div>
+                    <p className="text-xs text-base-content/50 mt-1">
+                      {t("dashPricing.freePeriodPlanDesc")}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
             {effectiveData.plans.map((plan, globalIdx) => {
               const p = plan as Record<string, unknown>;
               if (p.plan_type !== "conditional") return null;

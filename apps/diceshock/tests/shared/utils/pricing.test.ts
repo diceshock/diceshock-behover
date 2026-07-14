@@ -1,15 +1,11 @@
 /**
- * Regression tests for pricing utility.
+ * Tests for pricing utility.
  *
- * Bug #4: `n.plans.filter is not a function`
- *   - calculatePrice must return null (not crash) when snapshot.plans is not an array
- *   - calculatePrice must return null when snapshot is null or plans is empty
- *
- * Also covers correct calculation behavior:
- *   - FREE_PERIOD_MS = 30 min: first 30 min free
- *   - hourly plan: pricePerHalfHour * billableHalfHours
- *   - cap enforcement
- *   - pause deduction from billable time
+ * Key behaviors:
+ *   - Free period: ≤30 min effective time → free; >30 min → ALL half-hours billed (no deduction)
+ *   - Per-segment plan matching: each half-hour independently evaluates conditions
+ *   - Cap enforcement per plan
+ *   - Pause deduction from effective time
  *   - findMatchingPlan: conditional match vs fallback
  */
 import { describe, expect, it } from "vitest";
@@ -46,7 +42,7 @@ function fallbackPlan(price = 1000, opts?: Partial<SnapshotData["plans"][0]>): S
   };
 }
 
-describe("calculatePrice — null/crash guards (Bug #4 regression)", () => {
+describe("calculatePrice — null/crash guards", () => {
   it("returns null when snapshot is null", () => {
     const result = calculatePrice(0, HALF_HOUR * 3, "boardgame", null);
     expect(result).toBeNull();
@@ -58,11 +54,7 @@ describe("calculatePrice — null/crash guards (Bug #4 regression)", () => {
   });
 
   it("returns null when plans is not an array (string)", () => {
-    // Simulates the bug: data.plans was a JSON string, not parsed
     const bad = { config: { daytime_start: "10:00", daytime_end: "18:00" }, plans: "[{\"name\":\"x\"}]" as unknown as SnapshotData["plans"] };
-    // Before the fix, this would throw "plans.filter is not a function"
-    // After the fix on the CALLER side (parsing), this scenario shouldn't reach calculatePrice.
-    // But calculatePrice itself should still not crash if plans somehow isn't an array.
     expect(() => calculatePrice(0, HALF_HOUR * 3, "boardgame", bad)).not.toThrow();
   });
 
@@ -72,29 +64,44 @@ describe("calculatePrice — null/crash guards (Bug #4 regression)", () => {
   });
 });
 
-describe("calculatePrice — free period", () => {
+describe("calculatePrice — free period (≤30min free, >30min bills all)", () => {
   const snapshot = makeSnapshot([fallbackPlan(1000)]); // ¥10/hour = ¥5/half-hour
 
-  it("price is 0 for first 30 minutes (free period)", () => {
+  it("price is 0 for exactly 30 minutes (within free period)", () => {
     const result = calculatePrice(0, HALF_HOUR, "boardgame", snapshot);
-    // billableMs = max(0, 30min - 30min) = 0 → 0 half-hours → price 0
     expect(result).not.toBeNull();
     expect(result!.finalPrice).toBe(0);
+    expect(result!.billableHalfHours).toBe(0);
   });
 
-  it("price starts after free period", () => {
-    // 1 hour total → effectiveMs = 60min → billableMs = 30min → 1 half-hour
+  it("price is 0 for 15 minutes (within free period)", () => {
+    const result = calculatePrice(0, HALF_HOUR / 2, "boardgame", snapshot);
+    expect(result).not.toBeNull();
+    expect(result!.finalPrice).toBe(0);
+    expect(result!.billableHalfHours).toBe(0);
+  });
+
+  it("1 hour = 2 billable half-hours (exceeds 30min, all time billed)", () => {
     const result = calculatePrice(0, HALF_HOUR * 2, "boardgame", snapshot);
     expect(result).not.toBeNull();
-    expect(result!.finalPrice).toBe(500); // ¥5 for one billable half-hour
-    expect(result!.billableHalfHours).toBe(1);
+    // effectiveMs = 60min > 30min → bill all: ceil(60min / 30min) = 2 half-hours
+    expect(result!.billableHalfHours).toBe(2);
+    expect(result!.finalPrice).toBe(1000); // 2 × ¥5
   });
 
-  it("2 hours = 3 billable half-hours (minus free period)", () => {
+  it("31 minutes = 2 billable half-hours (exceeds 30min, all billed)", () => {
+    const result = calculatePrice(0, HALF_HOUR + 60000, "boardgame", snapshot);
+    expect(result).not.toBeNull();
+    // 31min > 30min → ceil(31min / 30min) = 2 half-hours
+    expect(result!.billableHalfHours).toBe(2);
+    expect(result!.finalPrice).toBe(1000); // 2 × ¥5
+  });
+
+  it("2 hours = 4 billable half-hours (all billed)", () => {
     const result = calculatePrice(0, HALF_HOUR * 4, "boardgame", snapshot);
     expect(result).not.toBeNull();
-    expect(result!.billableHalfHours).toBe(3);
-    expect(result!.finalPrice).toBe(1500); // ¥15
+    expect(result!.billableHalfHours).toBe(4);
+    expect(result!.finalPrice).toBe(2000); // 4 × ¥5
   });
 });
 
@@ -103,14 +110,24 @@ describe("calculatePrice — pause deduction", () => {
   const end = HALF_HOUR * 4; // 2 hours
   const snapshot = makeSnapshot([fallbackPlan(1000)]); // ¥10/hour
 
-  it("pause subtracts from effective time", () => {
-    // Pause the entire second half-hour
+  it("pause subtracts from effective time, remains above free threshold", () => {
+    // Pause the entire second half-hour (30min paused)
     const pauses = [{ pausedAt: HALF_HOUR, resumedAt: HALF_HOUR * 2 }];
     const result = calculatePrice(start, end, "boardgame", snapshot, pauses);
     expect(result).not.toBeNull();
-    // totalMs = 2h, pausedMs = 30min, effectiveMs = 90min, billableMs = 60min → 2 half-hours
-    expect(result!.billableHalfHours).toBe(2);
-    expect(result!.finalPrice).toBe(1000); // ¥10
+    // totalMs = 2h, pausedMs = 30min, effectiveMs = 90min > 30min → bill all
+    // billableHalfHours = ceil(90min / 30min) = 3
+    expect(result!.billableHalfHours).toBe(3);
+    expect(result!.finalPrice).toBe(1500); // 3 × ¥5
+  });
+
+  it("pause reduces effective time to exactly 30min → free", () => {
+    // 1 hour total, 30 min paused → effectiveMs = 30min ≤ 30min → free
+    const pauses = [{ pausedAt: HALF_HOUR, resumedAt: HALF_HOUR * 2 }];
+    const result = calculatePrice(start, HALF_HOUR * 2, "boardgame", snapshot, pauses);
+    expect(result).not.toBeNull();
+    expect(result!.finalPrice).toBe(0);
+    expect(result!.billableHalfHours).toBe(0);
   });
 
   it("pausing entire duration results in 0 price", () => {
@@ -127,21 +144,21 @@ describe("calculatePrice — cap enforcement", () => {
   ]); // ¥10/hour, capped at ¥50/day
 
   it("no cap when under limit", () => {
-    // 3 hours = 5 billable half-hours = ¥25
+    // 3 hours = 6 billable half-hours = ¥30
     const result = calculatePrice(0, HALF_HOUR * 6, "boardgame", snapshot);
-    expect(result!.finalPrice).toBe(2500);
+    expect(result!.finalPrice).toBe(3000);
     expect(result!.capApplied).toBe(false);
   });
 
   it("applies cap when over limit", () => {
-    // 12 hours = 23 billable half-hours = ¥115 → capped at ¥50
+    // 12 hours = 24 billable half-hours = ¥120 → capped at ¥50
     const result = calculatePrice(0, HALF_HOUR * 24, "boardgame", snapshot);
     expect(result!.finalPrice).toBe(5000);
     expect(result!.capApplied).toBe(true);
   });
 });
 
-describe("calculatePrice — findMatchingPlan", () => {
+describe("calculatePrice — per-segment plan matching", () => {
   it("uses fallback when no conditional matches", () => {
     const snapshot = makeSnapshot([
       {
@@ -210,6 +227,8 @@ describe("calculatePrice — findMatchingPlan", () => {
     const result = calculatePrice(monday10am, monday10am + HALF_HOUR * 4, "boardgame", snapshot);
     expect(result).not.toBeNull();
     expect(result!.planName).toBe("Weekday Special");
+    // 2 hours = 4 half-hours × ¥4/half-hour (800/2) = ¥16
+    expect(result!.finalPrice).toBe(1600);
   });
 
   it("returns null when only conditionals exist and none match (no fallback)", () => {
@@ -277,6 +296,72 @@ describe("calculatePrice — findMatchingPlan", () => {
     const result = calculatePrice(monday, monday + HALF_HOUR * 4, "boardgame", snapshot);
     expect(result).not.toBeNull();
     expect(result!.planName).toBe("Fallback");
+  });
+
+  it("different half-hours match different plans when time conditions change", () => {
+    // Daytime plan ends at 18:00, nighttime plan starts at 18:00
+    const snapshot = makeSnapshot([
+      {
+        plan_type: "conditional",
+        name: "Daytime Rate",
+        sort_order: 1,
+        enabled: true,
+        conditions: {
+          date: { type: "workdays" },
+          time: { type: "daytime" },
+          member: { type: "irrelevant" },
+          scope: [],
+        },
+        billing_type: "hourly",
+        price: 800, // ¥4/half-hour
+        points: 0,
+        cap_enabled: false,
+        cap_unit: null,
+        cap_price: null,
+        cap_price_day: null,
+        cap_price_night: null,
+        cap_points: null,
+        cap_points_day: null,
+        cap_points_night: null,
+      },
+      {
+        plan_type: "conditional",
+        name: "Nighttime Rate",
+        sort_order: 2,
+        enabled: true,
+        conditions: {
+          date: { type: "workdays" },
+          time: { type: "nighttime" },
+          member: { type: "irrelevant" },
+          scope: [],
+        },
+        billing_type: "hourly",
+        price: 600, // ¥3/half-hour
+        points: 0,
+        cap_enabled: false,
+        cap_unit: null,
+        cap_price: null,
+        cap_price_day: null,
+        cap_price_night: null,
+        cap_points: null,
+        cap_points_day: null,
+        cap_points_night: null,
+      },
+      fallbackPlan(1000),
+    ]);
+
+    // Monday 17:00 to 19:00 (2 hours, crosses day/night at 18:00)
+    // config: daytime 10:00-18:00
+    const monday17 = new Date("2024-01-08T17:00:00").getTime();
+    const result = calculatePrice(monday17, monday17 + HALF_HOUR * 4, "boardgame", snapshot);
+    expect(result).not.toBeNull();
+    // 4 half-hours total:
+    //   17:00-17:30 → daytime → ¥4
+    //   17:30-18:00 → daytime → ¥4
+    //   18:00-18:30 → nighttime → ¥3
+    //   18:30-19:00 → nighttime → ¥3
+    expect(result!.billableHalfHours).toBe(4);
+    expect(result!.finalPrice).toBe(1400); // 2×400 + 2×300
   });
 });
 

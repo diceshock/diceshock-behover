@@ -614,8 +614,8 @@ function BatchSettlePage() {
               }
               next.set(p.order.id, {
                 paymentPreset: defaultPreset,
-                deductAmount: defaultPreset === 'stored_value' ? p.finalPrice : 0,
-                deductPoints: defaultPreset === 'points' ? finalPts : 0,
+                deductAmount: p.finalPrice,
+                deductPoints: finalPts,
                 pointsChange: 0,
                 note: "",
                 settled: p.order.status === "SETTLED",
