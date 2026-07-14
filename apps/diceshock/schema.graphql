@@ -1368,6 +1368,7 @@ extend type Query {
 enum PricingSnapshotStatus {
   DRAFT
   PUBLISHED
+  ARCHIVED
 }
 
 type PricingConfig {

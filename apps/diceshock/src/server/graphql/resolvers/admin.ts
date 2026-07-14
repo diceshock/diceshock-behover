@@ -721,8 +721,12 @@ export const adminResolvers = {
       const tdb = db(ctx);
       const storeId = args.storeId ?? ctx.preferredStoreId;
       const latest = await tdb.query.pricingSnapshotsTable.findFirst({
-        where: (s, { eq }) => storeCondition(s.store_id, storeId),
-        orderBy: (s, { desc }) => desc(s.created_at),
+        where: (s, { eq: eq2 }) => {
+          const store = storeCondition(s.store_id, storeId);
+          const notArchived = sql`${s.status} != 'archived'`;
+          return store ? and(store, notArchived) : notArchived;
+        },
+        orderBy: (s, { desc: desc2 }) => desc2(s.created_at),
       });
       return {
         data: latest?.data
@@ -755,8 +759,12 @@ export const adminResolvers = {
       const tdb = db(ctx);
       const storeId = args.storeId ?? ctx.preferredStoreId;
       const rows = await tdb.query.pricingSnapshotsTable.findMany({
-        where: (s, { eq }) => storeCondition(s.store_id, storeId),
-        orderBy: (s, { desc }) => desc(s.created_at),
+        where: (s, { eq: eq2 }) => {
+          const store = storeCondition(s.store_id, storeId);
+          const notArchived = sql`${s.status} != 'archived'`;
+          return store ? and(store, notArchived) : notArchived;
+        },
+        orderBy: (s, { desc: desc2 }) => desc2(s.created_at),
       });
       return rows.map(mapPricingSnapshot);
     },
