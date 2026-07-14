@@ -133,9 +133,37 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
     setSettleForm(produce(recipe));
   }, []);
   const [settling, setSettling] = useState(false);
+  const [formInitialized, setFormInitialized] = useState(false);
 
   const preview = data?.settlementPreview;
   const isSettled = preview?.order.status === "SETTLED";
+
+  // Auto-select payment method and pre-fill amounts on load
+  useEffect(() => {
+    if (!preview || formInitialized || isSettled) return;
+    const svBal = preview.membership.storedValueBalance;
+    const ptsBal = preview.membership.pointsBalance;
+    const price = preview.finalPrice;
+    const pts = preview.finalPoints;
+    let preset: "stored_value" | "points" | "external" = "external";
+    let amount = "";
+    let deductPts = "";
+    if (svBal >= price && price > 0) {
+      preset = "stored_value";
+      amount = String(price / 100);
+    } else if (ptsBal >= pts && pts > 0) {
+      preset = "points";
+      deductPts = String(pts);
+    }
+    setSettleForm({
+      paymentPreset: preset,
+      deductAmount: amount,
+      deductPoints: deductPts,
+      pointsChange: "",
+      note: "",
+    });
+    setFormInitialized(true);
+  }, [preview, formInitialized, isSettled]);
 
 
   const handleSettle = useCallback(async () => {
@@ -315,23 +343,35 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
                 <div>
                   <label className="text-xs text-base-content/50 mb-1.5 block">支付方式</label>
                   <div className="flex gap-2">
-                    {SINGLE_PAYMENT_PRESETS.map((p) => (
-                      <button
-                        key={p.value}
-                        type="button"
-                        className={`btn btn-sm flex-1 ${settleForm.paymentPreset === p.value ? "btn-primary" : "btn-ghost border-base-300"}`}
-                        onClick={() => updateSettleForm((d) => {
-                          d.paymentPreset = p.value;
-                          if (p.value === "stored_value") {
-                            d.deductAmount = String(Math.min(storedValueBalance, preview.finalPrice) / 100);
-                          } else if (p.value === "points") {
-                            d.deductPoints = String(Math.min(pointsBalance, preview.finalPoints));
-                          }
-                        })}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
+                    {SINGLE_PAYMENT_PRESETS.map((p) => {
+                      const insufficientSv = p.value === "stored_value" && storedValueBalance < preview.finalPrice;
+                      const insufficientPts = p.value === "points" && (pointsBalance < preview.finalPoints || preview.finalPoints <= 0);
+                      const isDisabled = insufficientSv || insufficientPts;
+                      return (
+                        <div key={p.value} className="flex-1 relative group">
+                          <button
+                            type="button"
+                            className={`btn btn-sm w-full ${settleForm.paymentPreset === p.value ? "btn-primary" : "btn-ghost border-base-300"} ${isDisabled ? "btn-disabled opacity-50" : ""}`}
+                            disabled={isDisabled}
+                            onClick={() => updateSettleForm((d) => {
+                              d.paymentPreset = p.value;
+                              if (p.value === "stored_value") {
+                                d.deductAmount = String(Math.min(storedValueBalance, preview.finalPrice) / 100);
+                              } else if (p.value === "points") {
+                                d.deductPoints = String(Math.min(pointsBalance, preview.finalPoints));
+                              }
+                            })}
+                          >
+                            {p.label}
+                          </button>
+                          {isDisabled && (
+                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 hidden group-hover:block bg-base-300 text-xs px-2 py-1 rounded whitespace-nowrap z-10">
+                              {insufficientSv ? `余额不足 (${formatPrice(storedValueBalance)})` : "积分不足"}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -348,6 +388,9 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
                       value={settleForm.deductAmount}
                       onChange={(e) => updateSettleForm((d) => { d.deductAmount = e.target.value; })}
                     />
+                    {Number(settleForm.deductAmount) * 100 > storedValueBalance && (
+                      <p className="text-xs text-error mt-1">超出储值余额</p>
+                    )}
                   </div>
                 )}
 
@@ -364,6 +407,9 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
                       value={settleForm.deductPoints}
                       onChange={(e) => updateSettleForm((d) => { d.deductPoints = e.target.value; })}
                     />
+                    {Number(settleForm.deductPoints) > pointsBalance && (
+                      <p className="text-xs text-error mt-1">超出积分余额</p>
+                    )}
                   </div>
                 )}
 
@@ -391,12 +437,27 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
                   />
                 </div>
 
+                {/* Validation warning */}
+                {settleForm.paymentPreset === "stored_value" && Number(settleForm.deductAmount) * 100 > storedValueBalance && (
+                  <div className="bg-error/10 text-error text-xs px-3 py-2 rounded-lg">
+                    储值余额不足，无法使用储值支付。请选择其他支付方式或减少扣除金额。
+                  </div>
+                )}
+                {settleForm.paymentPreset === "points" && Number(settleForm.deductPoints) > pointsBalance && (
+                  <div className="bg-error/10 text-error text-xs px-3 py-2 rounded-lg">
+                    积分余额不足，无法使用积分支付。请选择其他支付方式或减少扣除积分。
+                  </div>
+                )}
+
                 {/* Actions */}
                 <div className="flex gap-2 pt-2">
                   <button
                     type="submit"
                     className="btn btn-primary flex-1 gap-1"
-                    disabled={settling}
+                    disabled={settling
+                      || (settleForm.paymentPreset === "stored_value" && Number(settleForm.deductAmount) * 100 > storedValueBalance)
+                      || (settleForm.paymentPreset === "points" && Number(settleForm.deductPoints) > pointsBalance)
+                    }
                   >
                     {settling ? <span className="loading loading-spinner loading-xs" /> : <CheckCircleIcon className="size-4" />}
                     确认结算
