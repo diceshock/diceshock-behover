@@ -412,7 +412,7 @@ function PricingPage() {
         draft.savedData = draft.data;
       });
       saveDialogRef.current?.close();
-      void refetchSnapshots();
+      await refetchSnapshots();
       msg.success(t("dashPricing.messages.draftSaved"));
     } catch (err) {
       msg.error(
@@ -427,7 +427,7 @@ function PricingPage() {
     setPublishPending(true);
     try {
       await publishSnapshot();
-      void refetchSnapshots();
+      await refetchSnapshots();
       msg.success(t("dashPricing.messages.published"));
     } catch (err) {
       msg.error(
@@ -455,7 +455,7 @@ function PricingPage() {
         draft.savedData = d;
       });
       msg.success(t("dashPricing.messages.restored"));
-      void refetchSnapshots();
+      await refetchSnapshots();
     } catch (err) {
       msg.error(
         err instanceof Error
