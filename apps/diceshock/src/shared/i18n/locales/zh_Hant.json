@@ -863,6 +863,7 @@
     "saveDraft": "保存草稿",
     "saveDraftFirst": "請先保存草稿",
     "noDraftToPublish": "没有可發布的草稿",
+    "noChangesToSave": "沒有需要保存的改動",
     "publishing": "發布中...",
     "publish": "發布",
     "daytimeStart": "白天开始時間",

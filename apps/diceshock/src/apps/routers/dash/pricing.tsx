@@ -828,6 +828,11 @@ function PricingPage() {
           className="btn btn-sm gap-2"
           onClick={() => saveDialogRef.current?.showModal()}
           disabled={savePending || !hasChanges}
+          title={
+            !hasChanges
+              ? t("dashPricing.noChangesToSave")
+              : ""
+          }
         >
           <FloppyDiskIcon className="size-4" />
           {savePending ? t("dashPricing.saving") : t("dashPricing.saveDraft")}

@@ -863,6 +863,7 @@
     "saveDraft": "Save Draft",
     "saveDraftFirst": "Save the draft first",
     "noDraftToPublish": "No draft to publish",
+    "noChangesToSave": "No changes to save",
     "publishing": "Publishing...",
     "publish": "Publish",
     "daytimeStart": "Daytime start",
