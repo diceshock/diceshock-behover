@@ -735,7 +735,8 @@
     "noActiveUsers": "No hay usuarios activos",
     "detail": "Detalle",
     "settle": "Liquidar",
-    "settleAll": "Liquidar todo"
+    "settleAll": "Liquidar todo",
+    "orderCount": "pedidos"
   },
   "dashLayout": {
     "notFoundTitle": "Llegaste a un lugar que no existe",

@@ -18,6 +18,7 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import clsx from "clsx";
+import { produce } from "immer";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
@@ -55,6 +56,7 @@ import {
 import type { Wind } from "@/shared/mahjong/constants";
 import { WIND_LABELS } from "@/shared/mahjong/constants";
 import dayjs from "@/shared/utils/dayjs-config";
+import { editUserSchema, addPlanSchema, editPlanSchema, deductSchema } from "./users-detail.store";
 import { formatDualPrice, formatPoints, formatPrice } from "@/shared/utils/pricing";
 
 export const Route = createFileRoute("/dash/users_/$id")({
@@ -215,6 +217,8 @@ function UserDetailPage() {
     nickname: "",
     phone: "",
   });
+  const updateEditForm = (recipe: (draft: { name: string; nickname: string; phone: string }) => void) =>
+    setEditForm(produce(recipe));
   const [editPending, setEditPending] = useState(false);
   const [rolePending, setRolePending] = useState(false);
 
@@ -267,14 +271,20 @@ function UserDetailPage() {
     startDate: dayjs().format("YYYY-MM-DD"),
     endDate: dayjs().add(30, "day").format("YYYY-MM-DD"),
   });
+  const updateAddForm = (recipe: (draft: { planType: PlanType; amount: string; pointsChange: string; startDate: string; endDate: string }) => void) =>
+    setAddForm(produce(recipe));
   const [addPending, setAddPending] = useState(false);
   const [addFormError, setAddFormError] = useState("");
 
   const deductDialogRef = useRef<HTMLDialogElement>(null);
-  const [deductAmount, setDeductAmount] = useState("");
-  const [deductPointsAmount, setDeductPointsAmount] = useState("");
-  const [deductNote, setDeductNote] = useState("");
-  const [deductDate, setDeductDate] = useState(dayjs().format("YYYY-MM-DD"));
+  const [deductForm, setDeductForm] = useState({
+    amount: "",
+    deductPoints: "",
+    note: "",
+    date: dayjs().format("YYYY-MM-DD"),
+  });
+  const updateDeductForm = (recipe: (draft: { amount: string; deductPoints: string; note: string; date: string }) => void) =>
+    setDeductForm(produce(recipe));
   const [deductPending, setDeductPending] = useState(false);
 
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
@@ -284,6 +294,8 @@ function UserDetailPage() {
     startDate: "",
     endDate: "",
   });
+  const updateEditPlanForm = (recipe: (draft: { planType: PlanType; amount: string; startDate: string; endDate: string }) => void) =>
+    setEditPlanForm(produce(recipe));
   const [editPlanPending, setEditPlanPending] = useState(false);
   const [editPlanError, setEditPlanError] = useState("");
 
@@ -579,15 +591,20 @@ function UserDetailPage() {
 
   const handleBasicSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const parsed = editUserSchema.safeParse(editForm);
+    if (!parsed.success) {
+      msg.error(parsed.error.issues[0]?.message ?? "表单验证失败");
+      return;
+    }
     setEditPending(true);
     try {
       await updateUser({
         variables: {
           input: {
             id,
-            name: editForm.name.trim() || undefined,
-            nickname: editForm.nickname.trim() || undefined,
-            phone: editForm.phone.trim() || undefined,
+            name: parsed.data.name || undefined,
+            nickname: parsed.data.nickname || undefined,
+            phone: parsed.data.phone || undefined,
           },
         },
       });
@@ -624,27 +641,32 @@ function UserDetailPage() {
       setAddFormError(addFormOverlapError);
       return;
     }
+    const parsed = addPlanSchema.safeParse(addForm);
+    if (!parsed.success) {
+      setAddFormError(parsed.error.issues[0]?.message ?? "表单验证失败");
+      return;
+    }
     setAddFormError("");
     setAddPending(true);
     try {
-      const ptsChange = addForm.pointsChange
-        ? Math.round(Number.parseFloat(addForm.pointsChange))
+      const ptsChange = parsed.data.pointsChange
+        ? Math.round(Number.parseFloat(parsed.data.pointsChange))
         : null;
       await createMembershipPlan({
         variables: {
           input: {
             userId: id,
-            planType: MEMBERSHIP_PLAN_TYPE_BY_FORM_VALUE[addForm.planType],
+            planType: MEMBERSHIP_PLAN_TYPE_BY_FORM_VALUE[parsed.data.planType],
             amount:
-              addForm.planType === "stored_value" && addForm.amount
-                ? Math.round(Number.parseFloat(addForm.amount) * 100)
+              parsed.data.planType === "stored_value" && parsed.data.amount
+                ? Math.round(Number.parseFloat(parsed.data.amount) * 100)
                 : null,
             points: ptsChange || null,
             startDate: new Date(
-              dayjs(addForm.startDate).valueOf(),
+              dayjs(parsed.data.startDate).valueOf(),
             ).toISOString(),
-            endDate: isTimePlan(addForm.planType)
-              ? new Date(dayjs(addForm.endDate).valueOf()).toISOString()
+            endDate: isTimePlan(parsed.data.planType)
+              ? new Date(dayjs(parsed.data.endDate).valueOf()).toISOString()
               : null,
           },
         },
@@ -677,18 +699,19 @@ function UserDetailPage() {
 
   const handleDeduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cents = deductAmount
-      ? Math.round(Number.parseFloat(deductAmount) * 100)
+    const parsed = deductSchema.safeParse(deductForm);
+    if (!parsed.success) {
+      msg.error(parsed.error.issues[0]?.message ?? "表单验证失败");
+      return;
+    }
+    const cents = parsed.data.amount
+      ? Math.round(Number.parseFloat(parsed.data.amount) * 100)
       : 0;
-    const pts = deductPointsAmount
-      ? Math.round(Number.parseFloat(deductPointsAmount))
+    const pts = parsed.data.deductPoints
+      ? Math.round(Number.parseFloat(parsed.data.deductPoints))
       : 0;
     if (cents <= 0 && pts <= 0) {
       msg.error("请输入有效划扣金额或积分");
-      return;
-    }
-    if (!deductNote.trim()) {
-      msg.error("请输入划扣说明");
       return;
     }
     setDeductPending(true);
@@ -700,8 +723,8 @@ function UserDetailPage() {
             input: {
               userId: id,
               amount: cents,
-              note: deductNote.trim(),
-              date: new Date(dayjs(deductDate).valueOf()).toISOString(),
+              note: parsed.data.note,
+              date: new Date(dayjs(parsed.data.date).valueOf()).toISOString(),
             },
           },
         });
@@ -713,7 +736,7 @@ function UserDetailPage() {
             input: {
               userId: id,
               amount: pts,
-              note: deductNote.trim(),
+              note: parsed.data.note,
             },
           },
         });
@@ -721,10 +744,12 @@ function UserDetailPage() {
       }
       msg.success(`已划扣 ${parts.join(" + ")}`);
       deductDialogRef.current?.close();
-      setDeductAmount("");
-      setDeductPointsAmount("");
-      setDeductNote("");
-      setDeductDate(dayjs().format("YYYY-MM-DD"));
+      setDeductForm({
+        amount: "",
+        deductPoints: "",
+        note: "",
+        date: dayjs().format("YYYY-MM-DD"),
+      });
     } catch (err) {
       msg.error(err instanceof Error ? err.message : "划扣失败");
     } finally {
@@ -754,6 +779,11 @@ function UserDetailPage() {
       setEditPlanError(editPlanOverlapError);
       return;
     }
+    const parsed = editPlanSchema.safeParse(editPlanForm);
+    if (!parsed.success) {
+      setEditPlanError(parsed.error.issues[0]?.message ?? "表单验证失败");
+      return;
+    }
     setEditPlanError("");
     setEditPlanPending(true);
     try {
@@ -761,17 +791,17 @@ function UserDetailPage() {
         variables: {
           input: {
             id: planId,
-            planType: MEMBERSHIP_PLAN_TYPE_BY_FORM_VALUE[editPlanForm.planType],
+            planType: MEMBERSHIP_PLAN_TYPE_BY_FORM_VALUE[parsed.data.planType],
             amount:
-              editPlanForm.planType === "stored_value" && editPlanForm.amount
-                ? Math.round(Number.parseFloat(editPlanForm.amount) * 100)
+              parsed.data.planType === "stored_value" && parsed.data.amount
+                ? Math.round(Number.parseFloat(parsed.data.amount) * 100)
                 : null,
-            startDate: editPlanForm.startDate
-              ? new Date(dayjs(editPlanForm.startDate).valueOf()).toISOString()
+            startDate: parsed.data.startDate
+              ? new Date(dayjs(parsed.data.startDate).valueOf()).toISOString()
               : undefined,
-            endDate: isTimePlan(editPlanForm.planType)
-              ? editPlanForm.endDate
-                ? new Date(dayjs(editPlanForm.endDate).valueOf()).toISOString()
+            endDate: isTimePlan(parsed.data.planType)
+              ? parsed.data.endDate
+                ? new Date(dayjs(parsed.data.endDate).valueOf()).toISOString()
                 : null
               : null,
           },
@@ -1125,8 +1155,7 @@ function UserDetailPage() {
                     type="button"
                     className="btn btn-accent btn-sm"
                     onClick={() => {
-                      setDeductAmount("");
-                      setDeductPointsAmount("");
+                      setDeductForm({ amount: "", deductPoints: "", note: "", date: dayjs().format("YYYY-MM-DD") });
                       deductDialogRef.current?.showModal();
                     }}
                   >
@@ -1281,12 +1310,12 @@ function UserDetailPage() {
                               </td>
                               <td>—</td>
                               <td>
+                                <form onSubmit={(e) => { e.preventDefault(); handleUpdatePlan(plan.id); }}>
                                 <div className="flex flex-col gap-1">
                                   <div className="flex items-center gap-2">
                                     <button
-                                      type="button"
+                                      type="submit"
                                       className="btn btn-xs btn-primary"
-                                      onClick={() => handleUpdatePlan(plan.id)}
                                       disabled={
                                         editPlanPending ||
                                         !!editPlanOverlapError
@@ -1312,6 +1341,7 @@ function UserDetailPage() {
                                     </span>
                                   )}
                                 </div>
+                                </form>
                               </td>
                             </tr>
                           );
@@ -1907,8 +1937,8 @@ function UserDetailPage() {
                 <input
                   type="number"
                   className="input input-bordered w-full"
-                  value={deductAmount}
-                  onChange={(e) => setDeductAmount(e.target.value)}
+                  value={deductForm.amount}
+                  onChange={(e) => updateDeductForm((d) => { d.amount = e.target.value; })}
                   placeholder="输入划扣金额（可留空）"
                   min="0"
                   step="1"
@@ -1921,8 +1951,8 @@ function UserDetailPage() {
                 <input
                   type="number"
                   className="input input-bordered w-full"
-                  value={deductPointsAmount}
-                  onChange={(e) => setDeductPointsAmount(e.target.value)}
+                  value={deductForm.deductPoints}
+                  onChange={(e) => updateDeductForm((d) => { d.deductPoints = e.target.value; })}
                   placeholder="输入划扣积分（可留空）"
                   min="0"
                   step="1"
@@ -1933,8 +1963,8 @@ function UserDetailPage() {
                 <input
                   type="text"
                   className="input input-bordered w-full"
-                  value={deductNote}
-                  onChange={(e) => setDeductNote(e.target.value)}
+                  value={deductForm.note}
+                  onChange={(e) => updateDeductForm((d) => { d.note = e.target.value; })}
                   placeholder="例：活动消费、桌游租赁"
                 />
               </label>
@@ -1943,8 +1973,8 @@ function UserDetailPage() {
                 <input
                   type="date"
                   className="input input-bordered w-full"
-                  value={deductDate}
-                  onChange={(e) => setDeductDate(e.target.value)}
+                  value={deductForm.date}
+                  onChange={(e) => updateDeductForm((d) => { d.date = e.target.value; })}
                 />
               </label>
             </div>
@@ -1953,7 +1983,7 @@ function UserDetailPage() {
               <button
                 type="submit"
                 className="btn btn-accent"
-                disabled={deductPending || !deductNote.trim() || !deductDate}
+                disabled={deductPending || !deductForm.note.trim() || !deductForm.date}
               >
                 {deductPending ? "划扣中..." : "确认划扣"}
               </button>

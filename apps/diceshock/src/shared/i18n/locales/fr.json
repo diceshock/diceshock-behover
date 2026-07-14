@@ -735,7 +735,8 @@
     "noActiveUsers": "Aucun utilisateur actif",
     "detail": "Détails",
     "settle": "Régler",
-    "settleAll": "Tout régler"
+    "settleAll": "Tout régler",
+    "orderCount": "commandes"
   },
   "dashLayout": {
     "notFoundTitle": "Vous êtes arrivé dans un endroit inexistant",

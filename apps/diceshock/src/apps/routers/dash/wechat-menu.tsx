@@ -15,6 +15,8 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute } from "@tanstack/react-router";
 import { nanoid } from "nanoid";
+import { produce } from "immer";
+import { z } from "zod/v4";
 import { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import {
@@ -82,6 +84,21 @@ const ROUTE_OPTIONS = [
 
 const EMPTY_DATA: WechatMenuData = { buttons: [] };
 
+const wechatMenuItemSchema = z.object({
+  id: z.string(),
+  type: z.enum(["view", "click", "miniprogram"]),
+  name: z.string().trim().min(1).max(50, "菜单名称最多50字符"),
+  link_target: z.string().trim().max(500),
+});
+const wechatMenuCategorySchema = z.object({
+  id: z.string(),
+  name: z.string().trim().min(1).max(50),
+  items: z.array(wechatMenuItemSchema),
+});
+const wechatMenuDataSchema = z.object({
+  buttons: z.array(z.union([wechatMenuItemSchema, wechatMenuCategorySchema])).max(10),
+});
+
 function parseMenuData(raw: string | null | undefined): WechatMenuData | null {
   if (!raw) return null;
   try {
@@ -131,37 +148,35 @@ function WechatMenuPage() {
   const hasDraft = snapshots.some((s) => s.status === "DRAFT");
 
   const updateButton = useCallback((index: number, updated: ButtonEntry) => {
-    setData((prev) => ({
-      ...prev,
-      buttons: prev.buttons.map((b, i) => (i === index ? updated : b)),
+    setData(produce((draft) => {
+      draft.buttons[index] = updated;
     }));
   }, []);
 
   const removeButton = useCallback((index: number) => {
-    setData((prev) => ({
-      ...prev,
-      buttons: prev.buttons.filter((_, i) => i !== index),
+    setData(produce((draft) => {
+      draft.buttons.splice(index, 1);
     }));
   }, []);
 
   const moveButton = useCallback((index: number, direction: -1 | 1) => {
-    setData((prev) => {
+    setData(produce((draft) => {
       const target = index + direction;
-      if (target < 0 || target >= prev.buttons.length) return prev;
-      const buttons = [...prev.buttons];
-      [buttons[index], buttons[target]] = [buttons[target]!, buttons[index]!];
-      return { ...prev, buttons };
-    });
+      if (target < 0 || target >= draft.buttons.length) return;
+      const temp = draft.buttons[index]!;
+      draft.buttons[index] = draft.buttons[target]!;
+      draft.buttons[target] = temp;
+    }));
   }, []);
 
   const addItem = () => {
     const newItem: WechatMenuItem = { id: nanoid(8), type: "view", name: "", link_target: "/" };
-    setData((prev) => ({ ...prev, buttons: [...prev.buttons, newItem] }));
+    setData(produce((draft) => { draft.buttons.push(newItem); }));
   };
 
   const addCategory = () => {
     const newCat: WechatMenuCategory = { id: nanoid(8), name: "", items: [] };
-    setData((prev) => ({ ...prev, buttons: [...prev.buttons, newCat] }));
+    setData(produce((draft) => { draft.buttons.push(newCat); }));
   };
 
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
@@ -174,13 +189,10 @@ function WechatMenuPage() {
     const sourceIdx = dragItemRef.current;
     dragItemRef.current = null;
     if (sourceIdx == null || sourceIdx === targetIdx) return;
-    setData((prev) => {
-      const buttons = [...prev.buttons];
-      const [moved] = buttons.splice(sourceIdx, 1);
-      if (!moved) return prev;
-      buttons.splice(targetIdx, 0, moved);
-      return { ...prev, buttons };
-    });
+    setData(produce((draft) => {
+      const [moved] = draft.buttons.splice(sourceIdx, 1);
+      if (moved) draft.buttons.splice(targetIdx, 0, moved);
+    }));
   };
 
   const [savePending, setSavePending] = useState(false);
@@ -204,7 +216,13 @@ function WechatMenuPage() {
     }
   };
 
-  const handleSaveDraft = async () => {
+  const handleSaveDraft = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const validated = wechatMenuDataSchema.safeParse(data);
+    if (!validated.success) {
+      msg.error(validated.error.issues[0]?.message ?? "菜单数据格式错误");
+      return;
+    }
     setSavePending(true);
     try {
       await saveSnapshot({
@@ -220,6 +238,11 @@ function WechatMenuPage() {
   };
 
   const handlePublish = async () => {
+    const validated = wechatMenuDataSchema.safeParse(data);
+    if (!validated.success) {
+      msg.error(validated.error.issues[0]?.message ?? "菜单数据格式错误");
+      return;
+    }
     setPublishPending(true);
     try {
       const result = await publishSnapshot();
@@ -415,14 +438,13 @@ function WechatMenuPage() {
       </div>
 
       {/* Fixed bottom action bar */}
-      <div className="fixed bottom-0 right-0 left-0 lg:left-16 bg-base-100 border-t border-base-200 px-4 py-2 flex items-center justify-end gap-2 z-30">
+      <form onSubmit={(e) => void handleSaveDraft(e)} className="fixed bottom-0 right-0 left-0 lg:left-16 bg-base-100 border-t border-base-200 px-4 py-2 flex items-center justify-end gap-2 z-30">
         {hasChanges && (
           <span className="text-xs text-warning mr-auto">{t("dashWechatMenu.unsavedChanges")}</span>
         )}
         <button
-          type="button"
+          type="submit"
           className="btn btn-sm gap-2"
-          onClick={() => void handleSaveDraft()}
           disabled={savePending || !hasChanges}
         >
           <FloppyDiskIcon className="size-4" />
@@ -438,7 +460,7 @@ function WechatMenuPage() {
           <CloudArrowUpIcon className="size-4" />
           {publishPending ? t("dashWechatMenu.publishing") : t("dashWechatMenu.publish")}
         </button>
-      </div>
+      </form>
 
       {/* Delete confirmation dialog */}
       <dialog ref={deleteDialogRef} className="modal">

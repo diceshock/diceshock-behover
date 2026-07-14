@@ -735,7 +735,8 @@
     "noActiveUsers": "Keine aktiven Benutzer",
     "detail": "Details",
     "settle": "Abrechnen",
-    "settleAll": "Alle abrechnen"
+    "settleAll": "Alle abrechnen",
+    "orderCount": "Bestellungen"
   },
   "dashLayout": {
     "notFoundTitle": "Du bist an einem Ort gelandet, den es nicht gibt",

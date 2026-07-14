@@ -5,7 +5,8 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import clsx from "clsx";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { produce } from "immer";
+import { useCallback, useRef, useState } from "react";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import TiptapEditor from "@/client/components/diceshock/TiptapEditor";
 import {
@@ -15,6 +16,7 @@ import {
   useRemoveActiveRegistrationMutation,
   useUpdateActiveMutation,
 } from "@/client/graphql/__generated__";
+import { activeDashEditSchema } from "./actives-form.store";
 
 type ActiveDetail = NonNullable<
   ReturnType<typeof useManagedActiveQuery>["data"]
@@ -34,13 +36,17 @@ function ActiveEditorPage() {
 
   const [tab, setTab] = useState<Tab>("info");
 
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [maxPlayers, setMaxPlayers] = useState(1);
-  const [boardGameId, setBoardGameId] = useState("");
-  const [content, setContent] = useState("");
-  const [isGame, setIsGame] = useState(true);
+  const [form, setForm] = useState({
+    title: "",
+    date: "",
+    time: "",
+    maxPlayers: 1,
+    boardGameId: "",
+    content: "",
+    isGame: true,
+  });
+  const updateForm = (recipe: (draft: typeof form) => void) =>
+    setForm(produce(recipe));
 
   const [joinedUsers, setJoinedUsers] = useState<Registration[]>([]);
   const [watchingUsers, setWatchingUsers] = useState<Registration[]>([]);
@@ -51,13 +57,15 @@ function ActiveEditorPage() {
     variables: { id },
     onCompleted: (res) => {
       const active = res.managedActive;
-      setTitle(active.title);
-      setDate(active.date);
-      setTime(active.time ?? "");
-      setMaxPlayers(active.maxPlayers);
-      setBoardGameId(active.boardGameId ?? "");
-      setContent(active.content ?? "");
-      setIsGame(active.isGame ?? true);
+      setForm({
+        title: active.title,
+        date: active.date,
+        time: active.time ?? "",
+        maxPlayers: active.maxPlayers,
+        boardGameId: active.boardGameId ?? "",
+        content: active.content ?? "",
+        isGame: active.isGame ?? true,
+      });
 
       setJoinedUsers(
         active.registrations.filter((r: Registration) => !r.isWatching) as Registration[],
@@ -113,17 +121,16 @@ function ActiveEditorPage() {
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!title.trim()) {
-        msg.error("请输入标题");
-        return;
-      }
-      if (!date) {
-        msg.error("请选择日期");
+      const result = activeDashEditSchema.safeParse(form);
+      if (!result.success) {
+        msg.error(result.error.issues[0]?.message ?? "表单验证失败");
         return;
       }
 
       setSubmitting(true);
       try {
+        const { title, date, time, maxPlayers, boardGameId, content, isGame } =
+          result.data;
         await updateActiveMutation({
           variables: {
             input: {
@@ -132,8 +139,8 @@ function ActiveEditorPage() {
               date,
               time: time || null,
               maxPlayers,
-              boardGameId: boardGameId.trim() || null,
-              content: content || null,
+              boardGameId: boardGameId?.trim() || null,
+              content: content?.trim() || null,
               isGame,
             },
           },
@@ -146,19 +153,7 @@ function ActiveEditorPage() {
         setSubmitting(false);
       }
     },
-    [
-      id,
-      title,
-      date,
-      time,
-      maxPlayers,
-      boardGameId,
-      content,
-      isGame,
-      msg,
-      navigate,
-      updateActiveMutation,
-    ],
+    [form, id, msg, navigate, updateActiveMutation],
   );
 
   const handleRemoveRegistration = async (reg: Registration) => {
@@ -226,8 +221,8 @@ function ActiveEditorPage() {
                   type="text"
                   placeholder="活动标题"
                   className="input input-bordered w-full"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  value={form.title}
+                  onChange={(e) => updateForm((d) => { d.title = e.target.value; })}
                   maxLength={100}
                   required
                 />
@@ -239,8 +234,8 @@ function ActiveEditorPage() {
                   <input
                     type="date"
                     className="input input-bordered w-full"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
+                    value={form.date}
+                    onChange={(e) => updateForm((d) => { d.date = e.target.value; })}
                     required
                   />
                 </label>
@@ -252,8 +247,8 @@ function ActiveEditorPage() {
                   <input
                     type="time"
                     className="input input-bordered w-full"
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
+                    value={form.time}
+                    onChange={(e) => updateForm((d) => { d.time = e.target.value; })}
                   />
                 </label>
               </div>
@@ -263,8 +258,8 @@ function ActiveEditorPage() {
                 <input
                   type="number"
                   className="input input-bordered w-full"
-                  value={maxPlayers}
-                  onChange={(e) => setMaxPlayers(Number(e.target.value))}
+                  value={form.maxPlayers}
+                  onChange={(e) => updateForm((d) => { d.maxPlayers = Number(e.target.value); })}
                   min={1}
                   max={100}
                   required
@@ -279,8 +274,8 @@ function ActiveEditorPage() {
                   type="text"
                   placeholder="桌游ID"
                   className="input input-bordered w-full"
-                  value={boardGameId}
-                  onChange={(e) => setBoardGameId(e.target.value)}
+                  value={form.boardGameId}
+                  onChange={(e) => updateForm((d) => { d.boardGameId = e.target.value; })}
                 />
               </label>
 
@@ -288,8 +283,8 @@ function ActiveEditorPage() {
                 <input
                   type="checkbox"
                   className="checkbox"
-                  checked={isGame}
-                  onChange={(e) => setIsGame(e.target.checked)}
+                  checked={form.isGame}
+                  onChange={(e) => updateForm((d) => { d.isGame = e.target.checked; })}
                 />
                 <span className="text-sm font-semibold">是否桌游</span>
               </label>
@@ -299,8 +294,8 @@ function ActiveEditorPage() {
                   内容（可选）
                 </span>
                 <TiptapEditor
-                  content={content}
-                  onChange={setContent}
+                  content={form.content}
+                  onChange={(val: string) => updateForm((d) => { d.content = val; })}
                   placeholder="活动详情..."
                 />
               </div>

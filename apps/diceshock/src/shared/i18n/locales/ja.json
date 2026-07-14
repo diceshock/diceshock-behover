@@ -735,7 +735,8 @@
     "noActiveUsers": "アクティブユーザーはいません",
     "detail": "詳細",
     "settle": "精算",
-    "settleAll": "全て精算"
+    "settleAll": "全て精算",
+    "orderCount": "件の注文"
   },
   "dashLayout": {
     "notFoundTitle": "存在しない場所に来ました",

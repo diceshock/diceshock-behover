@@ -14,6 +14,8 @@ import {
 } from "@tanstack/react-router";
 import type { EChartsOption } from "echarts";
 import { Component, forwardRef, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { produce } from "immer";
+import { z } from "zod/v4";
 import type { ErrorInfo, ReactNode } from "react";
 
 import { useMsg } from "@/client/components/diceshock/Msg";
@@ -126,11 +128,23 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
   }, [pricingData]);
 
   // Settlement form state
-  const [paymentPreset, setPaymentPreset] = useState<string>("external");
-  const [deductAmount, setDeductAmount] = useState(0);
-  const [deductPoints, setDeductPoints] = useState(0);
-  const [pointsChange, setPointsChange] = useState(0);
-  const [note, setNote] = useState("");
+  const settleFormSchema = useMemo(() => z.object({
+    paymentPreset: z.enum(["stored_value", "points", "external"]),
+    deductAmount: z.string().trim().max(20),
+    deductPoints: z.string().trim().max(20),
+    pointsChange: z.string().trim().max(20),
+    note: z.string().trim().max(200),
+  }), []);
+  const [settleForm, setSettleForm] = useState({
+    paymentPreset: "external" as "stored_value" | "points" | "external",
+    deductAmount: "",
+    deductPoints: "",
+    pointsChange: "",
+    note: "",
+  });
+  const updateSettleForm = useCallback((recipe: (draft: typeof settleForm) => void) => {
+    setSettleForm(produce(recipe));
+  }, []);
   const [settling, setSettling] = useState(false);
 
   const preview = data?.settlementPreview;
@@ -191,16 +205,22 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
 
   const handleSettle = useCallback(async () => {
     if (!preview || settling) return;
+    const parsed = settleFormSchema.safeParse(settleForm);
+    if (!parsed.success) {
+      msg.error(parsed.error.issues[0]?.message ?? "表单验证失败");
+      return;
+    }
+    const { paymentPreset, deductAmount, deductPoints, pointsChange, note } = parsed.data;
     setSettling(true);
     try {
       await settleOrder({
         variables: {
           input: {
             id: orderId,
-            deductAmount: paymentPreset === "stored_value" ? deductAmount : 0,
+            deductAmount: paymentPreset === "stored_value" ? Number(deductAmount) || 0 : 0,
             deductFromStoredValue: paymentPreset === "stored_value",
-            deductPoints: paymentPreset === "points" ? deductPoints : 0,
-            pointsChange: pointsChange || 0,
+            deductPoints: paymentPreset === "points" ? Number(deductPoints) || 0 : 0,
+            pointsChange: Number(pointsChange) || 0,
             note: note || null,
           },
         },
@@ -212,7 +232,7 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
     } finally {
       setSettling(false);
     }
-  }, [preview, settling, orderId, deductAmount, deductPoints, pointsChange, note, paymentPreset, settleOrder, msg, refetch]);
+  }, [preview, settling, settleForm, settleFormSchema, orderId, settleOrder, msg, refetch]);
 
   const handleResume = useCallback(async () => {
     try {
@@ -346,7 +366,7 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
 
             {/* NOT SETTLED: payment controls */}
             {!isSettled && (
-              <div className="px-5 py-4 space-y-4">
+              <form className="px-5 py-4 space-y-4" onSubmit={(e) => { e.preventDefault(); void handleSettle(); }}>
                 {/* Payment method selector */}
                 <div>
                   <label className="text-xs text-base-content/50 mb-1.5 block">支付方式</label>
@@ -355,8 +375,8 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
                       <button
                         key={p.value}
                         type="button"
-                        className={`btn btn-sm flex-1 ${paymentPreset === p.value ? "btn-primary" : "btn-ghost border-base-300"}`}
-                        onClick={() => setPaymentPreset(p.value)}
+                        className={`btn btn-sm flex-1 ${settleForm.paymentPreset === p.value ? "btn-primary" : "btn-ghost border-base-300"}`}
+                        onClick={() => updateSettleForm((d) => { d.paymentPreset = p.value; })}
                       >
                         {p.label}
                       </button>
@@ -365,7 +385,7 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
                 </div>
 
                 {/* Stored value input */}
-                {paymentPreset === "stored_value" && (
+                {settleForm.paymentPreset === "stored_value" && (
                   <div>
                     <label className="text-xs text-base-content/50 mb-1 block">
                       储值扣除 (余额: {formatPrice(storedValueBalance)})
@@ -374,14 +394,14 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
                       type="number"
                       className="input input-sm input-bordered w-full"
                       placeholder={`最多 ${(storedValueBalance / 100).toFixed(0)} 元`}
-                      value={deductAmount || ""}
-                      onChange={(e) => setDeductAmount(Number(e.target.value))}
+                      value={settleForm.deductAmount}
+                      onChange={(e) => updateSettleForm((d) => { d.deductAmount = e.target.value; })}
                     />
                   </div>
                 )}
 
                 {/* Points input */}
-                {paymentPreset === "points" && (
+                {settleForm.paymentPreset === "points" && (
                   <div>
                     <label className="text-xs text-base-content/50 mb-1 block">
                       积分扣除 (余额: {pointsBalance}点)
@@ -390,8 +410,8 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
                       type="number"
                       className="input input-sm input-bordered w-full"
                       placeholder={`最多 ${pointsBalance} 点`}
-                      value={deductPoints || ""}
-                      onChange={(e) => setDeductPoints(Number(e.target.value))}
+                      value={settleForm.deductPoints}
+                      onChange={(e) => updateSettleForm((d) => { d.deductPoints = e.target.value; })}
                     />
                   </div>
                 )}
@@ -403,8 +423,8 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
                     type="number"
                     className="input input-sm input-bordered w-full"
                     placeholder="0"
-                    value={pointsChange || ""}
-                    onChange={(e) => setPointsChange(Number(e.target.value))}
+                    value={settleForm.pointsChange}
+                    onChange={(e) => updateSettleForm((d) => { d.pointsChange = e.target.value; })}
                   />
                 </div>
 
@@ -415,18 +435,17 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
                     className="textarea textarea-sm textarea-bordered w-full"
                     placeholder="备注(可选)"
                     rows={2}
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
+                    value={settleForm.note}
+                    onChange={(e) => updateSettleForm((d) => { d.note = e.target.value; })}
                   />
                 </div>
 
                 {/* Actions */}
                 <div className="flex gap-2 pt-2">
                   <button
-                    type="button"
+                    type="submit"
                     className="btn btn-primary flex-1 gap-1"
                     disabled={settling}
-                    onClick={() => void handleSettle()}
                   >
                     {settling ? <span className="loading loading-spinner loading-xs" /> : <CheckCircleIcon className="size-4" />}
                     确认结算
@@ -437,7 +456,7 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
                     </button>
                   )}
                 </div>
-              </div>
+              </form>
             )}
 
             {/* Pause logs */}
@@ -705,11 +724,26 @@ function BatchSettlePage() {
     [pricingSnapshot],
   );
 
+  // Batch settle validation schema
+  const batchSettleSchema = useMemo(() => z.object({
+    paymentPreset: z.enum(["stored_value", "points", "external", "custom"]),
+    deductAmount: z.number(),
+    deductPoints: z.number(),
+    pointsChange: z.number(),
+    note: z.string().trim().max(200),
+  }), []);
+
   // Settle single user
   const handleSettleUser = useCallback(async (orderId: string) => {
     const state = userStates.get(orderId);
     if (!state) {
       console.warn("[settle] no state found for orderId:", orderId, "map size:", userStates.size);
+      return;
+    }
+
+    const parsed = batchSettleSchema.safeParse(state);
+    if (!parsed.success) {
+      msgRef.current.error(parsed.error.issues[0]?.message ?? "表单验证失败");
       return;
     }
 
@@ -778,7 +812,7 @@ function BatchSettlePage() {
       console.error("[settle] settleOrder failed:", err);
       msgRef.current.error(err instanceof Error ? err.message : "结算失败");
     }
-  }, [userStates, settleOrder, updateUserState, settledCount, previews.length]);
+  }, [userStates, settleOrder, updateUserState, settledCount, previews.length, batchSettleSchema]);
 
   // Resume order
   const handleResumeUser = useCallback(async (orderId: string) => {
@@ -1292,6 +1326,7 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
         <span className="font-mono text-2xl font-bold text-primary">{formatDualPrice(calculatedPrice, finalPoints)}</span>
       </div>
 
+      <form onSubmit={(e) => { e.preventDefault(); onSettle(); }}>
       {/* Payment preset cards - 2x2 grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
         {PAYMENT_PRESETS.map(({ key, label }) => {
@@ -1381,13 +1416,14 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
 
       {/* Action buttons */}
       <div className="flex items-center gap-2">
-        <button type="button" className="btn btn-sm btn-primary flex-1 gap-1" onClick={onSettle}>
+        <button type="submit" className="btn btn-sm btn-primary flex-1 gap-1">
           <CheckCircleIcon className="size-4" /> 结算
         </button>
         <button type="button" className="btn btn-sm btn-ghost gap-1" onClick={onResume}>
           <ClockIcon className="size-4" /> 恢复计费
         </button>
       </div>
+      </form>
     </div>
   );
 });

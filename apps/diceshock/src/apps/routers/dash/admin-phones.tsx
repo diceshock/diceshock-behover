@@ -1,8 +1,10 @@
 import { useApolloClient, gql } from "@apollo/client";
+import { produce } from "immer";
 import { ShieldCheckIcon, TrashIcon } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import { addPhoneSchema, removePhoneSchema } from "./admin-phones.store";
 
 const ADMIN_PHONES_QUERY = gql`
   query AdminPhones {
@@ -42,15 +44,17 @@ function AdminPhonesPage() {
   const [loading, setLoading] = useState(true);
 
   // Add form state
-  const [newPhone, setNewPhone] = useState("");
-  const [smsCode, setSmsCode] = useState("");
+  const [addForm, setAddForm] = useState({ phone: '', smsCode: '' });
+  const updateAddForm = (recipe: (draft: { phone: string; smsCode: string }) => void) =>
+    setAddForm(produce(recipe));
   const [smsSent, setSmsSent] = useState(false);
   const [sending, setSending] = useState(false);
   const [adding, setAdding] = useState(false);
 
   // Remove form state
-  const [removePhone, setRemovePhone] = useState<string | null>(null);
-  const [removeCode, setRemoveCode] = useState("");
+  const [removeForm, setRemoveForm] = useState({ phone: '', removeCode: '' });
+  const updateRemoveForm = (recipe: (draft: { phone: string; removeCode: string }) => void) =>
+    setRemoveForm(produce(recipe));
   const [removeSmsSent, setRemoveSmsSent] = useState(false);
 
   const fetchPhones = useCallback(async () => {
@@ -72,7 +76,7 @@ function AdminPhonesPage() {
   }, [fetchPhones]);
 
   const handleSendCode = async () => {
-    if (!/^1[3-9]\d{9}$/.test(newPhone)) {
+    if (!/^1[3-9]\d{9}$/.test(addForm.phone)) {
       msg.error("请输入正确的手机号");
       return;
     }
@@ -80,7 +84,7 @@ function AdminPhonesPage() {
     try {
       const { data } = await client.mutate({
         mutation: SEND_SMS_CODE,
-        variables: { input: { phone: newPhone } },
+        variables: { input: { phone: addForm.phone } },
       });
       if (data?.sendSmsCode?.success) {
         setSmsSent(true);
@@ -95,20 +99,21 @@ function AdminPhonesPage() {
     }
   };
 
-  const handleAdd = async () => {
-    if (!smsCode || smsCode.length !== 6) {
-      msg.error("请输入6位验证码");
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const result = addPhoneSchema.safeParse(addForm);
+    if (!result.success) {
+      msg.error(result.error.issues[0]?.message ?? "表单验证失败");
       return;
     }
     setAdding(true);
     try {
       const { data } = await client.mutate({
         mutation: ADD_ADMIN_PHONE,
-        variables: { input: { phone: newPhone, code: smsCode } },
+        variables: { input: { phone: result.data.phone, code: result.data.smsCode } },
       });
       setPhones(data.addAdminPhone);
-      setNewPhone("");
-      setSmsCode("");
+      setAddForm({ phone: '', smsCode: '' });
       setSmsSent(false);
       msg.success("管理员手机号已添加");
     } catch (err) {
@@ -119,7 +124,7 @@ function AdminPhonesPage() {
   };
 
   const handleRemoveSendCode = async (phone: string) => {
-    setRemovePhone(phone);
+    updateRemoveForm((draft) => { draft.phone = phone; });
     setSending(true);
     try {
       const { data } = await client.mutate({
@@ -137,19 +142,20 @@ function AdminPhonesPage() {
     }
   };
 
-  const handleRemove = async () => {
-    if (!removePhone || !removeCode || removeCode.length !== 6) {
-      msg.error("请输入6位验证码");
+  const handleRemove = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const result = removePhoneSchema.safeParse(removeForm);
+    if (!result.success) {
+      msg.error(result.error.issues[0]?.message ?? "表单验证失败");
       return;
     }
     try {
       const { data } = await client.mutate({
         mutation: REMOVE_ADMIN_PHONE,
-        variables: { input: { phone: removePhone, code: removeCode } },
+        variables: { input: { phone: result.data.phone, code: result.data.removeCode } },
       });
       setPhones(data.removeAdminPhone);
-      setRemovePhone(null);
-      setRemoveCode("");
+      setRemoveForm({ phone: '', removeCode: '' });
       setRemoveSmsSent(false);
       msg.success("管理员手机号已移除");
     } catch (err) {
@@ -206,110 +212,110 @@ function AdminPhonesPage() {
         </div>
 
         {/* Remove confirmation */}
-        {removePhone && removeSmsSent && (
-          <div className="card bg-warning/10 border border-warning shadow-sm mb-6">
-            <div className="card-body p-4">
-              <h2 className="card-title text-sm">
-                确认移除 {removePhone.slice(0, 3)}****{removePhone.slice(-4)}
-              </h2>
-              <p className="text-xs text-base-content/60">
-                已向该手机号发送验证码，输入后确认移除
-              </p>
-              <div className="flex gap-2 mt-2">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={6}
-                  className="input input-bordered input-sm flex-1"
-                  placeholder="6位验证码"
-                  value={removeCode}
-                  onChange={(e) => setRemoveCode(e.target.value)}
-                />
-                <button
-                  type="button"
-                  className="btn btn-error btn-sm"
-                  onClick={handleRemove}
-                  disabled={removeCode.length !== 6}
-                >
-                  确认移除
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => {
-                    setRemovePhone(null);
-                    setRemoveCode("");
-                    setRemoveSmsSent(false);
-                  }}
-                >
-                  取消
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Add new admin phone */}
-        <div className="card bg-base-100 shadow-sm">
-          <div className="card-body p-4">
-            <h2 className="card-title text-sm">添加管理员手机号</h2>
-            <div className="space-y-3">
-              <div className="flex gap-2">
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  maxLength={11}
-                  className="input input-bordered input-sm flex-1"
-                  placeholder="手机号"
-                  value={newPhone}
-                  onChange={(e) => setNewPhone(e.target.value)}
-                  disabled={smsSent}
-                />
-                <button
-                  type="button"
-                  className="btn btn-primary btn-sm"
-                  onClick={handleSendCode}
-                  disabled={sending || smsSent || newPhone.length !== 11}
-                >
-                  {sending ? "发送中..." : "发送验证码"}
-                </button>
-              </div>
-
-              {smsSent && (
-                <div className="flex gap-2">
+        {removeForm.phone && removeSmsSent && (
+          <form onSubmit={handleRemove}>
+            <div className="card bg-warning/10 border border-warning shadow-sm mb-6">
+              <div className="card-body p-4">
+                <h2 className="card-title text-sm">
+                  确认移除 {removeForm.phone.slice(0, 3)}****{removeForm.phone.slice(-4)}
+                </h2>
+                <p className="text-xs text-base-content/60">
+                  已向该手机号发送验证码，输入后确认移除
+                </p>
+                <div className="flex gap-2 mt-2">
                   <input
                     type="text"
                     inputMode="numeric"
                     maxLength={6}
                     className="input input-bordered input-sm flex-1"
                     placeholder="6位验证码"
-                    value={smsCode}
-                    onChange={(e) => setSmsCode(e.target.value)}
+                    value={removeForm.removeCode}
+                    onChange={(e) => updateRemoveForm((draft) => { draft.removeCode = e.target.value; })}
                   />
                   <button
-                    type="button"
-                    className="btn btn-primary btn-sm"
-                    onClick={handleAdd}
-                    disabled={adding || smsCode.length !== 6}
+                    type="submit"
+                    className="btn btn-error btn-sm"
+                    disabled={removeForm.removeCode.length !== 6}
                   >
-                    {adding ? "添加中..." : "确认添加"}
+                    确认移除
                   </button>
                   <button
                     type="button"
                     className="btn btn-ghost btn-sm"
                     onClick={() => {
-                      setSmsSent(false);
-                      setSmsCode("");
-                      setNewPhone("");
+                      setRemoveForm({ phone: '', removeCode: '' });
+                      setRemoveSmsSent(false);
                     }}
                   >
                     取消
                   </button>
                 </div>
-              )}
+              </div>
+            </div>
+          </form>
+        )}
+
+        {/* Add new admin phone */}
+        <form onSubmit={handleAdd}>
+          <div className="card bg-base-100 shadow-sm">
+            <div className="card-body p-4">
+              <h2 className="card-title text-sm">添加管理员手机号</h2>
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={11}
+                    className="input input-bordered input-sm flex-1"
+                    placeholder="手机号"
+                    value={addForm.phone}
+                    onChange={(e) => updateAddForm((draft) => { draft.phone = e.target.value; })}
+                    disabled={smsSent}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={handleSendCode}
+                    disabled={sending || smsSent || addForm.phone.length !== 11}
+                  >
+                    {sending ? "发送中..." : "发送验证码"}
+                  </button>
+                </div>
+
+                {smsSent && (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      className="input input-bordered input-sm flex-1"
+                      placeholder="6位验证码"
+                      value={addForm.smsCode}
+                      onChange={(e) => updateAddForm((draft) => { draft.smsCode = e.target.value; })}
+                    />
+                    <button
+                      type="submit"
+                      className="btn btn-primary btn-sm"
+                      disabled={adding || addForm.smsCode.length !== 6}
+                    >
+                      {adding ? "添加中..." : "确认添加"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => {
+                        setSmsSent(false);
+                        setAddForm({ phone: '', smsCode: '' });
+                      }}
+                    >
+                      取消
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        </form>
       </div>
     </main>
   );

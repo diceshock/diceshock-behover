@@ -1,10 +1,9 @@
 import dbFactory, { drizzle, userInfoTable } from "@lib/db";
 import type { Context } from "hono";
 import type { HonoCtxEnv } from "@/shared/types";
-import { cfAvatarUrl } from "@/shared/utils/cfImage";
+import { CDN_BASE, cfAvatarUrl } from "@/shared/utils/cfImage";
 
 const AVATAR_PREFIX = "avatars/";
-const CDN_BASE = "https://assets.runespark.fun/";
 const MAX_AVATAR_SIZE = 2 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 

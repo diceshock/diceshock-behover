@@ -28,6 +28,7 @@ import {
 import { useTranslation } from "@/client/hooks/useTranslation";
 import { formatMessage } from "@/shared/i18n";
 import dayjs from "@/shared/utils/dayjs-config";
+import { formatDualPrice, formatPrice, formatPoints } from "@/shared/utils/pricing";
 
 export const Route = createFileRoute("/dash/")({
   component: RouteComponent,
@@ -43,6 +44,14 @@ function formatTime(val: string | null | undefined): string {
   } catch {
     return "—";
   }
+}
+
+function maskPhone(phone: string | null | undefined): string {
+  if (!phone) return "";
+  if (phone.length <= 4) return phone;
+  const start = phone.slice(0, 3);
+  const end = phone.slice(-2);
+  return `${start}***${end}`;
 }
 
 function RouteComponent() {
@@ -124,27 +133,29 @@ function RouteComponent() {
     (o) => o.status === OrderStatus.Active,
   );
   const activeTables = useMemo(() => {
-    const map = new Map<string, { id: string; name: string; orderIds: string[] }>();
+    const map = new Map<string, { id: string; name: string; orderIds: string[]; orderCount: number }>();
     for (const o of activeOrders) {
       if (!o.table) continue;
       const existing = map.get(o.table.id);
       if (existing) {
         existing.orderIds.push(o.id);
+        existing.orderCount++;
       } else {
-        map.set(o.table.id, { id: o.table.id, name: o.table.name, orderIds: [o.id] });
+        map.set(o.table.id, { id: o.table.id, name: o.table.name, orderIds: [o.id], orderCount: 1 });
       }
     }
     return [...map.values()];
   }, [activeOrders]);
   const activeUsers = useMemo(() => {
-    const map = new Map<string, { key: string; name: string; userId: string | null; orderIds: string[] }>();
+    const map = new Map<string, { key: string; name: string; userId: string | null; phone: string | null; orderIds: string[] }>();
     for (const o of activeOrders) {
       const key = o.userId ?? o.tempId ?? o.nickname ?? o.id;
       const existing = map.get(key);
       if (existing) {
         existing.orderIds.push(o.id);
+        if (!existing.phone && o.phone) existing.phone = o.phone;
       } else {
-        map.set(key, { key, name: o.nickname ?? o.uid ?? "—", userId: o.userId, orderIds: [o.id] });
+        map.set(key, { key, name: o.nickname ?? o.uid ?? "—", userId: o.userId, phone: o.phone ?? null, orderIds: [o.id] });
       }
     }
     return [...map.values()];
@@ -191,22 +202,41 @@ function RouteComponent() {
                       key={order.id}
                       className="flex items-center justify-between p-2 rounded-lg hover:bg-base-200 transition-colors"
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span
-                          className={`badge badge-xs ${
-                            order.status === OrderStatus.Active
-                              ? "badge-success"
-                              : order.status === OrderStatus.Paused
-                                ? "badge-neutral"
-                                : "badge-ghost"
-                          }`}
-                        />
-                        <span className="text-sm truncate">
-                          {order.table?.name ?? "—"}
-                        </span>
-                        <span className="text-xs text-base-content/50">
-                          {order.nickname ?? ""}
-                        </span>
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`badge badge-xs ${
+                              order.status === OrderStatus.Active
+                                ? "badge-success"
+                                : order.status === OrderStatus.Paused
+                                  ? "badge-neutral"
+                                  : order.status === OrderStatus.Settled
+                                    ? "badge-info"
+                                    : "badge-ghost"
+                            }`}
+                          />
+                          <span className="text-sm truncate">
+                            {order.table?.name ?? "—"}
+                          </span>
+                          <span className="text-xs text-base-content/50">
+                            {order.nickname ?? ""}
+                          </span>
+                        </div>
+                        <div className="text-xs text-base-content/60 ml-4">
+                          {order.status === OrderStatus.Settled ? (
+                            <span className="text-success">
+                              {order.settledPrice != null && order.settledPrice > 0
+                                ? `${formatPrice(order.settledPrice)} 储值`
+                                : order.settledPoints != null && order.settledPoints > 0
+                                  ? `${formatPoints(order.settledPoints)} 积分`
+                                  : `${formatDualPrice(order.finalPrice, order.finalPoints)} 外部`}
+                            </span>
+                          ) : (
+                            <span className="text-warning">
+                              {formatDualPrice(order.finalPrice, order.finalPoints)}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0 ml-2">
                         <span className="text-xs text-base-content/50">
@@ -233,7 +263,7 @@ function RouteComponent() {
                                 {t("dashIndex.detail")}
                               </Link>
                             </li>
-                            {order.status === OrderStatus.Active && (
+                            {(order.status === OrderStatus.Active || order.status === OrderStatus.Paused) && (
                               <li>
                                 <Link
                                   to="/dash/orders/settle"
@@ -285,9 +315,15 @@ function RouteComponent() {
                       key={table.id}
                       className="flex items-center justify-between p-2 rounded-lg hover:bg-base-200 transition-colors"
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="badge badge-xs badge-success" />
-                        <span className="text-sm">{table.name}</span>
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="badge badge-xs badge-success" />
+                          <span className="text-sm">{table.name}</span>
+                          <span className="text-xs text-base-content/40 font-mono">#{table.id.slice(0, 6)}</span>
+                        </div>
+                        <span className="text-xs text-base-content/60 ml-4">
+                          {table.orderCount} {t("dashIndex.orderCount")}
+                        </span>
                       </div>
                       <div className="dropdown dropdown-end">
                         <div
@@ -360,9 +396,16 @@ function RouteComponent() {
                       key={user.key}
                       className="flex items-center justify-between p-2 rounded-lg hover:bg-base-200 transition-colors"
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="badge badge-xs badge-accent" />
-                        <span className="text-sm truncate">{user.name}</span>
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="badge badge-xs badge-accent" />
+                          <span className="text-sm truncate">{user.name}</span>
+                        </div>
+                        {user.phone && (
+                          <span className="text-xs text-base-content/50 ml-4 font-mono">
+                            {maskPhone(user.phone)}
+                          </span>
+                        )}
                       </div>
                       <div className="dropdown dropdown-end">
                         <div

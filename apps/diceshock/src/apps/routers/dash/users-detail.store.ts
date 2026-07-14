@@ -1,6 +1,4 @@
 import { z } from "zod/v4";
-import { createFormAtom } from "@/shared/forms/createFormAtom";
-import dayjs from "@/shared/utils/dayjs-config";
 
 // --- Edit User ---
 
@@ -10,11 +8,7 @@ export const editUserSchema = z.object({
 	phone: z.string().trim().max(20),
 });
 
-export const editUserFormAtoms = createFormAtom(editUserSchema, {
-	name: "",
-	nickname: "",
-	phone: "",
-});
+export type EditUserForm = z.infer<typeof editUserSchema>;
 
 // --- Add Plan ---
 
@@ -26,13 +20,7 @@ export const addPlanSchema = z.object({
 	endDate: z.string().trim().max(10),
 });
 
-export const addPlanFormAtoms = createFormAtom(addPlanSchema, {
-	planType: "monthly",
-	amount: "",
-	pointsChange: "",
-	startDate: dayjs().format("YYYY-MM-DD"),
-	endDate: dayjs().add(30, "day").format("YYYY-MM-DD"),
-});
+export type AddPlanForm = z.infer<typeof addPlanSchema>;
 
 // --- Edit Plan ---
 
@@ -43,25 +31,15 @@ export const editPlanSchema = z.object({
 	endDate: z.string().trim().max(10),
 });
 
-export const editPlanFormAtoms = createFormAtom(editPlanSchema, {
-	planType: "monthly",
-	amount: "",
-	startDate: "",
-	endDate: "",
-});
+export type EditPlanForm = z.infer<typeof editPlanSchema>;
 
 // --- Deduct ---
 
 export const deductSchema = z.object({
 	amount: z.string().trim().max(20),
 	deductPoints: z.string().trim().max(20),
-	note: z.string().trim().max(200),
+	note: z.string().trim().min(1, "请输入划扣说明").max(200),
 	date: z.string().trim().max(10),
 });
 
-export const deductFormAtoms = createFormAtom(deductSchema, {
-	amount: "",
-	deductPoints: "",
-	note: "",
-	date: dayjs().format("YYYY-MM-DD"),
-});
+export type DeductForm = z.infer<typeof deductSchema>;

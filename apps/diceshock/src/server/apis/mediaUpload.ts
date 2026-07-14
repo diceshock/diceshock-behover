@@ -1,8 +1,8 @@
 import type { Context } from "hono";
 import type { HonoCtxEnv } from "@/shared/types";
+import { cdnUrl } from "@/shared/utils/cfImage";
 
 const UPLOAD_PREFIX = "up/";
-const CDN_BASE = "https://assets.runespark.fun/";
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
 export default async function mediaUpload(c: Context<HonoCtxEnv>) {
@@ -35,6 +35,6 @@ export default async function mediaUpload(c: Context<HonoCtxEnv>) {
     name: `${id}${ext}`,
     contentType: file.type || "application/octet-stream",
     size: file.size,
-    url: `${CDN_BASE}${key}`,
+    url: cdnUrl(key),
   });
 }

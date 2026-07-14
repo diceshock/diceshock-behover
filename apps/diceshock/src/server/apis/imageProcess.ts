@@ -43,6 +43,7 @@ export interface ImageProcessResult {
 
 const VALID_TYPES: ImageTaskType[] = ["transcode", "html2image", "qrcode"];
 const CDN_BASE = "https://assets.runespark.fun/";
+const CDN_PATH = "/cdn/";
 const PROCESS_PREFIX = "processed/";
 const ERROR_SUFFIX = ".error";
 
@@ -85,7 +86,7 @@ export async function imageProcessStatus(c: Context<HonoCtxEnv>) {
       return c.json({
         taskId,
         status: "done",
-        url: `${CDN_BASE}${key}`,
+        url: `${CDN_PATH}${key}`,
       } satisfies ImageProcessResult);
     }
   }

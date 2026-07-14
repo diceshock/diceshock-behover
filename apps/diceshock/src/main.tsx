@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import apisRoot from "@/server/apis/apisRoot";
 import { avatarCard } from "@/server/apis/avatarCard";
 import avatarUpload from "@/server/apis/avatarUpload";
+import { cdnProxy } from "@/server/apis/cdnProxy";
 import { boardGameCard } from "@/server/apis/boardGameCard";
 import confirmMutation from "@/server/apis/chat/confirmMutation";
 import chatSessions from "@/server/apis/chat/sessions";
@@ -71,6 +72,9 @@ export const app = new Hono<HonoCtxEnv>();
 app.use(requestEndpoint);
 app.use(aliyunInj);
 
+
+// Serve R2 assets through the worker (bypass GFW for assets.runespark.fun)
+app.get("/cdn/*", cdnProxy);
 app.get("/wechat", wechatVerify);
 app.post("/wechat", wechatMessage);
 app.post("/wechat/menu", wechatCreateMenu);

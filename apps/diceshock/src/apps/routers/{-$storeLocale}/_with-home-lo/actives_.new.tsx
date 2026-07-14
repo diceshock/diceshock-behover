@@ -13,6 +13,7 @@ import {
 } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { produce } from "immer";
 import TiptapEditor from "@/client/components/diceshock/TiptapEditor";
 import {
   CreateActiveDocument,
@@ -24,6 +25,7 @@ import useAuth from "@/client/hooks/useAuth";
 import { useMessages } from "@/client/hooks/useMessages";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import dayjs from "@/shared/utils/dayjs-config";
+import { createActiveSchema } from "./actives-new.store";
 
 export const Route = createFileRoute(
   "/{-$storeLocale}/_with-home-lo/actives_/new",
@@ -38,24 +40,34 @@ function NewActivePage() {
   const navigate = useNavigate();
   const messages = useMessages();
 
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [maxPlayers, setMaxPlayers] = useState(4);
-  const [content, setContent] = useState("");
-  const [boardGameId, setBoardGameId] = useState<string | undefined>();
+  const [form, setForm] = useState({
+    title: "",
+    date: "",
+    time: "",
+    maxPlayers: 4,
+    content: "",
+    boardGameId: undefined as string | undefined,
+    isGame: true,
+  });
+  const updateForm = useCallback(
+    (recipe: (draft: typeof form) => void) => setForm(produce(recipe)),
+    [],
+  );
   const [boardGameName, setBoardGameName] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!title.trim()) {
-        messages.error(t("actives.newTitleRequired"));
-        return;
-      }
-      if (!date) {
-        messages.error(t("actives.newDateRequired"));
+
+      const parsed = createActiveSchema.safeParse({
+        ...form,
+        time: form.time || undefined,
+        content: form.content || undefined,
+        boardGameId: form.boardGameId || undefined,
+      });
+      if (!parsed.success) {
+        messages.error(parsed.error.issues[0]?.message ?? "输入格式错误");
         return;
       }
 
@@ -68,13 +80,13 @@ function NewActivePage() {
           mutation: CreateActiveDocument,
           variables: {
             input: {
-              title: title.trim(),
-              date,
-              time: time || undefined,
-              maxPlayers,
-              content: content || undefined,
-              boardGameId: boardGameId || undefined,
-              isGame: true,
+              title: form.title.trim(),
+              date: form.date,
+              time: form.time || undefined,
+              maxPlayers: form.maxPlayers,
+              content: form.content || undefined,
+              boardGameId: form.boardGameId || undefined,
+              isGame: form.isGame,
             },
           },
         });
@@ -91,18 +103,7 @@ function NewActivePage() {
         setSubmitting(false);
       }
     },
-    [
-      title,
-      date,
-      time,
-      maxPlayers,
-      content,
-      boardGameId,
-      client,
-      messages,
-      navigate,
-      t,
-    ],
+    [form, client, messages, navigate, t],
   );
 
   if (!userInfo) {
@@ -135,8 +136,8 @@ function NewActivePage() {
                 type="text"
                 placeholder={t("actives.newTitlePlaceholder")}
                 className="input input-bordered w-full"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                value={form.title}
+                onChange={(e) => updateForm((d) => { d.title = e.target.value; })}
                 maxLength={100}
                 required
               />
@@ -147,7 +148,7 @@ function NewActivePage() {
                 <GameControllerIcon className="size-4" />
                 {t("actives.newBoardGameOptional")}
               </span>
-              {boardGameId ? (
+              {form.boardGameId ? (
                 <div className="flex items-center gap-2">
                   <span className="badge badge-primary badge-lg gap-1">
                     🎲 {boardGameName}
@@ -156,7 +157,7 @@ function NewActivePage() {
                     type="button"
                     className="btn btn-ghost btn-xs"
                     onClick={() => {
-                      setBoardGameId(undefined);
+                      updateForm((d) => { d.boardGameId = undefined; });
                       setBoardGameName("");
                     }}
                   >
@@ -166,7 +167,7 @@ function NewActivePage() {
               ) : (
                 <BoardGameSearch
                   onSelect={(id, name) => {
-                    setBoardGameId(id);
+                    updateForm((d) => { d.boardGameId = id; });
                     setBoardGameName(name);
                   }}
                 />
@@ -182,8 +183,8 @@ function NewActivePage() {
                 <input
                   type="date"
                   className="input input-bordered w-full"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  value={form.date}
+                  onChange={(e) => updateForm((d) => { d.date = e.target.value; })}
                   min={dayjs().tz("Asia/Shanghai").format("YYYY-MM-DD")}
                   required
                 />
@@ -197,8 +198,8 @@ function NewActivePage() {
                 <input
                   type="time"
                   className="input input-bordered w-full"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
+                  value={form.time}
+                  onChange={(e) => updateForm((d) => { d.time = e.target.value; })}
                 />
               </label>
             </div>
@@ -211,11 +212,11 @@ function NewActivePage() {
               <input
                 type="number"
                 className="input input-bordered w-24"
-                value={maxPlayers}
+                value={form.maxPlayers}
                 onChange={(e) =>
-                  setMaxPlayers(
-                    Math.max(1, Math.min(100, Number(e.target.value))),
-                  )
+                  updateForm((d) => {
+                    d.maxPlayers = Math.max(1, Math.min(100, Number(e.target.value)));
+                  })
                 }
                 min={1}
                 max={100}
@@ -227,8 +228,8 @@ function NewActivePage() {
                 {t("actives.newContent")}
               </span>
               <TiptapEditor
-                content={content}
-                onChange={setContent}
+                content={form.content}
+                onChange={(val: string) => updateForm((d) => { d.content = val; })}
                 placeholder={t("actives.newContentPlaceholder")}
               />
             </div>

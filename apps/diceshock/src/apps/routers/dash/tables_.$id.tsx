@@ -20,6 +20,7 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import clsx from "clsx";
+import { produce } from "immer";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
@@ -48,6 +49,7 @@ import type { Wind } from "@/shared/mahjong/constants";
 import { WIND_LABELS } from "@/shared/mahjong/constants";
 import dayjs from "@/shared/utils/dayjs-config";
 import { formatPrice } from "@/shared/utils/pricing";
+import { addOccSchema, tableEditSchema } from "./tables.store";
 
 type TableDetail = NonNullable<
   ReturnType<typeof useManagedTableQuery>["data"]
@@ -157,6 +159,8 @@ function TableDetailPage() {
     capacity: 1,
     description: "",
   });
+  const updateForm = (recipe: (draft: typeof editForm) => void) =>
+    setEditForm(produce(recipe));
   const [editPending, setEditPending] = useState(false);
 
   const [updateTableMutation] = useUpdateTableMutation({
@@ -179,6 +183,8 @@ function TableDetailPage() {
 
   const addOccDialogRef = useRef<HTMLDialogElement>(null);
   const [addOccForm, setAddOccForm] = useState({ userId: "" });
+  const updateAddOccForm = (recipe: (draft: typeof addOccForm) => void) =>
+    setAddOccForm(produce(recipe));
   const [addOccPending, setAddOccPending] = useState(false);
 
   const [orderActionPending, setOrderActionPending] = useState(false);
@@ -293,8 +299,9 @@ function TableDetailPage() {
 
   const handleBasicSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editForm.name.trim()) {
-      msg.error("请输入桌台名称");
+    const parsed = tableEditSchema.safeParse(editForm);
+    if (!parsed.success) {
+      msg.error(parsed.error.issues[0]?.message ?? "表单验证失败");
       return;
     }
     setEditPending(true);
@@ -303,18 +310,18 @@ function TableDetailPage() {
         variables: {
           input: {
             id,
-            name: editForm.name.trim(),
-            type: editForm.type === "fixed" ? TableType.Fixed : TableType.Solo,
+            name: parsed.data.name,
+            type: parsed.data.type === "fixed" ? TableType.Fixed : TableType.Solo,
             scope:
-              editForm.scope === "boardgame"
+              parsed.data.scope === "boardgame"
                 ? TableScope.Boardgame
-                : editForm.scope === "trpg"
+                : parsed.data.scope === "trpg"
                   ? TableScope.Trpg
-                  : editForm.scope === "console"
+                  : parsed.data.scope === "console"
                     ? TableScope.Console
                     : TableScope.Mahjong,
-            capacity: editForm.capacity,
-            description: editForm.description.trim() || null,
+            capacity: parsed.data.capacity,
+            description: parsed.data.description || null,
           },
         },
       });
@@ -364,8 +371,9 @@ function TableDetailPage() {
 
   const handleAddOccupancy = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!addOccForm.userId.trim()) {
-      msg.error("请输入用户 ID");
+    const parsed = addOccSchema.safeParse(addOccForm);
+    if (!parsed.success) {
+      msg.error(parsed.error.issues[0]?.message ?? "表单验证失败");
       return;
     }
     setAddOccPending(true);
@@ -374,7 +382,7 @@ function TableDetailPage() {
         variables: {
           input: {
             tableId: id,
-            userId: addOccForm.userId.trim(),
+            userId: parsed.data.userId,
           },
         },
       });
@@ -533,7 +541,7 @@ function TableDetailPage() {
                   className="input input-bordered w-full"
                   value={editForm.name}
                   onChange={(e) =>
-                    setEditForm((p) => ({ ...p, name: e.target.value }))
+                    updateForm((d) => { d.name = e.target.value; })
                   }
                   placeholder="桌台名称"
                   maxLength={50}
@@ -546,10 +554,7 @@ function TableDetailPage() {
                   className="select select-bordered w-full"
                   value={editForm.type}
                   onChange={(e) =>
-                    setEditForm((p) => ({
-                      ...p,
-                      type: e.target.value as "fixed" | "solo",
-                    }))
+                    updateForm((d) => { d.type = e.target.value as "fixed" | "solo"; })
                   }
                 >
                   <option value="fixed">固定桌</option>
@@ -563,14 +568,9 @@ function TableDetailPage() {
                   className="select select-bordered w-full"
                   value={editForm.scope}
                   onChange={(e) =>
-                    setEditForm((p) => ({
-                      ...p,
-                      scope: e.target.value as
-                        | "trpg"
-                        | "boardgame"
-                        | "console"
-                        | "mahjong",
-                    }))
+                    updateForm((d) => {
+                      d.scope = e.target.value as "trpg" | "boardgame" | "console" | "mahjong";
+                    })
                   }
                 >
                   <option value="boardgame">桌游</option>
@@ -604,10 +604,7 @@ function TableDetailPage() {
                     className="input input-bordered w-full"
                     value={editForm.capacity}
                     onChange={(e) =>
-                      setEditForm((p) => ({
-                        ...p,
-                        capacity: Number(e.target.value),
-                      }))
+                      updateForm((d) => { d.capacity = Number(e.target.value); })
                     }
                     min={1}
                     max={20}
@@ -623,7 +620,7 @@ function TableDetailPage() {
                   className="textarea textarea-bordered w-full"
                   value={editForm.description}
                   onChange={(e) =>
-                    setEditForm((p) => ({ ...p, description: e.target.value }))
+                    updateForm((d) => { d.description = e.target.value; })
                   }
                   placeholder="桌台描述..."
                   rows={4}
@@ -656,7 +653,7 @@ function TableDetailPage() {
               table={table}
               editName={editForm.name}
               onEditName={(name: string) =>
-                setEditForm((p) => ({ ...p, name }))
+                updateForm((d) => { d.name = name; })
               }
               onRegenerate={() => regenerateDialogRef.current?.showModal()}
             />
@@ -1035,7 +1032,7 @@ function TableDetailPage() {
                   className="input input-bordered w-full"
                   value={addOccForm.userId}
                   onChange={(e) =>
-                    setAddOccForm((p) => ({ ...p, userId: e.target.value }))
+                    updateAddOccForm((d) => { d.userId = e.target.value; })
                   }
                   placeholder="输入用户 ID"
                 />

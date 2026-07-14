@@ -62,6 +62,10 @@ import {
 } from "@/shared/store-locale";
 import { avatarCardUrl } from "@/shared/utils/cfImage";
 import dayjs from "@/shared/utils/dayjs-config";
+import { z } from "zod/v4";
+
+const nicknameSchema = z.string().trim().min(1, "昵称不能为空").max(30, "昵称最多30字符");
+const phoneSchema = z.string().trim().regex(/^1[3-9]\d{9}$/, "手机号格式错误");
 
 type GqlMembershipPlan = NonNullable<
   NonNullable<
@@ -400,12 +404,12 @@ function RouteComponent() {
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
 
-      const trimmedNickname =
-        typeof nickname === "string" ? nickname.trim() : "";
-      if (!trimmedNickname) {
-        messages.error(t("me.nicknameRequired"));
+      const parsed = nicknameSchema.safeParse(nickname);
+      if (!parsed.success) {
+        messages.error(parsed.error.issues[0]?.message ?? "格式错误");
         return;
       }
+      const trimmedNickname = parsed.data;
 
       const currentNickname =
         typeof userInfo?.nickname === "string" ? userInfo.nickname : "";
@@ -484,11 +488,12 @@ function RouteComponent() {
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
 
-      const trimmedPhone = typeof phone === "string" ? phone.trim() : "";
-      if (!trimmedPhone) {
-        messages.error(t("me.phoneRequired"));
+      const phoneParsed = phoneSchema.safeParse(phone);
+      if (!phoneParsed.success) {
+        messages.error(phoneParsed.error.issues[0]?.message ?? "手机号格式错误");
         return;
       }
+      const trimmedPhone = phoneParsed.data;
 
       if (!smsForm.code || smsForm.code.length !== 6) {
         messages.error(t("me.codeRequired"));

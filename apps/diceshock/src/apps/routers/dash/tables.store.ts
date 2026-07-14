@@ -1,5 +1,4 @@
 import { z } from "zod/v4";
-import { createFormAtom } from "@/shared/forms/createFormAtom";
 
 const xssPattern = /[<>"'`]/;
 
@@ -14,6 +13,8 @@ export const tableCreateSchema = z.object({
 	scope: z.enum(["boardgame", "trpg", "console", "mahjong"]),
 	capacity: z.number().int().min(1).max(20),
 });
+
+export type TableCreateForm = z.infer<typeof tableCreateSchema>;
 
 export const tableEditSchema = z.object({
 	name: z
@@ -32,6 +33,8 @@ export const tableEditSchema = z.object({
 		.refine((v) => !xssPattern.test(v), "描述包含非法字符"),
 });
 
+export type TableEditForm = z.infer<typeof tableEditSchema>;
+
 export const addOccSchema = z.object({
 	userId: z
 		.string()
@@ -41,21 +44,4 @@ export const addOccSchema = z.object({
 		.refine((v) => !xssPattern.test(v), "ID 包含非法字符"),
 });
 
-export const tableCreateFormAtoms = createFormAtom(tableCreateSchema, {
-	name: "",
-	type: "fixed" as const,
-	scope: "boardgame" as const,
-	capacity: 4,
-});
-
-export const tableEditFormAtoms = createFormAtom(tableEditSchema, {
-	name: "",
-	type: "fixed" as const,
-	scope: "boardgame" as const,
-	capacity: 1,
-	description: "",
-});
-
-export const addOccFormAtoms = createFormAtom(addOccSchema, {
-	userId: "",
-});
+export type AddOccForm = z.infer<typeof addOccSchema>;

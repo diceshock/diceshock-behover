@@ -1,5 +1,4 @@
 import { z } from "zod/v4";
-import { createFormAtom } from "@/shared/forms/createFormAtom";
 
 export const addPhoneSchema = z.object({
 	phone: z
@@ -10,25 +9,17 @@ export const addPhoneSchema = z.object({
 	smsCode: z
 		.string()
 		.trim()
-		.length(6, "验证码6位")
-		.max(6, "验证码6位"),
+		.length(6, "验证码6位"),
 });
+
+export type AddPhoneForm = z.infer<typeof addPhoneSchema>;
 
 export const removePhoneSchema = z.object({
 	phone: z.string().trim().min(1, "手机号不能为空").max(11, "手机号最多11位"),
 	removeCode: z
 		.string()
 		.trim()
-		.length(6, "验证码6位")
-		.max(6, "验证码6位"),
+		.length(6, "验证码6位"),
 });
 
-export const addPhoneFormAtom = createFormAtom(addPhoneSchema, {
-	phone: "",
-	smsCode: "",
-});
-
-export const removePhoneFormAtom = createFormAtom(removePhoneSchema, {
-	phone: "",
-	removeCode: "",
-});
+export type RemovePhoneForm = z.infer<typeof removePhoneSchema>;

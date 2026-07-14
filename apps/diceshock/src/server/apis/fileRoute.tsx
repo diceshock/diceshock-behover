@@ -130,7 +130,7 @@ export default async function fileRoute(c: Context<HonoCtxEnv>) {
             <link
               rel="icon"
               type="image/svg+xml"
-              href="https://assets.runespark.fun/images/diceshock.favicon.svg"
+              href="/cdn/images/diceshock.favicon.svg"
             />
 
             <script

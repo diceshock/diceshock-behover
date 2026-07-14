@@ -10,6 +10,7 @@ import dbFactory, {
 import { desc, eq, like, or, type SQL } from "drizzle-orm";
 import type { GQLContext } from "../context";
 import { requireStaff } from "../guards";
+import { cfImageUrl } from "@/shared/utils/cfImage";
 
 function db(ctx: GQLContext) {
   return dbFactory(ctx.env.DB);
@@ -82,7 +83,7 @@ async function searchUsers(
       subtitle: ui.phone,
       detail: JSON.stringify({ uid: ui.uid, phone: ui.phone }),
       href: `/dash/users/${ui.id}`,
-      avatar: ui.avatar_url,
+      avatar: ui.avatar_url ? cfImageUrl(ui.avatar_url) : null,
       searchableFields: [ui.nickname, ui.uid, ui.phone].filter(Boolean).join(" "),
     });
   }
@@ -258,7 +259,7 @@ async function searchEvents(
     subtitle: r.description?.slice(0, 50) || null,
     detail: JSON.stringify({ title: r.title, description: r.description?.slice(0, 100) }),
     href: `/dash/events/${r.id}`,
-    avatar: r.cover_image_url,
+    avatar: r.cover_image_url ? cfImageUrl(r.cover_image_url) : null,
     searchableFields: [r.title, r.description?.slice(0, 100)].filter(Boolean).join(" "),
   }));
 }

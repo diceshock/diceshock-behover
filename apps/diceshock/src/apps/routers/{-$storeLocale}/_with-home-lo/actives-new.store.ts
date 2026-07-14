@@ -1,5 +1,4 @@
 import { z } from "zod/v4";
-import { createFormAtom } from "@/shared/forms/createFormAtom";
 
 export const createActiveSchema = z.object({
 	title: z.string().trim().min(1, "标题必填").max(100),
@@ -14,12 +13,4 @@ export const createActiveSchema = z.object({
 	isGame: z.boolean().default(true),
 });
 
-export const createActiveFormAtoms = createFormAtom(createActiveSchema, {
-	title: "",
-	date: "",
-	time: "",
-	maxPlayers: undefined,
-	content: "",
-	boardGameId: "",
-	isGame: true,
-});
+export type CreateActiveForm = z.infer<typeof createActiveSchema>;

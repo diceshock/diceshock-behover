@@ -125,7 +125,7 @@
 
 @font-face {
     font-family: "Dots";
-    src: url("https://assets.runespark.fun/fonts/dots.ttf") format("truetype");
+    src: url("/cdn/fonts/dots.ttf") format("truetype");
     font-weight: normal;
     font-style: normal;
 }

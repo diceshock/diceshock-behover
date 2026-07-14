@@ -5,7 +5,9 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import clsx from "clsx";
+import { produce } from "immer";
 import { useCallback, useRef, useState } from "react";
+import { z } from "zod/v4";
 import MarkdownTextEditor from "@/client/components/diceshock/MarkdownEditor/MarkdownTextEditor";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import {
@@ -15,29 +17,44 @@ import {
   useUpdateEventMutation,
 } from "@/client/graphql/__generated__";
 
+const eventEditSchema = z.object({
+  title: z.string().trim().min(1, "标题不能为空").max(100),
+  description: z.string().trim().max(500),
+  coverImageUrl: z.string().trim().max(500),
+  content: z.string().trim().max(10000),
+});
+
 export const Route = createFileRoute("/dash/events_/$id")({
   component: EventEditorPage,
 });
-
 function EventEditorPage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const msg = useMsg();
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [coverImageUrl, setCoverImageUrl] = useState("");
-  const [content, setContent] = useState("");
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    coverImageUrl: "",
+    content: "",
+  });
+  const updateForm = useCallback(
+    (recipe: (draft: typeof form) => void) => setForm(produce(recipe)),
+    [],
+  );
+
   const [submitting, setSubmitting] = useState(false);
 
   const { loading } = useManagedEventQuery({
     variables: { id },
     onCompleted: (res) => {
       const event = res.managedEvent;
-      setTitle(event.title);
-      setDescription(event.description ?? "");
-      setCoverImageUrl(event.coverImageUrl ?? "");
-      setContent(event.content ?? "");
+      setForm({
+        title: event.title,
+        description: event.description ?? "",
+        coverImageUrl: event.coverImageUrl ?? "",
+        content: event.content ?? "",
+      });
     },
     onError: (err) => {
       msg.error(err.message || "加载活动失败");
@@ -81,20 +98,22 @@ function EventEditorPage() {
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!title.trim()) {
-        msg.error("请输入标题");
+      const result = eventEditSchema.safeParse(form);
+      if (!result.success) {
+        msg.error(result.error.issues[0]?.message ?? "表单验证失败");
         return;
       }
 
       setSubmitting(true);
       try {
+        const { title, description, coverImageUrl, content } = result.data;
         await updateEventMutation({
           variables: {
             input: {
               id,
-              title: title.trim(),
-              description: description.trim() || undefined,
-              coverImageUrl: coverImageUrl.trim() || undefined,
+              title,
+              description: description || undefined,
+              coverImageUrl: coverImageUrl || undefined,
               content: content || undefined,
             },
           },
@@ -107,16 +126,7 @@ function EventEditorPage() {
         setSubmitting(false);
       }
     },
-    [
-      id,
-      title,
-      description,
-      coverImageUrl,
-      content,
-      msg,
-      navigate,
-      updateEventMutation,
-    ],
+    [id, form, msg, navigate, updateEventMutation],
   );
 
   if (loading) {
@@ -152,8 +162,8 @@ function EventEditorPage() {
                 type="text"
                 placeholder="活动标题"
                 className="input input-bordered w-full"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                value={form.title}
+                onChange={(e) => updateForm((d) => { d.title = e.target.value; })}
                 maxLength={200}
                 required
               />
@@ -164,8 +174,8 @@ function EventEditorPage() {
               <textarea
                 placeholder="活动描述，会显示在列表页卡片上"
                 className="textarea textarea-bordered w-full"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                value={form.description}
+                onChange={(e) => updateForm((d) => { d.description = e.target.value; })}
                 rows={3}
               />
             </label>
@@ -181,12 +191,12 @@ function EventEditorPage() {
                 type="url"
                 placeholder="https://example.com/image.jpg"
                 className="input input-bordered w-full"
-                value={coverImageUrl}
-                onChange={(e) => setCoverImageUrl(e.target.value)}
+                value={form.coverImageUrl}
+                onChange={(e) => updateForm((d) => { d.coverImageUrl = e.target.value; })}
               />
-              {coverImageUrl && (
+              {form.coverImageUrl && (
                 <img
-                  src={coverImageUrl}
+                  src={form.coverImageUrl}
                   alt="preview"
                   className="w-full max-h-48 object-cover rounded-lg mt-2"
                 />
@@ -196,8 +206,8 @@ function EventEditorPage() {
             <div className="flex flex-col gap-2">
               <span className="label text-sm font-semibold">正文</span>
               <MarkdownTextEditor
-                content={content}
-                onChange={setContent}
+                content={form.content}
+                onChange={(val) => updateForm((d) => { d.content = val; })}
                 placeholder="活动详情..."
               />
             </div>

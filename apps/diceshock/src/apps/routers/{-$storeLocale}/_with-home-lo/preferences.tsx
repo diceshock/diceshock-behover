@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { z } from "zod/v4";
 import { useCallback, useEffect, useState } from "react";
 import { useMessages } from "@/client/hooks/useMessages";
 import { CATEGORY_LABELS } from "@/shared/preferences/constants";
@@ -23,6 +24,8 @@ type PreferenceItem = {
   user_id: string;
   displayText: string;
 };
+
+const inputSchema = z.string().trim().min(1, "内容不能为空").max(500, "内容过长");
 
 function PreferencesPage() {
   const messages = useMessages();
@@ -50,6 +53,11 @@ function PreferencesPage() {
       e.preventDefault();
 
       const text = inputText.trim();
+      const validated = inputSchema.safeParse(text);
+      if (!validated.success) {
+        messages.error(validated.error.issues[0]?.message ?? "输入格式错误");
+        return;
+      }
       if (!text || isParsing) return;
 
       setIsParsing(true);
@@ -116,7 +124,7 @@ function PreferencesPage() {
           描述你的活动时间和类型偏好, 系统会自动为你匹配合适的活动
         </p>
 
-        <div className="sticky top-16 z-10 bg-base-100 pb-3">
+        <form onSubmit={handleInputSubmit} className="sticky top-16 z-10 bg-base-100 pb-3">
           <div className="relative">
             <input
               type="text"
@@ -173,7 +181,7 @@ function PreferencesPage() {
               </div>
             </div>
           )}
-        </div>
+        </form>
 
         {isLoading ? (
           <div className="flex flex-col gap-3 mt-4">

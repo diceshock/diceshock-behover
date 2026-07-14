@@ -1,5 +1,4 @@
 import { z } from "zod/v4";
-import { createFormAtom } from "@/shared/forms/createFormAtom";
 
 export const activeDashEditSchema = z.object({
 	title: z.string().trim().min(1, "标题必填").max(100),
@@ -11,12 +10,4 @@ export const activeDashEditSchema = z.object({
 	isGame: z.boolean(),
 });
 
-export const activeDashEditAtoms = createFormAtom(activeDashEditSchema, {
-	title: "",
-	date: "",
-	time: "",
-	maxPlayers: 1,
-	boardGameId: "",
-	content: "",
-	isGame: true,
-});
+export type ActiveDashEditForm = z.infer<typeof activeDashEditSchema>;

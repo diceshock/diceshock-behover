@@ -10,6 +10,7 @@ import type { GQLContext } from "../context";
 import { internalError, notFound, validationError } from "../errors";
 import { requireAdmin, requireAuth } from "../guards";
 import { zodToGraphQLError } from "../validate";
+import { cfImageUrl } from "@/shared/utils/cfImage";
 import CaptchaClient, {
   VerifyIntelligentCaptchaRequest,
 } from "@alicloud/captcha20230305";
@@ -89,7 +90,7 @@ async function getUserProfile(ctx: GQLContext, userId: string) {
     name: user.name,
     email: user.email,
     image: user.image,
-    avatarUrl: user.userInfo.avatar_url,
+    avatarUrl: user.userInfo.avatar_url ? cfImageUrl(user.userInfo.avatar_url) : null,
     role: user.role.toUpperCase(),
     nickname: user.userInfo.nickname,
     phone: user.userInfo.phone,

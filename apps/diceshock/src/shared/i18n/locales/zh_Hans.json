@@ -735,7 +735,8 @@
     "noActiveUsers": "暂无活跃用户",
     "detail": "详情",
     "settle": "结算",
-    "settleAll": "结算全部"
+    "settleAll": "结算全部",
+    "orderCount": "个订单"
   },
   "dashLayout": {
     "notFoundTitle": "来到了不存在的地方",

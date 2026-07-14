@@ -735,7 +735,8 @@
     "noActiveUsers": "No active users",
     "detail": "Detail",
     "settle": "Settle",
-    "settleAll": "Settle All"
+    "settleAll": "Settle All",
+    "orderCount": "orders"
   },
   "dashLayout": {
     "notFoundTitle": "You reached a place that does not exist",

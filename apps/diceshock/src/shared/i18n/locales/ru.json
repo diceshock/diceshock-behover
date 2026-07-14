@@ -735,7 +735,8 @@
     "noActiveUsers": "Активных пользователей нет",
     "detail": "Подробности",
     "settle": "Рассчитать",
-    "settleAll": "Рассчитать все"
+    "settleAll": "Рассчитать все",
+    "orderCount": "заказов"
   },
   "dashLayout": {
     "notFoundTitle": "Вы попали в несуществующее место",

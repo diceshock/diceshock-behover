@@ -1,4 +1,10 @@
-const CDN_BASE = "https://assets.runespark.fun/";
+export const CDN_BASE = "https://assets.runespark.fun/";
+const CDN_PATH = "/cdn/";
+
+/** Convert an R2 object key to a client-facing URL path */
+export function cdnUrl(key: string): string {
+  return `${CDN_PATH}${key}`;
+}
 
 export interface ImageTransformOptions {
   width?: number;
@@ -12,8 +18,14 @@ export function cfImageUrl(
   rawUrl: string,
   _opts: ImageTransformOptions = {},
 ): string {
-  // cdn-cgi/image/ transform is unavailable on this zone — pass through raw URL
-  return rawUrl.startsWith(CDN_BASE) ? rawUrl : `${CDN_BASE}${rawUrl}`;
+  // Use /cdn/ path prefix so assets route through the same origin (GFW-safe)
+  if (rawUrl.startsWith(CDN_BASE)) {
+    return CDN_PATH + rawUrl.slice(CDN_BASE.length);
+  }
+  if (rawUrl.startsWith("/") || rawUrl.startsWith("http")) {
+    return rawUrl;
+  }
+  return `${CDN_PATH}${rawUrl}`;
 }
 
 export function cfAvatarUrl(rawUrl: string, size = 256): string {

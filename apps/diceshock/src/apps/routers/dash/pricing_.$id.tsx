@@ -3,8 +3,10 @@ import {
   createFileRoute,
   useNavigate,
 } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useImmerAtom } from "jotai-immer";
+import { produce } from "immer";
+import { z } from "zod/v4";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import { pricingStoreAtom } from "./pricing.store";
@@ -117,6 +119,38 @@ function defaultConditions(): Conditions {
   };
 }
 
+const planEditSchema = z.object({
+  name: z.string().trim().min(1, "名称不能为空").max(100),
+  conditions: z.any(),
+  billingType: z.enum(["hourly", "fixed"]),
+  price: z.string().trim().max(20),
+  capUnit: z.string(),
+  capPrice: z.string().trim().max(20),
+  capPriceDay: z.string().trim().max(20),
+  capPriceNight: z.string().trim().max(20),
+  points: z.string().trim().max(20),
+  capPoints: z.string().trim().max(20),
+  capPointsDay: z.string().trim().max(20),
+  capPointsNight: z.string().trim().max(20),
+});
+
+type PlanEditForm = z.infer<typeof planEditSchema>;
+
+const INITIAL_FORM: PlanEditForm = {
+  name: "",
+  conditions: defaultConditions(),
+  billingType: "hourly",
+  price: "",
+  capUnit: "per_day",
+  capPrice: "",
+  capPriceDay: "",
+  capPriceNight: "",
+  points: "",
+  capPoints: "",
+  capPointsDay: "",
+  capPointsNight: "",
+};
+
 function PricingDetailPage() {
   const { id } = Route.useParams();
   const planIndex = Number(id);
@@ -127,78 +161,72 @@ function PricingDetailPage() {
 
   const plan = store.data.plans[planIndex] ?? null;
 
-  const [name, setName] = useState("");
-  const [conditions, setConditions] = useState<Conditions>(defaultConditions());
-  const [billingType, setBillingType] = useState<"hourly" | "fixed">("hourly");
-  const [price, setPrice] = useState("");
-  const [capUnit, setCapUnit] = useState<"per_day" | "split_day_night">(
-    "per_day",
-  );
-  const [capPrice, setCapPrice] = useState("");
-  const [capPriceDay, setCapPriceDay] = useState("");
-  const [capPriceNight, setCapPriceNight] = useState("");
-  const [points, setPoints] = useState("");
-  const [capPoints, setCapPoints] = useState("");
-  const [capPointsDay, setCapPointsDay] = useState("");
-  const [capPointsNight, setCapPointsNight] = useState("");
+  const [form, setForm] = useState<PlanEditForm>(INITIAL_FORM);
+  const updateForm = (recipe: (draft: PlanEditForm) => void) =>
+    setForm(produce(recipe));
 
   useEffect(() => {
     if (plan) {
       const p = plan as Record<string, unknown>;
-      setName((p.name as string) ?? "");
-      setConditions((p.conditions as Conditions) ?? defaultConditions());
-      setBillingType((p.billing_type as "hourly" | "fixed") ?? "hourly");
-      setPrice(centsToYuan(p.price as number));
-      setCapUnit((p.cap_unit as "per_day" | "split_day_night") ?? "per_day");
-      setCapPrice(centsToYuan(p.cap_price as number));
-      setCapPriceDay(centsToYuan(p.cap_price_day as number));
-      setCapPriceNight(centsToYuan(p.cap_price_night as number));
-      setPoints(pointsToDisplay(p.points as number));
-      setCapPoints(pointsToDisplay(p.cap_points as number));
-      setCapPointsDay(pointsToDisplay(p.cap_points_day as number));
-      setCapPointsNight(pointsToDisplay(p.cap_points_night as number));
+      setForm({
+        name: (p.name as string) ?? "",
+        conditions: (p.conditions as Conditions) ?? defaultConditions(),
+        billingType: (p.billing_type as "hourly" | "fixed") ?? "hourly",
+        price: centsToYuan(p.price as number),
+        capUnit: (p.cap_unit as string) ?? "per_day",
+        capPrice: centsToYuan(p.cap_price as number),
+        capPriceDay: centsToYuan(p.cap_price_day as number),
+        capPriceNight: centsToYuan(p.cap_price_night as number),
+        points: pointsToDisplay(p.points as number),
+        capPoints: pointsToDisplay(p.cap_points as number),
+        capPointsDay: pointsToDisplay(p.cap_points_day as number),
+        capPointsNight: pointsToDisplay(p.cap_points_night as number),
+      });
     }
   }, [plan]);
 
-  const handleSave = () => {
-    if (!name.trim()) {
-      msg.error("请输入计划名称");
+  const handleSave = (e: FormEvent) => {
+    e.preventDefault();
+    const result = planEditSchema.safeParse(form);
+    if (!result.success) {
+      msg.error(result.error.issues[0]?.message ?? "表单验证失败");
       return;
     }
+    const v = result.data;
 
     setStore((draft) => {
       const target = draft.data.plans[planIndex];
       if (!target) return;
-      target.name = name.trim();
-      target.conditions = conditions;
-      target.billing_type = billingType;
-      target.price = yuanToCents(price);
-      target.points = displayToPoints(points);
-      target.cap_enabled = billingType === "hourly";
-      target.cap_unit = billingType === "hourly" ? capUnit : null;
+      target.name = v.name;
+      target.conditions = v.conditions;
+      target.billing_type = v.billingType;
+      target.price = yuanToCents(v.price);
+      target.points = displayToPoints(v.points);
+      target.cap_enabled = v.billingType === "hourly";
+      target.cap_unit = v.billingType === "hourly" ? v.capUnit : null;
       target.cap_price =
-        billingType === "hourly" && capUnit === "per_day"
-          ? yuanToCents(capPrice)
+        v.billingType === "hourly" && v.capUnit === "per_day"
+          ? yuanToCents(v.capPrice)
           : null;
       target.cap_points =
-        billingType === "hourly" && capUnit === "per_day"
-          ? displayToPoints(capPoints)
+        v.billingType === "hourly" && v.capUnit === "per_day"
+          ? displayToPoints(v.capPoints)
           : null;
       target.cap_price_day =
-        billingType === "hourly" && capUnit === "split_day_night"
-          ? yuanToCents(capPriceDay)
+        v.billingType === "hourly" && v.capUnit === "split_day_night"
+          ? yuanToCents(v.capPriceDay)
           : null;
       target.cap_points_day =
-        billingType === "hourly" && capUnit === "split_day_night"
-          ? displayToPoints(capPointsDay)
+        v.billingType === "hourly" && v.capUnit === "split_day_night"
+          ? displayToPoints(v.capPointsDay)
           : null;
       target.cap_price_night =
-        billingType === "hourly" && capUnit === "split_day_night"
-          ? yuanToCents(capPriceNight)
+        v.billingType === "hourly" && v.capUnit === "split_day_night"
+          ? yuanToCents(v.capPriceNight)
           : null;
       target.cap_points_night =
-        billingType === "hourly" && capUnit === "split_day_night"
-          ? displayToPoints(capPointsNight)
+        v.billingType === "hourly" && v.capUnit === "split_day_night"
+          ? displayToPoints(v.capPointsNight)
           : null;
     });
 
@@ -220,12 +248,13 @@ function PricingDetailPage() {
     );
   }
 
-
   return (
     <ClientOnly>
       <main className="size-full overflow-y-auto">
-
-        <div className="mx-auto w-full max-w-3xl px-4 pb-20">
+        <form
+          className="mx-auto w-full max-w-3xl px-4 pb-20"
+          onSubmit={handleSave}
+        >
           <h1 className="text-2xl font-bold mb-6">编辑条件计划</h1>
 
           <div className="flex flex-col gap-6">
@@ -234,37 +263,18 @@ function PricingDetailPage() {
               <input
                 type="text"
                 className="input input-bordered w-full"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                value={form.name}
+                onChange={(e) =>
+                  updateForm((d) => {
+                    d.name = e.target.value;
+                  })
+                }
                 placeholder="例：工作日会员优惠"
                 maxLength={50}
               />
             </label>
 
-            <ConditionFormFields
-              conditions={conditions}
-              setConditions={setConditions}
-              billingType={billingType}
-              setBillingType={setBillingType}
-              price={price}
-              setPrice={setPrice}
-              points={points}
-              setPoints={setPoints}
-              capUnit={capUnit}
-              setCapUnit={setCapUnit}
-              capPrice={capPrice}
-              setCapPrice={setCapPrice}
-              capPoints={capPoints}
-              setCapPoints={setCapPoints}
-              capPriceDay={capPriceDay}
-              setCapPriceDay={setCapPriceDay}
-              capPointsDay={capPointsDay}
-              setCapPointsDay={setCapPointsDay}
-              capPriceNight={capPriceNight}
-              setCapPriceNight={setCapPriceNight}
-              capPointsNight={capPointsNight}
-              setCapPointsNight={setCapPointsNight}
-            />
+            <ConditionFormFields form={form} updateForm={updateForm} />
 
             <div className="flex justify-end gap-3 mt-4">
               <button
@@ -274,16 +284,12 @@ function PricingDetailPage() {
               >
                 取消
               </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={handleSave}
-              >
+              <button type="submit" className="btn btn-primary">
                 保存并返回
               </button>
             </div>
           </div>
-        </div>
+        </form>
       </main>
     </ClientOnly>
   );
@@ -471,69 +477,48 @@ function DualPriceInput({
 }
 
 function ConditionFormFields({
-  conditions,
-  setConditions,
-  billingType,
-  setBillingType,
-  price,
-  setPrice,
-  points,
-  setPoints,
-  capUnit,
-  setCapUnit,
-  capPrice,
-  setCapPrice,
-  capPoints,
-  setCapPoints,
-  capPriceDay,
-  setCapPriceDay,
-  capPointsDay,
-  setCapPointsDay,
-  capPriceNight,
-  setCapPriceNight,
-  capPointsNight,
-  setCapPointsNight,
+  form,
+  updateForm,
 }: {
-  conditions: Conditions;
-  setConditions: (c: Conditions) => void;
-  billingType: "hourly" | "fixed";
-  setBillingType: (t: "hourly" | "fixed") => void;
-  price: string;
-  setPrice: (v: string) => void;
-  points: string;
-  setPoints: (v: string) => void;
-  capUnit: "per_day" | "split_day_night";
-  setCapUnit: (u: "per_day" | "split_day_night") => void;
-  capPrice: string;
-  setCapPrice: (v: string) => void;
-  capPoints: string;
-  setCapPoints: (v: string) => void;
-  capPriceDay: string;
-  setCapPriceDay: (v: string) => void;
-  capPointsDay: string;
-  setCapPointsDay: (v: string) => void;
-  capPriceNight: string;
-  setCapPriceNight: (v: string) => void;
-  capPointsNight: string;
-  setCapPointsNight: (v: string) => void;
+  form: PlanEditForm;
+  updateForm: (recipe: (draft: PlanEditForm) => void) => void;
 }) {
+  const conditions = form.conditions as Conditions;
+  const billingType = form.billingType;
+  const price = form.price;
+  const points = form.points;
+  const capUnit = form.capUnit;
+  const capPrice = form.capPrice;
+  const capPoints = form.capPoints;
+  const capPriceDay = form.capPriceDay;
+  const capPointsDay = form.capPointsDay;
+  const capPriceNight = form.capPriceNight;
+  const capPointsNight = form.capPointsNight;
   const updateDate = (date: Conditions["date"]) =>
-    setConditions({ ...conditions, date });
+    updateForm((d) => {
+      (d.conditions as Conditions).date = date;
+    });
   const updateTime = (time: Conditions["time"]) =>
-    setConditions({ ...conditions, time });
+    updateForm((d) => {
+      (d.conditions as Conditions).time = time;
+    });
   const updateIdentity = (identity: Identity[]) => {
     const onlyRegistered =
       identity.length === 1 && identity[0] === "registered";
-    setConditions({
-      ...conditions,
-      identity,
-      member: onlyRegistered ? conditions.member : { type: "irrelevant" },
+    updateForm((d) => {
+      const c = d.conditions as Conditions;
+      c.identity = identity;
+      c.member = onlyRegistered ? c.member : { type: "irrelevant" };
     });
   };
   const updateMember = (member: Conditions["member"]) =>
-    setConditions({ ...conditions, member });
+    updateForm((d) => {
+      (d.conditions as Conditions).member = member;
+    });
   const updateScope = (scope: string[]) =>
-    setConditions({ ...conditions, scope });
+    updateForm((d) => {
+      (d.conditions as Conditions).scope = scope;
+    });
 
   const toggleIdentity = (val: Identity) => {
     const current = conditions.identity ?? ["registered"];
@@ -966,14 +951,14 @@ function ConditionFormFields({
               label="固定费用"
               desc="一口价，不按时间计费"
               selected={billingType === "fixed"}
-              onClick={() => setBillingType("fixed")}
+              onClick={() => updateForm((d) => { d.billingType = "fixed"; })}
             />
             <OptionCard
               icon={"⏱️"}
               label="小时计费"
               desc="按实际使用时长计费"
               selected={billingType === "hourly"}
-              onClick={() => setBillingType("hourly")}
+              onClick={() => updateForm((d) => { d.billingType = "hourly"; })}
             />
           </div>
 
@@ -984,8 +969,8 @@ function ConditionFormFields({
               }
               priceValue={price}
               pointsValue={points}
-              onPriceChange={setPrice}
-              onPointsChange={setPoints}
+              onPriceChange={(v) => updateForm((d) => { d.price = v; })}
+              onPointsChange={(v) => updateForm((d) => { d.points = v; })}
             />
 
             {billingType === "hourly" && (
@@ -1000,14 +985,14 @@ function ConditionFormFields({
                     label="按天封顶"
                     desc="每自然日一个封顶额"
                     selected={capUnit === "per_day"}
-                    onClick={() => setCapUnit("per_day")}
+                    onClick={() => updateForm((d) => { d.capUnit = "per_day"; })}
                   />
                   <OptionCard
                     icon={"🌗"}
                     label="分时段封顶"
                     desc="白天和晚上各有封顶额"
                     selected={capUnit === "split_day_night"}
-                    onClick={() => setCapUnit("split_day_night")}
+                    onClick={() => updateForm((d) => { d.capUnit = "split_day_night"; })}
                   />
                 </div>
                 {capUnit === "per_day" ? (
@@ -1015,8 +1000,8 @@ function ConditionFormFields({
                     label="封顶价格（元/点）"
                     priceValue={capPrice}
                     pointsValue={capPoints}
-                    onPriceChange={setCapPrice}
-                    onPointsChange={setCapPoints}
+                    onPriceChange={(v) => updateForm((d) => { d.capPrice = v; })}
+                    onPointsChange={(v) => updateForm((d) => { d.capPoints = v; })}
                   />
                 ) : (
                   <div className="flex gap-4">
@@ -1024,15 +1009,15 @@ function ConditionFormFields({
                       label="白天封顶（元/点）"
                       priceValue={capPriceDay}
                       pointsValue={capPointsDay}
-                      onPriceChange={setCapPriceDay}
-                      onPointsChange={setCapPointsDay}
+                      onPriceChange={(v) => updateForm((d) => { d.capPriceDay = v; })}
+                      onPointsChange={(v) => updateForm((d) => { d.capPointsDay = v; })}
                     />
                     <DualPriceInput
                       label="晚上封顶（元/点）"
                       priceValue={capPriceNight}
                       pointsValue={capPointsNight}
-                      onPriceChange={setCapPriceNight}
-                      onPointsChange={setCapPointsNight}
+                      onPriceChange={(v) => updateForm((d) => { d.capPriceNight = v; })}
+                      onPointsChange={(v) => updateForm((d) => { d.capPointsNight = v; })}
                     />
                   </div>
                 )}

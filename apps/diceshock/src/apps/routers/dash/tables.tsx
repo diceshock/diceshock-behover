@@ -8,6 +8,7 @@ import {
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { useCallback, useMemo, useRef, useState } from "react";
+import { produce } from "immer";
 import { useSetAtom } from "jotai";
 import { DataTable } from "@/client/components/dash/DataTable"
 import { IdCell } from "@/client/components/dash/IdCell";
@@ -35,6 +36,7 @@ import {
 import { useIsMobile } from "@/client/hooks/useIsMobile";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import dayjs from "@/shared/utils/dayjs-config";
+import { tableCreateSchema } from "./tables.store";
 
 const BATCH_SIZE = 100
 
@@ -164,6 +166,7 @@ function RouteComponent() {
     scope: "boardgame" as "trpg" | "boardgame" | "console" | "mahjong",
     capacity: 4,
   });
+  const updateCreateForm = useCallback((recipe: (draft: typeof createForm) => void) => setCreateForm(produce(recipe)), []);
   const [createPending, setCreatePending] = useState(false);
   const [batchPending, setBatchPending] = useState(false);
 
@@ -173,8 +176,9 @@ function RouteComponent() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!createForm.name.trim()) {
-      msg.error(t("dashTables.nameRequired"));
+    const parsed = tableCreateSchema.safeParse(createForm);
+    if (!parsed.success) {
+      msg.error(parsed.error.issues[0]?.message ?? "输入格式错误");
       return;
     }
     setCreatePending(true);
@@ -478,7 +482,7 @@ function RouteComponent() {
       />
 
       <dialog ref={createDialogRef} className="modal">
-        <form method="dialog" className="modal-box" onSubmit={handleCreate}>
+        <form className="modal-box" onSubmit={handleCreate}>
           <div className="modal-action flex items-center justify-between mb-4">
             <h3 className="font-bold text-lg">{t("dashTables.newTable")}</h3>
             <button
@@ -500,7 +504,7 @@ function RouteComponent() {
                 className="input input-bordered w-full"
                 value={createForm.name}
                 onChange={(e) =>
-                  setCreateForm((p) => ({ ...p, name: e.target.value }))
+                  updateCreateForm((d) => { d.name = e.target.value; })
                 }
                 placeholder={t("dashTables.namePlaceholder")}
                 maxLength={50}
@@ -515,10 +519,9 @@ function RouteComponent() {
                 className="select select-bordered w-full"
                 value={createForm.type}
                 onChange={(e) =>
-                  setCreateForm((p) => ({
-                    ...p,
-                    type: e.target.value as "fixed" | TableType.Solo,
-                  }))
+                  updateCreateForm((d) => {
+                    d.type = e.target.value as "fixed" | TableType.Solo;
+                  })
                 }
               >
                 <option value="fixed">{t("dashTables.fixedTable")}</option>
@@ -536,14 +539,13 @@ function RouteComponent() {
                 className="select select-bordered w-full"
                 value={createForm.scope}
                 onChange={(e) =>
-                  setCreateForm((p) => ({
-                    ...p,
-                    scope: e.target.value as
+                  updateCreateForm((d) => {
+                    d.scope = e.target.value as
                       | "trpg"
                       | "boardgame"
                       | "console"
-                      | "mahjong",
-                  }))
+                      | "mahjong";
+                  })
                 }
               >
                 <option value="boardgame">{t("dashTables.boardGames")}</option>
@@ -563,10 +565,9 @@ function RouteComponent() {
                   className="input input-bordered w-full"
                   value={createForm.capacity}
                   onChange={(e) =>
-                    setCreateForm((p) => ({
-                      ...p,
-                      capacity: Number(e.target.value),
-                    }))
+                    updateCreateForm((d) => {
+                      d.capacity = Number(e.target.value);
+                    })
                   }
                   min={1}
                   max={20}

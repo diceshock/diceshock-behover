@@ -735,7 +735,8 @@
     "noActiveUsers": "暫無活躍使用者",
     "detail": "詳情",
     "settle": "結算",
-    "settleAll": "結算全部"
+    "settleAll": "結算全部",
+    "orderCount": "個訂單"
   },
   "dashLayout": {
     "notFoundTitle": "來到了不存在的地方",

@@ -36,6 +36,7 @@ import type { GQLContext } from "../context";
 import { forbidden, internalError, notFound, validationError } from "../errors";
 import { requireAuth, requireStaff } from "../guards";
 import { zodToGraphQLError } from "../validate";
+import { cdnUrl, cfImageUrl } from "@/shared/utils/cfImage";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -73,7 +74,7 @@ function mapEventRow(row: typeof eventsTable.$inferSelect) {
     id: row.id,
     title: row.title,
     description: row.description,
-    coverImageUrl: row.cover_image_url,
+    coverImageUrl: row.cover_image_url ? cfImageUrl(row.cover_image_url) : null,
     content: row.content,
     storeId: row.store_id,
     isPublished: row.is_published,
@@ -85,7 +86,6 @@ function mapEventRow(row: typeof eventsTable.$inferSelect) {
 // ─── Media constants ──────────────────────────────────────────────────────
 
 const UPLOAD_PREFIX = "up/";
-const CDN_BASE = "https://assets.runespark.fun/";
 
 // ─── Shortlink constants ──────────────────────────────────────────────────
 
@@ -434,7 +434,7 @@ export const adminResolvers = {
           obj.httpMetadata?.contentType ?? "application/octet-stream",
         size: obj.size,
         uploaded: obj.uploaded.toISOString(),
-        url: `${CDN_BASE}${obj.key}`,
+        url: cdnUrl(obj.key),
       }));
 
       if (input.search) {
@@ -931,7 +931,7 @@ export const adminResolvers = {
           src.httpMetadata?.contentType ?? "application/octet-stream",
         size: src.size,
         uploaded: src.uploaded.toISOString(),
-        url: `${CDN_BASE}${newKey}`,
+        url: cdnUrl(newKey),
       };
     },
 
@@ -952,7 +952,7 @@ export const adminResolvers = {
           head?.httpMetadata?.contentType ?? "application/octet-stream",
         size: head?.size ?? 0,
         uploaded: head?.uploaded?.toISOString() ?? new Date().toISOString(),
-        url: `${CDN_BASE}${args.key}`,
+        url: cdnUrl(args.key),
       };
     },
 
