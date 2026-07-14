@@ -218,7 +218,7 @@ function PricingPage() {
   const [store, setStore] = useImmerAtom(pricingStoreAtom);
 
   const { data: qlData, loading } = usePricingDraftQuery();
-  const { data: snapshotsData } = usePricingSnapshotsQuery();
+  const { data: snapshotsData, refetch: refetchSnapshots } = usePricingSnapshotsQuery();
   const [saveSnapshot] = useSavePricingSnapshotMutation();
   const [publishSnapshot] = usePublishPricingSnapshotMutation();
   const [restoreSnapshot] = useRestorePricingSnapshotMutation();
@@ -412,6 +412,7 @@ function PricingPage() {
         draft.savedData = draft.data;
       });
       saveDialogRef.current?.close();
+      void refetchSnapshots();
       msg.success(t("dashPricing.messages.draftSaved"));
     } catch (err) {
       msg.error(
@@ -426,6 +427,7 @@ function PricingPage() {
     setPublishPending(true);
     try {
       await publishSnapshot();
+      void refetchSnapshots();
       msg.success(t("dashPricing.messages.published"));
     } catch (err) {
       msg.error(
@@ -453,6 +455,7 @@ function PricingPage() {
         draft.savedData = d;
       });
       msg.success(t("dashPricing.messages.restored"));
+      void refetchSnapshots();
     } catch (err) {
       msg.error(
         err instanceof Error
