@@ -160,7 +160,7 @@ export function calculatePrice(
   snapshot: SnapshotData | null,
   pauseLogs?: Array<{ pausedAt: number; resumedAt: number | null }>,
 ): PriceBreakdown | null {
-  if (!snapshot || snapshot.plans.length === 0) return null;
+  if (!snapshot || !Array.isArray(snapshot.plans) || snapshot.plans.length === 0) return null;
 
   const totalMs = Math.max(0, endAt - startAt);
   const totalMinutes = Math.floor(totalMs / 60000);

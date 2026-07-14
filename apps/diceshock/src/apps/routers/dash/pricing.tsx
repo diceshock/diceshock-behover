@@ -242,8 +242,10 @@ function PricingPage() {
 
   const snapshots = snapshotsData?.pricingSnapshots ?? [];
 
+  const initializedQlRef = useRef<typeof qlData>(undefined);
   useEffect(() => {
-    if (qlData?.pricingDraft) {
+    if (qlData?.pricingDraft && qlData !== initializedQlRef.current) {
+      initializedQlRef.current = qlData;
       const parsed = parseSnapshotData(qlData.pricingDraft.data);
       const d = parsed ?? EMPTY_DATA;
       setData(d);
