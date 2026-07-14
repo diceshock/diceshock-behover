@@ -320,7 +320,14 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
                         key={p.value}
                         type="button"
                         className={`btn btn-sm flex-1 ${settleForm.paymentPreset === p.value ? "btn-primary" : "btn-ghost border-base-300"}`}
-                        onClick={() => updateSettleForm((d) => { d.paymentPreset = p.value; })}
+                        onClick={() => updateSettleForm((d) => {
+                          d.paymentPreset = p.value;
+                          if (p.value === "stored_value") {
+                            d.deductAmount = String(Math.min(storedValueBalance, preview.finalPrice) / 100);
+                          } else if (p.value === "points") {
+                            d.deductPoints = String(Math.min(pointsBalance, preview.finalPoints));
+                          }
+                        })}
                       >
                         {p.label}
                       </button>
