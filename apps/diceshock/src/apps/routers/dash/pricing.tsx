@@ -27,7 +27,7 @@ import {
 import { useAdminStoreFilter } from "@/client/hooks/useAdminStoreFilter";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import { formatMessage } from "@/shared/i18n";
-import { pricingDataAtom } from "./pricing_.$id";
+import { pricingDataAtom, pricingInitializedAtom, pricingSavedDataAtom, pricingSnapshotNameAtom } from "./pricing_.$id";
 
 function isEqual(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
@@ -227,8 +227,9 @@ function PricingPage() {
   const { storeFilter } = useAdminStoreFilter();
 
   const [data, setData] = useAtom(pricingDataAtom);
-  const [savedData, setSavedData] = useState<SnapshotData>(EMPTY_DATA);
-  const [snapshotName, setSnapshotName] = useState(t("dashPricing.untitled"));
+  const [savedData, setSavedData] = useAtom(pricingSavedDataAtom);
+  const [snapshotName, setSnapshotName] = useAtom(pricingSnapshotNameAtom);
+  const [initialized, setInitialized] = useAtom(pricingInitializedAtom);
 
   const { data: qlData, loading } = usePricingDraftQuery();
   const { data: snapshotsData } = usePricingSnapshotsQuery();
@@ -242,10 +243,8 @@ function PricingPage() {
 
   const snapshots = snapshotsData?.pricingSnapshots ?? [];
 
-  const initializedQlRef = useRef<typeof qlData>(undefined);
   useEffect(() => {
-    if (qlData?.pricingDraft && qlData !== initializedQlRef.current) {
-      initializedQlRef.current = qlData;
+    if (qlData?.pricingDraft && !initialized) {
       const parsed = parseSnapshotData(qlData.pricingDraft.data);
       const d = parsed ?? EMPTY_DATA;
       setData(d);
@@ -253,8 +252,9 @@ function PricingPage() {
       setSnapshotName(
         qlData.pricingDraft.snapshotName ?? t("dashPricing.untitled"),
       );
+      setInitialized(true);
     }
-  }, [qlData, setData, t]);
+  }, [qlData, initialized, setData, setSavedData, setSnapshotName, setInitialized, t]);
 
   const effectiveData = data ?? EMPTY_DATA;
   const hasChanges = !isEqual(effectiveData, savedData);

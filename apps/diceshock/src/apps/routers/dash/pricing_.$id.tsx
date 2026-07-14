@@ -48,6 +48,9 @@ const EMPTY_DATA: SnapshotData = {
 };
 
 export const pricingDataAtom = atom<SnapshotData>(EMPTY_DATA);
+export const pricingSavedDataAtom = atom<SnapshotData>(EMPTY_DATA);
+export const pricingSnapshotNameAtom = atom<string>("");
+export const pricingInitializedAtom = atom<boolean>(false);
 
 const PLAN_TYPE_OPTIONS = [
   { value: "yearly", label: "桌面通行证 LTS" },
