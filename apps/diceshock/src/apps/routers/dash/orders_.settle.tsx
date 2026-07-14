@@ -106,7 +106,7 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
   });
   const [settleOrder] = useSettleOrderMutation();
   const [resumeOrder] = useResumeOrderMutation();
-  const { data: pricingData } = usePublishedPricingQuery();
+  const { data: pricingData } = usePublishedPricingQuery({ fetchPolicy: "network-only" });
 
   // Real-time sync: refetch when this order's status changes
   useOrderStatusChangedSubscription({
@@ -557,7 +557,7 @@ function BatchSettlePage() {
   const [fetchPreview] = useBatchSettlementPreviewMutation();
   const [settleOrder] = useSettleOrderMutation();
   const [resumeOrder] = useResumeOrderMutation();
-  const { data: pricingData } = usePublishedPricingQuery();
+  const { data: pricingData } = usePublishedPricingQuery({ fetchPolicy: "network-only" });
 
   const pricingSnapshot = useMemo<SnapshotData | null>(() => {
     const d = pricingData?.publishedPricing?.data;
