@@ -106,7 +106,6 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
   });
   const [settleOrder] = useSettleOrderMutation();
   const [resumeOrder] = useResumeOrderMutation();
-  const { data: pricingData } = usePublishedPricingQuery({ fetchPolicy: "network-only" });
 
   // Real-time sync: refetch when this order's status changes
   useOrderStatusChangedSubscription({
@@ -114,18 +113,6 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
     onData: () => { void refetch(); },
   });
 
-  const pricingSnapshot = useMemo<SnapshotData | null>(() => {
-    const d = pricingData?.publishedPricing?.data;
-    if (!d) return null;
-    try {
-      const plans = typeof d.plans === "string" ? JSON.parse(d.plans) : d.plans;
-      if (!Array.isArray(plans)) return null;
-      return {
-        config: { daytime_start: d.config?.daytimeStart ?? "10:00", daytime_end: d.config?.daytimeEnd ?? "18:00" },
-        plans,
-      };
-    } catch { return null; }
-  }, [pricingData]);
 
   // Settlement form state
   const settleFormSchema = useMemo(() => z.object({
@@ -150,18 +137,6 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
   const preview = data?.settlementPreview;
   const isSettled = preview?.order.status === "SETTLED";
 
-  // Compute full breakdown with per-plan details
-  const localBreakdown = useMemo(() => {
-    if (!preview || !pricingSnapshot) return null;
-    const startAt = new Date(preview.order.startAt).getTime();
-    const endAt = preview.order.endAt ? new Date(preview.order.endAt).getTime() : Date.now();
-    const scope = preview.order.table?.scope ?? "boardgame";
-    const pauseLogs = preview.pauseLogs.map((l: { pausedAt: string; resumedAt: string | null }) => ({
-      pausedAt: new Date(l.pausedAt).getTime(),
-      resumedAt: l.resumedAt ? new Date(l.resumedAt).getTime() : null,
-    }));
-    return calculatePrice(startAt, endAt, scope, pricingSnapshot, pauseLogs);
-  }, [preview, pricingSnapshot]);
 
   const handleSettle = useCallback(async () => {
     if (!preview || settling) return;
@@ -251,43 +226,41 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
               <div><span className="font-mono text-base font-bold text-success">{preview.billableMinutes}</span><br/>计费</div>
             </div>
 
-            {/* Plan details table */}
-            {localBreakdown && localBreakdown.planDetails.length > 0 && (
+            {/* Plan details - using server-computed breakdown */}
+            {preview.priceBreakdown && (
               <div className="px-5 py-3 border-b border-base-300">
                 <div className="space-y-2">
-                  {(() => {
-                    let cumPrice = 0;
-                    return localBreakdown.planDetails.map((item, i) => {
-                      cumPrice += item.subtotalPrice;
-                      return (
-                        <div key={i} className="rounded-lg bg-base-200/50 px-3 py-2 text-sm">
-                          {/* Row 1: time range + hours */}
-                          <div className="flex items-center justify-between">
-                            <span className="font-mono text-xs">{item.timeRange}</span>
-                            <span className="font-mono font-semibold">
-                              {item.billingType === "fixed" ? "固定" : `${item.billableHours}小时`}
-                            </span>
-                          </div>
-                          {/* Row 2: plan name, unit price, subtotal, cumulative */}
-                          <div className="flex items-center justify-between mt-1 text-xs text-base-content/60">
-                            <span className="flex items-center gap-1">
-                              {item.planType === "conditional" ? (
-                                <span className="badge badge-xs badge-info">{item.planName}</span>
-                              ) : (
-                                <span className="badge badge-xs">{item.planName}</span>
-                              )}
-                              <span>{formatPrice(item.unitPrice)}/时</span>
-                            </span>
-                            <span className="font-mono">
-                              {item.capApplied && <span className="text-warning mr-1">封顶</span>}
-                              <span className="font-semibold text-base-content">{formatPrice(item.subtotalPrice)}</span>
-                              <span className="text-base-content/40 ml-2">累计 {formatPrice(cumPrice)}</span>
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    });
-                  })()}
+                  <div className="rounded-lg bg-base-200/50 px-3 py-2 text-sm">
+                    {/* Row 1: plan info + billing */}
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        {preview.priceBreakdown.planType === "conditional" ? (
+                          <span className="badge badge-xs badge-info">{preview.priceBreakdown.planName}</span>
+                        ) : (
+                          <span className="badge badge-xs">{preview.priceBreakdown.planName}</span>
+                        )}
+                      </span>
+                      <span className="font-mono font-semibold">
+                        {preview.priceBreakdown.billingType === "fixed"
+                          ? "固定"
+                          : `${Math.round(preview.priceBreakdown.billableHalfHours * 0.5 * 10) / 10}小时`}
+                      </span>
+                    </div>
+                    {/* Row 2: unit price + total */}
+                    <div className="flex items-center justify-between mt-1 text-xs text-base-content/60">
+                      <span>
+                        {preview.priceBreakdown.billingType === "fixed"
+                          ? `固定 ${formatPrice(preview.priceBreakdown.unitPrice)}`
+                          : `${formatPrice(preview.priceBreakdown.unitPrice)}/时`}
+                      </span>
+                      <span className="font-mono">
+                        {preview.priceBreakdown.capApplied && (
+                          <span className="text-warning mr-1">封顶{preview.priceBreakdown.capType === "split_day_night" ? "(分段)" : ""}</span>
+                        )}
+                        <span className="font-semibold text-base-content">{formatPrice(preview.priceBreakdown.finalPrice)}</span>
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
