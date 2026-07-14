@@ -1079,3 +1079,122 @@ describe("calculatePrice — edge cases", () => {
     expect(result!.finalPrice).toBe(1100);
   });
 });
+
+// ═════════════════════════════════════════════════════════════════════════════
+// No-fallback scenario: last matched plan continues
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe("calculatePrice — no fallback, gaps filled by last matched plan", () => {
+  it("daytime-only plan continues to charge for nighttime segments (no fallback)", () => {
+    // Simulates the user's bug: only a daytime plan exists, no fallback, no nighttime plan
+    const snapshot = makeSnapshot([
+      plan({
+        name: "工作日白天定价",
+        sort_order: 1,
+        conditions: {
+          date: { type: "workdays" },
+          time: { type: "daytime" },
+          member: { type: "irrelevant" },
+          scope: [],
+        },
+        price: 1000, // ¥10/hour → ¥5/half-hour
+        points: 0,
+      }),
+      // NO fallback, NO nighttime plan
+    ]);
+
+    // Monday 14:13 to 21:47 (~7.5h, crosses 18:00 boundary)
+    const start = new Date("2024-01-08T14:13:00").getTime();
+    const end = new Date("2024-01-08T21:47:00").getTime();
+    const result = calculatePrice(start, end, "boardgame", snapshot);
+
+    expect(result).not.toBeNull();
+    // Total effective: ~454 min → ceil(454/30) = 16 half-hours
+    // First half-hour is free (<= 30min check): no, 454 > 30, so all 16 are billed
+    const expectedHalfHours = Math.ceil((end - start) / (30 * 60 * 1000));
+    expect(result!.billableHalfHours).toBe(expectedHalfHours);
+    // All segments should charge ¥5 each (daytime plan continues into night)
+    expect(result!.finalPrice).toBe(expectedHalfHours * 500);
+  });
+
+  it("only nighttime plan: daytime segments use last matched plan from initial match", () => {
+    // If session starts daytime but only a nighttime plan exists (odd config)
+    // First segments have no match → lastMatchedPlan is null → skip
+    // Once nighttime hits → matches → charges from then on
+    const snapshot = makeSnapshot([
+      plan({
+        name: "Night Only",
+        sort_order: 1,
+        conditions: {
+          date: { type: "workdays" },
+          time: { type: "nighttime" },
+          member: { type: "irrelevant" },
+          scope: [],
+        },
+        price: 600, // ¥3/half-hour
+        points: 0,
+      }),
+    ]);
+
+    // Monday 17:00 to 20:00 (6 half-hours)
+    // 17:00 daytime → no match, no lastMatched → skip
+    // 17:30 daytime → skip
+    // 18:00 nighttime → matches "Night Only" → ¥3
+    // 18:30 nighttime → ¥3
+    // 19:00 nighttime → ¥3
+    // 19:30 nighttime → ¥3
+    const mon17 = new Date("2024-01-08T17:00:00").getTime();
+    const result = calculatePrice(
+      mon17,
+      mon17 + 30 * 60 * 1000 * 6,
+      "boardgame",
+      snapshot,
+    );
+    expect(result).not.toBeNull();
+    expect(result!.finalPrice).toBe(4 * 300); // only 4 nighttime segments charged
+  });
+
+  it("gap between two time-scoped plans uses last matched plan", () => {
+    // Plan A: 10:00-14:00, Plan B: 16:00-22:00, no fallback
+    // Session 13:00-17:00: segments at 13:00, 13:30 → A; 14:00, 14:30...15:30 → gap filled by A; 16:00, 16:30 → B
+    const snapshot = makeSnapshot([
+      plan({
+        name: "Morning",
+        sort_order: 1,
+        conditions: {
+          date: { type: "workdays" },
+          time: { type: "custom", start: "10:00", end: "14:00" },
+          member: { type: "irrelevant" },
+          scope: [],
+        },
+        price: 1000, // ¥5/half-hour
+      }),
+      plan({
+        name: "Afternoon",
+        sort_order: 2,
+        conditions: {
+          date: { type: "workdays" },
+          time: { type: "custom", start: "16:00", end: "22:00" },
+          member: { type: "irrelevant" },
+          scope: [],
+        },
+        price: 600, // ¥3/half-hour
+      }),
+    ]);
+
+    // Monday 13:00 to 17:00 (8 half-hours)
+    // 13:00, 13:30 → Morning (¥5 each)
+    // 14:00, 14:30, 15:00, 15:30 → no match, lastMatched = Morning → ¥5 each
+    // 16:00, 16:30 → Afternoon (¥3 each)
+    const mon13 = new Date("2024-01-08T13:00:00").getTime();
+    const result = calculatePrice(
+      mon13,
+      mon13 + 30 * 60 * 1000 * 8,
+      "boardgame",
+      snapshot,
+    );
+    expect(result).not.toBeNull();
+    // Morning: 6 segments × ¥5 = ¥30, Afternoon: 2 segments × ¥3 = ¥6
+    expect(result!.finalPrice).toBe(6 * 500 + 2 * 300);
+  });
+});

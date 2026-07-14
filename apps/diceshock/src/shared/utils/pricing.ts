@@ -216,11 +216,14 @@ export function calculatePrice(
   let rawPoints = 0;
   // Track per-plan accumulation for cap enforcement
   const planAccum = new Map<string, { price: number; points: number; plan: PlanEntry }>();
+  let lastMatchedPlan: PlanEntry | null = null;
 
   for (const segTs of activeSegmentStarts) {
     const segDate = new Date(segTs);
-    const plan = findMatchingPlan(segDate, tableScope, snapshot);
-    if (!plan) continue;
+    const matched = findMatchingPlan(segDate, tableScope, snapshot);
+    const plan: PlanEntry = matched ?? lastMatchedPlan!;
+    if (!matched && !lastMatchedPlan) continue;
+    lastMatchedPlan = plan;
 
     if (plan.billing_type === "fixed") {
       // Fixed plans charge once regardless of segments; handled after loop
