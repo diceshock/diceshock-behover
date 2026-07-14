@@ -1328,6 +1328,9 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
 
       {/* Quick links */}
       <div className="flex gap-2 mb-3">
+        <Link to="/dash/orders" search={{ q: "", sortBy: "start_at", sortOrder: "desc", groupBy: "none", page: "1" }} className="btn btn-xs btn-ghost gap-1">
+          <LinkIcon className="size-3" /> 订单列表
+        </Link>
         <Link to="/dash/tables/$id" params={{ id: preview.order.table?.id ?? "" }} search={{ tab: "basic" }} className="btn btn-xs btn-ghost gap-1">
           <LinkIcon className="size-3" /> 桌台详情
         </Link>
