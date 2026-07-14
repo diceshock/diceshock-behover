@@ -352,7 +352,7 @@ function UserDetailPage() {
     });
   };
 
-  type OccStatus = "active" | "paused" | "ended";
+  type OccStatus = "active" | "paused" | "ended" | "settled";
 
   const handleBatchPauseOcc = async () => {
     const activeIds = rawOccupancies
@@ -1512,36 +1512,39 @@ function UserDetailPage() {
                               className="checkbox checkbox-sm"
                               checked={
                                 rawOccupancies.filter(
-                                  (o: UserOccupancy) =>
-                                    (o.status as string).toLowerCase() !==
-                                    "ended",
+                                  (o: UserOccupancy) => {
+                                    const s = (o.status as string).toLowerCase();
+                                    return s !== "ended" && s !== "settled";
+                                  },
                                 ).length > 0 &&
                                 rawOccupancies
                                   .filter(
-                                    (o: UserOccupancy) =>
-                                      (o.status as string).toLowerCase() !==
-                                      "ended",
+                                    (o: UserOccupancy) => {
+                                      const s = (o.status as string).toLowerCase();
+                                      return s !== "ended" && s !== "settled";
+                                    },
                                   )
                                   .every((o: UserOccupancy) =>
                                     selectedOccIds.has(o.id),
                                   )
                               }
                               onChange={() => {
-                                const nonEnded = rawOccupancies
+                                const actionable = rawOccupancies
                                   .filter(
-                                    (o: UserOccupancy) =>
-                                      (o.status as string).toLowerCase() !==
-                                      "ended",
+                                    (o: UserOccupancy) => {
+                                      const s = (o.status as string).toLowerCase();
+                                      return s !== "ended" && s !== "settled";
+                                    },
                                   )
                                   .map((o: UserOccupancy) => o.id);
                                 if (
-                                  nonEnded.every((oid: string) =>
+                                  actionable.every((oid: string) =>
                                     selectedOccIds.has(oid),
                                   )
                                 ) {
                                   setSelectedOccIds(new Set());
                                 } else {
-                                  setSelectedOccIds(new Set(nonEnded));
+                                  setSelectedOccIds(new Set(actionable));
                                 }
                               }}
                             />
@@ -1569,7 +1572,7 @@ function UserDetailPage() {
                           return (
                             <tr key={occ.id}>
                               <td>
-                                {occStatus !== "ended" && (
+                                {occStatus !== "ended" && occStatus !== "settled" && (
                                   <input
                                     type="checkbox"
                                     className="checkbox checkbox-sm"
@@ -1586,6 +1589,10 @@ function UserDetailPage() {
                                 ) : occStatus === "paused" ? (
                                   <span className="badge badge-neutral badge-sm">
                                     已暂停
+                                  </span>
+                                ) : occStatus === "settled" ? (
+                                  <span className="badge badge-info badge-sm">
+                                    已结算
                                   </span>
                                 ) : (
                                   <span className="badge badge-ghost badge-sm">
@@ -1646,7 +1653,7 @@ function UserDetailPage() {
                                       继续
                                     </button>
                                   )}
-                                  {occStatus !== "ended" && (
+                                  {(occStatus === "active" || occStatus === "paused") && (
                                     <button
                                       type="button"
                                       className="btn btn-xs btn-ghost btn-error"
@@ -1662,16 +1669,14 @@ function UserDetailPage() {
                                       终止
                                     </button>
                                   )}
-                                  {occStatus === "ended" && (
-                                    <Link
-                                      to="/dash/orders/settle"
-                                      search={{ ids: [occ.id] }}
-                                      className="btn btn-xs btn-ghost"
-                                    >
-                                      <EyeIcon className="size-3.5" />
-                                      详情
-                                    </Link>
-                                  )}
+                                  <Link
+                                    to="/dash/orders/settle"
+                                    search={{ ids: [occ.id] }}
+                                    className="btn btn-xs btn-ghost"
+                                  >
+                                    <EyeIcon className="size-3.5" />
+                                    详情
+                                  </Link>
                                 </div>
                               </th>
                             </tr>
