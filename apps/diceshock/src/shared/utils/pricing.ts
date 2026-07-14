@@ -48,6 +48,20 @@ export interface SnapshotData {
   plans: PlanEntry[];
 }
 
+export interface PlanDetailItem {
+  planName: string;
+  planType: "fallback" | "conditional";
+  billingType: "hourly" | "fixed";
+  halfHours: number;
+  billableHours: number;
+  unitPrice: number; // cents per hour
+  unitPoints: number;
+  subtotalPrice: number;
+  subtotalPoints: number;
+  capApplied: boolean;
+  timeRange: string; // e.g. "14:13 — 18:00"
+}
+
 export interface PriceBreakdown {
   planName: string;
   planType: "fallback" | "conditional";
@@ -62,6 +76,7 @@ export interface PriceBreakdown {
   capType: string | null;
   finalPrice: number;
   finalPoints: number;
+  planDetails: PlanDetailItem[];
 }
 
 function timeToMinutes(hhmm: string): number {
@@ -196,6 +211,7 @@ export function calculatePrice(
       capType: null,
       finalPrice: 0,
       finalPoints: 0,
+      planDetails: [],
     };
   }
 
@@ -215,7 +231,7 @@ export function calculatePrice(
   let rawPrice = 0;
   let rawPoints = 0;
   // Count half-hour segments per plan, then price = plan.price × (segments × 0.5)
-  const planSegments = new Map<string, { halfHours: number; plan: PlanEntry }>();
+  const planSegments = new Map<string, { halfHours: number; plan: PlanEntry; firstTs: number; lastTs: number }>();
   let lastMatchedPlan: PlanEntry | null = null;
 
   for (const segTs of activeSegmentStarts) {
@@ -226,16 +242,16 @@ export function calculatePrice(
     lastMatchedPlan = plan;
 
     if (plan.billing_type === "fixed") {
-      // Fixed plans charge once regardless of segments
       if (!planSegments.has(plan.name)) {
-        planSegments.set(plan.name, { halfHours: 0, plan });
+        planSegments.set(plan.name, { halfHours: 0, plan, firstTs: segTs, lastTs: segTs });
       }
     } else {
       const existing = planSegments.get(plan.name);
       if (existing) {
         existing.halfHours += 1;
+        existing.lastTs = segTs;
       } else {
-        planSegments.set(plan.name, { halfHours: 1, plan });
+        planSegments.set(plan.name, { halfHours: 1, plan, firstTs: segTs, lastTs: segTs });
       }
     }
   }
@@ -248,6 +264,7 @@ export function calculatePrice(
   let maxContribution = -1;
   let finalPrice = 0;
   let finalPoints = 0;
+  const planDetails: PlanDetailItem[] = [];
 
   for (const [, entry] of planSegments) {
     const plan = entry.plan;
@@ -302,6 +319,24 @@ export function calculatePrice(
     finalPrice += price;
     finalPoints += points;
 
+    const billableHoursForDetail = plan.billing_type === "fixed" ? 0 : Math.round(entry.halfHours * 0.5);
+    const startFmt = new Date(entry.firstTs).toTimeString().slice(0, 5);
+    const endFmt = new Date(entry.lastTs + HALF_HOUR_MS).toTimeString().slice(0, 5);
+    const planCapApplied = price < (plan.billing_type === "fixed" ? plan.price : plan.price * billableHoursForDetail);
+    planDetails.push({
+      planName: plan.name,
+      planType: plan.plan_type,
+      billingType: plan.billing_type,
+      halfHours: entry.halfHours,
+      billableHours: billableHoursForDetail,
+      unitPrice: plan.price,
+      unitPoints: plan.points ?? 0,
+      subtotalPrice: price,
+      subtotalPoints: points,
+      capApplied: planCapApplied,
+      timeRange: `${startFmt} — ${endFmt}`,
+    });
+
     if (price > maxContribution) {
       maxContribution = price;
       dominantPlan = plan;
@@ -329,6 +364,7 @@ export function calculatePrice(
     capType,
     finalPrice,
     finalPoints,
+    planDetails,
   };
 }
 

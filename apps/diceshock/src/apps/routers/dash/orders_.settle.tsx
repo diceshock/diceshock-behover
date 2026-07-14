@@ -150,57 +150,17 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
   const preview = data?.settlementPreview;
   const isSettled = preview?.order.status === "SETTLED";
 
-  // Build per-half-hour line items, then merge consecutive segments with same rate
-  const lineItems = useMemo(() => {
-    if (!preview) return [];
+  // Compute full breakdown with per-plan details
+  const localBreakdown = useMemo(() => {
+    if (!preview || !pricingSnapshot) return null;
     const startAt = new Date(preview.order.startAt).getTime();
     const endAt = preview.order.endAt ? new Date(preview.order.endAt).getTime() : Date.now();
-    const duration = endAt - startAt;
-    const intervals = Math.min(96, Math.max(1, Math.ceil(duration / HALF_HOUR_MS)));
     const scope = preview.order.table?.scope ?? "boardgame";
     const pauseLogs = preview.pauseLogs.map((l: { pausedAt: string; resumedAt: string | null }) => ({
       pausedAt: new Date(l.pausedAt).getTime(),
       resumedAt: l.resumedAt ? new Date(l.resumedAt).getTime() : null,
     }));
-
-    // Step 1: compute raw per-half-hour items
-    const raw: Array<{ startTime: string; endTime: string; cumPrice: number; increment: number; paused: boolean }> = [];
-    let prevPrice = 0;
-    for (let i = 1; i <= intervals; i++) {
-      const segEnd = Math.min(startAt + i * HALF_HOUR_MS, endAt);
-      const segStart = startAt + (i - 1) * HALF_HOUR_MS;
-      const segPaused = pauseLogs.some((l: { pausedAt: number; resumedAt: number | null }) => {
-        const ps = Math.max(l.pausedAt, segStart);
-        const pe = Math.min(l.resumedAt ?? endAt, segEnd);
-        return (pe - ps) >= (segEnd - segStart) * 0.9;
-      });
-      if (pricingSnapshot) {
-        const result = calculatePrice(startAt, segEnd, scope, pricingSnapshot, pauseLogs);
-        const cumPrice = result?.finalPrice ?? 0;
-        raw.push({ startTime: dayjs(segStart).format("HH:mm"), endTime: dayjs(segEnd).format("HH:mm"), cumPrice, increment: cumPrice - prevPrice, paused: segPaused });
-        prevPrice = cumPrice;
-      } else {
-        const pct = Math.min(1, (i * HALF_HOUR_MS) / Math.max(1, duration));
-        const cum = Math.round(preview.finalPrice * pct);
-        raw.push({ startTime: dayjs(segStart).format("HH:mm"), endTime: dayjs(segEnd).format("HH:mm"), cumPrice: cum, increment: cum - prevPrice, paused: segPaused });
-        prevPrice = cum;
-      }
-    }
-
-    // Step 2: merge consecutive segments with same increment and paused status
-    const merged: Array<{ startTime: string; endTime: string; cumPrice: number; totalIncrement: number; count: number; paused: boolean; unitIncrement: number }> = [];
-    for (const item of raw) {
-      const last = merged[merged.length - 1];
-      if (last && last.unitIncrement === item.increment && last.paused === item.paused) {
-        last.endTime = item.endTime;
-        last.cumPrice = item.cumPrice;
-        last.totalIncrement += item.increment;
-        last.count += 1;
-      } else {
-        merged.push({ startTime: item.startTime, endTime: item.endTime, cumPrice: item.cumPrice, totalIncrement: item.increment, count: 1, paused: item.paused, unitIncrement: item.increment });
-      }
-    }
-    return merged;
+    return calculatePrice(startAt, endAt, scope, pricingSnapshot, pauseLogs);
   }, [preview, pricingSnapshot]);
 
   const handleSettle = useCallback(async () => {
@@ -256,7 +216,6 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
     );
   }
 
-  const bd = preview.priceBreakdown;
   const storedValueBalance = preview.membership.storedValueBalance;
   const pointsBalance = preview.membership.pointsBalance;
 
@@ -292,35 +251,44 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
               <div><span className="font-mono text-base font-bold text-success">{preview.billableMinutes}</span><br/>计费</div>
             </div>
 
-            {/* Line items (receipt body) — merged by rate */}
-            <div className="px-5 py-3 border-b border-base-300">
-              <div className="flex items-center justify-between text-xs text-base-content/50 mb-2 px-1">
-                <span>时段</span>
-                <span>费用 / 累计</span>
-              </div>
-              <div className="space-y-0.5 max-h-64 overflow-y-auto">
-                {lineItems.map((item, i) => (
-                  <div key={i} className={`flex items-center justify-between text-sm font-mono px-1 py-0.5 rounded ${item.paused ? "text-base-content/30 line-through" : ""}`}>
-                    <span className="text-xs">
-                      {item.startTime} — {item.endTime}
-                      {item.count > 1 && <span className="text-base-content/40 ml-1">×{item.count}</span>}
-                    </span>
-                    <span className={item.totalIncrement > 0 ? "" : "text-base-content/30"}>
-                      {item.totalIncrement > 0 ? `+¥${(item.totalIncrement / 100).toFixed(1)}` : "—"}
-                      <span className="text-base-content/40 ml-2">¥{(item.cumPrice / 100).toFixed(1)}</span>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Pricing plan info */}
-            {bd && (
-              <div className="px-5 py-3 border-b border-base-300 text-sm space-y-1">
-                <div className="flex justify-between"><span className="text-base-content/60">计费计划</span><span className="font-semibold">{bd.planName}</span></div>
-                <div className="flex justify-between"><span className="text-base-content/60">单价</span><span>{formatPrice(bd.unitPrice)}/半小时</span></div>
-                <div className="flex justify-between"><span className="text-base-content/60">计费时段数</span><span>{bd.billableHalfHours}个半小时</span></div>
-                {bd.capApplied && <div className="flex justify-between text-warning"><span>封顶({bd.capType})</span><span>已触发</span></div>}
+            {/* Plan details table */}
+            {localBreakdown && localBreakdown.planDetails.length > 0 && (
+              <div className="px-5 py-3 border-b border-base-300">
+                <div className="space-y-2">
+                  {(() => {
+                    let cumPrice = 0;
+                    return localBreakdown.planDetails.map((item, i) => {
+                      cumPrice += item.subtotalPrice;
+                      return (
+                        <div key={i} className="rounded-lg bg-base-200/50 px-3 py-2 text-sm">
+                          {/* Row 1: time range + hours */}
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono text-xs">{item.timeRange}</span>
+                            <span className="font-mono font-semibold">
+                              {item.billingType === "fixed" ? "固定" : `${item.billableHours}小时`}
+                            </span>
+                          </div>
+                          {/* Row 2: plan name, unit price, subtotal, cumulative */}
+                          <div className="flex items-center justify-between mt-1 text-xs text-base-content/60">
+                            <span className="flex items-center gap-1">
+                              {item.planType === "conditional" ? (
+                                <span className="badge badge-xs badge-info">{item.planName}</span>
+                              ) : (
+                                <span className="badge badge-xs">{item.planName}</span>
+                              )}
+                              <span>{formatPrice(item.unitPrice)}/时</span>
+                            </span>
+                            <span className="font-mono">
+                              {item.capApplied && <span className="text-warning mr-1">封顶</span>}
+                              <span className="font-semibold text-base-content">{formatPrice(item.subtotalPrice)}</span>
+                              <span className="text-base-content/40 ml-2">累计 {formatPrice(cumPrice)}</span>
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
               </div>
             )}
 
