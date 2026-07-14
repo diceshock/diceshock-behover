@@ -732,7 +732,10 @@
     "activeTables": "Активные столы",
     "noActiveTables": "Активных столов нет",
     "activeUsers": "Активные пользователи",
-    "noActiveUsers": "Активных пользователей нет"
+    "noActiveUsers": "Активных пользователей нет",
+    "detail": "Подробности",
+    "settle": "Рассчитать",
+    "settleAll": "Рассчитать все"
   },
   "dashLayout": {
     "notFoundTitle": "Вы попали в несуществующее место",

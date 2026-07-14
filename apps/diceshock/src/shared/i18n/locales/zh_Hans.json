@@ -732,7 +732,10 @@
     "activeTables": "活跃桌台",
     "noActiveTables": "暂无活跃桌台",
     "activeUsers": "活跃用户",
-    "noActiveUsers": "暂无活跃用户"
+    "noActiveUsers": "暂无活跃用户",
+    "detail": "详情",
+    "settle": "结算",
+    "settleAll": "结算全部"
   },
   "dashLayout": {
     "notFoundTitle": "来到了不存在的地方",

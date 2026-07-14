@@ -3,7 +3,9 @@ import {
   CalendarDotsIcon,
   ClipboardTextIcon,
   CurrencyDollarIcon,
+  DotsThreeVerticalIcon,
   EnvelopeIcon,
+  EyeIcon,
   HouseIcon,
   ImageSquareIcon,
   MegaphoneIcon,
@@ -14,7 +16,7 @@ import {
   UsersIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import InventoryManagementCard from "@/client/components/diceshock/InventoryManagementCard";
 import {
   CaptchaSettingsDocument,
@@ -121,21 +123,38 @@ function RouteComponent() {
   const activeOrders = recentOrders.filter(
     (o) => o.status === OrderStatus.Active,
   );
-  const activeTables = [
-    ...new Map(
-      activeOrders.filter((o) => o.table).map((o) => [o.table!.id, o.table!]),
-    ).values(),
-  ];
-  const activeUsers = [
-    ...new Set(
-      activeOrders.map((o) => o.nickname).filter((n): n is string => n != null),
-    ),
-  ];
+  const activeTables = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; orderIds: string[] }>();
+    for (const o of activeOrders) {
+      if (!o.table) continue;
+      const existing = map.get(o.table.id);
+      if (existing) {
+        existing.orderIds.push(o.id);
+      } else {
+        map.set(o.table.id, { id: o.table.id, name: o.table.name, orderIds: [o.id] });
+      }
+    }
+    return [...map.values()];
+  }, [activeOrders]);
+  const activeUsers = useMemo(() => {
+    const map = new Map<string, { key: string; name: string; userId: string | null; orderIds: string[] }>();
+    for (const o of activeOrders) {
+      const key = o.userId ?? o.tempId ?? o.nickname ?? o.id;
+      const existing = map.get(key);
+      if (existing) {
+        existing.orderIds.push(o.id);
+      } else {
+        map.set(key, { key, name: o.nickname ?? o.uid ?? "—", userId: o.userId, orderIds: [o.id] });
+      }
+    }
+    return [...map.values()];
+  }, [activeOrders]);
 
   return (
     <main className="size-full p-4 overflow-y-auto">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Recent Orders */}
           <div className="card bg-base-100 shadow-sm">
             <div className="card-body p-4">
               <div className="flex items-center justify-between mb-3">
@@ -168,16 +187,8 @@ function RouteComponent() {
               ) : (
                 <div className="space-y-2">
                   {recentOrders.slice(0, 5).map((order) => (
-                    <Link
+                    <div
                       key={order.id}
-                      to="/dash/orders"
-                      search={{
-                        q: "",
-                        sortBy: "start_at",
-                        sortOrder: "desc",
-                        groupBy: "none",
-                        page: 1,
-                      }}
                       className="flex items-center justify-between p-2 rounded-lg hover:bg-base-200 transition-colors"
                     >
                       <div className="flex items-center gap-2 min-w-0">
@@ -193,17 +204,57 @@ function RouteComponent() {
                         <span className="text-sm truncate">
                           {order.table?.name ?? "—"}
                         </span>
+                        <span className="text-xs text-base-content/50">
+                          {order.nickname ?? ""}
+                        </span>
                       </div>
-                      <span className="text-xs text-base-content/50 shrink-0 ml-2">
-                        {formatTime(order.startAt)}
-                      </span>
-                    </Link>
+                      <div className="flex items-center gap-1 shrink-0 ml-2">
+                        <span className="text-xs text-base-content/50">
+                          {formatTime(order.startAt)}
+                        </span>
+                        <div className="dropdown dropdown-end">
+                          <div
+                            tabIndex={0}
+                            role="button"
+                            className="btn btn-xs btn-ghost btn-square"
+                          >
+                            <DotsThreeVerticalIcon className="size-4" weight="bold" />
+                          </div>
+                          <ul
+                            tabIndex={0}
+                            className="dropdown-content menu bg-base-200 rounded-box z-50 w-28 p-2 shadow-lg"
+                          >
+                            <li>
+                              <Link
+                                to="/dash/orders/settle"
+                                search={{ ids: [order.id] }}
+                              >
+                                <EyeIcon className="size-4" />
+                                {t("dashIndex.detail")}
+                              </Link>
+                            </li>
+                            {order.status === OrderStatus.Active && (
+                              <li>
+                                <Link
+                                  to="/dash/orders/settle"
+                                  search={{ ids: [order.id] }}
+                                >
+                                  <CurrencyDollarIcon className="size-4" />
+                                  {t("dashIndex.settle")}
+                                </Link>
+                              </li>
+                            )}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
             </div>
           </div>
 
+          {/* Active Tables */}
           <div className="card bg-base-100 shadow-sm">
             <div className="card-body p-4">
               <div className="flex items-center justify-between mb-3">
@@ -230,22 +281,55 @@ function RouteComponent() {
               ) : (
                 <div className="space-y-2">
                   {activeTables.map((table) => (
-                    <Link
+                    <div
                       key={table.id}
-                      to="/dash/tables/$id"
-                      params={{ id: table.id }}
-                      search={{ tab: "basic" }}
-                      className="flex items-center gap-2 p-2 rounded-lg hover:bg-base-200 transition-colors"
+                      className="flex items-center justify-between p-2 rounded-lg hover:bg-base-200 transition-colors"
                     >
-                      <span className="badge badge-xs badge-success" />
-                      <span className="text-sm">{table.name}</span>
-                    </Link>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="badge badge-xs badge-success" />
+                        <span className="text-sm">{table.name}</span>
+                      </div>
+                      <div className="dropdown dropdown-end">
+                        <div
+                          tabIndex={0}
+                          role="button"
+                          className="btn btn-xs btn-ghost btn-square"
+                        >
+                          <DotsThreeVerticalIcon className="size-4" weight="bold" />
+                        </div>
+                        <ul
+                          tabIndex={0}
+                          className="dropdown-content menu bg-base-200 rounded-box z-50 w-32 p-2 shadow-lg"
+                        >
+                          <li>
+                            <Link
+                              to="/dash/tables/$id"
+                              params={{ id: table.id }}
+                              search={{ tab: "basic" }}
+                            >
+                              <EyeIcon className="size-4" />
+                              {t("dashIndex.detail")}
+                            </Link>
+                          </li>
+                          <li>
+                            <Link
+                              to="/dash/orders/settle"
+                              search={{ ids: table.orderIds }}
+                            >
+                              <CurrencyDollarIcon className="size-4" />
+                              {t("dashIndex.settleAll")}
+                            </Link>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
             </div>
           </div>
 
+          {/* Active Users */}
           <div className="card bg-base-100 shadow-sm">
             <div className="card-body p-4">
               <div className="flex items-center justify-between mb-3">
@@ -271,13 +355,50 @@ function RouteComponent() {
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {activeUsers.map((name) => (
+                  {activeUsers.map((user) => (
                     <div
-                      key={name}
-                      className="flex items-center gap-2 p-2 rounded-lg"
+                      key={user.key}
+                      className="flex items-center justify-between p-2 rounded-lg hover:bg-base-200 transition-colors"
                     >
-                      <span className="badge badge-xs badge-accent" />
-                      <span className="text-sm truncate">{name}</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="badge badge-xs badge-accent" />
+                        <span className="text-sm truncate">{user.name}</span>
+                      </div>
+                      <div className="dropdown dropdown-end">
+                        <div
+                          tabIndex={0}
+                          role="button"
+                          className="btn btn-xs btn-ghost btn-square"
+                        >
+                          <DotsThreeVerticalIcon className="size-4" weight="bold" />
+                        </div>
+                        <ul
+                          tabIndex={0}
+                          className="dropdown-content menu bg-base-200 rounded-box z-50 w-28 p-2 shadow-lg"
+                        >
+                          {user.userId && (
+                            <li>
+                              <Link
+                                to="/dash/users/$id"
+                                params={{ id: user.userId }}
+                                search={{ tab: "basic" }}
+                              >
+                                <EyeIcon className="size-4" />
+                                {t("dashIndex.detail")}
+                              </Link>
+                            </li>
+                          )}
+                          <li>
+                            <Link
+                              to="/dash/orders/settle"
+                              search={{ ids: user.orderIds }}
+                            >
+                              <CurrencyDollarIcon className="size-4" />
+                              {t("dashIndex.settle")}
+                            </Link>
+                          </li>
+                        </ul>
+                      </div>
                     </div>
                   ))}
                 </div>

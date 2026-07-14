@@ -732,7 +732,10 @@
     "activeTables": "Active Tables",
     "noActiveTables": "No active tables",
     "activeUsers": "Active Users",
-    "noActiveUsers": "No active users"
+    "noActiveUsers": "No active users",
+    "detail": "Detail",
+    "settle": "Settle",
+    "settleAll": "Settle All"
   },
   "dashLayout": {
     "notFoundTitle": "You reached a place that does not exist",

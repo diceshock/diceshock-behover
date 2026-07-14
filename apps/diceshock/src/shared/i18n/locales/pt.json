@@ -732,7 +732,10 @@
     "activeTables": "Mesas ativas",
     "noActiveTables": "Sem mesas ativas",
     "activeUsers": "Usuários ativos",
-    "noActiveUsers": "Sem usuários ativos"
+    "noActiveUsers": "Sem usuários ativos",
+    "detail": "Detalhes",
+    "settle": "Liquidar",
+    "settleAll": "Liquidar Todos"
   },
   "dashLayout": {
     "notFoundTitle": "Você chegou a um lugar que não existe",

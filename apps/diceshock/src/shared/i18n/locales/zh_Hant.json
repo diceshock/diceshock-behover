@@ -732,7 +732,10 @@
     "activeTables": "活躍桌台",
     "noActiveTables": "暫無活躍桌台",
     "activeUsers": "活躍使用者",
-    "noActiveUsers": "暫無活躍使用者"
+    "noActiveUsers": "暫無活躍使用者",
+    "detail": "詳情",
+    "settle": "結算",
+    "settleAll": "結算全部"
   },
   "dashLayout": {
     "notFoundTitle": "來到了不存在的地方",

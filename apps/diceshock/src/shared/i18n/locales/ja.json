@@ -732,7 +732,10 @@
     "activeTables": "アクティブな卓",
     "noActiveTables": "アクティブな卓はありません",
     "activeUsers": "アクティブユーザー",
-    "noActiveUsers": "アクティブユーザーはいません"
+    "noActiveUsers": "アクティブユーザーはいません",
+    "detail": "詳細",
+    "settle": "精算",
+    "settleAll": "全て精算"
   },
   "dashLayout": {
     "notFoundTitle": "存在しない場所に来ました",
