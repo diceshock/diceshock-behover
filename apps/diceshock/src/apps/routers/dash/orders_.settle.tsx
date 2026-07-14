@@ -226,41 +226,44 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
               <div><span className="font-mono text-base font-bold text-success">{preview.billableMinutes}</span><br/>计费</div>
             </div>
 
-            {/* Plan details - using server-computed breakdown */}
-            {preview.priceBreakdown && (
+            {/* Plan details - per-segment breakdown */}
+            {preview.priceBreakdown && preview.priceBreakdown.planDetails.length > 0 && (
               <div className="px-5 py-3 border-b border-base-300">
                 <div className="space-y-2">
-                  <div className="rounded-lg bg-base-200/50 px-3 py-2 text-sm">
-                    {/* Row 1: plan info + billing */}
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-1">
-                        {preview.priceBreakdown.planType === "conditional" ? (
-                          <span className="badge badge-xs badge-info">{preview.priceBreakdown.planName}</span>
-                        ) : (
-                          <span className="badge badge-xs">{preview.priceBreakdown.planName}</span>
-                        )}
-                      </span>
-                      <span className="font-mono font-semibold">
-                        {preview.priceBreakdown.billingType === "fixed"
-                          ? "固定"
-                          : `${Math.round(preview.priceBreakdown.billableHalfHours * 0.5 * 10) / 10}小时`}
-                      </span>
+                  {preview.priceBreakdown.planDetails.map((detail, idx) => (
+                    <div key={idx} className="rounded-lg bg-base-200/50 px-3 py-2 text-sm">
+                      {/* Row 1: plan name + time range */}
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                          {detail.planType === "conditional" ? (
+                            <span className="badge badge-xs badge-info">{detail.planName}</span>
+                          ) : (
+                            <span className="badge badge-xs">{detail.planName}</span>
+                          )}
+                          <span className="text-xs text-base-content/50">{detail.timeRange}</span>
+                        </span>
+                        <span className="font-mono font-semibold">
+                          {detail.billingType === "fixed"
+                            ? "固定"
+                            : `${detail.billableHours}小时`}
+                        </span>
+                      </div>
+                      {/* Row 2: unit price + subtotal */}
+                      <div className="flex items-center justify-between mt-1 text-xs text-base-content/60">
+                        <span>
+                          {detail.billingType === "fixed"
+                            ? `固定 ${formatPrice(detail.unitPrice)}`
+                            : `${formatPrice(detail.unitPrice)}/时`}
+                        </span>
+                        <span className="font-mono">
+                          {detail.capApplied && (
+                            <span className="text-warning mr-1">封顶</span>
+                          )}
+                          <span className="font-semibold text-base-content">{formatPrice(detail.subtotalPrice)}</span>
+                        </span>
+                      </div>
                     </div>
-                    {/* Row 2: unit price + total */}
-                    <div className="flex items-center justify-between mt-1 text-xs text-base-content/60">
-                      <span>
-                        {preview.priceBreakdown.billingType === "fixed"
-                          ? `固定 ${formatPrice(preview.priceBreakdown.unitPrice)}`
-                          : `${formatPrice(preview.priceBreakdown.unitPrice)}/时`}
-                      </span>
-                      <span className="font-mono">
-                        {preview.priceBreakdown.capApplied && (
-                          <span className="text-warning mr-1">封顶{preview.priceBreakdown.capType === "split_day_night" ? "(分段)" : ""}</span>
-                        )}
-                        <span className="font-semibold text-base-content">{formatPrice(preview.priceBreakdown.finalPrice)}</span>
-                      </span>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
             )}

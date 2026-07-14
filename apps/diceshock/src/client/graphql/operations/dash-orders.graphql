@@ -113,6 +113,19 @@ query SettlementPreview($id: ID!) {
       capType
       finalPrice
       finalPoints
+      planDetails {
+        planName
+        planType
+        billingType
+        halfHours
+        billableHours
+        unitPrice
+        unitPoints
+        subtotalPrice
+        subtotalPoints
+        capApplied
+        timeRange
+      }
     }
     membership {
       hasTimePlan
@@ -188,6 +201,19 @@ mutation BatchSettlementPreview($ids: [ID!]!) {
       capType
       finalPrice
       finalPoints
+      planDetails {
+        planName
+        planType
+        billingType
+        halfHours
+        billableHours
+        unitPrice
+        unitPoints
+        subtotalPrice
+        subtotalPoints
+        capApplied
+        timeRange
+      }
     }
     membership {
       hasTimePlan

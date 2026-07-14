@@ -377,6 +377,20 @@ type OrderListResult {
   pageInfo: PageInfo!
 }
 
+type PlanDetailItem {
+  planName: String!
+  planType: String!
+  billingType: String!
+  halfHours: Int!
+  billableHours: Int!
+  unitPrice: Int!
+  unitPoints: Int!
+  subtotalPrice: Int!
+  subtotalPoints: Int!
+  capApplied: Boolean!
+  timeRange: String!
+}
+
 type PriceBreakdown {
   planName: String!
   planType: String!
@@ -391,6 +405,7 @@ type PriceBreakdown {
   capType: String
   finalPrice: Int!
   finalPoints: Int!
+  planDetails: [PlanDetailItem!]!
 }
 
 type OrderPauseLogView {

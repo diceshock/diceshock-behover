@@ -1425,6 +1425,21 @@ export type PerUserSettleInput = {
   pointsChange?: InputMaybe<Scalars['Int']['input']>;
 };
 
+export type PlanDetailItem = {
+  __typename?: 'PlanDetailItem';
+  billableHours: Scalars['Int']['output'];
+  billingType: Scalars['String']['output'];
+  capApplied: Scalars['Boolean']['output'];
+  halfHours: Scalars['Int']['output'];
+  planName: Scalars['String']['output'];
+  planType: Scalars['String']['output'];
+  subtotalPoints: Scalars['Int']['output'];
+  subtotalPrice: Scalars['Int']['output'];
+  timeRange: Scalars['String']['output'];
+  unitPoints: Scalars['Int']['output'];
+  unitPrice: Scalars['Int']['output'];
+};
+
 export type PointsDeduction = {
   __typename?: 'PointsDeduction';
   amount: Scalars['Int']['output'];
@@ -1459,6 +1474,7 @@ export type PriceBreakdown = {
   capType?: Maybe<Scalars['String']['output']>;
   finalPoints: Scalars['Int']['output'];
   finalPrice: Scalars['Int']['output'];
+  planDetails: Array<PlanDetailItem>;
   planName: Scalars['String']['output'];
   planType: Scalars['String']['output'];
   rawPoints: Scalars['Int']['output'];
