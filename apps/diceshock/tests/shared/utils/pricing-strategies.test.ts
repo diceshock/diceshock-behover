@@ -185,21 +185,21 @@ describe("calculatePrice — points billing", () => {
           member: { type: "irrelevant" },
           scope: [],
         },
-        price: 600, // ¥3/half-hour
-        points: 100, // 50 points/half-hour
+        price: 600, // ¥6/hour
+        points: 100, // 100 points/hour
       }),
       fallback(),
     ]);
 
-    // 1.5 hours = 3 half-hours
+    // 1.5 hours = 3 half-hours → round(3×0.5) = 2 billable hours
     const result = calculatePrice(
       MONDAY_10AM,
       MONDAY_10AM + HALF_HOUR * 3,
       "boardgame",
       snapshot,
     );
-    expect(result!.finalPrice).toBe(900); // 3 × 300
-    expect(result!.finalPoints).toBe(150); // 3 × 50
+    expect(result!.finalPrice).toBe(1200); // 2h × ¥6
+    expect(result!.finalPoints).toBe(200); // 2h × 100pts
   });
 });
 
@@ -1074,9 +1074,9 @@ describe("calculatePrice — edge cases", () => {
     );
     expect(result).not.toBeNull();
     expect(result!.billableHalfHours).toBe(3);
-    // Segment timestamps: 17:00 (day), 18:00 (night), 18:30 (night)
-    // Price: 500 + 300 + 300 = 1100
-    expect(result!.finalPrice).toBe(1100);
+    // Segment timestamps: 17:00 (day=1 seg → round(0.5)=1h), 18:00+18:30 (night=2 segs → round(1.0)=1h)
+    // Day: 1h × ¥10 = ¥10, Night: 1h × ¥6 = ¥6 → total ¥16
+    expect(result!.finalPrice).toBe(1600);
   });
 });
 

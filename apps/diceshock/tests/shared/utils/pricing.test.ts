@@ -117,8 +117,9 @@ describe("calculatePrice — pause deduction", () => {
     expect(result).not.toBeNull();
     // totalMs = 2h, pausedMs = 30min, effectiveMs = 90min > 30min → bill all
     // billableHalfHours = ceil(90min / 30min) = 3
+    // billableHours for plan = round(3 × 0.5) = round(1.5) = 2h
     expect(result!.billableHalfHours).toBe(3);
-    expect(result!.finalPrice).toBe(1500); // 3 × ¥5
+    expect(result!.finalPrice).toBe(2000); // 2h × ¥10
   });
 
   it("pause reduces effective time to exactly 30min → free", () => {

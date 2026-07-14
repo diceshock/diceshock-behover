@@ -214,8 +214,8 @@ export function calculatePrice(
 
   let rawPrice = 0;
   let rawPoints = 0;
-  // Track per-plan accumulation for cap enforcement
-  const planAccum = new Map<string, { price: number; points: number; plan: PlanEntry }>();
+  // Count half-hour segments per plan, then price = plan.price × (segments × 0.5)
+  const planSegments = new Map<string, { halfHours: number; plan: PlanEntry }>();
   let lastMatchedPlan: PlanEntry | null = null;
 
   for (const segTs of activeSegmentStarts) {
@@ -226,34 +226,48 @@ export function calculatePrice(
     lastMatchedPlan = plan;
 
     if (plan.billing_type === "fixed") {
-      // Fixed plans charge once regardless of segments; handled after loop
-      if (!planAccum.has(plan.name)) {
-        planAccum.set(plan.name, { price: plan.price, points: plan.points ?? 0, plan });
+      // Fixed plans charge once regardless of segments
+      if (!planSegments.has(plan.name)) {
+        planSegments.set(plan.name, { halfHours: 0, plan });
       }
     } else {
-      const pricePerHalfHour = Math.round(plan.price / 2);
-      const pointsPerHalfHour = Math.round((plan.points ?? 0) / 2);
-      const existing = planAccum.get(plan.name);
+      const existing = planSegments.get(plan.name);
       if (existing) {
-        existing.price += pricePerHalfHour;
-        existing.points += pointsPerHalfHour;
+        existing.halfHours += 1;
       } else {
-        planAccum.set(plan.name, { price: pricePerHalfHour, points: pointsPerHalfHour, plan });
+        planSegments.set(plan.name, { halfHours: 1, plan });
       }
     }
   }
 
-  // Apply caps per plan, then sum
+  // Compute price per plan: price = plan.price × (halfHours × 0.5)
+  // Then apply caps, then sum all plans.
   let capApplied = false;
   let capType: string | null = null;
   let dominantPlan: PlanEntry | null = null;
   let maxContribution = -1;
+  let finalPrice = 0;
+  let finalPoints = 0;
 
-  for (const [, entry] of planAccum) {
-    let price = entry.price;
-    let points = entry.points;
+  for (const [, entry] of planSegments) {
     const plan = entry.plan;
+    let price: number;
+    let points: number;
 
+    if (plan.billing_type === "fixed") {
+      price = plan.price;
+      points = plan.points ?? 0;
+    } else {
+      // Round half-hours to billable hours (四舍五入: 1段=1h, 2段=1h, 3段=2h, 4段=2h, 5段=3h...)
+      const billableHoursForPlan = Math.round(entry.halfHours * 0.5);
+      price = plan.price * billableHoursForPlan;
+      points = (plan.points ?? 0) * billableHoursForPlan;
+    }
+
+    rawPrice += price;
+    rawPoints += points;
+
+    // Apply caps
     if (plan.billing_type === "hourly" && plan.cap_enabled) {
       if (plan.cap_unit === "per_day") {
         if (plan.cap_price != null && price > plan.cap_price) {
@@ -267,7 +281,7 @@ export function calculatePrice(
           capType = "per_day";
         }
       } else if (plan.cap_unit === "split_day_night") {
-        // Use the first segment's time context for cap determination
+        // Determine day/night based on the majority of this plan's segments
         const refDate = new Date(activeSegmentStarts[0]);
         const isDay = isDaytime(refDate, snapshot.config);
         const capVal = isDay ? plan.cap_price_day : plan.cap_price_night;
@@ -285,39 +299,13 @@ export function calculatePrice(
       }
     }
 
-    rawPrice += entry.price;
-    rawPoints += entry.points;
+    finalPrice += price;
+    finalPoints += points;
 
     if (price > maxContribution) {
       maxContribution = price;
       dominantPlan = plan;
     }
-  }
-
-  // Compute final totals after caps
-  let finalPrice = 0;
-  let finalPoints = 0;
-  for (const [, entry] of planAccum) {
-    let price = entry.price;
-    let points = entry.points;
-    const plan = entry.plan;
-
-    if (plan.billing_type === "hourly" && plan.cap_enabled) {
-      if (plan.cap_unit === "per_day") {
-        if (plan.cap_price != null && price > plan.cap_price) price = plan.cap_price;
-        if (plan.cap_points != null && points > plan.cap_points) points = plan.cap_points;
-      } else if (plan.cap_unit === "split_day_night") {
-        const refDate = new Date(activeSegmentStarts[0]);
-        const isDay = isDaytime(refDate, snapshot.config);
-        const capVal = isDay ? plan.cap_price_day : plan.cap_price_night;
-        if (capVal != null && price > capVal) price = capVal;
-        const capPts = isDay ? plan.cap_points_day : plan.cap_points_night;
-        if (capPts != null && points > capPts) points = capPts;
-      }
-    }
-
-    finalPrice += price;
-    finalPoints += points;
   }
 
   // Use the dominant plan (highest contribution) for metadata
