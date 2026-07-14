@@ -24,6 +24,7 @@ import {
   TableByCodeDocument,
   type TableByCodeQuery,
   type TableByCodeQueryVariables,
+  useOrderStatusChangedSubscription,
 } from "@/client/graphql/__generated__";
 import useAuth from "@/client/hooks/useAuth";
 import useCrossData from "@/client/hooks/useCrossData";
@@ -228,6 +229,13 @@ function SeatTimerPage() {
   useEffect(() => {
     void fetchTable();
   }, [fetchTable]);
+
+  // Real-time order status sync: refetch table data when order status changes
+  useOrderStatusChangedSubscription({
+    variables: { tableId: tableData?.id ?? undefined },
+    skip: !tableData?.id,
+    onData: () => { void fetchTable(); },
+  });
 
   useEffect(() => {
     if (identity?.kind !== "real" || gszCheckedRef.current) return;

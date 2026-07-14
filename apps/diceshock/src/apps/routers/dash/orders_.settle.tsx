@@ -24,6 +24,7 @@ import {
   useSettleOrderMutation,
   useResumeOrderMutation,
   usePublishedPricingQuery,
+  useOrderStatusChangedSubscription,
 } from "@/client/graphql/__generated__";
 import type { SettlementPreviewQuery } from "@/client/graphql/__generated__/operations";
 import dayjs from "@/shared/utils/dayjs-config";
@@ -104,6 +105,12 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
   const [settleOrder] = useSettleOrderMutation();
   const [resumeOrder] = useResumeOrderMutation();
   const { data: pricingData } = usePublishedPricingQuery();
+
+  // Real-time sync: refetch when this order's status changes
+  useOrderStatusChangedSubscription({
+    variables: { orderId },
+    onData: () => { void refetch(); },
+  });
 
   const pricingSnapshot = useMemo<SnapshotData | null>(() => {
     const d = pricingData?.publishedPricing?.data;
@@ -640,6 +647,28 @@ function BatchSettlePage() {
   }, [ids, fetchPreview]);
 
   useEffect(() => { void fetchData(); }, [fetchData]);
+
+  // Real-time sync: refetch preview data when any order in this batch changes status
+  useOrderStatusChangedSubscription({
+    onData: ({ data: subData }) => {
+      const changed = subData.data?.orderStatusChanged;
+      if (!changed) return;
+      const orderId = changed.order?.id;
+      if (!orderId || !ids.includes(orderId)) return;
+      // Update settled state immediately from subscription
+      if (changed.currentStatus === "SETTLED") {
+        setUserStates((prev) => {
+          const next = new Map(prev);
+          const old = next.get(orderId);
+          if (old) next.set(orderId, { ...old, settled: true });
+          return next;
+        });
+      } else {
+        // For other status changes (e.g. cancelled), refetch
+        void fetchData();
+      }
+    },
+  });
 
   const updateUserState = useCallback((orderId: string, patch: Partial<UserCardState>) => {
     setUserStates((prev) => {

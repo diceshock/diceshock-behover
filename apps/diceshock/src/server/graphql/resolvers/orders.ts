@@ -450,13 +450,17 @@ async function publishOrderEvent(
   orderId: string,
   type: string,
   payload: Record<string, unknown>,
+  options?: { tableId?: string; order?: Record<string, unknown> },
 ): Promise<void> {
   try {
     const env = ctx.env as GQLContext["env"] & {
       PUBSUB?: DurableObjectNamespace;
     };
     if (!env.PUBSUB) return;
-    const body = JSON.stringify({ type, payload, timestamp: Date.now() });
+    const enrichedPayload = options?.order
+      ? { ...payload, order: options.order }
+      : payload;
+    const body = JSON.stringify({ type, payload: enrichedPayload, timestamp: Date.now() });
     // Publish to specific order channel
     const pubsubId = env.PUBSUB.idFromName(`order:${orderId}`);
     const stub = env.PUBSUB.get(pubsubId);
@@ -465,6 +469,12 @@ async function publishOrderEvent(
     const allId = env.PUBSUB.idFromName("order:all");
     const allStub = env.PUBSUB.get(allId);
     await allStub.fetch("https://internal/publish", { method: "POST", body });
+    // Publish to table channel for user-facing listeners
+    if (options?.tableId) {
+      const tableChannelId = env.PUBSUB.idFromName(`order-table:${options.tableId}`);
+      const tableStub = env.PUBSUB.get(tableChannelId);
+      await tableStub.fetch("https://internal/publish", { method: "POST", body });
+    }
   } catch (e) { console.error("[orders] publishOrderEvent error", e); }
 }
 
@@ -916,16 +926,18 @@ async function settleOrderById(
     .where(drizzle.eq(tableOccupancyTable.id, input.id));
 
   const updated = await fetchOrderOrThrow(tdb, input.id);
+  const gqlOrder = toGqlOrder(updated);
   await publishOrderEvent(ctx, input.id, "ORDER_STATUS_CHANGED", {
     orderId: input.id,
     previousStatus: normalizeStatus(existing),
+    currentStatus: "SETTLED",
     status: "SETTLED",
     amount: data.finalPrice,
     points: data.finalPoints,
-  });
+  }, { tableId: updated.table_id, order: gqlOrder });
 
   return {
-    order: toGqlOrder(updated),
+    order: gqlOrder,
     price: data.finalPrice,
     points: data.finalPoints,
     snapshot: null,
@@ -1175,11 +1187,13 @@ export const ordersResolvers = {
         })
         .returning();
       const order = await fetchOrderOrThrow(tdb, inserted.id);
+      const gqlOrder = toGqlOrder(order);
       await publishOrderEvent(ctx, inserted.id, "ORDER_STATUS_CHANGED", {
         orderId: inserted.id,
+        currentStatus: "ACTIVE",
         status: "ACTIVE",
-      });
-      return toGqlOrder(order);
+      }, { tableId: order.table_id, order: gqlOrder });
+      return gqlOrder;
     },
     async endOrder(_source: unknown, args: unknown, ctx: GQLContext) {
       requireStaff(ctx);
@@ -1199,12 +1213,14 @@ export const ordersResolvers = {
         })
         .where(drizzle.eq(tableOccupancyTable.id, input.id));
       const updated = await fetchOrderOrThrow(tdb, input.id);
+      const gqlOrder = toGqlOrder(updated);
       await publishOrderEvent(ctx, input.id, "ORDER_STATUS_CHANGED", {
         orderId: input.id,
         previousStatus,
+        currentStatus: "ENDED",
         status: "ENDED",
-      });
-      return toGqlOrder(updated);
+      }, { tableId: updated.table_id, order: gqlOrder });
+      return gqlOrder;
     },
     async pauseOrder(_source: unknown, args: unknown, ctx: GQLContext) {
       requireStaff(ctx);
@@ -1221,12 +1237,14 @@ export const ordersResolvers = {
         .set({ status: "paused" })
         .where(drizzle.eq(tableOccupancyTable.id, input.id));
       const updated = await fetchOrderOrThrow(tdb, input.id);
+      const gqlOrder = toGqlOrder(updated);
       await publishOrderEvent(ctx, input.id, "ORDER_STATUS_CHANGED", {
         orderId: input.id,
         previousStatus: "ACTIVE",
+        currentStatus: "PAUSED",
         status: "PAUSED",
-      });
-      return toGqlOrder(updated);
+      }, { tableId: updated.table_id, order: gqlOrder });
+      return gqlOrder;
     },
     async resumeOrder(_source: unknown, args: unknown, ctx: GQLContext) {
       requireStaff(ctx);
@@ -1241,12 +1259,14 @@ export const ordersResolvers = {
         .set({ status: "active" })
         .where(drizzle.eq(tableOccupancyTable.id, input.id));
       const updated = await fetchOrderOrThrow(tdb, input.id);
+      const gqlOrder = toGqlOrder(updated);
       await publishOrderEvent(ctx, input.id, "ORDER_STATUS_CHANGED", {
         orderId: input.id,
         previousStatus: "PAUSED",
+        currentStatus: "ACTIVE",
         status: "ACTIVE",
-      });
-      return toGqlOrder(updated);
+      }, { tableId: updated.table_id, order: gqlOrder });
+      return gqlOrder;
     },
     async settleOrder(_source: unknown, args: unknown, ctx: GQLContext) {
       requireStaff(ctx);
@@ -1362,16 +1382,18 @@ export const ordersResolvers = {
         })
         .where(drizzle.eq(tableOccupancyTable.id, input.id));
       const updated = await fetchOrderOrThrow(tdb, input.id);
+      const gqlOrder = toGqlOrder(updated);
       await publishOrderEvent(ctx, input.id, "ORDER_STATUS_CHANGED", {
         orderId: input.id,
         previousStatus: "SETTLED",
+        currentStatus: "ENDED",
         status: "ENDED",
-      });
+      }, { tableId: updated.table_id, order: gqlOrder });
       return {
         id: input.id,
         success: true,
         restored: true,
-        order: toGqlOrder(updated),
+        order: gqlOrder,
       };
     },
     async cancelBatchSettlement(
@@ -1444,8 +1466,9 @@ export const ordersResolvers = {
           actions.push(`Ended orphaned order ${order.id}`);
           await publishOrderEvent(ctx, order.id, "ORDER_STATUS_CHANGED", {
             orderId: order.id,
+            currentStatus: "ENDED",
             status: "ENDED",
-          });
+          }, { tableId: order.table_id });
         }
         for (const log of orphanedPauseLogs) {
           await tdb
