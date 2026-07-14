@@ -3,21 +3,15 @@ import {
   createFileRoute,
   useNavigate,
 } from "@tanstack/react-router";
-import { atom, useAtom } from "jotai";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useImmerAtom } from "jotai-immer";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import { useTranslation } from "@/client/hooks/useTranslation";
+import { pricingStoreAtom } from "./pricing.store";
 
 export const Route = createFileRoute("/dash/pricing_/$id")({
   component: PricingDetailPage,
 });
-
-type SnapshotData = {
-  config: { daytime_start: string; daytime_end: string };
-  plans: Record<string, unknown>[];
-};
-
-type PlanEntry = SnapshotData["plans"][number];
 
 type Identity = "temporary" | "registered";
 
@@ -41,16 +35,6 @@ type Conditions = {
     | { type: "specific"; planTypes: string[] };
   scope: string[];
 };
-
-const EMPTY_DATA: SnapshotData = {
-  config: { daytime_start: "10:00", daytime_end: "18:00" },
-  plans: [],
-};
-
-export const pricingDataAtom = atom<SnapshotData>(EMPTY_DATA);
-export const pricingSavedDataAtom = atom<SnapshotData>(EMPTY_DATA);
-export const pricingSnapshotNameAtom = atom<string>("");
-export const pricingInitializedAtom = atom<boolean>(false);
 
 const PLAN_TYPE_OPTIONS = [
   { value: "yearly", label: "桌面通行证 LTS" },
@@ -139,9 +123,9 @@ function PricingDetailPage() {
   const navigate = useNavigate();
   const msg = useMsg();
   const { t } = useTranslation();
-  const [pricingData, setPricingData] = useAtom(pricingDataAtom);
+  const [store, setStore] = useImmerAtom(pricingStoreAtom);
 
-  const plan = pricingData?.plans[planIndex] ?? null;
+  const plan = store.data.plans[planIndex] ?? null;
 
   const [name, setName] = useState("");
   const [conditions, setConditions] = useState<Conditions>(defaultConditions());
@@ -181,52 +165,47 @@ function PricingDetailPage() {
       msg.error("请输入计划名称");
       return;
     }
-    if (!pricingData) return;
 
-    const updated: PlanEntry = {
-      ...plan!,
-      name: name.trim(),
-      conditions,
-      billing_type: billingType,
-      price: yuanToCents(price),
-      points: displayToPoints(points),
-      cap_enabled: billingType === "hourly",
-      cap_unit: billingType === "hourly" ? capUnit : null,
-      cap_price:
+    setStore((draft) => {
+      const target = draft.data.plans[planIndex];
+      if (!target) return;
+      target.name = name.trim();
+      target.conditions = conditions;
+      target.billing_type = billingType;
+      target.price = yuanToCents(price);
+      target.points = displayToPoints(points);
+      target.cap_enabled = billingType === "hourly";
+      target.cap_unit = billingType === "hourly" ? capUnit : null;
+      target.cap_price =
         billingType === "hourly" && capUnit === "per_day"
           ? yuanToCents(capPrice)
-          : null,
-      cap_points:
+          : null;
+      target.cap_points =
         billingType === "hourly" && capUnit === "per_day"
           ? displayToPoints(capPoints)
-          : null,
-      cap_price_day:
+          : null;
+      target.cap_price_day =
         billingType === "hourly" && capUnit === "split_day_night"
           ? yuanToCents(capPriceDay)
-          : null,
-      cap_points_day:
+          : null;
+      target.cap_points_day =
         billingType === "hourly" && capUnit === "split_day_night"
           ? displayToPoints(capPointsDay)
-          : null,
-      cap_price_night:
+          : null;
+      target.cap_price_night =
         billingType === "hourly" && capUnit === "split_day_night"
           ? yuanToCents(capPriceNight)
-          : null,
-      cap_points_night:
+          : null;
+      target.cap_points_night =
         billingType === "hourly" && capUnit === "split_day_night"
           ? displayToPoints(capPointsNight)
-          : null,
-    };
-
-    setPricingData({
-      ...pricingData,
-      plans: pricingData.plans.map((p, i) => (i === planIndex ? updated : p)),
+          : null;
     });
 
     void navigate({ to: "/dash/pricing" });
   };
 
-  if (!pricingData || !plan) {
+  if (!plan) {
     return (
       <main className="size-full flex flex-col items-center justify-center gap-4">
         <p className="text-base-content/60">{t("dashPricing.notFound")}</p>
@@ -240,6 +219,7 @@ function PricingDetailPage() {
       </main>
     );
   }
+
 
   return (
     <ClientOnly>

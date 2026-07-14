@@ -12,8 +12,8 @@ import {
   XIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useAtom } from "jotai";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useImmerAtom } from "jotai-immer";
+import { useEffect, useRef, useState } from "react";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import {
   type PricingSnapshotsQuery,
@@ -27,7 +27,7 @@ import {
 import { useAdminStoreFilter } from "@/client/hooks/useAdminStoreFilter";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import { formatMessage } from "@/shared/i18n";
-import { pricingDataAtom, pricingInitializedAtom, pricingSavedDataAtom, pricingSnapshotNameAtom } from "./pricing_.$id";
+import { pricingStoreAtom, EMPTY_DATA, type SnapshotData, type PlanEntry } from "./pricing.store";
 
 function isEqual(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
@@ -37,12 +37,6 @@ export const Route = createFileRoute("/dash/pricing")({
   component: PricingPage,
 });
 
-type SnapshotData = {
-  config: { daytime_start: string; daytime_end: string };
-  plans: Record<string, unknown>[];
-};
-
-type PlanEntry = SnapshotData["plans"][number];
 type Identity = "temporary" | "registered";
 type Translator = ReturnType<typeof useTranslation>["t"];
 
@@ -215,21 +209,13 @@ function parseSnapshotData(raw: {
   }
 }
 
-const EMPTY_DATA: SnapshotData = {
-  config: { daytime_start: "10:00", daytime_end: "18:00" },
-  plans: [],
-};
-
 function PricingPage() {
   const msg = useMsg();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { storeFilter } = useAdminStoreFilter();
 
-  const [data, setData] = useAtom(pricingDataAtom);
-  const [savedData, setSavedData] = useAtom(pricingSavedDataAtom);
-  const [snapshotName, setSnapshotName] = useAtom(pricingSnapshotNameAtom);
-  const [initialized, setInitialized] = useAtom(pricingInitializedAtom);
+  const [store, setStore] = useImmerAtom(pricingStoreAtom);
 
   const { data: qlData, loading } = usePricingDraftQuery();
   const { data: snapshotsData } = usePricingSnapshotsQuery();
@@ -244,20 +230,21 @@ function PricingPage() {
   const snapshots = snapshotsData?.pricingSnapshots ?? [];
 
   useEffect(() => {
-    if (qlData?.pricingDraft && !initialized) {
+    if (qlData?.pricingDraft && !store.initialized) {
       const parsed = parseSnapshotData(qlData.pricingDraft.data);
       const d = parsed ?? EMPTY_DATA;
-      setData(d);
-      setSavedData(d);
-      setSnapshotName(
-        qlData.pricingDraft.snapshotName ?? t("dashPricing.untitled"),
-      );
-      setInitialized(true);
+      setStore((draft) => {
+        draft.data = d;
+        draft.savedData = d;
+        draft.snapshotName =
+          qlData.pricingDraft!.snapshotName ?? t("dashPricing.untitled");
+        draft.initialized = true;
+      });
     }
-  }, [qlData, initialized, setData, setSavedData, setSnapshotName, setInitialized, t]);
+  }, [qlData, store.initialized, setStore, t]);
 
-  const effectiveData = data ?? EMPTY_DATA;
-  const hasChanges = !isEqual(effectiveData, savedData);
+  const effectiveData = store.data;
+  const hasChanges = !isEqual(effectiveData, store.savedData);
   const hasDraft = snapshots.some((s: PricingSnapshotsQuery["pricingSnapshots"][number]) => s.status === "DRAFT");
 
   const fallbackPlan =
@@ -269,67 +256,61 @@ function PricingPage() {
   );
 
   const updatePlan = (index: number, updates: Partial<PlanEntry>) => {
-    setData((prev) => {
-      const d = prev ?? EMPTY_DATA;
-      return {
-        ...d,
-        plans: d.plans.map((p, i) =>
-          i === index ? ({ ...p, ...updates } as Record<string, unknown>) : p,
-        ),
-      };
+    setStore((draft) => {
+      Object.assign(draft.data.plans[index], updates);
     });
   };
 
   const removePlan = (index: number) => {
-    setData((prev) => {
-      const d = prev ?? EMPTY_DATA;
-      return {
-        ...d,
-        plans: d.plans.filter((_, i) => i !== index),
-      };
+    setStore((draft) => {
+      draft.data.plans.splice(index, 1);
     });
   };
 
   const addConditionalPlan = () => {
-    const newPlan: PlanEntry = {
-      plan_type: "conditional",
-      name: t("dashPricing.defaultConditionalPlanName"),
-      sort_order: conditionalPlans.length + 1,
-      enabled: true,
-      conditions: {
-        date: { type: "workdays" },
-        time: { type: "all_day" },
-        identity: ["registered"],
-        member: { type: "irrelevant" },
-        scope: [],
-      },
-      billing_type: "hourly",
-      price: 1000,
-      cap_enabled: true,
-      cap_unit: "per_day",
-      cap_price: 5000,
-      cap_price_day: null,
-      cap_price_night: null,
-    };
-    setData((prev) => ({ ...prev, plans: [...prev.plans, newPlan] }));
+    setStore((draft) => {
+      draft.data.plans.push({
+        plan_type: "conditional",
+        name: t("dashPricing.defaultConditionalPlanName"),
+        sort_order: draft.data.plans.filter(
+          (p: Record<string, unknown>) => p.plan_type === "conditional",
+        ).length + 1,
+        enabled: true,
+        conditions: {
+          date: { type: "workdays" },
+          time: { type: "all_day" },
+          identity: ["registered"],
+          member: { type: "irrelevant" },
+          scope: [],
+        },
+        billing_type: "hourly",
+        price: 1000,
+        cap_enabled: true,
+        cap_unit: "per_day",
+        cap_price: 5000,
+        cap_price_day: null,
+        cap_price_night: null,
+      });
+    });
   };
 
   const addFallbackPlan = () => {
-    const newPlan: PlanEntry = {
-      plan_type: "fallback",
-      name: t("dashPricing.fallbackPlan"),
-      sort_order: 0,
-      enabled: true,
-      conditions: null,
-      billing_type: "hourly",
-      price: 1000,
-      cap_enabled: true,
-      cap_unit: "per_day",
-      cap_price: 5000,
-      cap_price_day: null,
-      cap_price_night: null,
-    };
-    setData((prev) => ({ ...prev, plans: [newPlan, ...prev.plans] }));
+    setStore((draft) => {
+      draft.data.plans.unshift({
+        plan_type: "fallback",
+        name: t("dashPricing.fallbackPlan"),
+        sort_order: 0,
+        enabled: true,
+        conditions: null,
+        billing_type: "hourly",
+        price: 1000,
+        cap_enabled: true,
+        cap_unit: "per_day",
+        cap_price: 5000,
+        cap_price_day: null,
+        cap_price_night: null,
+      });
+    });
   };
 
   const configDialogRef = useRef<HTMLDialogElement>(null);
@@ -350,7 +331,9 @@ function PricingPage() {
   }, [effectiveData.config]);
 
   const handleSaveConfig = () => {
-    setData((prev) => ({ ...prev, config: { ...configForm } }));
+    setStore((draft) => {
+      draft.data.config = { ...configForm };
+    });
     configDialogRef.current?.close();
   };
 
@@ -382,22 +365,20 @@ function PricingPage() {
     dragItemRef.current = null;
     if (sourceIdx == null || sourceIdx === targetIdx) return;
 
-    setData((prev) => {
-      const plans = [...prev.plans];
+    setStore((draft) => {
+      const plans = draft.data.plans;
       const [moved] = plans.splice(sourceIdx, 1);
-      if (!moved) return prev;
+      if (!moved) return;
       plans.splice(targetIdx, 0, moved);
-      return {
-        ...prev,
-        plans: plans.map((p, i) => ({ ...p, sort_order: i })),
-      };
+      for (let i = 0; i < plans.length; i++) {
+        plans[i].sort_order = i;
+      }
     });
   };
 
   const handleToggle = (globalIdx: number) => {
-    const plan = effectiveData.plans[globalIdx] as Record<string, unknown>;
-    updatePlan(globalIdx, {
-      enabled: !plan.enabled,
+    setStore((draft) => {
+      draft.data.plans[globalIdx].enabled = !draft.data.plans[globalIdx].enabled;
     });
   };
 
@@ -407,7 +388,7 @@ function PricingPage() {
   const saveDialogRef = useRef<HTMLDialogElement>(null);
 
   const handleSaveDraft = async () => {
-    if (!snapshotName.trim()) {
+    if (!store.snapshotName.trim()) {
       msg.error(t("dashPricing.errors.enterSnapshotName"));
       return;
     }
@@ -416,7 +397,7 @@ function PricingPage() {
       await saveSnapshot({
         variables: {
           input: {
-            name: snapshotName.trim(),
+            name: store.snapshotName.trim(),
             data: {
               config: JSON.stringify({
                 daytimeStart: effectiveData.config.daytime_start,
@@ -427,7 +408,9 @@ function PricingPage() {
           },
         },
       });
-      setSavedData(effectiveData);
+      setStore((draft) => {
+        draft.savedData = draft.data;
+      });
       saveDialogRef.current?.close();
       msg.success(t("dashPricing.messages.draftSaved"));
     } catch (err) {
@@ -465,8 +448,10 @@ function PricingPage() {
         result.data?.restorePricingSnapshot?.data ?? {},
       );
       const d = parsed ?? EMPTY_DATA;
-      setData(d);
-      setSavedData(d);
+      setStore((draft) => {
+        draft.data = d;
+        draft.savedData = d;
+      });
       msg.success(t("dashPricing.messages.restored"));
     } catch (err) {
       msg.error(
@@ -522,7 +507,7 @@ function PricingPage() {
       <div className="mx-auto w-full max-w-4xl px-4 pb-28 space-y-6 pt-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex-1 min-w-0">
-            <EditableTitle value={snapshotName} onChange={setSnapshotName} />
+            <EditableTitle value={store.snapshotName} onChange={(v) => setStore((draft) => { draft.snapshotName = v; })} />
           </div>
           {hasChanges && (
             <span className="badge badge-warning badge-sm">
@@ -949,8 +934,8 @@ function PricingPage() {
             <input
               type="text"
               className="input input-bordered w-full"
-              value={snapshotName}
-              onChange={(e) => setSnapshotName(e.target.value)}
+              value={store.snapshotName}
+              onChange={(e) => setStore((draft) => { draft.snapshotName = e.target.value; })}
               placeholder={t("dashPricing.snapshotNamePlaceholder")}
               maxLength={50}
             />
@@ -970,7 +955,7 @@ function PricingPage() {
               type="button"
               className="btn btn-primary"
               onClick={() => void handleSaveDraft()}
-              disabled={savePending || !snapshotName.trim()}
+              disabled={savePending || !store.snapshotName.trim()}
             >
               {savePending ? t("dashPricing.saving") : t("dashPricing.save")}
             </button>

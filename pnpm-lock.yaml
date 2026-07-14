@@ -58,6 +58,9 @@ importers:
       immer:
         specifier: ^11.1.4
         version: 11.1.8
+      jotai-immer:
+        specifier: ^0.4.3
+        version: 0.4.3(immer@11.1.8)(jotai@2.20.1(@babel/core@7.29.7)(@babel/template@7.29.7)(@types/react@19.2.17)(react@19.2.7))
       lodash:
         specifier: ^4.17.23
         version: 4.18.1
@@ -212,6 +215,9 @@ importers:
       jotai:
         specifier: ^2.18.1
         version: 2.20.1(@babel/core@7.29.7)(@babel/template@7.29.7)(@types/react@19.2.17)(react@19.2.7)
+      jotai-immer:
+        specifier: ^0.4.3
+        version: 0.4.3(immer@11.1.8)(jotai@2.20.1(@babel/core@7.29.7)(@babel/template@7.29.7)(@types/react@19.2.17)(react@19.2.7))
       js-base64:
         specifier: ^3.7.8
         version: 3.7.8
@@ -5327,6 +5333,12 @@ packages:
 
   jose@6.2.3:
     resolution: {integrity: sha512-YYVDInQKFJfR/xa3ojUTl8c2KoTwiL1R5Wg9YCydwH0x0B9grbzlg5HC7mMjCtUJjbQ/YnGEZIhI5tCgfTb4Hw==}
+
+  jotai-immer@0.4.3:
+    resolution: {integrity: sha512-sJWiSweR294aDA/jeH6bKSKYVxRqgfxnLWaZmKw0/Hd6iGKLN4TSB3AHpFWQFDf0W+P3sEIkROr0ALlWQfCSeA==}
+    peerDependencies:
+      immer: '>=9.0.0'
+      jotai: '>=2.0.0'
 
   jotai@2.20.1:
     resolution: {integrity: sha512-dnuKfU/GLi8B28RRMjQ3AfoN7kfzP8o41+AX2FmITZqEMY8PHnjABq+VkEooomLwYaGjda+pgy0yFSjaHX/ZPg==}
@@ -12673,6 +12685,11 @@ snapshots:
   jiti@2.6.1: {}
 
   jose@6.2.3: {}
+
+  jotai-immer@0.4.3(immer@11.1.8)(jotai@2.20.1(@babel/core@7.29.7)(@babel/template@7.29.7)(@types/react@19.2.17)(react@19.2.7)):
+    dependencies:
+      immer: 11.1.8
+      jotai: 2.20.1(@babel/core@7.29.7)(@babel/template@7.29.7)(@types/react@19.2.17)(react@19.2.7)
 
   jotai@2.20.1(@babel/core@7.29.7)(@babel/template@7.29.7)(@types/react@19.2.17)(react@19.2.7):
     optionalDependencies:
