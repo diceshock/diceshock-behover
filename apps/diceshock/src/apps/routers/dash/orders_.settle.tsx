@@ -90,13 +90,16 @@ function SettlePageWithBoundary() {
 
 type SinglePreview = SettlementPreviewQuery["settlementPreview"];
 
-const SINGLE_PAYMENT_PRESETS = [
-  { value: "external", label: "外部支付" },
-  { value: "stored_value", label: "储值余额" },
-  { value: "points", label: "积分" },
-] as const;
+function getSinglePaymentPresets(t: (key: string) => string) {
+  return [
+    { value: "external", label: t("dashSettle.paymentExternal") },
+    { value: "stored_value", label: t("dashSettle.paymentStoredValue") },
+    { value: "points", label: t("dashSettle.paymentPoints") },
+  ] as const;
+}
 
 function SingleOrderReceipt({ orderId }: { orderId: string }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const msg = useMsg();
 
@@ -145,20 +148,17 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
     const ptsBal = preview.membership.pointsBalance;
     const price = preview.finalPrice;
     const pts = preview.finalPoints;
+    // Auto-select best method based on balance sufficiency, but always pre-fill the full amount
     let preset: "stored_value" | "points" | "external" = "external";
-    let amount = "";
-    let deductPts = "";
     if (svBal >= price && price > 0) {
       preset = "stored_value";
-      amount = String(price / 100);
     } else if (ptsBal >= pts && pts > 0) {
       preset = "points";
-      deductPts = String(pts);
     }
     setSettleForm({
       paymentPreset: preset,
-      deductAmount: amount,
-      deductPoints: deductPts,
+      deductAmount: price > 0 ? String(price / 100) : "",
+      deductPoints: pts > 0 ? String(pts) : "",
       pointsChange: "",
       note: "",
     });
@@ -170,7 +170,7 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
     if (!preview || settling) return;
     const parsed = settleFormSchema.safeParse(settleForm);
     if (!parsed.success) {
-      msg.error(parsed.error.issues[0]?.message ?? "表单验证失败");
+      msg.error(parsed.error.issues[0]?.message ?? t("dashSettle.formValidationFailed"));
       return;
     }
     const { paymentPreset, deductAmount, deductPoints, pointsChange, note } = parsed.data;
@@ -188,10 +188,10 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
           },
         },
       });
-      msg.success("结算成功");
+      msg.success(t("dashSettle.settleSuccess"));
       void refetch();
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "结算失败");
+      msg.error(err instanceof Error ? err.message : t("dashSettle.settleFailed"));
     } finally {
       setSettling(false);
     }
@@ -200,10 +200,10 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
   const handleResume = useCallback(async () => {
     try {
       await resumeOrder({ variables: { id: orderId } });
-      msg.success("已恢复计时");
+      msg.success(t("dashSettle.resumeSuccess"));
       void refetch();
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : "恢复失败");
+      msg.error(err instanceof Error ? err.message : t("dashSettle.resumeFailed"));
     }
   }, [orderId, resumeOrder, msg, refetch]);
 
@@ -213,8 +213,8 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
   if (error || !preview) {
     return (
       <main className="size-full flex flex-col items-center justify-center gap-4">
-        <p className="text-base-content/60">{error?.message ?? "订单未找到"}</p>
-        <Link to="/dash/orders" search={{ q: "", sortBy: "start_at", sortOrder: "desc", groupBy: "none", page: "1" }} className="btn btn-primary btn-sm">返回订单列表</Link>
+        <p className="text-base-content/60">{error?.message ?? t("dashSettle.orderNotFound")}</p>
+        <Link to="/dash/orders" search={{ q: "", sortBy: "start_at", sortOrder: "desc", groupBy: "none", page: "1" }} className="btn btn-primary btn-sm">{t("dashSettle.backToOrders")}</Link>
       </main>
     );
   }
@@ -225,7 +225,7 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
   return (
     <ClientOnly>
       <main className="size-full overflow-y-auto">
-        <div className="mx-auto max-w-md px-4 py-6">
+        <div className="mx-auto max-w-md px-4 py-6 pb-[50vh] md:pb-6">
           {/* Receipt container */}
           <div className="bg-base-100 border border-base-300 rounded-xl shadow-sm overflow-hidden">
             {/* Receipt header */}
@@ -234,31 +234,31 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
                 <div>
                   <h1 className="text-lg font-bold flex items-center gap-2">
                     <ReceiptIcon className="size-5" />
-                    {preview.order.nickname ?? preview.order.uid ?? "匿名"}
+                    {preview.order.nickname ?? preview.order.uid ?? t("dashSettle.anonymous")}
                   </h1>
                   <p className="text-xs text-base-content/50 mt-0.5">
-                    {preview.order.table?.name ?? "未知桌台"} · {dayjs(preview.order.startAt).format("MM/DD HH:mm")}
-                    {preview.order.endAt ? ` — ${dayjs(preview.order.endAt).format("HH:mm")}` : " — 进行中"}
+                    {preview.order.table?.name ?? t("dashSettle.unknownTable")} · {dayjs(preview.order.startAt).format("MM/DD HH:mm")}
+                    {preview.order.endAt ? ` — ${dayjs(preview.order.endAt).format("HH:mm")}` : ` — ${t("dashSettle.ongoing")}`}
                   </p>
                 </div>
-                {isSettled && <span className="badge badge-success">已结算</span>}
-                {preview.order.status === "PAUSED" && <span className="badge badge-warning">暂停中</span>}
-                {preview.order.status === "ACTIVE" && <span className="badge badge-info">进行中</span>}
+                {isSettled && <span className="badge badge-success">{t("dashSettle.settled")}</span>}
+                {preview.order.status === "PAUSED" && <span className="badge badge-warning">{t("dashSettle.paused")}</span>}
+                {preview.order.status === "ACTIVE" && <span className="badge badge-info">{t("dashSettle.active")}</span>}
               </div>
             </div>
 
             {/* Time summary bar */}
             <div className="grid grid-cols-3 text-center py-3 border-b border-base-300 text-xs">
-              <div><span className="font-mono text-base font-bold">{preview.totalMinutes}</span><br/>总分钟</div>
-              <div><span className="font-mono text-base font-bold text-warning">{preview.pausedMinutes}</span><br/>暂停</div>
-              <div><span className="font-mono text-base font-bold text-success">{preview.billableMinutes}</span><br/>计费</div>
+              <div><span className="font-mono text-base font-bold">{preview.totalMinutes}</span><br/>{t("dashSettle.totalMinutes")}</div>
+              <div><span className="font-mono text-base font-bold text-warning">{preview.pausedMinutes}</span><br/>{t("dashSettle.pausedMinutes")}</div>
+              <div><span className="font-mono text-base font-bold text-success">{preview.billableMinutes}</span><br/>{t("dashSettle.billableMinutes")}</div>
             </div>
 
             {/* Plan details - per-segment breakdown */}
             {preview.priceBreakdown && preview.priceBreakdown.planDetails.length > 0 && (
               <div className="px-5 py-3 border-b border-base-300">
                 <div className="space-y-2">
-                  {preview.priceBreakdown.planDetails.map((detail, idx) => (
+                  {preview.priceBreakdown.planDetails.map((detail: any, idx: number) => (
                     <div key={idx} className="rounded-lg bg-base-200/50 px-3 py-2 text-sm">
                       {/* Row 1: plan name + time range */}
                       <div className="flex items-center justify-between">
@@ -272,20 +272,20 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
                         </span>
                         <span className="font-mono font-semibold">
                           {detail.billingType === "fixed"
-                            ? "固定"
-                            : `${detail.billableHours}小时`}
+                            ? t("dashSettle.billingFixed")
+                            : t("dashSettle.billingHours", { hours: detail.billableHours })}
                         </span>
                       </div>
                       {/* Row 2: unit price + subtotal */}
                       <div className="flex items-center justify-between mt-1 text-xs text-base-content/60">
                         <span>
                           {detail.billingType === "fixed"
-                            ? `固定 ${formatPrice(detail.unitPrice)}`
-                            : `${formatPrice(detail.unitPrice)}/时`}
+                            ? t("dashSettle.billingFixedPrice", { price: formatPrice(detail.unitPrice) })
+                            : t("dashSettle.billingPerHour", { price: formatPrice(detail.unitPrice) })}
                         </span>
                         <span className="font-mono">
                           {detail.capApplied && (
-                            <span className="text-warning mr-1">封顶</span>
+                            <span className="text-warning mr-1">{t("dashSettle.capApplied")}</span>
                           )}
                           <span className="font-semibold text-base-content">{formatPrice(detail.subtotalPrice)}</span>
                         </span>
@@ -299,12 +299,12 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
             {/* Subtotal: 应付金额 */}
             <div className="px-5 py-4 border-b border-base-300 bg-base-200/50">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-base-content/60">应付金额</span>
+                <span className="text-sm text-base-content/60">{t("dashSettle.subtotalLabel")}</span>
                 <span className="text-2xl font-bold font-mono">{formatPrice(preview.finalPrice)}</span>
               </div>
               {preview.finalPoints > 0 && (
                 <div className="flex items-center justify-between mt-1">
-                  <span className="text-sm text-base-content/60">或积分</span>
+                  <span className="text-sm text-base-content/60">{t("dashSettle.orPoints")}</span>
                   <span className="text-lg font-semibold">{formatPoints(preview.finalPoints)}</span>
                 </div>
               )}
@@ -320,17 +320,17 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
                       ? formatPrice(preview.order.settledPrice)
                       : preview.order.settledPoints != null && preview.order.settledPoints > 0
                         ? formatPoints(preview.order.settledPoints)
-                        : "外部支付"}
+                        : t("dashSettle.settledViaExternal")}
                   </div>
                   <div className="text-sm text-base-content/60 mt-1">
                     {preview.order.settledPrice != null && preview.order.settledPrice > 0
-                      ? "储值余额支付"
+                      ? t("dashSettle.settledViaStoredValue")
                       : preview.order.settledPoints != null && preview.order.settledPoints > 0
-                        ? "积分支付"
-                        : `应付 ${formatPrice(preview.order.finalPrice ?? preview.finalPrice)}`}
+                        ? t("dashSettle.settledViaPoints")
+                        : t("dashSettle.amountDue", { price: formatPrice(preview.order.finalPrice ?? preview.finalPrice) })}
                   </div>
                   <div className="text-xs text-base-content/40 mt-2">
-                    {preview.order.endAt ? dayjs(preview.order.endAt).format("YYYY-MM-DD HH:mm") : ""} 结算
+                    {preview.order.endAt ? dayjs(preview.order.endAt).format("YYYY-MM-DD HH:mm") : ""} t("dashSettle.settledAt")
                   </div>
                 </div>
               </div>
@@ -341,9 +341,9 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
               <form className="px-5 py-4 space-y-4" onSubmit={(e) => { e.preventDefault(); void handleSettle(); }}>
                 {/* Payment method selector */}
                 <div>
-                  <label className="text-xs text-base-content/50 mb-1.5 block">支付方式</label>
+                  <label className="text-xs text-base-content/50 mb-1.5 block">{t("dashSettle.paymentMethodLabel")}</label>
                   <div className="flex gap-2">
-                    {SINGLE_PAYMENT_PRESETS.map((p) => (
+                    {getSinglePaymentPresets(t).map((p) => (
                       <div key={p.value} className="flex-1">
                         <button
                           type="button"
@@ -351,9 +351,9 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
                           onClick={() => updateSettleForm((d) => {
                             d.paymentPreset = p.value;
                             if (p.value === "stored_value") {
-                              d.deductAmount = String(Math.min(storedValueBalance, preview.finalPrice) / 100);
+                              d.deductAmount = String(preview.finalPrice / 100);
                             } else if (p.value === "points") {
-                              d.deductPoints = String(Math.min(pointsBalance, preview.finalPoints > 0 ? preview.finalPoints : 0));
+                              d.deductPoints = String(preview.finalPoints > 0 ? preview.finalPoints : 0);
                             }
                           })}
                         >
@@ -362,7 +362,7 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
                             <span className="text-[10px] opacity-60 ml-1">({formatPrice(storedValueBalance)})</span>
                           )}
                           {p.value === "points" && (
-                            <span className="text-[10px] opacity-60 ml-1">({pointsBalance}点)</span>
+                            <span className="text-[10px] opacity-60 ml-1">({t("dashSettle.pointsBalance", { points: pointsBalance })})</span>
                           )}
                         </button>
                       </div>
@@ -374,17 +374,17 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
                 {settleForm.paymentPreset === "stored_value" && (
                   <div>
                     <label className="text-xs text-base-content/50 mb-1 block">
-                      储值扣除 (余额: {formatPrice(storedValueBalance)})
+                      {t("dashSettle.storedValueDeductLabel", { balance: formatPrice(storedValueBalance) })}
                     </label>
                     <input
                       type="number"
                       className="input input-sm input-bordered w-full"
-                      placeholder={`最多 ${(storedValueBalance / 100).toFixed(0)} 元`}
+                      placeholder={t("dashSettle.svMaxPlaceholder", { max: (storedValueBalance / 100).toFixed(0) })}
                       value={settleForm.deductAmount}
                       onChange={(e) => updateSettleForm((d) => { d.deductAmount = e.target.value; })}
                     />
                     {Number(settleForm.deductAmount) * 100 > storedValueBalance && (
-                      <p className="text-xs text-error mt-1">超出储值余额</p>
+                      <p className="text-xs text-error mt-1">{t("dashSettle.svExceedsBalance")}</p>
                     )}
                   </div>
                 )}
@@ -393,24 +393,24 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
                 {settleForm.paymentPreset === "points" && (
                   <div>
                     <label className="text-xs text-base-content/50 mb-1 block">
-                      积分扣除 (余额: {pointsBalance}点)
+                      {t("dashSettle.pointsDeductLabel", { balance: pointsBalance })}
                     </label>
                     <input
                       type="number"
                       className="input input-sm input-bordered w-full"
-                      placeholder={`最多 ${pointsBalance} 点`}
+                      placeholder={t("dashSettle.ptsMaxPlaceholder", { max: pointsBalance })}
                       value={settleForm.deductPoints}
                       onChange={(e) => updateSettleForm((d) => { d.deductPoints = e.target.value; })}
                     />
                     {Number(settleForm.deductPoints) > pointsBalance && (
-                      <p className="text-xs text-error mt-1">超出积分余额</p>
+                      <p className="text-xs text-error mt-1">{t("dashSettle.ptsExceedsBalance")}</p>
                     )}
                   </div>
                 )}
 
                 {/* Points change */}
                 <div>
-                  <label className="text-xs text-base-content/50 mb-1 block">积分变动 (正=奖励, 负=扣除)</label>
+                  <label className="text-xs text-base-content/50 mb-1 block">{t("dashSettle.pointsChangeLabel")}</label>
                   <input
                     type="number"
                     className="input input-sm input-bordered w-full"
@@ -422,10 +422,10 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
 
                 {/* Note */}
                 <div>
-                  <label className="text-xs text-base-content/50 mb-1 block">备注</label>
+                  <label className="text-xs text-base-content/50 mb-1 block">{t("dashSettle.noteLabel")}</label>
                   <textarea
                     className="textarea textarea-sm textarea-bordered w-full"
-                    placeholder="备注(可选)"
+                    placeholder={t("dashSettle.notePlaceholder")}
                     rows={2}
                     value={settleForm.note}
                     onChange={(e) => updateSettleForm((d) => { d.note = e.target.value; })}
@@ -436,13 +436,13 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
                 {settleForm.paymentPreset === "stored_value" && Number(settleForm.deductAmount) * 100 > storedValueBalance && (
                   <div className="bg-error/10 text-error text-xs px-3 py-2 rounded-lg flex items-center gap-1.5">
                     <span className="font-semibold">⚠</span>
-                    储值余额不足：当前余额 {formatPrice(storedValueBalance)}，扣除金额 {formatPrice(Number(settleForm.deductAmount) * 100)}，超出 {formatPrice(Number(settleForm.deductAmount) * 100 - storedValueBalance)}。
+                    {t("dashSettle.svInsufficientWarning", { balance: formatPrice(storedValueBalance), deduct: formatPrice(Number(settleForm.deductAmount) * 100), excess: formatPrice(Number(settleForm.deductAmount) * 100 - storedValueBalance) })}
                   </div>
                 )}
                 {settleForm.paymentPreset === "points" && Number(settleForm.deductPoints) > pointsBalance && (
                   <div className="bg-error/10 text-error text-xs px-3 py-2 rounded-lg flex items-center gap-1.5">
                     <span className="font-semibold">⚠</span>
-                    积分余额不足：当前余额 {pointsBalance}点，扣除积分 {Number(settleForm.deductPoints)}点，超出 {Number(settleForm.deductPoints) - pointsBalance}点。
+                    {t("dashSettle.ptsInsufficientWarning", { balance: pointsBalance, deduct: Number(settleForm.deductPoints), excess: Number(settleForm.deductPoints) - pointsBalance })}
                   </div>
                 )}
 
@@ -457,11 +457,11 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
                     }
                   >
                     {settling ? <span className="loading loading-spinner loading-xs" /> : <CheckCircleIcon className="size-4" />}
-                    确认结算
+                    {t("dashSettle.confirmSettleBtn")}
                   </button>
                   {preview.order.status === "PAUSED" && (
                     <button type="button" className="btn btn-ghost gap-1" onClick={() => void handleResume()}>
-                      <ClockIcon className="size-4" /> 恢复
+                      <ClockIcon className="size-4" /> {t("dashSettle.resumeOrderBtn")}
                     </button>
                   )}
                 </div>
@@ -471,11 +471,11 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
             {/* Pause logs */}
             {preview.pauseLogs.length > 0 && (
               <div className="px-5 py-3 border-t border-base-300 text-xs text-base-content/50">
-                <div className="font-semibold text-base-content/70 mb-1">暂停记录</div>
+                <div className="font-semibold text-base-content/70 mb-1">{t("dashSettle.pauseLogsTitle")}</div>
                 {preview.pauseLogs.map((log: { pausedAt: string; resumedAt: string | null }, i: number) => (
                   <div key={i} className="flex justify-between">
                     <span>{dayjs(log.pausedAt).format("HH:mm")}</span>
-                    <span>{log.resumedAt ? dayjs(log.resumedAt).format("HH:mm") : "进行中"}</span>
+                    <span>{log.resumedAt ? dayjs(log.resumedAt).format("HH:mm") : t("dashSettle.pauseOngoing")}</span>
                   </div>
                 ))}
               </div>
@@ -484,18 +484,18 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
             {/* Membership */}
             {(preview.membership.hasTimePlan || storedValueBalance > 0 || pointsBalance > 0) && (
               <div className="px-5 py-3 border-t border-base-300 text-xs text-base-content/50">
-                <div className="font-semibold text-base-content/70 mb-1">会员信息</div>
+                <div className="font-semibold text-base-content/70 mb-1">{t("dashSettle.membershipTitle")}</div>
                 {preview.membership.hasTimePlan && (
                   <div className="flex justify-between">
-                    <span>时间计划</span>
-                    <span>{preview.membership.timePlanType} ({preview.membership.timePlanActive ? "有效" : "已过期"})</span>
+                    <span>{t("dashSettle.timePlanLabel")}</span>
+                    <span>{preview.membership.timePlanType} ({preview.membership.timePlanActive ? t("dashSettle.timePlanActive") : t("dashSettle.timePlanExpired")})</span>
                   </div>
                 )}
                 {storedValueBalance > 0 && (
-                  <div className="flex justify-between"><span>储值余额</span><span>{formatPrice(storedValueBalance)}</span></div>
+                  <div className="flex justify-between"><span>{t("dashSettle.storedValueBalanceLabel")}</span><span>{formatPrice(storedValueBalance)}</span></div>
                 )}
                 {pointsBalance > 0 && (
-                  <div className="flex justify-between"><span>积分余额</span><span>{pointsBalance}点</span></div>
+                  <div className="flex justify-between"><span>{t("dashSettle.pointsBalanceLabel")}</span><span>{pointsBalance}</span></div>
                 )}
               </div>
             )}
@@ -503,11 +503,11 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
             {/* Footer */}
             <div className="px-5 py-3 border-t border-base-300 flex gap-2 justify-center">
               <Link to="/dash/orders" search={{ q: "", sortBy: "start_at", sortOrder: "desc", groupBy: "none", page: "1" }} className="btn btn-ghost btn-xs gap-1">
-                <HouseIcon className="size-3" /> 订单列表
+                <HouseIcon className="size-3" /> {t("dashSettle.orderListLink")}
               </Link>
               {preview.order.userId && (
                 <Link to="/dash/users/$id" params={{ id: preview.order.userId }} search={{ tab: "basic" }} className="btn btn-ghost btn-xs gap-1">
-                  <UserIcon className="size-3" /> 用户详情
+                  <UserIcon className="size-3" /> {t("dashSettle.userDetailLink")}
                 </Link>
               )}
             </div>
@@ -516,7 +516,7 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
           {/* Recent orders below the receipt */}
           {preview.recentOrders.length > 0 && (
             <div className="mt-6">
-              <h3 className="text-sm font-semibold text-base-content/60 mb-2">近期订单</h3>
+              <h3 className="text-sm font-semibold text-base-content/60 mb-2">{t("dashSettle.recentOrdersTitle")}</h3>
               <div className="space-y-1">
                 {preview.recentOrders.map((o: { id: string; tableName: string; startAt: string; endAt: string | null; finalPrice: number | null; status: string }) => (
                   <Link
@@ -556,24 +556,31 @@ interface UserCardState {
 
 // --- Plan options ---
 
-const PLAN_OPTIONS: { value: string; label: string }[] = [
-  { value: "none", label: "无计划" },
-  { value: "monthly", label: "桌面通行证" },
-  { value: "monthly_cc", label: "CC桌面通行证" },
-  { value: "yearly", label: "桌面通行证 LTS" },
-  { value: "stored_value", label: "储值卡" },
-];
+function getPlanOptions(t: (key: string) => string) {
+  return [
+    { value: "none", label: t("dashSettle.planNone") },
+    { value: "monthly", label: t("dashSettle.planMonthly") },
+    { value: "monthly_cc", label: t("dashSettle.planMonthlyCc") },
+    { value: "yearly", label: t("dashSettle.planYearly") },
+    { value: "stored_value", label: t("dashSettle.planStoredValue") },
+  ] as const;
+}
 
 // --- Utility ---
 
 const HALF_HOUR_MS = 30 * 60 * 1000;
 
-function formatMinutes(mins: number): string {
+function formatMinutes(mins: number, t?: (key: string, vars?: Record<string, string | number>) => string): string {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
-  if (h === 0) return `${m}分钟`;
-  if (m === 0) return `${h}小时`;
-  return `${h}小时${m}分钟`;
+  if (t) {
+    if (h === 0) return t("dashSettle.minutesFmt", { minutes: m });
+    if (m === 0) return t("dashSettle.hoursFmt", { hours: h });
+    return t("dashSettle.hourMinutesFmt", { hours: h, minutes: m });
+  }
+  if (h === 0) return `${m}min`;
+  if (m === 0) return `${h}h`;
+  return `${h}h${m}m`;
 }
 
 // --- Main Page ---
@@ -752,7 +759,7 @@ function BatchSettlePage() {
 
     const parsed = batchSettleSchema.safeParse(state);
     if (!parsed.success) {
-      msgRef.current.error(parsed.error.issues[0]?.message ?? "表单验证失败");
+      msgRef.current.error(parsed.error.issues[0]?.message ?? t("dashSettle.batchValidationFailed"));
       return;
     }
 
@@ -769,12 +776,12 @@ function BatchSettlePage() {
         effectiveDeductPoints = state.deductPoints;
         break;
       case 'external':
-        effectiveNote = effectiveNote ? `使用外部付款; ${effectiveNote}` : "使用外部付款";
+        effectiveNote = effectiveNote ? `${t("dashSettle.noteExternalPayment")}; ${effectiveNote}` : t("dashSettle.noteExternalPayment");
         break;
       case 'custom':
         effectiveDeductAmount = state.deductAmount;
         effectiveDeductPoints = state.deductPoints;
-        effectiveNote = effectiveNote ? `使用自定义付款; ${effectiveNote}` : "使用自定义付款";
+        effectiveNote = effectiveNote ? `${t("dashSettle.noteCustomPayment")}; ${effectiveNote}` : t("dashSettle.noteCustomPayment");
         break;
     }
 
@@ -788,9 +795,9 @@ function BatchSettlePage() {
     const ptsWarning = effectiveDeductPoints > 0 && resultingPts < 1;
     if (svWarning || ptsWarning) {
       const warnings: string[] = [];
-      if (svWarning) warnings.push(`储值余额将降至 ¥${(resultingSv / 100).toFixed(2)}`);
-      if (ptsWarning) warnings.push(`积分余额将降至 ${resultingPts}点`);
-      const confirmMsg = `${warnings.join("，")}，确认结算？`;
+      if (svWarning) warnings.push(t("dashSettle.svBalanceWarning", { balance: (resultingSv / 100).toFixed(2) }));
+      if (ptsWarning) warnings.push(t("dashSettle.ptsBalanceWarning", { balance: resultingPts }));
+      const confirmMsg = `${warnings.join(", ")} — ${t("dashSettle.confirmSettle")}`;
       if (!confirm(confirmMsg)) return;
     }
 
@@ -808,7 +815,7 @@ function BatchSettlePage() {
         },
       });
       updateUserState(orderId, { settled: true });
-      msgRef.current.success("结算完成");
+      msgRef.current.success(t("dashSettle.batchSettleSuccess"));
       // Check if all settled
       const newSettledCount = settledCount + 1;
       if (newSettledCount === previews.length) {
@@ -819,16 +826,16 @@ function BatchSettlePage() {
       }
     } catch (err) {
       console.error("[settle] settleOrder failed:", err);
-      msgRef.current.error(err instanceof Error ? err.message : "结算失败");
+      msgRef.current.error(err instanceof Error ? err.message : t("dashSettle.batchSettleFailed"));
     }
   }, [userStates, settleOrder, updateUserState, settledCount, previews.length, batchSettleSchema]);
 
   // Resume order
   const handleResumeUser = useCallback(async (orderId: string) => {
-    if (!confirm("确定恢复计费？该用户将从批量结算中移除并继续计费。")) return;
+    if (!confirm(t("dashSettle.confirmResumeBilling"))) return;
     try {
       await resumeOrder({ variables: { id: orderId } });
-      msgRef.current.success("已恢复计费");
+      msgRef.current.success(t("dashSettle.batchResumeSuccess"));
       const remaining = ids.filter((id) => id !== orderId);
       if (remaining.length === 0) {
         void navigate({ to: "/dash/orders", search: { q: "", sortBy: "start_at", sortOrder: "desc", groupBy: "none", page: "1" } });
@@ -836,7 +843,7 @@ function BatchSettlePage() {
         void navigate({ to: "/dash/orders/settle", search: { ids: remaining } });
       }
     } catch (err) {
-      msgRef.current.error(err instanceof Error ? err.message : "恢复失败");
+      msgRef.current.error(err instanceof Error ? err.message : t("dashSettle.batchResumeFailed"));
     }
   }, [ids, resumeOrder, navigate]);
 
@@ -899,7 +906,7 @@ function BatchSettlePage() {
           pricingSnapshot={pricingSnapshot}
         />
 
-        <div className="mx-auto w-full max-w-4xl px-4 pb-32">
+          <div className="mx-auto w-full max-w-4xl px-4 pb-[50vh] md:pb-32">
           {previews.map((preview) => {
             const state = userStates.get(preview.order.id);
             if (!state) return null;
@@ -958,6 +965,8 @@ function OverviewSection({
   totalDuration: number;
   pricingSnapshot: SnapshotData | null;
 }) {
+  const { t } = useTranslation();
+
   const chartOption = useMemo<EChartsOption>(() => {
     if (previews.length === 0) return {};
 
@@ -996,7 +1005,7 @@ function OverviewSection({
           points.push(Math.round(p.finalPrice * pct));
         }
       }
-      userSeries.push({ name: p.order.nickname ?? p.order.uid ?? "用户", data: points });
+      userSeries.push({ name: p.order.nickname ?? p.order.uid ?? t("dashSettle.userFallback"), data: points });
     }
 
     // Total line
@@ -1014,7 +1023,7 @@ function OverviewSection({
       yAxis: { type: "value", show: false },
       series: [
         {
-          name: "总计",
+          name: "Total",
           type: "line",
           data: totalData,
           smooth: true,
@@ -1045,22 +1054,22 @@ function OverviewSection({
 
       <div className="relative z-10 px-4 pt-4 pb-6">
         <div className="flex items-center gap-2 mb-4">
-          <h1 className="text-xl font-bold">批量结算</h1>
+          <h1 className="text-xl font-bold">{t("dashSettle.batchTitle")}</h1>
         </div>
 
         <div className="mx-auto max-w-4xl flex flex-wrap gap-6 items-end">
           <div>
-            <div className="text-xs text-base-content/50 uppercase tracking-wider">总金额</div>
+            <div className="text-xs text-base-content/50 uppercase tracking-wider">{t("dashSettle.totalAmountLabel")}</div>
             <div className="text-3xl font-bold font-mono">{formatPrice(totalPrice)}</div>
           </div>
           <div>
-            <div className="text-xs text-base-content/50 uppercase tracking-wider">总时长</div>
-            <div className="text-xl font-semibold">{formatMinutes(totalDuration)}</div>
+            <div className="text-xs text-base-content/50 uppercase tracking-wider">{t("dashSettle.totalDurationLabel")}</div>
+            <div className="text-xl font-semibold">{formatMinutes(totalDuration, t)}</div>
           </div>
           <div className="flex flex-wrap gap-3 ml-auto">
             {previews.map((p) => (
               <div key={p.order.id} className="text-sm">
-                <span className="text-base-content/60">{p.order.nickname ?? p.order.uid ?? "用户"}</span>
+                <span className="text-base-content/60">{p.order.nickname ?? p.order.uid ?? t("dashSettle.userFallback")}</span>
                 <span className="ml-1 font-mono font-semibold">{formatPrice(p.finalPrice)}</span>
               </div>
             ))}
@@ -1073,12 +1082,14 @@ function OverviewSection({
 
 // === Per-User Billing Card ===
 
-const PAYMENT_PRESETS = [
-  { key: 'stored_value', label: '储值划扣' },
-  { key: 'points', label: '积分划扣' },
-  { key: 'external', label: '外部付款' },
-  { key: 'custom', label: '自定义' },
-] as const;
+function getPaymentPresets(t: (key: string) => string) {
+  return [
+    { key: 'stored_value', label: t("dashSettle.batchSvDeduct") },
+    { key: 'points', label: t("dashSettle.batchPtsDeduct") },
+    { key: 'external', label: t("dashSettle.batchExternalPayment") },
+    { key: 'custom', label: t("dashSettle.batchCustom") },
+  ] as const;
+}
 
 const UserBillingCard = forwardRef<HTMLDivElement, {
   preview: SettlementPreviewItem;
@@ -1089,6 +1100,7 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
   onSettle: () => void;
   onResume: () => void;
 }>(function UserBillingCard({ preview, state, pricingSnapshot, computePrice, onStateChange, onSettle, onResume }, ref) {
+  const { t } = useTranslation();
   const calculatedPrice = useMemo(
     () => computePrice(preview, state.selectedPlan),
     [preview, state.selectedPlan, computePrice],
@@ -1109,10 +1121,10 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
 
   const presetDisabledReason = useMemo(() => ({
     stored_value: storedValueBalance < calculatedPrice
-      ? `储值余额不足 (余额: ¥${(storedValueBalance / 100).toFixed(2)})`
+      ? t("dashSettle.svInsufficientDetail", { balance: (storedValueBalance / 100).toFixed(2) })
       : null,
     points: pointsBalance < finalPoints
-      ? `积分不足 (余额: ${pointsBalance}点)`
+      ? t("dashSettle.ptsInsufficientDetail", { balance: pointsBalance })
       : null,
     external: null,
     custom: null,
@@ -1160,14 +1172,14 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
       const pauseIdx = Math.floor((new Date(log.pausedAt).getTime() - startAt) / HALF_HOUR_MS);
       markLines.push({
         xAxis: Math.min(pauseIdx, intervals - 1),
-        label: { formatter: "暂停", fontSize: 9 },
+        label: { formatter: t("dashSettle.chartPause"), fontSize: 9 },
         lineStyle: { color: "#f59e0b" },
       });
       if (log.resumedAt) {
         const resumeIdx = Math.floor((new Date(log.resumedAt).getTime() - startAt) / HALF_HOUR_MS);
         markLines.push({
           xAxis: Math.min(resumeIdx, intervals - 1),
-          label: { formatter: "恢复", fontSize: 9 },
+          label: { formatter: t("dashSettle.chartResume"), fontSize: 9 },
           lineStyle: { color: "#10b981" },
         });
       }
@@ -1185,7 +1197,7 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
           const idx = Math.floor((boundary - startAt) / HALF_HOUR_MS);
           markLines.push({
             xAxis: Math.min(idx, intervals - 1),
-            label: { formatter: "夜间", fontSize: 9 },
+            label: { formatter: t("dashSettle.chartNight"), fontSize: 9 },
             lineStyle: { color: "#8b5cf6" },
           });
         }
@@ -1217,7 +1229,7 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
         trigger: "axis",
         formatter: (params: Array<{ name: string; value: number }>) => {
           const p = params[0];
-          return `${p?.name ?? ""}<br/>增量: ${formatPrice(p?.value ?? 0)}`;
+          return t("dashSettle.chartTooltip", { name: p?.name ?? "", price: formatPrice(p?.value ?? 0) }).replace("\n", "<br/>");
         },
       },
     };
@@ -1254,11 +1266,11 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
       case 'stored_value':
         return `-¥${(calculatedPrice / 100).toFixed(2)}`;
       case 'points':
-        return `-${finalPoints}点`;
+        return t("dashSettle.ptsDeductSummary", { amount: finalPoints });
       case 'external':
-        return "不扣除任何储值或积分";
+        return t("dashSettle.noDeduction");
       case 'custom':
-        return "自定义扣费金额";
+        return t("dashSettle.customDeduction");
     }
   };
 
@@ -1269,30 +1281,30 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <ReceiptIcon className="size-5 text-success" />
-            <span className="font-bold">{preview.order.nickname ?? preview.order.uid ?? "用户"}</span>
-            <span className="badge badge-success badge-sm">已结算</span>
+            <span className="font-bold">{preview.order.nickname ?? preview.order.uid ?? t("dashSettle.userFallback")}</span>
+            <span className="badge badge-success badge-sm">{t("dashSettle.settledBadge")}</span>
           </div>
           <span className="font-mono text-lg font-bold">{formatDualPrice(preview.finalPrice, finalPoints)}</span>
         </div>
         <div className="text-sm text-base-content/60 space-y-1">
-          <div>时长: {formatMinutes(preview.billableMinutes)} (暂停 {formatMinutes(preview.pausedMinutes)})</div>
-          <div>桌台: {preview.order.table?.name ?? "-"}</div>
-          {state.deductAmount > 0 && <div>储值扣费: {formatPrice(state.deductAmount)}</div>}
-          {state.deductPoints > 0 && <div>积分扣费: {formatPoints(state.deductPoints)}</div>}
-          {state.pointsChange !== 0 && <div>积分变更: {state.pointsChange > 0 ? "+" : ""}{state.pointsChange}</div>}
-          {state.note && <div>备注: {state.note}</div>}
+          <div>{t("dashSettle.durationSummary", { billable: formatMinutes(preview.billableMinutes, t), paused: formatMinutes(preview.pausedMinutes, t) })}</div>
+          <div>{t("dashSettle.tableLabel", { name: preview.order.table?.name ?? "-" })}</div>
+          {state.deductAmount > 0 && <div>{t("dashSettle.svDeductSummary", { amount: formatPrice(state.deductAmount) })}</div>}
+          {state.deductPoints > 0 && <div>{t("dashSettle.ptsDeductSummary", { amount: formatPoints(state.deductPoints) })}</div>}
+          {state.pointsChange !== 0 && <div>{t("dashSettle.pointsChangeSummary", { change: `${state.pointsChange > 0 ? "+" : ""}${state.pointsChange}` })}</div>}
+          {state.note && <div>{t("dashSettle.noteSummary", { note: state.note })}</div>}
         </div>
         <div className="flex gap-2 mt-3">
           <Link to="/dash/tables/$id" params={{ id: preview.order.table?.id ?? "" }} search={{ tab: "basic" }} className="btn btn-xs btn-ghost gap-1">
-            <LinkIcon className="size-3" /> 桌台详情
+            <LinkIcon className="size-3" /> {t("dashSettle.tableDetailLink")}
           </Link>
           {preview.order.userId && (
             <Link to="/dash/users/$id" params={{ id: preview.order.userId }} search={{ tab: "basic" }} className="btn btn-xs btn-ghost gap-1">
-              <UserIcon className="size-3" /> 用户详情
+              <UserIcon className="size-3" /> {t("dashSettle.userDetailLink")}
             </Link>
           )}
           <Link to="/dash/orders/settle" search={{ ids: [preview.order.id] }} className="btn btn-xs btn-ghost gap-1">
-            <ReceiptIcon className="size-3" /> 订单详情
+            <ReceiptIcon className="size-3" /> {t("dashSettle.orderDetailLink")}
           </Link>
         </div>
       </div>
@@ -1305,10 +1317,10 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <UserIcon className="size-5" />
-          <span className="font-bold text-lg">{preview.order.nickname ?? preview.order.uid ?? "用户"}</span>
+          <span className="font-bold text-lg">{preview.order.nickname ?? preview.order.uid ?? t("dashSettle.userFallback")}</span>
           <span className="text-sm text-base-content/50">{preview.order.table?.name}</span>
           <Link to="/dash/orders/settle" search={{ ids: [preview.order.id] }} className="btn btn-xs btn-ghost gap-0.5 ml-1">
-            <LinkIcon className="size-3" /> 详情
+            <LinkIcon className="size-3" /> {t("dashSettle.detailLink")}
           </Link>
         </div>
         <select
@@ -1316,7 +1328,7 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
           value={state.selectedPlan}
           onChange={(e) => onStateChange({ selectedPlan: e.target.value })}
         >
-          {PLAN_OPTIONS.map((opt) => (
+          {getPlanOptions(t).map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </select>
@@ -1331,14 +1343,14 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
 
       {/* Price display - dual format */}
       <div className="flex items-center justify-between mb-4">
-        <span className="text-sm text-base-content/60">计费金额</span>
+        <span className="text-sm text-base-content/60">{t("dashSettle.subtotalLabel")}</span>
         <span className="font-mono text-2xl font-bold text-primary">{formatDualPrice(calculatedPrice, finalPoints)}</span>
       </div>
 
       <form onSubmit={(e) => { e.preventDefault(); onSettle(); }}>
       {/* Payment preset cards - 2x2 grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-        {PAYMENT_PRESETS.map(({ key, label }) => {
+        {getPaymentPresets(t).map(({ key, label }) => {
           const disabled = presetDisabled[key];
           const selected = state.paymentPreset === key;
           const reason = presetDisabledReason[key];
@@ -1369,7 +1381,7 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
       {state.paymentPreset === 'custom' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 p-3 bg-base-100 rounded-lg border border-base-300">
           <label className="form-control">
-            <div className="label"><span className="label-text text-xs">储值扣费</span></div>
+            <div className="label"><span className="label-text text-xs">{t("dashSettle.storedValueDeductField")}</span></div>
             <div className="join">
               <span className="join-item btn btn-sm btn-disabled font-mono">-</span>
               <input
@@ -1383,7 +1395,7 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
             </div>
           </label>
           <label className="form-control">
-            <div className="label"><span className="label-text text-xs">积分扣费</span></div>
+            <div className="label"><span className="label-text text-xs">{t("dashSettle.pointsDeductField")}</span></div>
             <div className="join">
               <span className="join-item btn btn-sm btn-disabled font-mono">-</span>
               <input
@@ -1402,14 +1414,14 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
       {/* Quick links */}
       <div className="flex gap-2 mb-3">
         <Link to="/dash/orders" search={{ q: "", sortBy: "start_at", sortOrder: "desc", groupBy: "none", page: "1" }} className="btn btn-xs btn-ghost gap-1">
-          <LinkIcon className="size-3" /> 订单列表
+          <LinkIcon className="size-3" /> {t("dashSettle.orderListLink")}
         </Link>
         <Link to="/dash/tables/$id" params={{ id: preview.order.table?.id ?? "" }} search={{ tab: "basic" }} className="btn btn-xs btn-ghost gap-1">
-          <LinkIcon className="size-3" /> 桌台详情
+          <LinkIcon className="size-3" /> {t("dashSettle.tableDetailLink")}
         </Link>
         {preview.order.userId && (
           <Link to="/dash/users/$id" params={{ id: preview.order.userId }} search={{ tab: "basic" }} className="btn btn-xs btn-ghost gap-1">
-            <UserIcon className="size-3" /> 用户详情
+            <UserIcon className="size-3" /> {t("dashSettle.userDetailLink")}
           </Link>
         )}
       </div>
@@ -1417,7 +1429,7 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
       {/* Note */}
       <textarea
         className="textarea textarea-bordered w-full textarea-sm mb-4"
-        placeholder="备注（可选）"
+        placeholder={t("dashSettle.notePlaceholder")}
         rows={2}
         value={state.note}
         onChange={(e) => onStateChange({ note: e.target.value })}
@@ -1426,10 +1438,10 @@ const UserBillingCard = forwardRef<HTMLDivElement, {
       {/* Action buttons */}
       <div className="flex items-center gap-2">
         <button type="submit" className="btn btn-sm btn-primary flex-1 gap-1">
-          <CheckCircleIcon className="size-4" /> 结算
+          <CheckCircleIcon className="size-4" /> {t("dashSettle.settleBtn")}
         </button>
         <button type="button" className="btn btn-sm btn-ghost gap-1" onClick={onResume}>
-          <ClockIcon className="size-4" /> 恢复计费
+          <ClockIcon className="size-4" /> {t("dashSettle.resumeBillingBtn")}
         </button>
       </div>
       </form>
@@ -1450,15 +1462,16 @@ function PendingBar({
   onScrollToPending: () => void;
   allSettled: boolean;
 }) {
+  const { t } = useTranslation();
   if (allSettled) return null;
   return (
     <div className="sticky bottom-4 z-30 mx-auto max-w-md">
       <div className="bg-base-100 shadow-lg rounded-full px-5 py-3 flex items-center justify-between border border-base-300">
         <span className="text-sm font-medium">
-          待处理 <span className="font-bold text-primary">{settledCount}/{totalCount}</span>
+          {t("dashSettle.pendingCount")} <span className="font-bold text-primary">{settledCount}/{totalCount}</span>
         </span>
         <button type="button" className="btn btn-xs btn-primary" onClick={onScrollToPending}>
-          前往待处理项
+          {t("dashSettle.goToPending")}
         </button>
       </div>
     </div>
