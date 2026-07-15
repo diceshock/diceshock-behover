@@ -343,35 +343,30 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
                 <div>
                   <label className="text-xs text-base-content/50 mb-1.5 block">支付方式</label>
                   <div className="flex gap-2">
-                    {SINGLE_PAYMENT_PRESETS.map((p) => {
-                      const insufficientSv = p.value === "stored_value" && storedValueBalance < preview.finalPrice;
-                      const insufficientPts = p.value === "points" && (pointsBalance < preview.finalPoints || preview.finalPoints <= 0);
-                      const isDisabled = insufficientSv || insufficientPts;
-                      return (
-                        <div key={p.value} className="flex-1 relative group">
-                          <button
-                            type="button"
-                            className={`btn btn-sm w-full ${settleForm.paymentPreset === p.value ? "btn-primary" : "btn-ghost border-base-300"} ${isDisabled ? "btn-disabled opacity-50" : ""}`}
-                            disabled={isDisabled}
-                            onClick={() => updateSettleForm((d) => {
-                              d.paymentPreset = p.value;
-                              if (p.value === "stored_value") {
-                                d.deductAmount = String(Math.min(storedValueBalance, preview.finalPrice) / 100);
-                              } else if (p.value === "points") {
-                                d.deductPoints = String(Math.min(pointsBalance, preview.finalPoints));
-                              }
-                            })}
-                          >
-                            {p.label}
-                          </button>
-                          {isDisabled && (
-                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 hidden group-hover:block bg-base-300 text-xs px-2 py-1 rounded whitespace-nowrap z-10">
-                              {insufficientSv ? `余额不足 (${formatPrice(storedValueBalance)})` : "积分不足"}
-                            </div>
+                    {SINGLE_PAYMENT_PRESETS.map((p) => (
+                      <div key={p.value} className="flex-1">
+                        <button
+                          type="button"
+                          className={`btn btn-sm w-full ${settleForm.paymentPreset === p.value ? "btn-primary" : "btn-ghost border-base-300"}`}
+                          onClick={() => updateSettleForm((d) => {
+                            d.paymentPreset = p.value;
+                            if (p.value === "stored_value") {
+                              d.deductAmount = String(Math.min(storedValueBalance, preview.finalPrice) / 100);
+                            } else if (p.value === "points") {
+                              d.deductPoints = String(Math.min(pointsBalance, preview.finalPoints > 0 ? preview.finalPoints : 0));
+                            }
+                          })}
+                        >
+                          {p.label}
+                          {p.value === "stored_value" && (
+                            <span className="text-[10px] opacity-60 ml-1">({formatPrice(storedValueBalance)})</span>
                           )}
-                        </div>
-                      );
-                    })}
+                          {p.value === "points" && (
+                            <span className="text-[10px] opacity-60 ml-1">({pointsBalance}点)</span>
+                          )}
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -439,13 +434,15 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
 
                 {/* Validation warning */}
                 {settleForm.paymentPreset === "stored_value" && Number(settleForm.deductAmount) * 100 > storedValueBalance && (
-                  <div className="bg-error/10 text-error text-xs px-3 py-2 rounded-lg">
-                    储值余额不足，无法使用储值支付。请选择其他支付方式或减少扣除金额。
+                  <div className="bg-error/10 text-error text-xs px-3 py-2 rounded-lg flex items-center gap-1.5">
+                    <span className="font-semibold">⚠</span>
+                    储值余额不足：当前余额 {formatPrice(storedValueBalance)}，扣除金额 {formatPrice(Number(settleForm.deductAmount) * 100)}，超出 {formatPrice(Number(settleForm.deductAmount) * 100 - storedValueBalance)}。
                   </div>
                 )}
                 {settleForm.paymentPreset === "points" && Number(settleForm.deductPoints) > pointsBalance && (
-                  <div className="bg-error/10 text-error text-xs px-3 py-2 rounded-lg">
-                    积分余额不足，无法使用积分支付。请选择其他支付方式或减少扣除积分。
+                  <div className="bg-error/10 text-error text-xs px-3 py-2 rounded-lg flex items-center gap-1.5">
+                    <span className="font-semibold">⚠</span>
+                    积分余额不足：当前余额 {pointsBalance}点，扣除积分 {Number(settleForm.deductPoints)}点，超出 {Number(settleForm.deductPoints) - pointsBalance}点。
                   </div>
                 )}
 
@@ -455,8 +452,8 @@ function SingleOrderReceipt({ orderId }: { orderId: string }) {
                     type="submit"
                     className="btn btn-primary flex-1 gap-1"
                     disabled={settling
-                      || (settleForm.paymentPreset === "stored_value" && Number(settleForm.deductAmount) * 100 > storedValueBalance)
-                      || (settleForm.paymentPreset === "points" && Number(settleForm.deductPoints) > pointsBalance)
+                      || (settleForm.paymentPreset === "stored_value" && (Number(settleForm.deductAmount) <= 0 || Number(settleForm.deductAmount) * 100 > storedValueBalance))
+                      || (settleForm.paymentPreset === "points" && (Number(settleForm.deductPoints) <= 0 || Number(settleForm.deductPoints) > pointsBalance))
                     }
                   >
                     {settling ? <span className="loading loading-spinner loading-xs" /> : <CheckCircleIcon className="size-4" />}
