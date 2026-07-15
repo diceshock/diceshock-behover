@@ -227,10 +227,21 @@ export default {
         WECHAT_MP_APP_ID: env.WECHAT_MP_APP_ID,
         WECHAT_MP_APP_SECRET: env.WECHAT_MP_APP_SECRET,
       });
+
+      // 06:00 Shanghai = 22:00 UTC — auto-close orders past business hours
+      const hour = new Date(event.scheduledTime).getUTCHours();
+      if (hour === 22) {
+        // Dynamic import: Workers code-splitting for scheduled handlers
+        const { closeOvertimeOrders } = await import(
+          "./server/cron/overtimeAutoClose"
+        );
+        await closeOvertimeOrders({ DB: env.DB });
+      }
     }
 
     // Midnight matching (0:00 Shanghai = 16:00 UTC)
     if (event.cron === "0 16 * * *") {
+      // Dynamic import: Workers code-splitting for scheduled handlers
       const { runPreferenceMatching } = await import(
         "./server/cron/preferenceMatching"
       );
