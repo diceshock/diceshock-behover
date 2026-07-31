@@ -255,20 +255,26 @@ function BoardGameDetailPage() {
     );
   }
 
-  const content = (
-    game.content ? JSON.parse(game.content) : null
-  ) as BoardGame.BoardGameCol | null;
+  const safeJsonParse = <T,>(val: string | null | undefined, fallback: T): T => {
+    if (!val) return fallback;
+    try {
+      return JSON.parse(val) as T;
+    } catch {
+      return fallback;
+    }
+  };
+
+  const content = safeJsonParse<BoardGame.BoardGameCol | null>(
+    game.content,
+    null,
+  );
   const coverUrl = content?.sch_cover_url || content?.eng_cover_url || "";
   const gameName = game.schName || game.engName || "Unknown";
   const engName = game.engName || "";
   const rating = game.gstoneRating ?? 0;
-  const playerNum = (
-    game.playerNum ? JSON.parse(game.playerNum) : []
-  ) as number[];
-  const bestPlayerNum = (
-    game.bestPlayerNum ? JSON.parse(game.bestPlayerNum) : []
-  ) as number[];
-  const parsedCategory = game.category ? JSON.parse(game.category) : null;
+  const playerNum = safeJsonParse<number[]>(game.playerNum, []);
+  const bestPlayerNum = safeJsonParse<number[]>(game.bestPlayerNum, []);
+  const parsedCategory = safeJsonParse<unknown>(game.category, null);
   const categories = (
     Array.isArray(parsedCategory)
       ? parsedCategory
@@ -276,7 +282,7 @@ function BoardGameDetailPage() {
         ? [parsedCategory]
         : []
   ) as BoardGame.Category[];
-  const parsedMode = game.mode ? JSON.parse(game.mode) : null;
+  const parsedMode = safeJsonParse<unknown>(game.mode, null);
   const mode = parsedMode as BoardGame.Mode | BoardGame.Mode[] | null;
   const modes: BoardGame.Mode[] = Array.isArray(mode)
     ? mode

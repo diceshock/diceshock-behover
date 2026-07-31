@@ -687,7 +687,7 @@ export const usersResolvers = {
               : like(game.player_num, `%${playerNum}%`),
             bestPlayerNum === undefined
               ? undefined
-              : like(game.player_num, `%${bestPlayerNum}%`),
+              : like(game.best_player_num, `%${bestPlayerNum}%`),
           ),
         limit,
         offset,
