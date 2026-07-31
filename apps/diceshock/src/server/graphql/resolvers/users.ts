@@ -700,14 +700,12 @@ export const usersResolvers = {
         engName: g.eng_name,
         gstoneId: g.gstone_id,
         gstoneRating: g.gstone_rating,
-        category: typeof g.category === "string" ? g.category : null,
-        mode: typeof g.mode === "string" ? g.mode : null,
-        playerNum: Array.isArray(g.player_num)
-          ? g.player_num.join(",")
-          : String(g.player_num ?? ""),
-        bestPlayerNum: Array.isArray(g.best_player_num)
-          ? g.best_player_num.join(",")
-          : String(g.best_player_num ?? ""),
+        category: g.category ? JSON.stringify(g.category) : null,
+        mode: g.mode ? JSON.stringify(g.mode) : null,
+        playerNum: g.player_num ? JSON.stringify(g.player_num) : null,
+        bestPlayerNum: g.best_player_num
+          ? JSON.stringify(g.best_player_num)
+          : null,
         content: g.content ? JSON.stringify(g.content) : null,
         removeDate: g.removeDate ? toIsoString(g.removeDate) : null,
       }));
@@ -764,14 +762,12 @@ export const usersResolvers = {
         engName: game.eng_name,
         gstoneId: game.gstone_id,
         gstoneRating: game.gstone_rating,
-        category: typeof game.category === "string" ? game.category : null,
-        mode: typeof game.mode === "string" ? game.mode : null,
-        playerNum: Array.isArray(game.player_num)
-          ? game.player_num.join(",")
-          : String(game.player_num ?? ""),
-        bestPlayerNum: Array.isArray(game.best_player_num)
-          ? game.best_player_num.join(",")
-          : String(game.best_player_num ?? ""),
+        category: game.category ? JSON.stringify(game.category) : null,
+        mode: game.mode ? JSON.stringify(game.mode) : null,
+        playerNum: game.player_num ? JSON.stringify(game.player_num) : null,
+        bestPlayerNum: game.best_player_num
+          ? JSON.stringify(game.best_player_num)
+          : null,
         content: game.content ? JSON.stringify(game.content) : null,
         removeDate: game.removeDate ? toIsoString(game.removeDate) : null,
       };

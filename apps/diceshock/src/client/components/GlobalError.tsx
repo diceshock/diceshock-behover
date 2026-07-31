@@ -1,14 +1,8 @@
-import Footer from "./diceshock/Footer";
-import Header from "./diceshock/Header";
-
 export default function GlobalError({ error }: { error: unknown }) {
   const message =
     error instanceof Error ? error.message : "发生了未知错误，请稍后再试。";
 
   return (
-    <>
-      <Header />
-
       <main className="w-full min-h-[calc(100vh-4rem)] flex items-center justify-center px-4">
         <div className="flex flex-col items-center justify-center text-center max-w-2xl">
           <p className="font-mono font-black text-[25vw] md:text-[18vw] lg:text-[12rem] leading-none text-error/20 select-none">
@@ -52,8 +46,5 @@ export default function GlobalError({ error }: { error: unknown }) {
           </div>
         </div>
       </main>
-
-      <Footer />
-    </>
   );
 }
