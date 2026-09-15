@@ -164,9 +164,6 @@ max_batch_timeout = 5
 max_retries = 3
 max_concurrency = 1
 
-[[routes]]
-pattern = "origin.runespark.fun"
-custom_domain = true
 
 [triggers]
 crons = ["*/5 * * * *", "0 4-22 * * *", "0 16 * * *"]
