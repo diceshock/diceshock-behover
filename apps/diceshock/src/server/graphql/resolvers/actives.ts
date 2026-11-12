@@ -134,7 +134,7 @@ async function fetchActive(
   id: string,
 ): Promise<Record<string, unknown> | null> {
   const row = await tdb.query.activesTable.findFirst({
-    where: (a, { eq }) => eq(a.id, id),
+    where: (a, { eq, and, isNull }) => and(eq(a.id, id), isNull(a.trpg_state)),
     with: {
       creator: { columns: { id: true, name: true, image: true } },
       registrations: {
@@ -260,7 +260,7 @@ export const activesResolvers = {
 
       const tdb = dbFactory(ctx.env.DB);
       const active = await tdb.query.activesTable.findFirst({
-        where: (a, { eq }) => eq(a.id, input.activeId),
+        where: (a, { eq, and, isNull }) => and(eq(a.id, input.activeId), isNull(a.trpg_state)),
         with: { registrations: true },
       });
 
@@ -327,7 +327,7 @@ export const activesResolvers = {
 
       const tdb = dbFactory(ctx.env.DB);
       const active = await tdb.query.activesTable.findFirst({
-        where: (a, { eq }) => eq(a.id, input.activeId),
+        where: (a, { eq, and, isNull }) => and(eq(a.id, input.activeId), isNull(a.trpg_state)),
         columns: {
           id: true,
           creator_id: true,
@@ -412,7 +412,7 @@ export const activesResolvers = {
       await tdb
         .update(activesTable)
         .set(updateData)
-        .where(drizzle.eq(activesTable.id, id));
+        .where(drizzle.and(drizzle.eq(activesTable.id, id), drizzle.isNull(activesTable.trpg_state)));
 
       const active = await fetchActiveOrThrow(tdb, id);
       return toGqlActive(active);
@@ -449,7 +449,7 @@ export const activesResolvers = {
 
       const tdb = dbFactory(ctx.env.DB);
       const registration = await tdb.query.activeRegistrationsTable.findFirst({
-        where: (r, { eq }) => eq(r.id, input.registrationId),
+        where: (r, { eq, and, isNull }) => and(eq(r.id, input.registrationId), isNull(r.trpg_status)),
         columns: {
           id: true,
           active_id: true,
@@ -479,7 +479,7 @@ export const activesResolvers = {
       const tdb = dbFactory(ctx.env.DB);
 
       const rows = await tdb.query.activesTable.findMany({
-        where: (a, { inArray }) => inArray(a.id, input.ids),
+        where: (a, { inArray, and, isNull }) => and(inArray(a.id, input.ids), isNull(a.trpg_state)),
         with: {
           creator: { columns: { id: true, name: true, image: true } },
           registrations: {
@@ -494,12 +494,14 @@ export const activesResolvers = {
         },
       });
 
+      const ids = rows.map((row) => row.id);
+      if (!ids.length) return [];
       await tdb
         .delete(activeRegistrationsTable)
-        .where(drizzle.inArray(activeRegistrationsTable.active_id, input.ids));
+        .where(drizzle.inArray(activeRegistrationsTable.active_id, ids));
       await tdb
         .delete(activesTable)
-        .where(drizzle.inArray(activesTable.id, input.ids));
+        .where(drizzle.inArray(activesTable.id, ids));
 
       return rows.map((r) => toGqlActive(r as Record<string, unknown>));
     },
@@ -515,7 +517,7 @@ export const activesResolvers = {
 
       const tdb = dbFactory(ctx.env.DB);
       const registrations = await tdb.query.activeRegistrationsTable.findMany({
-        where: (r, { eq }) => eq(r.active_id, input.activeId),
+        where: (r, { eq, and, isNull }) => and(eq(r.active_id, input.activeId), isNull(r.trpg_status)),
       });
 
       const participants = await Promise.all(
@@ -559,7 +561,7 @@ export const activesResolvers = {
       if (!args.filter) {
         const storeId = args.storeId;
         const rows = await tdb.query.activesTable.findMany({
-          where: storeId ? (a, { eq }) => eq(a.store_id, storeId) : undefined,
+          where: (a, { eq, and, isNull }) => and(isNull(a.trpg_state), storeId ? eq(a.store_id, storeId) : undefined),
           orderBy: (a, { desc }) => desc(a.create_at),
           with: {
             creator: { columns: { id: true, name: true, image: true } },
@@ -595,8 +597,8 @@ export const activesResolvers = {
       const hasExpired = statuses.includes("expired");
 
       const rows = await tdb.query.activesTable.findMany({
-        where: (a, { eq, like, gte, lt, gt, and }) => {
-          const conds: ReturnType<typeof eq>[] = [];
+        where: (a, { eq, like, gte, lt, gt, and, isNull }) => {
+          const conds: ReturnType<typeof eq>[] = [isNull(a.trpg_state)];
 
           if (filter.search) {
             conds.push(like(a.title, `%${filter.search}%`));

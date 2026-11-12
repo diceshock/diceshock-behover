@@ -1,5 +1,5 @@
 import db, { activeRegistrationsTable, activesTable, users } from "@lib/db";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import type { Context } from "hono";
 import type { HonoCtxEnv } from "@/shared/types";
 import {
@@ -19,7 +19,7 @@ export async function activeCard(c: Context<HonoCtxEnv>) {
     const logoDataUrl = await fetchAsDataUrl(LOGO_URL);
 
     const active = await db(c.env.DB).query.activesTable.findFirst({
-      where: eq(activesTable.id, id),
+      where: and(eq(activesTable.id, id), isNull(activesTable.trpg_state)),
       with: {
         creator: true,
         registrations: true,

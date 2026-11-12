@@ -62,6 +62,7 @@ import requestEndpoint from "./server/middlewares/requestEndpoint";
 import serverMetaInj from "./server/middlewares/serverMetaInj";
 import storeLocaleMiddleware from "./server/middlewares/storeLocale";
 import { wechatSilentAuth } from "./server/middlewares/wechatSilentAuth";
+import { trpgRoutes } from "./server/trpg/routes";
 
 export { DsSubscriptionDO } from "./server/durableObjects/DsSubscriptionDO";
 export { PubSubDO } from "./server/durableObjects/PubSubDO";
@@ -102,6 +103,7 @@ if (import.meta.env.DEV) {
 }
 
 app.use(authInit);
+app.route("/api/trpg", trpgRoutes);
 
 app.route("/api/chat/stream", chatStream);
 app.route("/api/chat/confirm", confirmMutation);

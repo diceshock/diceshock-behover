@@ -54,6 +54,7 @@ const NAV_ITEMS: ReadonlyArray<{
   { to: "/dash", icon: GaugeIcon, labelKey: "dashNav.dashboard", exact: true },
   { to: "/dash/users", icon: UsersIcon, labelKey: "dashNav.users" },
   { to: "/dash/actives", icon: CalendarDotsIcon, labelKey: "dashNav.actives" },
+  { to: "/dash/trpg", icon: CalendarDotsIcon, labelKey: "dashNav.trpg" },
   { to: "/dash/events", icon: MegaphoneIcon, labelKey: "dashNav.events" },
   { to: "/dash/tables", icon: TableIcon, labelKey: "dashNav.tables" },
   { to: "/dash/orders", icon: ClipboardTextIcon, labelKey: "dashNav.orders" },

@@ -32,6 +32,8 @@ export const userInfoZ = createSelectSchema(userInfoTable)
   .omit({
     id: true,
     create_at: true,
+    trpg_staff_stores: true,
+    trpg_host_stores: true,
   })
   .partial({
     points: true,

@@ -255,6 +255,32 @@ async function mergeUsersInto(
       }
     }
 
+
+    // Preserve TRPG history and any confirmed seat when both accounts registered.
+    await DB.batch([
+      DB.prepare(`UPDATE active_registrations AS r SET trpg_status='withdrawn',trpg_reason='账号合并去重'
+        WHERE r.user_id IN (?1,?2) AND r.trpg_status IN ('interested','pending','confirmed')
+          AND EXISTS(SELECT 1 FROM active_registrations other WHERE other.active_id=r.active_id
+            AND other.user_id=CASE WHEN r.user_id=?1 THEN ?2 ELSE ?1 END
+            AND other.trpg_status IN ('interested','pending','confirmed')
+            AND (CASE other.trpg_status WHEN 'confirmed' THEN 3 WHEN 'pending' THEN 2 ELSE 1 END)*2 + (other.user_id=?2)
+              > (CASE r.trpg_status WHEN 'confirmed' THEN 3 WHEN 'pending' THEN 2 ELSE 1 END)*2 + (r.user_id=?2))`)
+        .bind(sourceUserId, targetUserId),
+      DB.prepare("UPDATE active_registrations SET user_id=? WHERE user_id=? AND trpg_status IS NOT NULL")
+        .bind(targetUserId, sourceUserId),
+      DB.prepare("UPDATE actives SET creator_id=? WHERE creator_id=? AND trpg_state IS NOT NULL")
+        .bind(targetUserId, sourceUserId),
+      DB.prepare(`UPDATE user_info SET
+        trpg_staff_stores=(SELECT json_group_array(value) FROM (
+          SELECT value FROM json_each(user_info.trpg_staff_stores) UNION
+          SELECT value FROM user_info AS source, json_each(source.trpg_staff_stores) WHERE source.id=?1)),
+        trpg_host_stores=(SELECT json_group_array(value) FROM (
+          SELECT value FROM json_each(user_info.trpg_host_stores) UNION
+          SELECT value FROM user_info AS source, json_each(source.trpg_host_stores) WHERE source.id=?1))
+        WHERE id=?2`).bind(sourceUserId, targetUserId),
+      DB.prepare("DELETE FROM session WHERE userId=? AND sessionToken LIKE 'ds-miniapp:%'").bind(sourceUserId),
+    ]);
+
     // j. Disable source user
     await d
       .update(users)

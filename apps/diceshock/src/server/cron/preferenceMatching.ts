@@ -282,6 +282,7 @@ export async function runPreferenceMatching(env: {
     .from(activesTable)
     .where(
       and(
+        drizzle.isNull(activesTable.trpg_state),
         gte(activesTable.date, formatDate(start)),
         lte(activesTable.date, formatDate(endInclusive)),
       ),

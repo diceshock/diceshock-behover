@@ -7,7 +7,7 @@ import dbFactory, {
   userInfoTable,
   users,
 } from "@lib/db";
-import { desc, eq, like, or, type SQL } from "drizzle-orm";
+import { and, desc, eq, isNull, like, or, type SQL } from "drizzle-orm";
 import type { GQLContext } from "../context";
 import { requireStaff } from "../guards";
 import { cfImageUrl } from "@/shared/utils/cfImage";
@@ -216,11 +216,11 @@ async function searchActives(
     .from(activesTable)
     .leftJoin(userInfoTable, eq(activesTable.creator_id, userInfoTable.id))
     .where(
-      or(
+      and(isNull(activesTable.trpg_state), or(
         like(activesTable.title, term),
         like(userInfoTable.nickname, term),
         like(userInfoTable.uid, term),
-      ),
+      )),
     )
     .orderBy(desc(activesTable.create_at))
     .limit(limit);

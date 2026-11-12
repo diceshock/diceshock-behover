@@ -173,7 +173,7 @@ export async function executeQueryActiveParticipants(
       title: activesTable.title,
     })
     .from(activesTable)
-    .where(eq(activesTable.id, args.active_id))
+    .where(and(eq(activesTable.id, args.active_id), drizzle.isNull(activesTable.trpg_state)))
     .limit(1);
 
   if (active.length === 0) {

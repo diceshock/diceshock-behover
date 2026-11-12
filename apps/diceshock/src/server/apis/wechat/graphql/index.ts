@@ -2,16 +2,25 @@ import type dbFactory from "@lib/db";
 import { buildSchema } from "drizzle-graphql";
 import {
   type ASTVisitor,
+  astFromValue,
   type DocumentNode,
   execute,
+  getNamedType,
+  getOperationAST,
+  getVariableValues,
   type GraphQLError,
   GraphQLError as GraphQLExecutionError,
   type GraphQLSchema,
+  isInputObjectType,
+  Kind,
   parse,
   specifiedRules,
   type ValidationContext,
+  TypeInfo,
   validate,
+  valueFromASTUntyped,
   visit,
+  visitWithTypeInfo,
 } from "graphql";
 import type { HonoCtxEnv } from "@/shared/types";
 import { ALL_RESOLVERS, ALL_TYPEDEFS } from "../../../graphql/resolvers/_all";
@@ -79,6 +88,10 @@ function permissionRule(
 ): (context: ValidationContext) => ASTVisitor {
   return (context: ValidationContext) => ({
     Field(node) {
+      if (node.name.value.startsWith("trpg_")) {
+        context.reportError(new GraphQLExecutionError("跑团字段请使用跑团接口", { nodes: node }));
+        return;
+      }
       const parentType = context.getParentType();
       if (parentType?.name !== "Query" && parentType?.name !== "Mutation")
         return;
@@ -100,7 +113,45 @@ function permissionRule(
         );
       }
     },
+    ObjectField(node) {
+      if (node.name.value.startsWith("trpg_")) {
+        context.reportError(new GraphQLExecutionError("跑团字段请使用跑团接口", { nodes: node }));
+      }
+    },
   });
+}
+
+function containsTrpgInput(value: unknown): boolean {
+  return !!value && typeof value === "object" &&
+    Object.entries(value).some(([key, child]) => key.startsWith("trpg_") || containsTrpgInput(child));
+}
+
+function legacyWhere(where: Record<string, unknown>, column: string): Record<string, unknown> {
+  if (Array.isArray(where.OR) && where.OR.length) {
+    return { ...where, OR: where.OR.map((condition) => legacyWhere(condition ?? {}, column)) };
+  }
+  return { ...where, [column]: { isNull: true } };
+}
+
+function scopeLegacyActivities(schema: GraphQLSchema, document: DocumentNode, variables?: Record<string, unknown>) {
+  const typeInfo = new TypeInfo(schema);
+  return visit(document, visitWithTypeInfo(typeInfo, {
+    Field(node) {
+      const whereArg = typeInfo.getFieldDef()?.args.find((arg) => arg.name === "where");
+      if (!whereArg) return;
+      const type = getNamedType(whereArg.type);
+      if (!isInputObjectType(type)) return;
+      const fields = type.getFields();
+      const column = fields.trpg_state ? "trpg_state" : fields.trpg_status ? "trpg_status" : null;
+      if (!column) return;
+      const original = node.arguments?.find((arg) => arg.name.value === "where");
+      const where = original ? valueFromASTUntyped(original.value, variables) : {};
+      const value = astFromValue(legacyWhere((where ?? {}) as Record<string, unknown>, column), whereArg.type);
+      if (!value) throw new GraphQLExecutionError("活动筛选条件不正确");
+      const argument = { kind: Kind.ARGUMENT, name: { kind: Kind.NAME, value: "where" }, value } as const;
+      return { ...node, arguments: [...(node.arguments ?? []).filter((arg) => arg.name.value !== "where"), argument] };
+    },
+  }));
 }
 
 function getFindManyFields(schema: GraphQLSchema): Set<string> {
@@ -253,6 +304,7 @@ export async function executeGraphQL(
   if (validationErrors.length > 0) {
     return { errors: formatErrors(validationErrors) };
   }
+  if (containsTrpgInput(variables)) return { errors: ["跑团字段请使用跑团接口"] };
 
   const findManyFields = getFindManyFields(schema);
   const cappedDocument = capLimitArgument(document, findManyFields);
@@ -261,9 +313,21 @@ export async function executeGraphQL(
     variables,
     findManyFields,
   );
+  const operation = getOperationAST(cappedDocument);
+  const resolved = operation
+    ? getVariableValues(schema, operation.variableDefinitions ?? [], cappedVariables ?? {})
+    : null;
+  if (resolved?.errors) return { errors: formatErrors(resolved.errors) };
+  let scopedDocument: DocumentNode;
+  try {
+    scopedDocument = scopeLegacyActivities(schema, cappedDocument, resolved?.coerced ?? cappedVariables);
+  } catch (error) {
+    if (error instanceof GraphQLExecutionError) return { errors: formatErrors([error]) };
+    throw error;
+  }
   const result = await execute({
     schema,
-    document: cappedDocument,
+    document: scopedDocument,
     contextValue: context,
     variableValues: cappedVariables,
   });

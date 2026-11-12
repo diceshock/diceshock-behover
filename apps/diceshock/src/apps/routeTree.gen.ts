@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routers/__root'
 import { Route as Char123StoreLocaleChar125RouteImport } from './routers/{-$storeLocale}'
+import { Route as TrpgHostRouteImport } from './routers/trpg-host'
 import { Route as DashRouteImport } from './routers/dash'
 import { Route as DashIndexRouteImport } from './routers/dash/index'
 import { Route as Char123StoreLocaleChar125ReadyRouteImport } from './routers/{-$storeLocale}/ready'
@@ -18,6 +19,7 @@ import { Route as Char123StoreLocaleChar125WithHomeLoRouteImport } from './route
 import { Route as XIdRouteImport } from './routers/x.$id'
 import { Route as DashWechatMenuRouteImport } from './routers/dash/wechat-menu'
 import { Route as DashUsersRouteImport } from './routers/dash/users'
+import { Route as DashTrpgRouteImport } from './routers/dash/trpg'
 import { Route as DashTablesRouteImport } from './routers/dash/tables'
 import { Route as DashPricingRouteImport } from './routers/dash/pricing'
 import { Route as DashOrdersRouteImport } from './routers/dash/orders'
@@ -57,6 +59,11 @@ const Char123StoreLocaleChar125Route =
     path: '/{-$storeLocale}',
     getParentRoute: () => rootRouteImport,
   } as any)
+const TrpgHostRoute = TrpgHostRouteImport.update({
+  id: '/trpg-host',
+  path: '/trpg-host',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashRoute = DashRouteImport.update({
   id: '/dash',
   path: '/dash',
@@ -97,6 +104,11 @@ const DashWechatMenuRoute = DashWechatMenuRouteImport.update({
 const DashUsersRoute = DashUsersRouteImport.update({
   id: '/users',
   path: '/users',
+  getParentRoute: () => DashRoute,
+} as any)
+const DashTrpgRoute = DashTrpgRouteImport.update({
+  id: '/trpg',
+  path: '/trpg',
   getParentRoute: () => DashRoute,
 } as any)
 const DashTablesRoute = DashTablesRouteImport.update({
@@ -278,6 +290,7 @@ const Char123StoreLocaleChar125WithHomeLoActivesIdRoute =
 
 export interface FileRoutesByFullPath {
   '/dash': typeof DashRouteWithChildren
+  '/trpg-host': typeof TrpgHostRoute
   '/{-$storeLocale}': typeof Char123StoreLocaleChar125RouteWithChildren
   '/dash/actives': typeof DashActivesRoute
   '/dash/admin-phones': typeof DashAdminPhonesRoute
@@ -288,6 +301,7 @@ export interface FileRoutesByFullPath {
   '/dash/orders': typeof DashOrdersRoute
   '/dash/pricing': typeof DashPricingRoute
   '/dash/tables': typeof DashTablesRoute
+  '/dash/trpg': typeof DashTrpgRoute
   '/dash/users': typeof DashUsersRoute
   '/dash/wechat-menu': typeof DashWechatMenuRoute
   '/x/$id': typeof XIdRoute
@@ -319,6 +333,7 @@ export interface FileRoutesByFullPath {
   '/{-$storeLocale}/inventory/$id': typeof Char123StoreLocaleChar125WithHomeLoInventoryIdRoute
 }
 export interface FileRoutesByTo {
+  '/trpg-host': typeof TrpgHostRoute
   '/{-$storeLocale}': typeof Char123StoreLocaleChar125WithHomeLoIndexRoute
   '/dash/actives': typeof DashActivesRoute
   '/dash/admin-phones': typeof DashAdminPhonesRoute
@@ -329,6 +344,7 @@ export interface FileRoutesByTo {
   '/dash/orders': typeof DashOrdersRoute
   '/dash/pricing': typeof DashPricingRoute
   '/dash/tables': typeof DashTablesRoute
+  '/dash/trpg': typeof DashTrpgRoute
   '/dash/users': typeof DashUsersRoute
   '/dash/wechat-menu': typeof DashWechatMenuRoute
   '/x/$id': typeof XIdRoute
@@ -361,6 +377,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/dash': typeof DashRouteWithChildren
+  '/trpg-host': typeof TrpgHostRoute
   '/{-$storeLocale}': typeof Char123StoreLocaleChar125RouteWithChildren
   '/dash/actives': typeof DashActivesRoute
   '/dash/admin-phones': typeof DashAdminPhonesRoute
@@ -371,6 +388,7 @@ export interface FileRoutesById {
   '/dash/orders': typeof DashOrdersRoute
   '/dash/pricing': typeof DashPricingRoute
   '/dash/tables': typeof DashTablesRoute
+  '/dash/trpg': typeof DashTrpgRoute
   '/dash/users': typeof DashUsersRoute
   '/dash/wechat-menu': typeof DashWechatMenuRoute
   '/x/$id': typeof XIdRoute
@@ -406,6 +424,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/dash'
+    | '/trpg-host'
     | '/{-$storeLocale}'
     | '/dash/actives'
     | '/dash/admin-phones'
@@ -416,6 +435,7 @@ export interface FileRouteTypes {
     | '/dash/orders'
     | '/dash/pricing'
     | '/dash/tables'
+    | '/dash/trpg'
     | '/dash/users'
     | '/dash/wechat-menu'
     | '/x/$id'
@@ -447,6 +467,7 @@ export interface FileRouteTypes {
     | '/{-$storeLocale}/inventory/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/trpg-host'
     | '/{-$storeLocale}'
     | '/dash/actives'
     | '/dash/admin-phones'
@@ -457,6 +478,7 @@ export interface FileRouteTypes {
     | '/dash/orders'
     | '/dash/pricing'
     | '/dash/tables'
+    | '/dash/trpg'
     | '/dash/users'
     | '/dash/wechat-menu'
     | '/x/$id'
@@ -488,6 +510,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/dash'
+    | '/trpg-host'
     | '/{-$storeLocale}'
     | '/dash/actives'
     | '/dash/admin-phones'
@@ -498,6 +521,7 @@ export interface FileRouteTypes {
     | '/dash/orders'
     | '/dash/pricing'
     | '/dash/tables'
+    | '/dash/trpg'
     | '/dash/users'
     | '/dash/wechat-menu'
     | '/x/$id'
@@ -532,6 +556,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   DashRoute: typeof DashRouteWithChildren
+  TrpgHostRoute: typeof TrpgHostRoute
   Char123StoreLocaleChar125Route: typeof Char123StoreLocaleChar125RouteWithChildren
   XIdRoute: typeof XIdRoute
 }
@@ -543,6 +568,13 @@ declare module '@tanstack/react-router' {
       path: '/{-$storeLocale}'
       fullPath: '/{-$storeLocale}'
       preLoaderRoute: typeof Char123StoreLocaleChar125RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trpg-host': {
+      id: '/trpg-host'
+      path: '/trpg-host'
+      fullPath: '/trpg-host'
+      preLoaderRoute: typeof TrpgHostRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dash': {
@@ -599,6 +631,13 @@ declare module '@tanstack/react-router' {
       path: '/users'
       fullPath: '/dash/users'
       preLoaderRoute: typeof DashUsersRouteImport
+      parentRoute: typeof DashRoute
+    }
+    '/dash/trpg': {
+      id: '/dash/trpg'
+      path: '/trpg'
+      fullPath: '/dash/trpg'
+      preLoaderRoute: typeof DashTrpgRouteImport
       parentRoute: typeof DashRoute
     }
     '/dash/tables': {
@@ -838,6 +877,7 @@ interface DashRouteChildren {
   DashOrdersRoute: typeof DashOrdersRoute
   DashPricingRoute: typeof DashPricingRoute
   DashTablesRoute: typeof DashTablesRoute
+  DashTrpgRoute: typeof DashTrpgRoute
   DashUsersRoute: typeof DashUsersRoute
   DashWechatMenuRoute: typeof DashWechatMenuRoute
   DashIndexRoute: typeof DashIndexRoute
@@ -860,6 +900,7 @@ const DashRouteChildren: DashRouteChildren = {
   DashOrdersRoute: DashOrdersRoute,
   DashPricingRoute: DashPricingRoute,
   DashTablesRoute: DashTablesRoute,
+  DashTrpgRoute: DashTrpgRoute,
   DashUsersRoute: DashUsersRoute,
   DashWechatMenuRoute: DashWechatMenuRoute,
   DashIndexRoute: DashIndexRoute,
@@ -980,6 +1021,7 @@ const Char123StoreLocaleChar125RouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   DashRoute: DashRouteWithChildren,
+  TrpgHostRoute: TrpgHostRoute,
   Char123StoreLocaleChar125Route: Char123StoreLocaleChar125RouteWithChildren,
   XIdRoute: XIdRoute,
 }

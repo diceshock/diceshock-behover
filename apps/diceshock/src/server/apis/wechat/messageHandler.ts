@@ -277,6 +277,7 @@ async function buildActivesReply(c: Context<HonoCtxEnv>): Promise<string> {
       .from(activesTable)
       .where(
         drizzle.and(
+          drizzle.isNull(activesTable.trpg_state),
           drizzle.gte(activesTable.date, today),
           drizzle.lte(activesTable.date, weekEnd),
         ),

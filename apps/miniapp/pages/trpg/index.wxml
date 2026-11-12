@@ -1,0 +1,108 @@
+<view class="page">
+  <view class="row">
+    <button size="mini" bindtap="home">跑团约局</button>
+    <button size="mini" bindtap="account">我的账户</button>
+  </view>
+  <view wx:if="{{error}}" class="error">{{error}}</view>
+  <view wx:if="{{busy}}" class="muted">正在加载…</view>
+  <block wx:if="{{screen === 'home'}}">
+    <view class="hero"><view class="title">DiceShock 跑团约局</view></view>
+    <view class="row">
+      <button size="mini" data-id="" bindtap="pickStore" class="{{!store ? 'primary' : ''}}">全部门店</button>
+      <button wx:for="{{stores}}" wx:key="id" size="mini" data-id="{{item.id}}" bindtap="pickStore"
+        class="{{store === item.id ? 'primary' : ''}}">{{item.name}}</button>
+    </view>
+    <view class="card">
+      <picker mode="date" value="{{date}}" data-field="date" bindchange="input"><view>{{date || '选择日期'}}</view></picker>
+      <input value="{{rule}}" placeholder="规则系统" data-field="rule" bindinput="input" maxlength="40"/>
+      <input value="{{tag}}" placeholder="场次标签" data-field="tag" bindinput="input" maxlength="20"/>
+      <view class="row"><label>只看有余位 <switch checked="{{available}}" bindchange="availability"/></label>
+        <button size="mini" bindtap="clearFilters" disabled="{{busy}}">清除</button>
+        <button size="mini" bindtap="filter" disabled="{{busy}}">筛选</button></view>
+    </view>
+    <view wx:if="{{!busy && !days.length}}" class="card muted">暂无场次。</view>
+    <view wx:for="{{days}}" wx:for-item="day" wx:key="date">
+      <view class="day">{{day.date}}</view>
+      <view wx:for="{{day.items}}" wx:key="id" class="card" bindtap="open" data-id="{{item.id}}">
+        <view class="row"><text class="time">{{item.time}}</text><text class="tag">{{item.startsAt ? item.seats : '登记意向'}}</text></view>
+        <view class="section">{{item.title}}</view>
+        <view class="muted">{{item.storeName}} · {{item.gameSystem}} · {{item.fee}}</view>
+        <view class="muted">{{item.startsAt ? item.progress : '已有 ' + item.interestedCount + ' 人登记'}}</view>
+        <text wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this" class="tag">{{tag}}</text>
+      </view>
+    </view>
+    <button wx:if="{{more}}" bindtap="more" disabled="{{busy}}">更多场次</button>
+  </block>
+  <block wx:elif="{{screen === 'detail' && session}}">
+    <view class="hero">
+      <view class="muted">{{session.gameSystem}} · {{session.storeName}}</view>
+      <view class="title">{{session.title}}</view><view>{{session.day}} · {{session.time}}</view>
+      <view wx:if="{{session.status === 'cancelled'}}" class="tag">场次已取消</view>
+      <view wx:elif="{{session.status === 'completed'}}" class="tag">已结团</view>
+    </view>
+    <view class="card"><view class="section">场次简介</view><view class="body">{{session.description}}</view></view>
+    <view class="card"><view class="section">模组信息</view><view>{{session.moduleName}} · {{session.hostName}}</view></view>
+    <view class="card">
+      <view class="section">到店地点</view>
+      <view class="row"><image wx:if="{{session.visit.wechat === 'DiceShockJDK'}}" class="store-logo" src="/assets/jiedaokou.png" mode="aspectFit"/><text>{{session.storeName}} {{session.tableName}}</text></view>
+      <view class="body">{{session.address}}</view>
+      <view wx:if="{{session.visit}}" class="muted">工作日 14:00–24:00 · 节假日 13:00–24:00</view>
+      <view class="row">
+        <button wx:if="{{session.address}}" size="mini" bindtap="copyAddress">复制地址</button>
+        <button wx:if="{{session.visit}}" size="mini" bindtap="previewGuide">寻店指南</button>
+      </view>
+      <view wx:if="{{session.visit}}" class="row">
+        <button size="mini" bindtap="callStore">拨打门店电话</button>
+        <button size="mini" bindtap="copyWechat">复制门店微信</button>
+      </view>
+    </view>
+    <view class="card">
+      <view class="section">成员</view>
+      <view>{{session.minimum}} 人成车 · {{session.capacity}} 人满车</view>
+      <view wx:if="{{session.startsAt}}">已确认 {{session.confirmedCount}} 人 · {{session.seats}} · {{session.progress}}</view>
+      <view wx:else>已登记意向 {{session.interestedCount}} 人，待门店确认时间。</view>
+      <view class="muted">报名截止 {{session.deadlineText}}</view>
+      <view wx:if="{{session.confirmedCount && !roster.length}}" class="muted">微信登录后可查看已确认玩家的称呼。</view>
+      <view wx:for="{{roster}}">{{item.nickname}}</view>
+    </view>
+    <view class="card"><view class="section">收费</view><view>{{session.fee}}</view>
+      <view wx:if="{{session.feeCents}}" class="muted">标准跑团含 5 小时，超时每人每小时 20 元。成车人数达到后，店员会联系进群确认 50 元／人定金。</view>
+    </view>
+    <view wx:if="{{booking && session.status !== 'cancelled'}}" class="card"><view>{{booking.label}}</view><view class="muted">{{booking.reason}}</view></view>
+    <button wx:if="{{session.registrationOpen && (!booking || booking.status === 'withdrawn' || booking.status === 'rejected' || (booking.status === 'interested' && session.startsAt)) && (!session.startsAt || session.remaining > 0)}}"
+      data-action="join" bindtap="registration" class="primary" disabled="{{busy}}">{{session.startsAt ? '提交报名' : '登记意向'}}</button>
+    <button wx:if="{{session.registrationOpen && (booking.status === 'pending' || booking.status === 'confirmed' || booking.status === 'interested')}}"
+      data-action="withdraw" bindtap="registration" disabled="{{busy}}">撤回报名</button>
+    <button open-type="share">分享场次</button>
+  </block>
+  <block wx:elif="{{screen === 'account'}}">
+    <view class="section">我的账户</view>
+    <button wx:if="{{!account && !authStep}}" bindtap="login" class="primary" disabled="{{busy}}">微信登录</button>
+    <block wx:if="{{account}}">
+      <view class="card"><view class="section">{{account.nickname}}</view><view>余额 {{account.balanceCents / 100}} 元 · {{account.points}} 积分</view></view>
+      <view class="row"><button size="mini" data-mode="registrations" bindtap="changeRecords">我的报名</button>
+        <button size="mini" data-mode="history" bindtap="changeRecords">跑团记录</button></view>
+      <view wx:if="{{!busy && !records.length}}" class="card muted">暂无记录。</view>
+      <view wx:for="{{records}}" wx:key="id" class="card" bindtap="open" data-id="{{item.id}}">
+        <view class="section">{{item.title}}</view><view class="muted">{{item.day}} · {{item.storeName}} · {{item.bookingLabel}}</view>
+      </view>
+      <button wx:if="{{recordMore}}" bindtap="moreRecords" disabled="{{busy}}">更多记录</button>
+      <button bindtap="logout" disabled="{{busy}}">退出登录</button>
+    </block>
+  </block>
+  <view wx:if="{{privacyNeeded}}" class="card">
+    <view class="section">隐私授权</view>
+    <button size="mini" bindtap="openPrivacy">查看隐私保护指引</button>
+    <view class="row">
+      <button size="mini" data-agree="no" bindtap="respondPrivacy">暂不同意</button>
+      <button size="mini" class="primary" id="privacy-agree" open-type="agreePrivacyAuthorization" data-agree="yes" bindagreeprivacyauthorization="respondPrivacy">同意</button>
+    </view>
+  </view>
+  <view wx:if="{{authStep === 'phone'}}" class="card">
+    <view class="section">验证手机号</view>
+    <view class="muted">用你在骰子奇兵登记的手机号关联会员账户。手机号用于门店联系确认定金。报名通过后，登录玩家可见你的称呼。</view>
+    <button size="mini" bindtap="openPrivacy">隐私保护指引</button>
+    <input maxlength="24" placeholder="报名时怎么称呼你" data-field="nickname" bindinput="input"/>
+    <button class="primary" open-type="getPhoneNumber" bindgetphonenumber="verifyPhone" disabled="{{busy || !nickname}}">验证手机号</button>
+  </view>
+</view>

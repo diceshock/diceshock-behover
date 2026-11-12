@@ -106,6 +106,8 @@ export const userInfoTable = sqlite.sqliteTable("user_info", {
     .references(() => storesTable.id),
   preferred_locale: sqlite.text("preferred_locale"),
   preferred_theme: sqlite.text("preferred_theme"),
+  trpg_staff_stores: sqlite.text({ mode: "json" }).$type<string[]>(),
+  trpg_host_stores: sqlite.text({ mode: "json" }).$type<string[]>(),
 });
 
 export const userBusinessCardTable = sqlite.sqliteTable("user_business_card", {
@@ -175,6 +177,22 @@ export const activesTable = sqlite.sqliteTable(
     max_players: sqlite.int().notNull(),
     content: sqlite.text(), // tiptap JSON
     is_game: sqlite.int({ mode: "boolean" }).$default(() => true),
+    trpg_state: sqlite.text({ enum: ["pending", "returned", "published", "cancelled", "completed"] }),
+    trpg_module: sqlite.text(),
+    trpg_system: sqlite.text(),
+    trpg_min_players: sqlite.integer(),
+    trpg_table_id: sqlite.text().references(() => tablesTable.id),
+    trpg_duration: sqlite.integer(),
+    trpg_fee: sqlite.integer(),
+    trpg_starts_at: sqlite.integer(),
+    trpg_deadline: sqlite.integer(),
+    trpg_closed_at: sqlite.integer(),
+    trpg_priority_until: sqlite.integer(),
+    trpg_time_hint: sqlite.text(),
+    trpg_reason: sqlite.text(),
+    trpg_tags: sqlite.text({ mode: "json" }).$type<string[]>(),
+    trpg_changed_by: sqlite.text().references(() => users.id, { onDelete: "set null" }),
+    trpg_revision: sqlite.integer().notNull().default(1),
     is_system_recommended: sqlite
       .integer("is_system_recommended", { mode: "boolean" })
       .$default(() => false),
@@ -201,6 +219,10 @@ export const activeRegistrationsTable = sqlite.sqliteTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     is_watching: sqlite.int({ mode: "boolean" }).$default(() => false),
+    trpg_status: sqlite.text({ enum: ["interested", "pending", "confirmed", "rejected", "withdrawn"] }),
+    trpg_reason: sqlite.text(),
+    trpg_reviewed_by: sqlite.text().references(() => users.id, { onDelete: "set null" }),
+    trpg_reviewed_at: sqlite.integer(),
     create_at: sqlite
       .integer("create_at", { mode: "timestamp_ms" })
       .$defaultFn(() => new Date(Date.now())),

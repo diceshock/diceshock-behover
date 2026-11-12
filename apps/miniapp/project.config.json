@@ -1,0 +1,7 @@
+{
+  "appid": "wx2dea4e74c1ecc1c5",
+  "projectname": "DiceShock 跑团",
+  "compileType": "miniprogram",
+  "miniprogramRoot": "./",
+  "setting": { "es6": true, "urlCheck": true }
+}

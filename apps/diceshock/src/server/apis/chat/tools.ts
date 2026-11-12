@@ -365,7 +365,7 @@ export async function executeQueryActiveParticipants(
       title: activesTable.title,
     })
     .from(activesTable)
-    .where(eq(activesTable.id, args.active_id))
+    .where(drizzle.and(eq(activesTable.id, args.active_id), drizzle.isNull(activesTable.trpg_state)))
     .limit(1);
 
   if (active.length === 0) return { error: "查询失败: 约局不存在" };

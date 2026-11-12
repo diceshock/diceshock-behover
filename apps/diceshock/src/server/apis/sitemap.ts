@@ -36,6 +36,7 @@ export default async function sitemap(c: Context<HonoCtxEnv>) {
         update_at: activesTable.update_at,
       })
       .from(activesTable)
+      .where(drizzle.isNull(activesTable.trpg_state))
       .orderBy(drizzle.desc(activesTable.create_at)),
     tdb
       .select({

@@ -1,0 +1,21 @@
+page { background: #f3f6f2; color: #101412; font-size: 28rpx; line-height: 1.5; }
+.page { padding: 26rpx; }
+.hero, .card { padding: 24rpx; margin-bottom: 16rpx; border-radius: 16rpx; }
+.hero { background: #101412; color: #fff; }
+.hero .muted { color: #c7d5ca; }
+.card { background: #fff; border: 1rpx solid #dce5de; }
+.title { font-size: 44rpx; font-weight: 750; }
+.section { font-size: 32rpx; font-weight: 700; margin-bottom: 6rpx; }
+.row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8rpx; }
+.muted { color: #45534a; font-size: 26rpx; }
+.time { color: #17442a; font-weight: 700; font-variant-numeric: tabular-nums; }
+.day { margin: 20rpx 0 8rpx; font-weight: 700; color: #17442a; }
+.tag { display: inline-block; margin-right: 8rpx; padding: 2rpx 12rpx; border-radius: 99rpx; background: #def9e7; color: #17442a; font-size: 24rpx; }
+.body { white-space: pre-wrap; overflow-wrap: anywhere; margin-bottom: 12rpx; }
+.error { background: #fbe2db; padding: 16rpx; margin-bottom: 16rpx; color: #812c20; }
+button { background: #e3ece5; font-size: 28rpx; margin: 10rpx 0; }
+button.primary { background: #7efba9; }
+button::after { border: 0; }
+input { background: #edf3ee; padding: 12rpx; border-radius: 8rpx; margin: 12rpx 0; }
+
+.store-logo { width: 52rpx; height: 52rpx; border-radius: 8rpx; }

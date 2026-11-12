@@ -6,7 +6,7 @@ import db, {
   storesTable,
 } from "@lib/db";
 import dayjs from "dayjs";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { renderToString } from "react-dom/server";
 
 // ─── 750px mobile-optimized article template ─────────────────────────────────
@@ -210,7 +210,7 @@ export async function fetchActiveArticleData(
 ): Promise<ArticleActiveData | null> {
   const d = db(dbBinding);
   const active = await d.query.activesTable.findFirst({
-    where: eq(activesTable.id, activeId),
+    where: and(eq(activesTable.id, activeId), isNull(activesTable.trpg_state)),
     with: {
       creator: true,
       boardGame: true,

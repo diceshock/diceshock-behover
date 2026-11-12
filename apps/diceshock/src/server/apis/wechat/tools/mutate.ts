@@ -440,7 +440,7 @@ async function handleJoinActive(
       title: activesTable.title,
     })
     .from(activesTable)
-    .where(eq(activesTable.id, activeId))
+    .where(and(eq(activesTable.id, activeId), drizzle.isNull(activesTable.trpg_state)))
     .limit(1);
 
   if (active.length === 0) {
@@ -517,7 +517,7 @@ async function handleUpdateActive(
   const active = await d
     .select({ creator_id: activesTable.creator_id })
     .from(activesTable)
-    .where(eq(activesTable.id, activeId))
+    .where(and(eq(activesTable.id, activeId), drizzle.isNull(activesTable.trpg_state)))
     .limit(1);
 
   if (active.length === 0) {
@@ -560,7 +560,7 @@ async function handleLeaveActive(
       is_system_recommended: activesTable.is_system_recommended,
     })
     .from(activesTable)
-    .where(eq(activesTable.id, activeId))
+    .where(and(eq(activesTable.id, activeId), drizzle.isNull(activesTable.trpg_state)))
     .limit(1);
 
   if (active.length === 0) {
