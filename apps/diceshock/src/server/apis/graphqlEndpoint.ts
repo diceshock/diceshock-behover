@@ -4,6 +4,7 @@ import type { Context } from "hono";
 import type { HonoCtxEnv } from "@/shared/types";
 import { executeGraphQL, type GraphQLContext } from "./wechat/graphql/index";
 import { hasRole, type Role } from "./wechat/graphql/permissions";
+import { miniappAccount } from "../services/miniappAuth";
 
 const GRAPHIQL_HTML = `<!DOCTYPE html>
 <html lang="en">
@@ -74,10 +75,29 @@ export async function graphqlHandler(
     }
 
     if (c.req.method === "POST") {
+      c.header("Cache-Control", "no-store");
       const authUser = await getAuthUser(c).catch(() => null);
       let role = resolveRole(authUser);
       let userId = resolveUserId(authUser);
       let preferredStoreId = resolvePreferredStoreId(authUser);
+
+      const authorization = c.req.header("Authorization");
+      if (authorization) {
+        try {
+          const account = await miniappAccount(c.env.DB, authorization);
+          userId = account.id;
+          role = "authenticated";
+          preferredStoreId = null;
+        } catch {
+          return c.json({ errors: [{ message: "请重新登录", extensions: { code: "UNAUTHORIZED" } }] }, 401);
+        }
+      }
+      const origin = c.req.header("Origin");
+      const expectedOrigin = new URL(c.env.AUTH_URL || c.req.url).origin;
+      if (origin && origin !== expectedOrigin && origin !== new URL(c.req.url).origin) {
+        return c.json({ errors: [{ message: "请求来源无效" }] }, 403);
+      }
+      c.header("Cache-Control", "no-store");
 
       if (import.meta.env.DEV) {
         const testRole = c.req.header("X-Test-Role") as Role | undefined;
@@ -97,11 +117,11 @@ export async function graphqlHandler(
         body = await c.req.json();
       } catch (err) {
         console.error("[graphql] invalid JSON body:", err);
-        return c.json({ errors: ["Invalid JSON body"] }, 400);
+        return c.json({ errors: [{ message: "Invalid JSON body" }] }, 400);
       }
 
       if (!body.query || typeof body.query !== "string") {
-        return c.json({ errors: ["Missing or invalid 'query' field"] }, 400);
+        return c.json({ errors: [{ message: "Missing or invalid 'query' field" }] }, 400);
       }
 
       const operationName = body.query.match(/(?:mutation|query)\s+(\w+)/)?.[1] ?? "anonymous";
@@ -122,7 +142,14 @@ export async function graphqlHandler(
       if (result.errors?.length) {
         console.error("[graphql] errors in", operationName, ":", JSON.stringify(result.errors));
       }
-      return c.json(result);
+      // executeGraphQL also serves the text-based WeChat agent. The HTTP API
+      // must return GraphQL error objects so Apollo can surface their messages.
+      return c.json({
+        ...result,
+        ...(result.errors && {
+          errors: result.errors.map((message) => ({ message })),
+        }),
+      });
     }
 
     return c.text("Method Not Allowed", 405);

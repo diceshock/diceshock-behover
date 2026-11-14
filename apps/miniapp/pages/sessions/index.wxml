@@ -1,0 +1,28 @@
+<view class="page">
+  <view class="title">找一场好团</view>
+  <view class="muted subtitle">选择门店和时间，和同好一起出发。</view>
+  <view class="panel">
+    <picker range="{{stores}}" range-key="name" value="{{storeIndex}}" bindchange="pickStore" disabled="{{busy}}">
+      <view class="picker">门店：{{stores[storeIndex].name || '全部门店'}} ›</view>
+    </picker>
+    <picker mode="date" value="{{date}}" bindchange="pickDate" disabled="{{busy}}">
+      <view class="picker">日期：{{date || '不限'}} ›</view>
+    </picker>
+    <input value="{{rule}}" data-field="rule" bindinput="input" placeholder="规则，如 DND、COC" maxlength="40" aria-label="游戏规则"/>
+    <input value="{{tag}}" data-field="tag" bindinput="input" placeholder="标签，如新手友好" maxlength="20" aria-label="场次标签"/>
+    <view class="row">
+      <text>仅看可报名场次</text>
+      <switch checked="{{available}}" bindchange="available" disabled="{{busy}}" color="#117747"/>
+    </view>
+    <view class="actions">
+      <button class="primary" bindtap="search" disabled="{{busy}}">筛选</button>
+      <button bindtap="clear" disabled="{{busy}}">重置</button>
+    </view>
+  </view>
+  <view wx:if="{{error}}" class="error" role="alert">{{error}}<button bindtap="search">重试</button>
+  </view>
+  <view wx:if="{{busy}}" class="empty">正在加载…</view>
+  <view wx:if="{{!busy && !error && !sessions.length}}" class="empty">暂无符合条件的场次，试试其他时间或门店。</view>
+  <session-card wx:for="{{sessions}}" wx:key="id" session="{{item}}"/>
+  <button wx:if="{{hasMore}}" bindtap="more" loading="{{busy}}" disabled="{{busy}}">加载更多</button>
+</view>

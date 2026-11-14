@@ -1,0 +1,41 @@
+<view class="page">
+  <view wx:if="{{error}}" class="error" role="alert">{{error}}<button bindtap="reload" disabled="{{busy}}">重试</button>
+    <button bindtap="login">重新登录</button>
+  </view>
+  <view wx:if="{{busy && !session}}" class="empty">正在加载…</view>
+  <block wx:if="{{session}}">
+    <view class="panel">
+      <view class="eyebrow">{{session.gameSystem}} · {{session.moduleName || '模组待定'}}</view>
+      <view class="title">{{session.title}}</view>
+      <view class="muted">主持人：{{session.hostName}}</view>
+      <view class="tags">
+        <text class="tag" wx:for="{{session.tags}}" wx:key="*this">{{item}}</text>
+      </view>
+      <view class="body">{{session.description}}</view>
+    </view>
+    <view class="panel">
+      <view class="heading">时间与席位</view>
+      <view>{{session.timeText}}</view>
+      <view wx:if="{{!session.startsAt}}">{{session.timeHint}}</view>
+      <view class="muted">预计 {{session.durationMinutes}} 分钟 · {{session.feeText}}</view>
+      <view>{{session.confirmedCount}} / {{session.capacity}} 人已确认 · {{session.minimum}} 人成团</view>
+      <view wx:if="{{session.startsAt}}" class="muted">报名截止：{{session.deadlineText}}</view>
+      <view wx:if="{{session.priorityText}}" class="notice">{{session.priorityText}}</view>
+      <view wx:if="{{session.bookingText}}" class="notice">{{session.bookingText}}</view>
+      <view wx:if="{{session.booking.reason}}" class="muted">{{session.booking.reason}}</view>
+      <button wx:if="{{session.canJoin}}" class="primary" bindtap="join" loading="{{busy}}" disabled="{{busy}}">{{session.joinText}}</button>
+      <button wx:if="{{session.canWithdraw}}" bindtap="withdraw" disabled="{{busy}}">取消报名</button>
+      <view wx:if="{{!session.registrationOpen && session.status === 'published'}}" class="muted">报名已截止，如需变更请联系门店。</view>
+      <view wx:if="{{session.feeCents > 0}}" class="muted">报名后由门店核实定金并确认席位；此页面不发起付款。</view>
+    </view>
+    <view class="panel">
+      <view class="heading">{{session.storeName}}</view>
+      <view>{{session.tableName}}</view>
+      <view class="muted">{{session.address}}</view>
+      <image wx:if="{{media.image}}" src="{{media.image}}" mode="widthFix" class="store-image" lazy-load bindtap="preview" binderror="imageError" aria-label="门店寻店指引"/>
+      <button wx:if="{{session.address}}" bindtap="copyAddress">复制地址</button>
+      <button wx:if="{{media.phone}}" bindtap="call">联系门店</button>
+      <button wx:if="{{media.wechat}}" bindtap="copyWechat">复制门店微信</button>
+    </view>
+  </block>
+</view>

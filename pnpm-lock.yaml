@@ -343,6 +343,8 @@ importers:
         specifier: ^0.5.2
         version: 0.5.2
 
+  apps/miniapp: {}
+
   apps/rolesandbox:
     dependencies:
       hono:

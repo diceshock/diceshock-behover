@@ -1,0 +1,17 @@
+<view class="card" bindtap="open" role="button" aria-label="查看{{session.title}}">
+  <view class="row">
+    <text class="eyebrow">{{session.gameSystem}}</text>
+    <text class="price">{{session.feeText}}</text>
+  </view>
+  <view class="heading">{{session.title}}</view>
+  <view class="muted">{{session.timeText}} · {{session.durationMinutes}} 分钟</view>
+  <view class="muted">{{session.storeName}} · {{session.hostName}}</view>
+  <view class="tags">
+    <text wx:for="{{session.tags}}" wx:key="*this" class="tag">{{item}}</text>
+  </view>
+  <view class="row">
+    <text>{{session.progressText}}</text>
+    <text>{{session.startsAt ? '余 ' + session.remaining + ' 位' : '意向征集'}}</text>
+  </view>
+  <view wx:if="{{session.bookingText}}" class="booking">{{session.bookingText}}</view>
+</view>

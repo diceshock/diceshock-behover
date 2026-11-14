@@ -1,0 +1,5 @@
+{
+  "navigationBarTitleText": "找团",
+  "enablePullDownRefresh": true,
+  "usingComponents": { "session-card": "/components/session-card/index" }
+}

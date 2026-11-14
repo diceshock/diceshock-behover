@@ -1,3 +1,4 @@
+import { mergeTrpgAccount } from "../services/trpg/mergeAccount";
 /**
  * Account merge system.
  *
@@ -254,6 +255,8 @@ async function mergeUsersInto(
           .where(eq(userBusinessCardTable.id, sourceUserId));
       }
     }
+
+    await mergeTrpgAccount(d, sourceUserId, targetUserId);
 
     // j. Disable source user
     await d
