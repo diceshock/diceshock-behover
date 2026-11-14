@@ -1,0 +1,24 @@
+<view class="page">
+  <view class="title">欢迎来到骰子奇兵</view>
+  <view class="muted subtitle">登录后报名跑团，查看你的冒险记录。</view>
+  <view wx:if="{{error}}" class="error" role="alert">{{error}}</view>
+  <view class="panel">
+    <button wx:if="{{!phoneNeeded}}" class="primary" bindtap="login" loading="{{busy}}" disabled="{{busy}}">微信登录</button>
+    <block wx:else>
+      <view>怎么称呼你？</view>
+      <input type="nickname" value="{{nickname}}" bindinput="nickname" placeholder="填写昵称" maxlength="24" aria-label="昵称"/>
+      <view class="muted">手机号用于关联已有会员和确认报名，不会向其他玩家展示。</view>
+      <button class="primary" open-type="getPhoneNumber" bindgetphonenumber="verify" loading="{{busy}}" disabled="{{busy || !nickname}}">验证手机号并登录</button>
+    </block>
+    <button class="link" bindtap="openPrivacy">查看隐私保护指引</button>
+  </view>
+  <view wx:if="{{privacyNeeded}}" class="privacy-overlay">
+    <view class="panel privacy-dialog" role="dialog" aria-modal="true" aria-label="隐私保护指引">
+      <view class="heading">请阅读隐私保护指引</view>
+      <view class="muted">报名需要微信身份和手机号，用于关联会员与门店联系。</view>
+      <button bindtap="openPrivacy">阅读完整指引</button>
+      <button id="agree-privacy" class="primary" open-type="agreePrivacyAuthorization" bindagreeprivacyauthorization="agree">同意并继续</button>
+      <button bindtap="decline">暂不同意</button>
+    </view>
+  </view>
+</view>

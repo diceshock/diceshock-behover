@@ -1,0 +1,14 @@
+{
+  "appid": "touristappid",
+  "projectname": "diceshock-miniapp",
+  "compileType": "miniprogram",
+  "miniprogramRoot": "./",
+  "setting": { "es6": true, "urlCheck": true },
+  "packOptions": {
+    "ignore": [
+      { "type": "folder", "value": "scripts" },
+      { "type": "file", "value": "config.local.json" },
+      { "type": "file", "value": "config.example.json" }
+    ]
+  }
+}

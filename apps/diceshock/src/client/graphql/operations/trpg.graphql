@@ -1,0 +1,150 @@
+fragment TrpgSessionFields on TrpgSession {
+  id
+  storeId
+  storeName
+  address
+  tableId
+  tableName
+  hostName
+  title
+  description
+  moduleName
+  gameSystem
+  status
+  startsAt
+  deadline
+  priorityUntil
+  durationMinutes
+  feeCents
+  capacity
+  minimum
+  timeHint
+  tags
+  revision
+  reason
+  confirmedCount
+  interestedCount
+  pendingCount
+  remaining
+  canReview
+  canEdit
+  registrationOpen
+}
+
+query TrpgDashboard($filters: TrpgFilters) {
+  trpgStores(managed: true) {
+    id
+    name
+    canReview
+  }
+  trpgSessions(filters: $filters, managed: true) {
+    items {
+      ...TrpgSessionFields
+    }
+    hasMore
+  }
+  trpgProfile {
+    id
+    nickname
+    admin
+  }
+}
+
+query TrpgResources($storeId: ID!) {
+  trpgTables(storeId: $storeId) {
+    id
+    name
+    capacity
+  }
+}
+
+query TrpgHosts($storeId: ID!) {
+  trpgHosts(storeId: $storeId) {
+    id
+    uid
+    nickname
+  }
+}
+
+query TrpgRoster($id: ID!, $offset: Int = 0) {
+  trpgRoster(id: $id, offset: $offset) {
+    items {
+      id
+      nickname
+      status
+      phone
+      reason
+    }
+    hasMore
+  }
+}
+
+query TrpgMembers($storeId: ID!, $search: String!) {
+  trpgMembers(storeId: $storeId, search: $search) {
+    id
+    uid
+    nickname
+  }
+}
+
+query TrpgMemberHistory($storeId: ID!, $userId: ID!, $offset: Int) {
+  trpgMemberHistory(storeId: $storeId, userId: $userId, offset: $offset) {
+    items {
+      ...TrpgSessionFields
+    }
+    hasMore
+  }
+}
+
+mutation CreateTrpgSession($input: TrpgSessionInput!) {
+  createTrpgSession(input: $input) {
+    ...TrpgSessionFields
+  }
+}
+
+mutation ResubmitTrpgSession($id: ID!, $revision: Int!, $input: TrpgSessionInput!) {
+  resubmitTrpgSession(id: $id, revision: $revision, input: $input) {
+    success
+  }
+}
+
+mutation TransitionTrpgSession($id: ID!, $revision: Int!, $action: String!, $reason: String) {
+  transitionTrpgSession(
+    id: $id
+    revision: $revision
+    action: $action
+    reason: $reason
+  ) {
+    success
+  }
+}
+
+mutation ScheduleTrpgSession($id: ID!, $revision: Int!, $tableId: ID!, $startsAt: String!, $deadline: String!) {
+  scheduleTrpgSession(
+    id: $id
+    revision: $revision
+    tableId: $tableId
+    startsAt: $startsAt
+    deadline: $deadline
+  ) {
+    success
+  }
+}
+
+mutation ReviewTrpgRegistration($id: ID!, $registrationId: ID!, $decision: String!, $depositConfirmed: Boolean, $reason: String) {
+  reviewTrpgRegistration(
+    id: $id
+    registrationId: $registrationId
+    decision: $decision
+    depositConfirmed: $depositConfirmed
+    reason: $reason
+  ) {
+    success
+  }
+}
+
+mutation SetTrpgAccess($id: ID!, $storeId: ID!, $staff: Boolean!, $host: Boolean!) {
+  setTrpgAccess(id: $id, storeId: $storeId, staff: $staff, host: $host) {
+    success
+  }
+}

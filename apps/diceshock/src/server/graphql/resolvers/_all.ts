@@ -1,3 +1,4 @@
+import { trpgResolvers } from "./trpg";
 import baseSchema from "../../../../schema.graphql?raw";
 import type { ResolverMap } from "../schema";
 import { activesResolvers } from "./actives";
@@ -30,6 +31,7 @@ function mergeResolverMaps(
 }
 
 export const ALL_RESOLVERS: ResolverMap = mergeResolverMaps(
+  trpgResolvers,
   activesResolvers as Record<string, Record<string, unknown>>,
   articleResolvers as Record<string, Record<string, unknown>>,
   adminResolvers as Record<string, Record<string, unknown>>,

@@ -1,0 +1,25 @@
+<view class="page">
+  <view class="title">我的跑团</view>
+  <view wx:if="{{!loggedIn}}" class="panel">
+    <view class="muted">登录后查看报名进度与已结团记录。</view>
+    <button class="primary" bindtap="login">微信登录</button>
+  </view>
+  <view wx:if="{{error}}" class="error" role="alert">{{error}}<button bindtap="reload">重试</button>
+    <button bindtap="login">重新登录</button>
+  </view>
+  <view wx:if="{{profile}}" class="panel">
+    <view class="heading">{{profile.nickname}}</view>
+    <view>余额 ¥{{profile.balanceText}} · 积分 {{profile.points}}</view>
+    <button bindtap="logout" disabled="{{busy}}">退出登录</button>
+  </view>
+  <block wx:if="{{loggedIn}}">
+    <view class="actions">
+      <button class="{{!archive ? 'primary' : ''}}" data-archive="no" bindtap="changeMode" disabled="{{busy}}">我的报名</button>
+      <button class="{{archive ? 'primary' : ''}}" data-archive="yes" bindtap="changeMode" disabled="{{busy}}">已结团</button>
+    </view>
+    <view wx:if="{{busy}}" class="empty">正在加载…</view>
+    <view wx:if="{{!busy && !error && !records.length}}" class="empty">暂无{{archive ? '已结团' : '报名'}}记录</view>
+    <session-card wx:for="{{records}}" wx:key="id" session="{{item}}"/>
+    <button wx:if="{{hasMore}}" bindtap="more" disabled="{{busy}}">加载更多</button>
+  </block>
+</view>

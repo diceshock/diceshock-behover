@@ -23,6 +23,7 @@ import { formatFilterChipLabel } from "./launcher/types";
 const SEGMENT_LABEL_KEY: Record<string, TranslationKey> = {
   users: "dashNav.users",
   actives: "dashNav.actives",
+  trpg: "dashNav.trpg",
   events: "dashNav.events",
   tables: "dashNav.tables",
   orders: "dashNav.orders",

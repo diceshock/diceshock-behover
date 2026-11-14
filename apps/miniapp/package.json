@@ -1,0 +1,8 @@
+{
+  "name": "diceshock-miniapp",
+  "private": true,
+  "scripts": {
+    "prepare:config": "node scripts/prepare.mjs",
+    "check": "node scripts/check.mjs"
+  }
+}
