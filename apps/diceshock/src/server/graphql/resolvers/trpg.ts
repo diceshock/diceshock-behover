@@ -304,6 +304,11 @@ export const trpgResolvers: ResolverMap = {
       await access.setHost(ctx.db, await actor(ctx), input.id, input.host);
       return ok();
     },
+    setTrpgMember: async (_source, args, ctx) => {
+      const input = parse(idInput.extend({ member: z.boolean() }), args);
+      await access.setMember(ctx.db, await actor(ctx), input.id, input.member);
+      return ok();
+    },
     setTrpgAccess: async (_source, args, ctx) => {
       const input = parse(
         idInput.extend({

@@ -1,6 +1,11 @@
 import type { Database } from "@lib/db";
-import { storesTable, trpgAccess, users } from "@lib/db";
-import { and, eq, sql } from "drizzle-orm";
+import {
+  storesTable,
+  trpgAccess,
+  userMembershipPlansTable,
+  users,
+} from "@lib/db";
+import { and, eq, gt, isNull, lte, or, sql } from "drizzle-orm";
 import { forbidden, unauthorized } from "../../graphql/errors";
 
 export async function operator(db: Database, id: string) {
@@ -18,7 +23,8 @@ export async function operator(db: Database, id: string) {
 }
 export type Operator = Awaited<ReturnType<typeof operator>>;
 export const canEnterDashboard = (actor: Operator) =>
-  actor.role === "admin" || (actor.role === "staff" && actor.access.some((a) => a.staff));
+  actor.role === "admin" ||
+  (actor.role === "staff" && actor.access.some((a) => a.staff));
 export const canReview = (actor: Operator, storeId: string) =>
   actor.role === "admin" ||
   (actor.role === "staff" &&
@@ -32,6 +38,70 @@ export function requireDirectoryReviewer(actor: Operator) {
   )
     throw forbidden("没有会员管理权限");
 }
+
+async function fallbackRole(db: Database, id: string) {
+  const now = new Date();
+  const active = await db
+    .select({ id: userMembershipPlansTable.id })
+    .from(userMembershipPlansTable)
+    .where(
+      and(
+        eq(userMembershipPlansTable.user_id, id),
+        sql`${userMembershipPlansTable.plan_type} <> 'stored_value'`,
+        lte(userMembershipPlansTable.start_date, now),
+        or(
+          isNull(userMembershipPlansTable.end_date),
+          gt(userMembershipPlansTable.end_date, now),
+        ),
+      ),
+    )
+    .get();
+  return active ? ("member" as const) : ("customer" as const);
+}
+
+/** Promote an existing account to the member identity, or demote it again. */
+export async function setMember(
+  db: Database,
+  actor: Operator,
+  id: string,
+  member: boolean,
+) {
+  requireDirectoryReviewer(actor);
+  const target = await operator(db, id);
+  if (target.access.some((a) => a.host)) return;
+  if (member) {
+    if (target.role === "customer")
+      await db.update(users).set({ role: "member" }).where(eq(users.id, id));
+    return;
+  }
+  if (target.role === "member")
+    await db.update(users).set({ role: "customer" }).where(eq(users.id, id));
+}
+
+async function syncHostIdentity(
+  db: Database,
+  id: string,
+  role: Operator["role"],
+  granted: boolean,
+) {
+  if (granted) {
+    if (role === "customer" || role === "member")
+      await db.update(users).set({ role: "host" }).where(eq(users.id, id));
+    return;
+  }
+  if (role !== "host") return;
+  const remaining = await db
+    .select({ id: trpgAccess.userId })
+    .from(trpgAccess)
+    .where(and(eq(trpgAccess.userId, id), eq(trpgAccess.host, true)))
+    .get();
+  if (!remaining)
+    await db
+      .update(users)
+      .set({ role: await fallbackRole(db, id) })
+      .where(eq(users.id, id));
+}
+
 export async function setHost(
   db: Database,
   actor: Operator,
@@ -39,18 +109,20 @@ export async function setHost(
   host: boolean,
 ) {
   if (actor.role !== "admin") throw forbidden("仅管理员可修改主持权限");
-  await operator(db, id);
+  const target = await operator(db, id);
   if (!host) {
     await db
       .update(trpgAccess)
       .set({ host: false })
       .where(eq(trpgAccess.userId, id));
+    await syncHostIdentity(db, id, target.role, false);
     return;
   }
   // One atomic statement; store-specific staff grants are preserved on conflict.
   await db.run(sql`INSERT INTO trpg_access(user_id,store_id,staff,host)
     SELECT ${id},id,0,1 FROM stores WHERE 1
     ON CONFLICT(user_id,store_id) DO UPDATE SET host=1`);
+  await syncHostIdentity(db, id, target.role, true);
 }
 export function requireHost(actor: Operator, storeId: string) {
   if (!canHost(actor, storeId)) throw forbidden("没有该门店的主持权限");
@@ -66,7 +138,7 @@ export async function setAccess(
   if (actor.role !== "admin") throw forbidden("仅管理员可修改权限");
   const target = await operator(db, input.id);
   if (input.staff && target.role !== "staff")
-    throw forbidden("请先在用户管理中将该账号设为店员");
+    throw forbidden("请先在用户管理中将该账号设为店长");
   const store = await db
     .select()
     .from(storesTable)
@@ -85,4 +157,5 @@ export async function setAccess(
       target: [trpgAccess.userId, trpgAccess.storeId],
       set: { staff: input.staff, host: input.host },
     });
+  await syncHostIdentity(db, input.id, target.role, input.host);
 }

@@ -48,6 +48,7 @@ export async function directory(
       id: users.id,
       uid: userInfoTable.uid,
       nickname: userInfoTable.nickname,
+      role: users.role,
       phone: userInfoTable.phone,
       disabled: users.disabled,
       points: sql<number>`coalesce(${userInfoTable.points},0)`.mapWith(Number),
@@ -72,7 +73,7 @@ export async function directory(
     .where(
       and(
         input.membersOnly
-          ? sql`${users.role} NOT IN ('admin','staff') AND NOT EXISTS(SELECT 1 FROM trpg_access a WHERE a.user_id=${users.id} AND (a.host=1 OR a.staff=1))`
+          ? sql`${users.role} NOT IN ('admin','staff','host') AND NOT EXISTS(SELECT 1 FROM trpg_access a WHERE a.user_id=${users.id} AND (a.host=1 OR a.staff=1))`
           : undefined,
         input.hostsOnly
           ? sql`EXISTS(SELECT 1 FROM trpg_access a WHERE a.user_id=${users.id} AND a.host=1)`

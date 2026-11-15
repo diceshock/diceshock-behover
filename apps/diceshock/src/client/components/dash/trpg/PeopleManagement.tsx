@@ -3,6 +3,7 @@ import { useState } from "react";
 import {
   type TrpgDirectoryQuery,
   useSetTrpgHostMutation,
+  useSetTrpgMemberMutation,
   useTrpgDashboardQuery,
   useTrpgDirectoryQuery,
   useTrpgManagementContextQuery,
@@ -71,6 +72,7 @@ function Directory({
     member: Member;
     host: boolean;
   } | null>(null);
+  const [memberTarget, setMemberTarget] = useState<Member | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const directory = useTrpgDirectoryQuery({
@@ -95,6 +97,24 @@ function Directory({
     fetchPolicy: "network-only",
   });
   const [save, saving] = useSetTrpgHostMutation();
+  const [saveMember, savingMember] = useSetTrpgMemberMutation();
+  async function confirmMember() {
+    if (!memberTarget || savingMember.loading) return;
+    setError("");
+    setMessage("");
+    try {
+      await saveMember({
+        variables: { id: memberTarget.id, member: true },
+      });
+      setMemberTarget(null);
+      setAdding(false);
+      setSelected(null);
+      setMessage(t("trpgOps.memberSaved"));
+      await directory.refetch();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.error"));
+    }
+  }
   async function confirmAccess() {
     if (!change || saving.loading) return;
     setError("");
@@ -158,6 +178,19 @@ function Directory({
             {t("trpgOps.addHost")}
           </button>
         )}
+        {!hostsOnly && (
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={() => {
+              setAdding(!adding);
+              setMemberTarget(null);
+              setChange(null);
+            }}
+          >
+            {t("trpgOps.addMember")}
+          </button>
+        )}
       </form>
       {hostsOnly && !admin && (
         <p className="text-sm text-base-content/70">{t("trpgOps.adminOnly")}</p>
@@ -172,9 +205,11 @@ function Directory({
       )}
       {adding && (
         <section className="space-y-3 rounded-box border border-base-300 p-4">
-          <h2 className="font-semibold">{t("trpgOps.addHost")}</h2>
+          <h2 className="font-semibold">
+            {t(hostsOnly ? "trpgOps.addHost" : "trpgOps.addMember")}
+          </h2>
           <p className="text-sm text-base-content/70">
-            {t("trpgOps.addHostHelp")}
+            {t(hostsOnly ? "trpgOps.addHostHelp" : "trpgOps.addMemberHelp")}
           </p>
           <form
             className="flex flex-wrap items-end gap-2"
@@ -212,8 +247,17 @@ function Directory({
                 key={m.id}
                 type="button"
                 className="btn"
-                disabled={m.host || m.disabled || saving.loading}
-                onClick={() => setChange({ member: m, host: true })}
+                disabled={
+                  m.disabled ||
+                  (hostsOnly
+                    ? m.host || saving.loading
+                    : m.host || m.role !== "customer" || savingMember.loading)
+                }
+                onClick={() =>
+                  hostsOnly
+                    ? setChange({ member: m, host: true })
+                    : setMemberTarget(m)
+                }
               >
                 {m.nickname} · {m.uid}
                 {m.host ? ` · ${t("trpg.host")}` : ""}
@@ -229,9 +273,36 @@ function Directory({
             onClick={() => {
               setAdding(false);
               setChange(null);
+              setMemberTarget(null);
             }}
           >
             {t("common.cancel")}
+          </button>
+        </section>
+      )}
+      {memberTarget && (
+        <section className="alert flex flex-wrap" role="alert">
+          <div>
+            <h2 className="font-semibold">
+              {t("trpgOps.confirmAddMember")} · {memberTarget.nickname}
+            </h2>
+            <p className="mt-1 text-sm">{t("trpgOps.addMemberHelp")}</p>
+          </div>
+          <button
+            type="button"
+            className="btn"
+            disabled={savingMember.loading}
+            onClick={() => setMemberTarget(null)}
+          >
+            {t("common.cancel")}
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={savingMember.loading}
+            onClick={() => void confirmMember()}
+          >
+            {t(savingMember.loading ? "common.saving" : "common.confirm")}
           </button>
         </section>
       )}

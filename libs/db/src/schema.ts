@@ -69,7 +69,13 @@ export const storeInventoryRelations = relations(
   }),
 );
 
-export const userRoles = ["customer", "admin", "staff"] as const;
+export const userRoles = [
+  "customer",
+  "member",
+  "host",
+  "staff",
+  "admin",
+] as const;
 export type UserRole = (typeof userRoles)[number];
 
 export const users = sqlite.sqliteTable("user", {

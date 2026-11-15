@@ -23,6 +23,25 @@ function context(id: string | null): GraphQLContext {
     env: { DB: fixture.d1 } as GraphQLContext["env"],
   };
 }
+it("lets reviewers add the member identity but blocks self-escalation", async () => {
+  const mutation =
+    "mutation($id:ID!,$member:Boolean!){setTrpgMember(id:$id,member:$member){success}}";
+  const denied = await executeGraphQL(
+    mutation,
+    { id: "p1", member: true },
+    context("p1"),
+  );
+  expect(denied.errors?.length).toBeGreaterThan(0);
+
+  const granted = await executeGraphQL(
+    mutation,
+    { id: "p1", member: true },
+    context("admin"),
+  );
+  expect(granted.errors).toBeUndefined();
+  expect((await operator(fixture.db, "p1")).role).toBe("member");
+});
+
 it("does not expose domain tables through generated CRUD or leak pending sessions", async () => {
   const session = await createSession(
     fixture.db,

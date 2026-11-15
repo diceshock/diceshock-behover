@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it } from "vitest";
-import { canHost, operator, setAccess, setHost } from "@/server/services/trpg/access";
+import { canHost, operator, setAccess, setHost, setMember } from "@/server/services/trpg/access";
 import { directory, listSessions } from "@/server/services/trpg/queries";
 import { createDatabase } from "./database";
 
@@ -80,6 +80,45 @@ it("shares host identity across both stores and preserves local staff grants", a
   expect(after.access.some(a => a.host)).toBe(false);
   expect(after.access.find(a => a.storeId === "a")?.staff).toBe(true);
   await expect(setHost(db, after, "p1", true)).rejects.toThrow();
+});
+
+it("assigns the member identity and never overrides hosts", async () => {
+  const { db } = fixture;
+  const admin = await operator(db, "admin");
+  await setMember(db, admin, "p1", true);
+  expect((await operator(db, "p1")).role).toBe("member");
+  await setMember(db, admin, "p1", false);
+  expect((await operator(db, "p1")).role).toBe("customer");
+  await setMember(db, admin, "host", true);
+  expect((await operator(db, "host")).role).toBe("customer");
+  await expect(
+    setMember(db, await operator(db, "p2"), "p1", true),
+  ).rejects.toThrow();
+});
+
+it("mirrors host grants into the host identity and restores member fallback", async () => {
+  const { db, sqlite } = fixture;
+  const admin = await operator(db, "admin");
+  await setHost(db, admin, "p2", true);
+  expect((await operator(db, "p2")).role).toBe("host");
+  await setHost(db, admin, "p2", false);
+  expect((await operator(db, "p2")).role).toBe("customer");
+
+  sqlite
+    .prepare(
+      "INSERT INTO user_membership_plans(id,user_id,plan_type,start_date,end_date) VALUES (?,?,?,?,?)",
+    )
+    .run(
+      "active",
+      "p1",
+      "monthly",
+      Date.now() - 1000,
+      Date.now() + 86_400_000,
+    );
+  await setHost(db, admin, "p1", true);
+  expect((await operator(db, "p1")).role).toBe("host");
+  await setHost(db, admin, "p1", false);
+  expect((await operator(db, "p1")).role).toBe("member");
 });
 
 it("returns shared balances and all time-card periods without duplicating members", async () => {

@@ -290,6 +290,7 @@ export type PricingSnapshotDataInput = {
 };
 
 export type PricingSnapshotStatus =
+  | 'ARCHIVED'
   | 'DRAFT'
   | 'PUBLISHED';
 
@@ -464,6 +465,8 @@ export type UserFilterInput = {
 export type UserRole =
   | 'ADMIN'
   | 'CUSTOMER'
+  | 'HOST'
+  | 'MEMBER'
   | 'STAFF';
 
 export type VerifyTotpInput = {

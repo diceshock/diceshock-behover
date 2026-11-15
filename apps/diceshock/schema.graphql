@@ -44,6 +44,8 @@ enum SortOrder {
 
 enum UserRole {
   CUSTOMER
+  MEMBER
+  HOST
   STAFF
   ADMIN
 }
@@ -1838,6 +1840,7 @@ type TrpgDirectoryMember {
   id: ID!
   uid: String!
   nickname: String!
+  role: String!
   phone: String
   points: Int!
   balanceCents: Int!
@@ -1978,5 +1981,6 @@ extend type Mutation {
   withdrawTrpgRegistration(id: ID!): OperationResult!
   reviewTrpgRegistration(id: ID!, registrationId: ID!, decision: String!, depositConfirmed: Boolean = false, reason: String = ""): OperationResult!
   setTrpgHost(id: ID!, host: Boolean!): OperationResult!
+  setTrpgMember(id: ID!, member: Boolean!): OperationResult!
   setTrpgAccess(id: ID!, storeId: ID!, staff: Boolean!, host: Boolean!): OperationResult!
 }

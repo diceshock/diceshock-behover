@@ -29,8 +29,10 @@ export const CATEGORIES: CategoryDef[] = [
         label: "角色",
         options: [
           { value: "admin", label: "管理员" },
-          { value: "staff", label: "店员" },
-          { value: "authenticated", label: "顾客" },
+          { value: "staff", label: "店长" },
+          { value: "host", label: "主持人" },
+          { value: "member", label: "会员" },
+          { value: "customer", label: "顾客" },
         ],
       },
       {

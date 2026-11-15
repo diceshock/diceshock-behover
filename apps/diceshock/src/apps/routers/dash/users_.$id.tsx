@@ -123,6 +123,8 @@ const TIME_PLAN_TYPES: PlanType[] = ["monthly", "monthly_cc", "yearly"];
 const USER_ROLE_BY_FORM_VALUE: Record<string, UserRole> = {
   admin: UserRole.Admin,
   customer: UserRole.Customer,
+  member: UserRole.Member,
+  host: UserRole.Host,
   staff: UserRole.Staff,
 };
 
@@ -1019,7 +1021,9 @@ function UserDetailPage() {
                     disabled={rolePending}
                   >
                     <option value="customer">顾客</option>
-                    <option value="staff">店员</option>
+                    <option value="member">会员</option>
+                    <option value="host">主持人</option>
+                    <option value="staff">店长</option>
                     <option value="admin">管理员</option>
                   </select>
                 </label>

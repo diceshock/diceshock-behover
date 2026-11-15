@@ -66,7 +66,7 @@ query TrpgManagementContext {
 
 query TrpgDirectory($storeId: ID, $search: String = "", $hostsOnly: Boolean = false, $membersOnly: Boolean = false, $offset: Int = 0) {
   trpgDirectory(storeId: $storeId, search: $search, hostsOnly: $hostsOnly, membersOnly: $membersOnly, offset: $offset) {
-    items { id uid nickname phone points balanceCents storedValueMember timePlans { id type startsAt expiresAt } host staff disabled }
+    items { id uid nickname role phone points balanceCents storedValueMember timePlans { id type startsAt expiresAt } host staff disabled }
     hasMore
   }
 }
@@ -163,6 +163,7 @@ mutation SetTrpgAccess($id: ID!, $storeId: ID!, $staff: Boolean!, $host: Boolean
 }
 
 mutation SetTrpgHost($id: ID!, $host: Boolean!) { setTrpgHost(id: $id, host: $host) { success } }
+mutation SetTrpgMember($id: ID!, $member: Boolean!) { setTrpgMember(id: $id, member: $member) { success } }
 query TrpgRewardsAdmin {
   trpgProfile { admin }
   trpgStores(managed: true) { id name canReview }

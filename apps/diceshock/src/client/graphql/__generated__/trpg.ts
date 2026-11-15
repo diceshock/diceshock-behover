@@ -80,7 +80,7 @@ export type TrpgDirectoryQueryVariables = Exact<{
 }>;
 
 
-export type TrpgDirectoryQuery = { trpgDirectory: { hasMore: boolean, items: Array<{ id: string, uid: string, nickname: string, phone: string | null, points: number, balanceCents: number, storedValueMember: boolean, host: boolean, staff: boolean, disabled: boolean, timePlans: Array<{ id: string, type: string, startsAt: string, expiresAt: string | null }> }> } };
+export type TrpgDirectoryQuery = { trpgDirectory: { hasMore: boolean, items: Array<{ id: string, uid: string, nickname: string, role: string, phone: string | null, points: number, balanceCents: number, storedValueMember: boolean, host: boolean, staff: boolean, disabled: boolean, timePlans: Array<{ id: string, type: string, startsAt: string, expiresAt: string | null }> }> } };
 
 export type TrpgHostsQueryVariables = Exact<{
   storeId: string | number;
@@ -179,6 +179,14 @@ export type SetTrpgHostMutationVariables = Exact<{
 
 
 export type SetTrpgHostMutation = { setTrpgHost: { success: boolean } };
+
+export type SetTrpgMemberMutationVariables = Exact<{
+  id: string | number;
+  member: boolean;
+}>;
+
+
+export type SetTrpgMemberMutation = { setTrpgMember: { success: boolean } };
 
 export type TrpgRewardsAdminQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -413,6 +421,7 @@ export const TrpgDirectoryDocument = gql`
       id
       uid
       nickname
+      role
       phone
       points
       balanceCents
@@ -926,6 +935,40 @@ export function useSetTrpgHostMutation(baseOptions?: Apollo.MutationHookOptions<
 export type SetTrpgHostMutationHookResult = ReturnType<typeof useSetTrpgHostMutation>;
 export type SetTrpgHostMutationResult = Apollo.MutationResult<SetTrpgHostMutation>;
 export type SetTrpgHostMutationOptions = Apollo.BaseMutationOptions<SetTrpgHostMutation, SetTrpgHostMutationVariables>;
+export const SetTrpgMemberDocument = gql`
+    mutation SetTrpgMember($id: ID!, $member: Boolean!) {
+  setTrpgMember(id: $id, member: $member) {
+    success
+  }
+}
+    `;
+export type SetTrpgMemberMutationFn = Apollo.MutationFunction<SetTrpgMemberMutation, SetTrpgMemberMutationVariables>;
+
+/**
+ * __useSetTrpgMemberMutation__
+ *
+ * To run a mutation, you first call `useSetTrpgMemberMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSetTrpgMemberMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [setTrpgMemberMutation, { data, loading, error }] = useSetTrpgMemberMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      member: // value for 'member'
+ *   },
+ * });
+ */
+export function useSetTrpgMemberMutation(baseOptions?: Apollo.MutationHookOptions<SetTrpgMemberMutation, SetTrpgMemberMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<SetTrpgMemberMutation, SetTrpgMemberMutationVariables>(SetTrpgMemberDocument, options);
+      }
+export type SetTrpgMemberMutationHookResult = ReturnType<typeof useSetTrpgMemberMutation>;
+export type SetTrpgMemberMutationResult = Apollo.MutationResult<SetTrpgMemberMutation>;
+export type SetTrpgMemberMutationOptions = Apollo.BaseMutationOptions<SetTrpgMemberMutation, SetTrpgMemberMutationVariables>;
 export const TrpgRewardsAdminDocument = gql`
     query TrpgRewardsAdmin {
   trpgProfile {
