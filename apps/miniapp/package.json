@@ -2,6 +2,8 @@
   "name": "diceshock-miniapp",
   "private": true,
   "scripts": {
+    "build:local": "node scripts/build.mjs --local",
+    "build:release": "node scripts/build.mjs",
     "prepare:config": "node scripts/prepare.mjs",
     "check": "node scripts/check.mjs"
   }

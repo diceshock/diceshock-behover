@@ -1,3 +1,4 @@
+const { pricing } = require("./pricing");
 const labels = {
   interested: "已登记意向",
   pending: "待门店审核",
@@ -18,7 +19,9 @@ function sessionView(row) {
     ...row,
     timeText: localTime(row.startsAt),
     deadlineText: localTime(row.deadline),
-    feeText: row.feeCents ? `¥${(row.feeCents / 100).toFixed(2)} / 人` : "免费",
+    typeText: (pricing[row.sessionType] || pricing.commercial).label,
+    feeText: (pricing[row.sessionType] || pricing.commercial).summary,
+    feeDetail: (pricing[row.sessionType] || pricing.commercial).detail,
     progressText:
       row.confirmedCount >= row.minimum
         ? "已成团"

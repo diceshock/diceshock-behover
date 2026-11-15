@@ -1,6 +1,6 @@
 import type { Database } from "@lib/db";
 import { storesTable, trpgAccess, users } from "@lib/db";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { forbidden, unauthorized } from "../../graphql/errors";
 
 export async function operator(db: Database, id: string) {
@@ -17,13 +17,41 @@ export async function operator(db: Database, id: string) {
   return { ...user, access };
 }
 export type Operator = Awaited<ReturnType<typeof operator>>;
+export const canEnterDashboard = (actor: Operator) =>
+  actor.role === "admin" || (actor.role === "staff" && actor.access.some((a) => a.staff));
 export const canReview = (actor: Operator, storeId: string) =>
   actor.role === "admin" ||
   (actor.role === "staff" &&
     actor.access.some((a) => a.storeId === storeId && a.staff));
 export const canHost = (actor: Operator, storeId: string) =>
-  canReview(actor, storeId) ||
-  actor.access.some((a) => a.storeId === storeId && a.host);
+  canReview(actor, storeId) || actor.access.some((a) => a.host);
+export function requireDirectoryReviewer(actor: Operator) {
+  if (
+    actor.role !== "admin" &&
+    !(actor.role === "staff" && actor.access.some((a) => a.staff))
+  )
+    throw forbidden("没有会员管理权限");
+}
+export async function setHost(
+  db: Database,
+  actor: Operator,
+  id: string,
+  host: boolean,
+) {
+  if (actor.role !== "admin") throw forbidden("仅管理员可修改主持权限");
+  await operator(db, id);
+  if (!host) {
+    await db
+      .update(trpgAccess)
+      .set({ host: false })
+      .where(eq(trpgAccess.userId, id));
+    return;
+  }
+  // One atomic statement; store-specific staff grants are preserved on conflict.
+  await db.run(sql`INSERT INTO trpg_access(user_id,store_id,staff,host)
+    SELECT ${id},id,0,1 FROM stores WHERE 1
+    ON CONFLICT(user_id,store_id) DO UPDATE SET host=1`);
+}
 export function requireHost(actor: Operator, storeId: string) {
   if (!canHost(actor, storeId)) throw forbidden("没有该门店的主持权限");
 }

@@ -57,10 +57,10 @@ export async function createSession(
   // The availability predicate and insert execute as one D1 statement.
   const result = await db.run(sql`INSERT INTO trpg_sessions
     (id,store_id,host_id,table_id,title,description,module_name,game_system,status,starts_at,deadline,
-     duration_minutes,fee_cents,capacity,minimum,time_hint,tags,created_at,updated_at)
+     duration_minutes,session_type,fee_cents,capacity,minimum,time_hint,tags,created_at,updated_at)
     SELECT ${input.requestId},${input.storeId},${host.id},${input.tableId},${input.title},${input.description},
       ${input.moduleName},${input.gameSystem},${status},${startsAt},${deadline},${input.durationMinutes},
-      ${input.feeCents},${input.capacity},${input.minimum},${input.timeHint},${JSON.stringify(input.tags)},${now},${now}
+      ${input.sessionType},${input.feeCents},${input.capacity},${input.minimum},${input.timeHint},${JSON.stringify(input.tags)},${now},${now}
     WHERE EXISTS(SELECT 1 FROM stores WHERE id=${input.storeId} AND is_active=1)
       AND (${startsAt} IS NULL OR ${suitableTable(input.storeId, input.tableId, input.capacity)})
       AND (${status}='pending' OR ${startsAt} IS NULL OR ${noOverlap(input.requestId, host.id, input.tableId, startsAt, input.durationMinutes)})
@@ -83,13 +83,14 @@ export async function createSession(
       previous.capacity !== input.capacity ||
       previous.minimum !== input.minimum ||
       previous.feeCents !== input.feeCents ||
+      previous.sessionType !== input.sessionType ||
       previous.durationMinutes !== input.durationMinutes ||
       previous.moduleName !== input.moduleName ||
       previous.gameSystem !== input.gameSystem ||
       previous.timeHint !== input.timeHint ||
       JSON.stringify(previous.tags) !== JSON.stringify(input.tags)
     ) {
-      throw conflict("请求已变更、门店或桌位不可用，或主持人排期冲突");
+      throw conflict("请求已变更、门店或包间或大厅不可用，或主持人排期冲突");
     }
   }
   return present(await findSession(db, input.requestId), actor);
@@ -123,6 +124,7 @@ export async function resubmitSession(
       tableId: input.tableId,
       capacity: input.capacity,
       minimum: input.minimum,
+      sessionType: input.sessionType,
       feeCents: input.feeCents,
       durationMinutes: input.durationMinutes,
       timeHint: input.timeHint,
@@ -142,7 +144,7 @@ export async function resubmitSession(
       ),
     )
     .run();
-  if (!result.meta.changes) throw conflict("场次已变更或桌位不可用，请刷新");
+  if (!result.meta.changes) throw conflict("场次已变更或包间或大厅不可用，请刷新");
 }
 export async function transition(
   db: Database,
@@ -234,5 +236,5 @@ export async function scheduleSession(
     )
     .run();
   if (!result.meta.changes)
-    throw conflict("场次已变更、桌位冲突或没有足够的优先确认时间");
+    throw conflict("场次已变更、包间或大厅冲突或没有足够的优先确认时间");
 }

@@ -1,28 +1,92 @@
 <view class="page">
-  <view class="title">找一场好团</view>
-  <view class="muted subtitle">选择门店和时间，和同好一起出发。</view>
-  <view class="panel">
-    <picker range="{{stores}}" range-key="name" value="{{storeIndex}}" bindchange="pickStore" disabled="{{busy}}">
-      <view class="picker">门店：{{stores[storeIndex].name || '全部门店'}} ›</view>
-    </picker>
-    <picker mode="date" value="{{date}}" bindchange="pickDate" disabled="{{busy}}">
-      <view class="picker">日期：{{date || '不限'}} ›</view>
-    </picker>
-    <input value="{{rule}}" data-field="rule" bindinput="input" placeholder="规则，如 DND、COC" maxlength="40" aria-label="游戏规则"/>
-    <input value="{{tag}}" data-field="tag" bindinput="input" placeholder="标签，如新手友好" maxlength="20" aria-label="场次标签"/>
-    <view class="row">
-      <text>仅看可报名场次</text>
-      <switch checked="{{available}}" bindchange="available" disabled="{{busy}}" color="#117747"/>
-    </view>
-    <view class="actions">
-      <button class="primary" bindtap="search" disabled="{{busy}}">筛选</button>
-      <button bindtap="clear" disabled="{{busy}}">重置</button>
+  <view class="brand-bar">
+    <image class="brand-wordmark" src="/brand/logo-wordmark.svg" mode="aspectFit" aria-label="DiceShock"/>
+    <view class="brand-actions">
+      <navigator url="/pages/pricing/index" class="brand-account" hover-class="none">收费说明</navigator>
+      <navigator url="/pages/account/index" class="brand-account" hover-class="none">我的账户 ›</navigator>
     </view>
   </view>
-  <view wx:if="{{error}}" class="error" role="alert">{{error}}<button bindtap="search">重试</button>
+  <navigator class="hero home-hero mailbox-entry" url="/pages/mailbox/index">
+    <view>
+      <text class="mailbox-title">骰子奇兵冒险者公会信箱</text>
+      <view class="muted">写建议 · 许个愿</view>
+    </view>
+    <text aria-hidden="true">›</text>
+  </navigator>
+  <navigator url="/pages/rewards/index" class="card"><view class="row">
+    <text class="card-title">积分兑换商城</text><text class="tag">会员福利 ›</text>
+  </view><view class="muted">全天畅玩 · TRPG 跑团</view></navigator>
+  <view class="section">选择门店</view>
+  <view class="split">
+    <button wx:for="{{branches}}" wx:key="id" class="branch-card {{branch === item.id ? 'is-selected' : ''}}" data-branch="{{item.id}}" bindtap="selectBranch" disabled="{{busy}}">
+      <view class="branch-art">
+        <image wx:if="{{item.art === 'jiedaokou'}}" class="branch-cover" src="/brand/jiedaokou.png" mode="aspectFit" aria-hidden="true"/>
+        <image wx:elif="{{item.cover}}" class="branch-cover" src="{{item.cover}}" mode="aspectFill"/>
+        <view wx:elif="{{item.art === 'guangguli'}}" class="optics-art" aria-hidden="true">
+          <image class="optics-lightning" src="/brand/optics-lightning.svg" mode="aspectFit"/>
+          <image class="optics-wordmark" src="/brand/optics-wordmark.svg" mode="aspectFit"/>
+        </view>
+        <image wx:else class="branch-mark" src="/brand/logo-mark.svg" mode="aspectFit" aria-hidden="true"/>
+      </view>
+      <view class="branch-info">
+        <text class="branch-name">{{item.name}}</text>
+        <text wx:if="{{item.address}}" class="branch-address">{{item.address}}</text>
+        <text class="branch-count">{{item.upcoming}} 场可查看 ›</text>
+      </view>
+    </button>
   </view>
-  <view wx:if="{{busy}}" class="empty">正在加载…</view>
-  <view wx:if="{{!busy && !error && !sessions.length}}" class="empty">暂无符合条件的场次，试试其他时间或门店。</view>
-  <session-card wx:for="{{sessions}}" wx:key="id" session="{{item}}"/>
-  <button wx:if="{{hasMore}}" bindtap="more" loading="{{busy}}" disabled="{{busy}}">加载更多</button>
+  <view class="split">
+    <navigator wx:for="{{branches}}" wx:key="id" url="/pages/visit/index?id={{item.id}}" class="label">{{item.name}}到店指引 ›</navigator>
+  </view>
+<view class="section row"><text>近期场次</text>
+    <button class="filter-toggle" bindtap="toggleFilters">{{filtersOpen ? '收起筛选' : '筛选'}}</button>
+  </view>
+  <view class="filter-chips">
+    <button class="chip {{!branch ? 'primary' : ''}}" data-branch="" bindtap="selectBranch" disabled="{{busy}}">全部</button>
+    <button wx:for="{{branches}}" wx:key="id" class="chip {{branch === item.id ? 'primary' : ''}}"
+      data-branch="{{item.id}}" bindtap="selectBranch" disabled="{{busy}}">{{item.name}}</button>
+  </view>
+  <view wx:if="{{filtersOpen}}" class="card">
+    <view class="split">
+      <view>
+        <text class="label">日期</text>
+        <picker mode="date" value="{{date}}" bindchange="selectDate"><view class="picker">{{date || '不限日期'}}</view></picker>
+      </view>
+      <view>
+        <text class="label">规则系统</text>
+        <input placeholder="如 CoC 或 D＆D" value="{{rule}}" bindinput="inputRule" maxlength="40" confirm-type="search" bindconfirm="search"/>
+      </view>
+    </view>
+    <view class="split">
+      <view><text class="label">标签</text><input placeholder="如 新手友好" value="{{tag}}" bindinput="inputTag" maxlength="20"/></view>
+      <view><text class="label">席位</text><button class="chip {{available ? 'primary' : ''}}" bindtap="toggleAvailable">{{available ? '仅看有余位' : '不限席位'}}</button></view>
+    </view>
+    <view class="split">
+      <button class="primary" bindtap="search" disabled="{{busy}}">筛选场次</button>
+      <button bindtap="clearFilters" disabled="{{busy}}">清除筛选</button>
+    </view>
+  </view>
+  <view wx:if="{{error}}" class="error">{{error}}<button bindtap="refresh">重试</button></view>
+  <view wx:if="{{busy && !sessions.length}}" class="muted">正在加载场次…</view>
+  <view wx:if="{{!busy && !error && !sessions.length}}" class="card muted">{{queryDate || queryRule || queryTag || queryAvailable ? '没有符合条件的场次，试试调整筛选。' : '近期场次还在筹备中，欢迎稍后再来看看。'}}</view>
+  <view wx:if="{{board.length}}" class="recruitment-list">
+    <view wx:for="{{board}}" wx:for-item="day" wx:key="id" class="recruitment-day">
+      <view class="recruitment-date">{{day.label}}</view>
+      <button wx:for="{{day.cards}}" wx:key="id" class="recruitment-card" bindtap="open" data-id="{{item.id}}">
+        <view class="recruitment-info">
+          <view wx:if="{{item.timeLabel}}" class="recruitment-time">{{item.timeLabel}}</view>
+          <view class="card-title">{{item.title}}</view>
+          <view class="muted">{{item.branchLabel}} · {{item.gameSystem}}</view>
+          <view class="muted">{{item.typeLabel}} · {{item.feeLabel}}</view>
+          <view wx:if="{{item.tags.length}}" class="chips session-tags">
+            <text wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this" class="tag">{{tag}}</text>
+          </view>
+        </view>
+        <view class="recruitment-seats">
+          <text>{{item.seatLabel}}</text><text class="muted">{{item.countLabel}}</text>
+        </view>
+      </button>
+    </view>
+  </view>
+  <button wx:if="{{hasMore}}" bindtap="more" loading="{{busy}}">更多场次</button>
 </view>

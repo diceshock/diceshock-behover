@@ -7,6 +7,7 @@ import {
   useTrpgResourcesQuery,
 } from "@/client/graphql/__generated__/trpg";
 import { useTranslation } from "@/client/hooks/useTranslation";
+import { pricing, type SessionType, sessionTypes } from "@/shared/trpg/pricing";
 import { sessionInput } from "@/shared/trpg/validation";
 import { ErrorMessage, Field, instant, localTime } from "./common";
 
@@ -27,6 +28,9 @@ export function SessionEditor({
   const requestId = useRef(crypto.randomUUID());
   const [pendingTime, setPendingTime] = useState(
     session ? !session.startsAt : false,
+  );
+  const [sessionType, setSessionType] = useState<SessionType>(
+    (session?.sessionType as SessionType) || "commercial",
   );
   const [error, setError] = useState("");
   const [create, creating] = useCreateTrpgSessionMutation();
@@ -56,7 +60,7 @@ export function SessionEditor({
       capacity: Number(get("capacity")),
       minimum: Number(get("minimum")),
       durationMinutes: Number(get("durationMinutes")),
-      feeCents: Math.round(Number(get("fee")) * 100),
+      sessionType,
       timeHint: get("timeHint"),
       tags: get("tags")
         .split(/[,，、]/)
@@ -145,7 +149,6 @@ export function SessionEditor({
                 ["minimum", 1, 6, session?.minimum ?? 4],
                 ["capacity", 1, 6, session?.capacity ?? 6],
                 ["durationMinutes", 1, 1440, session?.durationMinutes ?? 300],
-                ["fee", 0, 9999.99, (session?.feeCents ?? 11800) / 100],
               ] as const
             ).map(([name, min, max, value]) => (
               <Field key={name} label={t(`trpg.${name}`)}>
@@ -155,12 +158,29 @@ export function SessionEditor({
                   type="number"
                   min={min}
                   max={max}
-                  step={name === "fee" ? "0.01" : "1"}
+                  step="1"
                   required
                   defaultValue={value}
                 />
               </Field>
             ))}
+            <Field label={t("trpg.type")}>
+              <select
+                className="select w-full"
+                name="sessionType"
+                value={sessionType}
+                onChange={(e) => setSessionType(e.target.value as SessionType)}
+              >
+                {sessionTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {pricing[type].label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-2 text-sm text-base-content/70">
+                {pricing[sessionType].detail}
+              </p>
+            </Field>
             <label className="flex min-h-11 items-center gap-2 md:col-span-2">
               <input
                 className="checkbox checkbox-sm"

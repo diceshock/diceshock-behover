@@ -1,5 +1,7 @@
 {
-  "navigationBarTitleText": "找团",
+  "navigationBarTitleText": "骰子奇兵",
   "enablePullDownRefresh": true,
-  "usingComponents": { "session-card": "/components/session-card/index" }
+  "usingComponents": {
+    "session-card": "/components/session-card/index"
+  }
 }

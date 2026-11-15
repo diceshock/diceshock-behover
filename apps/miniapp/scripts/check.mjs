@@ -23,7 +23,7 @@ function walk(dir) {
       walk(file);
       continue;
     }
-    if (/\.(png|jpe?g|gif|webp|avif)$/i.test(name))
+    if (/\.(png|jpe?g|gif|webp|avif)$/i.test(name) && path.relative(root,file).replaceAll('\\','/') !== 'brand/jiedaokou.png')
       throw new Error(`Raster media must be hosted externally: ${file}`);
     if (name.endsWith(".js")) {
       const result = spawnSync(process.execPath, ["--check", file], {
@@ -47,5 +47,5 @@ for (const page of app.pages)
 if (size > 2 * 1024 * 1024)
   throw new Error(`Main package too large: ${size} bytes`);
 console.log(
-  `Miniapp source check passed: ${files} files, ${size} bytes, no raster assets.`,
+  `Miniapp source check passed: ${files} files, ${size} bytes; only the approved bundled brand mark is allowed.`,
 );

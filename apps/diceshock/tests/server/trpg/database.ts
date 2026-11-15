@@ -10,7 +10,7 @@ export function createDatabase() {
  CREATE TABLE user_info (id TEXT PRIMARY KEY REFERENCES "user"(id),uid TEXT NOT NULL,nickname TEXT NOT NULL,phone TEXT,points INTEGER,create_at INTEGER,avatar_url TEXT,meta TEXT,preferred_store_id TEXT,preferred_locale TEXT,preferred_theme TEXT);
  CREATE TABLE stores (id TEXT PRIMARY KEY,code TEXT,name TEXT NOT NULL,address TEXT,is_active INTEGER,created_at INTEGER);
  CREATE TABLE tables (id TEXT PRIMARY KEY,name TEXT,store_id TEXT REFERENCES stores(id),capacity INTEGER,status TEXT,scope TEXT,type TEXT,description TEXT,code TEXT,create_at INTEGER,update_at INTEGER);
- CREATE TABLE user_membership_plans (id TEXT,user_id TEXT,plan_type TEXT,amount INTEGER);
+ CREATE TABLE user_membership_plans (id TEXT,user_id TEXT,plan_type TEXT,amount INTEGER,points INTEGER,note TEXT,order_id TEXT,start_date INTEGER NOT NULL DEFAULT 0,end_date INTEGER,create_at INTEGER,update_at INTEGER);
  CREATE TABLE session (sessionToken TEXT PRIMARY KEY,userId TEXT REFERENCES "user"(id),expires INTEGER);
  CREATE TABLE account (userId TEXT REFERENCES "user"(id),type TEXT,provider TEXT,providerAccountId TEXT,PRIMARY KEY(provider,providerAccountId));
  `);
@@ -20,6 +20,8 @@ export function createDatabase() {
       "utf8",
     ),
   );
+  sqlite.exec(readFileSync(new URL("../../../../../drizzle/0057_trpg_session_type.sql", import.meta.url), "utf8"));
+  sqlite.exec(readFileSync(new URL("../../../../../drizzle/0058_trpg_member_services.sql", import.meta.url), "utf8"));
   class Statement {
     constructor(
       readonly query: string,

@@ -112,10 +112,10 @@ const GSZ_PHASE_LABELS: Record<string, string> = {
 };
 
 const PLAN_TYPE_OPTIONS: { value: PlanType; label: string }[] = [
-  { value: "yearly", label: "桌面通行证 LTS" },
-  { value: "monthly", label: "桌面通行证" },
-  { value: "monthly_cc", label: "CC桌面通行证" },
-  { value: "stored_value", label: "Table AGENT 储值卡" },
+  { value: "yearly", label: "时间卡（年卡）" },
+  { value: "monthly", label: "时间卡（月卡 / 自定义）" },
+  { value: "monthly_cc", label: "时间卡（20 天卡）" },
+  { value: "stored_value", label: "储值会员" },
 ];
 
 const TIME_PLAN_TYPES: PlanType[] = ["monthly", "monthly_cc", "yearly"];
@@ -932,7 +932,7 @@ function UserDetailPage() {
               )}
               onClick={() => setActiveTab("membership")}
             >
-              会员&消费
+              会员资产
             </button>
             <button
               type="button"
@@ -1181,7 +1181,7 @@ function UserDetailPage() {
                     }}
                   >
                     <PlusIcon />
-                    添加计划
+                    充值 / 开卡 / 续卡
                   </button>
                 </div>
               </div>
@@ -1773,7 +1773,7 @@ function UserDetailPage() {
         <dialog ref={addDialogRef} className="modal">
           <form method="dialog" className="modal-box" onSubmit={handleAddPlan}>
             <div className="modal-action flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg">添加会员计划</h3>
+              <h3 className="font-bold text-lg">充值 / 开卡 / 续卡</h3>
               <button
                 type="button"
                 className="btn btn-ghost btn-square"
@@ -1785,7 +1785,7 @@ function UserDetailPage() {
 
             <div className="flex flex-col gap-4">
               <label className="flex flex-col gap-2">
-                <span className="label text-sm font-semibold">计划类型</span>
+                <span className="label text-sm font-semibold">会员卡类型</span>
                 <select
                   className="select select-bordered w-full"
                   value={addForm.planType}
@@ -1801,6 +1801,43 @@ function UserDetailPage() {
                 </select>
               </label>
 
+              {isTimePlan(addForm.planType) && (
+                <div className="space-y-2">
+                  <div className="text-sm font-semibold">有效期快捷填写</div>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { label: "月卡", months: 1 },
+                      { label: "季卡", months: 3 },
+                      { label: "年卡", months: 12 },
+                    ].map(({ label, months }) => (
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        key={label}
+                        onClick={() => {
+                          const planType: PlanType =
+                            months === 12 ? "yearly" : "monthly";
+                          const { startDate } = computeSmartDates(planType);
+                          setAddForm((p) => ({
+                            ...p,
+                            planType,
+                            startDate,
+                            endDate: dayjs(startDate)
+                              .add(months, "month")
+                              .format("YYYY-MM-DD"),
+                          }));
+                          setAddFormError("");
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-base-content/60">
+                    按开始、结束日期生效，可手动调整；续卡会避开已有有效期。
+                  </p>
+                </div>
+              )}
               {addForm.planType === "stored_value" && (
                 <label className="flex flex-col gap-2">
                   <span className="label text-sm font-semibold">

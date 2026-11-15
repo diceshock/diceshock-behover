@@ -21,8 +21,13 @@ export const sessionInput = z
     capacity: z.number().int().min(1).max(6),
     minimum: z.number().int().min(1).max(6),
     durationMinutes: z.number().int().min(1).max(1440),
-    feeCents: z.number().int().min(0).max(999999),
+    sessionType: z.enum(["commercial", "club", "test"]).default("commercial"),
+    feeCents: z.number().int().min(0).max(999999).optional(),
   })
+  .transform((v) => ({
+    ...v,
+    feeCents: v.sessionType === "commercial" ? 11800 : 0,
+  }))
   .refine(
     (v) =>
       v.minimum <= v.capacity &&
@@ -31,7 +36,7 @@ export const sessionInput = z
         : !!v.tableId &&
           !!v.deadline &&
           Date.parse(v.deadline) <= Date.parse(v.startsAt)),
-    "请核对席位、桌位和报名时间",
+    "请核对席位、包间或大厅和报名时间",
   );
 export type SessionInput = z.output<typeof sessionInput>;
 export const sessionAction = z.enum([

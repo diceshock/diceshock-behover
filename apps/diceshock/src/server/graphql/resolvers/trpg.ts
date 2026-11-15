@@ -32,6 +32,13 @@ const filters = z.object({
   rule: z.string().max(40).nullish(),
   tag: z.string().max(20).nullish(),
   available: z.boolean().nullish(),
+  dateFrom: z.iso.date().nullish(),
+  dateTo: z.iso.date().nullish(),
+  status: z
+    .enum(["pending", "returned", "published", "cancelled", "completed"])
+    .nullish(),
+  unscheduled: z.boolean().nullish(),
+  hostId: trpgId.nullish(),
 });
 const ok = () => ({ success: true });
 export const trpgResolvers: ResolverMap = {
@@ -49,9 +56,20 @@ export const trpgResolvers: ResolverMap = {
           rule: input.rule ?? undefined,
           tag: input.tag ?? undefined,
           available: input.available ?? undefined,
+          dateFrom: input.dateFrom ?? undefined,
+          dateTo: input.dateTo ?? undefined,
+          status: input.status ?? undefined,
+          unscheduled: input.unscheduled ?? undefined,
+          hostId: input.hostId ?? undefined,
         },
         args.managed ? await actor(ctx) : undefined,
       );
+    },
+    trpgManagedSession: async (_source, args, ctx) => {
+      const user = await actor(ctx);
+      const row = await queries.findSession(ctx.db, parse(idInput, args).id);
+      await queries.roster(ctx.db, row.id, user, 0);
+      return queries.present(row, user);
     },
     trpgSession: async (_source, args, ctx) =>
       queries.publicSession(ctx.db, parse(idInput, args).id),
@@ -78,7 +96,7 @@ export const trpgResolvers: ResolverMap = {
         .from(userInfoTable)
         .where(eq(userInfoTable.id, user.id))
         .get();
-      return { ...profile, admin: user.role === "admin" };
+      return { ...profile, admin: user.role === "admin", canManage: access.canEnterDashboard(user), canHost: access.canEnterDashboard(user) || user.access.some((a) => a.host) };
     },
     trpgMyRecords: async (_source, args, ctx) => {
       const user = await actor(ctx);
@@ -110,12 +128,26 @@ export const trpgResolvers: ResolverMap = {
             eq(users.disabled, false),
             or(
               eq(users.role, "admin"),
-              sql`EXISTS(SELECT 1 FROM trpg_access a WHERE a.user_id=${users.id} AND a.store_id=${storeId}
-            AND (a.host=1 OR (a.staff=1 AND ${users.role}='staff')))`,
+              sql`EXISTS(SELECT 1 FROM trpg_access a WHERE a.user_id=${users.id}
+            AND (a.host=1 OR (a.store_id=${storeId} AND a.staff=1 AND ${users.role}='staff')))`,
             ),
           ),
         )
         .limit(100);
+    },
+    trpgDirectory: async (_source, args, ctx) => {
+      const user = await actor(ctx);
+      const input = parse(
+        z.object({
+          storeId: trpgId.nullish(),
+          search: z.string().trim().max(80).default(""),
+          hostsOnly: z.boolean().default(false),
+          membersOnly: z.boolean().default(false),
+          offset: trpgOffset,
+        }),
+        args,
+      );
+      return queries.directory(ctx.db, user, input);
     },
     trpgMembers: async (_source, args, ctx) => {
       const user = await actor(ctx);
@@ -147,16 +179,20 @@ export const trpgResolvers: ResolverMap = {
     trpgMemberHistory: async (_source, args, ctx) => {
       const user = await actor(ctx);
       const input = parse(
-        storeInput.extend({ userId: trpgId, offset: trpgOffset }),
+        z.object({
+          storeId: trpgId.nullish(),
+          userId: trpgId,
+          offset: trpgOffset,
+        }),
         args,
       );
-      access.requireReviewer(user, input.storeId);
+      access.requireDirectoryReviewer(user);
       return queries.playerRecords(
         ctx.db,
         input.userId,
         true,
         input.offset,
-        input.storeId,
+        undefined,
       );
     },
   },
@@ -261,6 +297,11 @@ export const trpgResolvers: ResolverMap = {
         input.depositConfirmed,
         input.reason,
       );
+      return ok();
+    },
+    setTrpgHost: async (_source, args, ctx) => {
+      const input = parse(idInput.extend({ host: z.boolean() }), args);
+      await access.setHost(ctx.db, await actor(ctx), input.id, input.host);
       return ok();
     },
     setTrpgAccess: async (_source, args, ctx) => {

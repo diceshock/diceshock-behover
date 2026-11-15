@@ -42,6 +42,7 @@ it("does not expose domain tables through generated CRUD or leak pending session
       capacity: 6,
       minimum: 4,
       durationMinutes: 300,
+      sessionType: "test",
       feeCents: 0,
     },
   );

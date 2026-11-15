@@ -1,3 +1,4 @@
+import { operator, canEnterDashboard } from "../services/trpg/access";
 import Credentials from "@auth/core/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { type AuthConfig, getAuthUser, initAuthConfig } from "@hono/auth-js";
@@ -688,14 +689,6 @@ export const authGuard = FACTORY.createMiddleware(async (c, next) => {
 });
 
 export const dashGuard = FACTORY.createMiddleware(async (c, next) => {
-  // E2E test bypass: only in local dev, allow X-Test-Role header to skip auth
-  if (import.meta.env.DEV) {
-    const testRole = c.req.header("X-Test-Role");
-    if (testRole === "staff" || testRole === "admin") {
-      return next();
-    }
-  }
-
   const authUser = await getAuthUser(c).catch((err) => {
     console.warn("[dashGuard] getAuthUser failed:", err?.message ?? err);
     return null;

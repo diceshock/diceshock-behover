@@ -8,6 +8,7 @@ import {
   useTrpgRosterQuery,
 } from "@/client/graphql/__generated__/trpg";
 import { useTranslation } from "@/client/hooks/useTranslation";
+import { sessionPricing } from "@/shared/trpg/pricing";
 import { displayTime, ErrorMessage, Field, instant } from "./common";
 
 type Action =
@@ -121,8 +122,12 @@ export function SessionDetails({
             confirmed: session.confirmedCount,
             capacity: session.capacity,
             minimum: session.minimum,
-            fee: (session.feeCents / 100).toFixed(2),
+            fee: sessionPricing(session.sessionType).summary,
           })}
+        </p>
+        <p className="text-sm">
+          <strong>{sessionPricing(session.sessionType).label}</strong> ·{" "}
+          {sessionPricing(session.sessionType).detail}
         </p>
         {session.reason && (
           <div className="alert alert-warning">{session.reason}</div>

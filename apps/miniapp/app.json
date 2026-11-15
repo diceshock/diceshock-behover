@@ -3,22 +3,20 @@
     "pages/sessions/index",
     "pages/account/index",
     "pages/session/index",
-    "pages/login/index"
+    "pages/login/index",
+    "pages/mailbox/index",
+    "pages/rewards/index",
+    "pages/visit/index",
+    "pages/pricing/index",
+    "pages/workbench/index",
+    "pages/host-edit/index",
+    "pages/manage-session/index"
   ],
   "window": {
     "navigationBarTitleText": "骰子奇兵",
-    "navigationBarBackgroundColor": "#ffffff",
-    "navigationBarTextStyle": "black",
-    "backgroundColor": "#f5f5f5"
-  },
-  "tabBar": {
-    "color": "#666666",
-    "selectedColor": "#117747",
-    "backgroundColor": "#ffffff",
-    "list": [
-      { "pagePath": "pages/sessions/index", "text": "找团" },
-      { "pagePath": "pages/account/index", "text": "我的" }
-    ]
+    "navigationBarBackgroundColor": "#101412",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f3f6f2"
   },
   "style": "v2",
   "lazyCodeLoading": "requiredComponents"

@@ -82,7 +82,7 @@ Page({
   finish(token) {
     saveToken(token);
     wx.navigateBack({
-      fail: () => wx.switchTab({ url: "/pages/account/index" }),
+      fail: () => wx.redirectTo({ url: "/pages/account/index" }),
     });
   },
 });

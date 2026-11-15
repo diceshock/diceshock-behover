@@ -4,8 +4,8 @@
   </view>
   <view wx:if="{{busy && !session}}" class="empty">正在加载…</view>
   <block wx:if="{{session}}">
-    <view class="panel">
-      <view class="eyebrow">{{session.gameSystem}} · {{session.moduleName || '模组待定'}}</view>
+    <view class="hero">
+      <view class="kicker">{{session.gameSystem}} · {{session.moduleName || '模组待定'}}</view>
       <view class="title">{{session.title}}</view>
       <view class="muted">主持人：{{session.hostName}}</view>
       <view class="tags">
@@ -14,6 +14,9 @@
       <view class="body">{{session.description}}</view>
     </view>
     <view class="panel">
+      <view class="heading">{{session.typeText}} · 收费</view>
+      <view>{{session.feeText}}</view>
+      <view class="muted">{{session.feeDetail}}</view>
       <view class="heading">时间与席位</view>
       <view>{{session.timeText}}</view>
       <view wx:if="{{!session.startsAt}}">{{session.timeHint}}</view>

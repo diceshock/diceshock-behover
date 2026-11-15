@@ -5,6 +5,7 @@ import {
   storesTable,
   tablesTable,
   userInfoTable,
+  userMembershipPlansTable,
   users,
 } from "@lib/db";
 import {
@@ -19,9 +20,106 @@ import {
   sql,
 } from "drizzle-orm";
 import { notFound } from "../../graphql/errors";
-import { canHost, canReview, type Operator, requireHost } from "./access";
+import {
+  canHost,
+  canReview,
+  type Operator,
+  requireDirectoryReviewer,
+  requireHost,
+} from "./access";
 
 export const PAGE_SIZE = 30;
+
+// Both stores share one membership and host directory. Scheduling stays scoped.
+export async function directory(
+  db: Database,
+  actor: Operator,
+  input: {
+    storeId?: string | null;
+    search: string;
+    hostsOnly: boolean;
+    membersOnly?: boolean;
+    offset: number;
+  },
+) {
+  requireDirectoryReviewer(actor);
+  const rows = await db
+    .select({
+      id: users.id,
+      uid: userInfoTable.uid,
+      nickname: userInfoTable.nickname,
+      phone: userInfoTable.phone,
+      disabled: users.disabled,
+      points: sql<number>`coalesce(${userInfoTable.points},0)`.mapWith(Number),
+      balanceCents:
+        sql<number>`(SELECT coalesce(sum(amount),0) FROM user_membership_plans WHERE user_id=${users.id} AND plan_type='stored_value')`.mapWith(
+          Number,
+        ),
+      storedValueMember:
+        sql<boolean>`EXISTS(SELECT 1 FROM user_membership_plans p WHERE p.user_id=${users.id} AND p.plan_type='stored_value' AND p.amount>0)`.mapWith(
+          Boolean,
+        ),
+      host: sql<boolean>`EXISTS(SELECT 1 FROM trpg_access a WHERE a.user_id=${users.id} AND a.host=1)`.mapWith(
+        Boolean,
+      ),
+      staff:
+        sql<boolean>`EXISTS(SELECT 1 FROM trpg_access a WHERE a.user_id=${users.id} AND a.staff=1)`.mapWith(
+          Boolean,
+        ),
+    })
+    .from(users)
+    .innerJoin(userInfoTable, eq(users.id, userInfoTable.id))
+    .where(
+      and(
+        input.membersOnly
+          ? sql`${users.role} NOT IN ('admin','staff') AND NOT EXISTS(SELECT 1 FROM trpg_access a WHERE a.user_id=${users.id} AND (a.host=1 OR a.staff=1))`
+          : undefined,
+        input.hostsOnly
+          ? sql`EXISTS(SELECT 1 FROM trpg_access a WHERE a.user_id=${users.id} AND a.host=1)`
+          : undefined,
+        input.search
+          ? sql`(instr(lower(${userInfoTable.nickname}),lower(${input.search}))>0 OR instr(lower(${userInfoTable.uid}),lower(${input.search}))>0 OR ${userInfoTable.phone}=${input.search})`
+          : undefined,
+      ),
+    )
+    .orderBy(asc(userInfoTable.nickname), asc(users.id))
+    .limit(PAGE_SIZE + 1)
+    .offset(input.offset);
+  const page = rows.slice(0, PAGE_SIZE);
+  const timePlans = page.length
+    ? await db
+        .select()
+        .from(userMembershipPlansTable)
+        .where(
+          and(
+            inArray(
+              userMembershipPlansTable.user_id,
+              page.map((m) => m.id),
+            ),
+            inArray(userMembershipPlansTable.plan_type, [
+              "monthly",
+              "monthly_cc",
+              "yearly",
+            ]),
+          ),
+        )
+        .orderBy(asc(userMembershipPlansTable.start_date))
+    : [];
+  return {
+    items: page.map((m) => ({
+      ...m,
+      timePlans: timePlans
+        .filter((p) => p.user_id === m.id)
+        .map((p) => ({
+          id: p.id,
+          type: p.plan_type,
+          startsAt: p.start_date.toISOString(),
+          expiresAt: p.end_date?.toISOString() ?? null,
+        })),
+    })),
+    hasMore: rows.length > PAGE_SIZE,
+  };
+}
 const count = (states: string[]) =>
   sql<number>`(SELECT count(*) FROM trpg_registrations r
   WHERE r.session_id = ${sessions.id} AND r.status IN (${sql.join(
@@ -94,6 +192,11 @@ export async function listSessions(
     rule?: string;
     tag?: string;
     available?: boolean;
+    dateFrom?: string;
+    dateTo?: string;
+    status?: "pending" | "returned" | "published" | "cancelled" | "completed";
+    unscheduled?: boolean;
+    hostId?: string;
   },
   actor?: Operator,
 ) {
@@ -110,10 +213,7 @@ export async function listSessions(
           ),
           and(
             eq(sessions.hostId, actor.id),
-            inArray(
-              sessions.storeId,
-              actor.access.filter((a) => a.host).map((a) => a.storeId),
-            ),
+            actor.access.some((a) => a.host) ? sql`1=1` : sql`0=1`,
           ),
         )
     : and(
@@ -126,6 +226,15 @@ export async function listSessions(
       and(
         scope,
         input.storeId ? eq(sessions.storeId, input.storeId) : undefined,
+        input.status ? eq(sessions.status, input.status) : undefined,
+        input.hostId ? eq(sessions.hostId, input.hostId) : undefined,
+        input.unscheduled ? isNull(sessions.startsAt) : undefined,
+        input.dateFrom
+          ? sql`${sessions.startsAt} + ${sessions.durationMinutes} * 60000 > ${Date.parse(`${input.dateFrom}T00:00:00+08:00`)}`
+          : undefined,
+        input.dateTo
+          ? sql`${sessions.startsAt} < ${Date.parse(`${input.dateTo}T00:00:00+08:00`)}`
+          : undefined,
         input.date
           ? sql`date(${sessions.startsAt}/1000, 'unixepoch', '+8 hours') = ${input.date}`
           : undefined,
@@ -157,7 +266,7 @@ export async function listSessions(
 }
 export async function listStores(db: Database, actor?: Operator) {
   const rows = await db
-    .select()
+    .select({ ...getTableColumns(storesTable), upcoming: sql<number>`(SELECT count(*) FROM trpg_sessions s WHERE s.store_id=stores.id AND s.status='published' AND (s.starts_at IS NULL OR s.starts_at>${Date.now()}))`.mapWith(Number) })
     .from(storesTable)
     .where(eq(storesTable.is_active, 1))
     .orderBy(asc(storesTable.name));

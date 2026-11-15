@@ -19,6 +19,11 @@ import { Route as Char123StoreLocaleChar125WithHomeLoRouteImport } from './route
 import { Route as XIdRouteImport } from './routers/x.$id'
 import { Route as DashWechatMenuRouteImport } from './routers/dash/wechat-menu'
 import { Route as DashUsersRouteImport } from './routers/dash/users'
+import { Route as DashTrpgServicesRouteImport } from './routers/dash/trpg-services'
+import { Route as DashTrpgRewardsRouteImport } from './routers/dash/trpg-rewards'
+import { Route as DashTrpgMembersRouteImport } from './routers/dash/trpg-members'
+import { Route as DashTrpgMailboxRouteImport } from './routers/dash/trpg-mailbox'
+import { Route as DashTrpgHostsRouteImport } from './routers/dash/trpg-hosts'
 import { Route as DashTrpgRouteImport } from './routers/dash/trpg'
 import { Route as DashTablesRouteImport } from './routers/dash/tables'
 import { Route as DashPricingRouteImport } from './routers/dash/pricing'
@@ -104,6 +109,31 @@ const DashWechatMenuRoute = DashWechatMenuRouteImport.update({
 const DashUsersRoute = DashUsersRouteImport.update({
   id: '/users',
   path: '/users',
+  getParentRoute: () => DashRoute,
+} as any)
+const DashTrpgServicesRoute = DashTrpgServicesRouteImport.update({
+  id: '/trpg-services',
+  path: '/trpg-services',
+  getParentRoute: () => DashRoute,
+} as any)
+const DashTrpgRewardsRoute = DashTrpgRewardsRouteImport.update({
+  id: '/trpg-rewards',
+  path: '/trpg-rewards',
+  getParentRoute: () => DashRoute,
+} as any)
+const DashTrpgMembersRoute = DashTrpgMembersRouteImport.update({
+  id: '/trpg-members',
+  path: '/trpg-members',
+  getParentRoute: () => DashRoute,
+} as any)
+const DashTrpgMailboxRoute = DashTrpgMailboxRouteImport.update({
+  id: '/trpg-mailbox',
+  path: '/trpg-mailbox',
+  getParentRoute: () => DashRoute,
+} as any)
+const DashTrpgHostsRoute = DashTrpgHostsRouteImport.update({
+  id: '/trpg-hosts',
+  path: '/trpg-hosts',
   getParentRoute: () => DashRoute,
 } as any)
 const DashTrpgRoute = DashTrpgRouteImport.update({
@@ -302,6 +332,11 @@ export interface FileRoutesByFullPath {
   '/dash/pricing': typeof DashPricingRoute
   '/dash/tables': typeof DashTablesRoute
   '/dash/trpg': typeof DashTrpgRoute
+  '/dash/trpg-hosts': typeof DashTrpgHostsRoute
+  '/dash/trpg-mailbox': typeof DashTrpgMailboxRoute
+  '/dash/trpg-members': typeof DashTrpgMembersRoute
+  '/dash/trpg-rewards': typeof DashTrpgRewardsRoute
+  '/dash/trpg-services': typeof DashTrpgServicesRoute
   '/dash/users': typeof DashUsersRoute
   '/dash/wechat-menu': typeof DashWechatMenuRoute
   '/x/$id': typeof XIdRoute
@@ -345,6 +380,11 @@ export interface FileRoutesByTo {
   '/dash/pricing': typeof DashPricingRoute
   '/dash/tables': typeof DashTablesRoute
   '/dash/trpg': typeof DashTrpgRoute
+  '/dash/trpg-hosts': typeof DashTrpgHostsRoute
+  '/dash/trpg-mailbox': typeof DashTrpgMailboxRoute
+  '/dash/trpg-members': typeof DashTrpgMembersRoute
+  '/dash/trpg-rewards': typeof DashTrpgRewardsRoute
+  '/dash/trpg-services': typeof DashTrpgServicesRoute
   '/dash/users': typeof DashUsersRoute
   '/dash/wechat-menu': typeof DashWechatMenuRoute
   '/x/$id': typeof XIdRoute
@@ -389,6 +429,11 @@ export interface FileRoutesById {
   '/dash/pricing': typeof DashPricingRoute
   '/dash/tables': typeof DashTablesRoute
   '/dash/trpg': typeof DashTrpgRoute
+  '/dash/trpg-hosts': typeof DashTrpgHostsRoute
+  '/dash/trpg-mailbox': typeof DashTrpgMailboxRoute
+  '/dash/trpg-members': typeof DashTrpgMembersRoute
+  '/dash/trpg-rewards': typeof DashTrpgRewardsRoute
+  '/dash/trpg-services': typeof DashTrpgServicesRoute
   '/dash/users': typeof DashUsersRoute
   '/dash/wechat-menu': typeof DashWechatMenuRoute
   '/x/$id': typeof XIdRoute
@@ -436,6 +481,11 @@ export interface FileRouteTypes {
     | '/dash/pricing'
     | '/dash/tables'
     | '/dash/trpg'
+    | '/dash/trpg-hosts'
+    | '/dash/trpg-mailbox'
+    | '/dash/trpg-members'
+    | '/dash/trpg-rewards'
+    | '/dash/trpg-services'
     | '/dash/users'
     | '/dash/wechat-menu'
     | '/x/$id'
@@ -479,6 +529,11 @@ export interface FileRouteTypes {
     | '/dash/pricing'
     | '/dash/tables'
     | '/dash/trpg'
+    | '/dash/trpg-hosts'
+    | '/dash/trpg-mailbox'
+    | '/dash/trpg-members'
+    | '/dash/trpg-rewards'
+    | '/dash/trpg-services'
     | '/dash/users'
     | '/dash/wechat-menu'
     | '/x/$id'
@@ -522,6 +577,11 @@ export interface FileRouteTypes {
     | '/dash/pricing'
     | '/dash/tables'
     | '/dash/trpg'
+    | '/dash/trpg-hosts'
+    | '/dash/trpg-mailbox'
+    | '/dash/trpg-members'
+    | '/dash/trpg-rewards'
+    | '/dash/trpg-services'
     | '/dash/users'
     | '/dash/wechat-menu'
     | '/x/$id'
@@ -631,6 +691,41 @@ declare module '@tanstack/react-router' {
       path: '/users'
       fullPath: '/dash/users'
       preLoaderRoute: typeof DashUsersRouteImport
+      parentRoute: typeof DashRoute
+    }
+    '/dash/trpg-services': {
+      id: '/dash/trpg-services'
+      path: '/trpg-services'
+      fullPath: '/dash/trpg-services'
+      preLoaderRoute: typeof DashTrpgServicesRouteImport
+      parentRoute: typeof DashRoute
+    }
+    '/dash/trpg-rewards': {
+      id: '/dash/trpg-rewards'
+      path: '/trpg-rewards'
+      fullPath: '/dash/trpg-rewards'
+      preLoaderRoute: typeof DashTrpgRewardsRouteImport
+      parentRoute: typeof DashRoute
+    }
+    '/dash/trpg-members': {
+      id: '/dash/trpg-members'
+      path: '/trpg-members'
+      fullPath: '/dash/trpg-members'
+      preLoaderRoute: typeof DashTrpgMembersRouteImport
+      parentRoute: typeof DashRoute
+    }
+    '/dash/trpg-mailbox': {
+      id: '/dash/trpg-mailbox'
+      path: '/trpg-mailbox'
+      fullPath: '/dash/trpg-mailbox'
+      preLoaderRoute: typeof DashTrpgMailboxRouteImport
+      parentRoute: typeof DashRoute
+    }
+    '/dash/trpg-hosts': {
+      id: '/dash/trpg-hosts'
+      path: '/trpg-hosts'
+      fullPath: '/dash/trpg-hosts'
+      preLoaderRoute: typeof DashTrpgHostsRouteImport
       parentRoute: typeof DashRoute
     }
     '/dash/trpg': {
@@ -878,6 +973,11 @@ interface DashRouteChildren {
   DashPricingRoute: typeof DashPricingRoute
   DashTablesRoute: typeof DashTablesRoute
   DashTrpgRoute: typeof DashTrpgRoute
+  DashTrpgHostsRoute: typeof DashTrpgHostsRoute
+  DashTrpgMailboxRoute: typeof DashTrpgMailboxRoute
+  DashTrpgMembersRoute: typeof DashTrpgMembersRoute
+  DashTrpgRewardsRoute: typeof DashTrpgRewardsRoute
+  DashTrpgServicesRoute: typeof DashTrpgServicesRoute
   DashUsersRoute: typeof DashUsersRoute
   DashWechatMenuRoute: typeof DashWechatMenuRoute
   DashIndexRoute: typeof DashIndexRoute
@@ -901,6 +1001,11 @@ const DashRouteChildren: DashRouteChildren = {
   DashPricingRoute: DashPricingRoute,
   DashTablesRoute: DashTablesRoute,
   DashTrpgRoute: DashTrpgRoute,
+  DashTrpgHostsRoute: DashTrpgHostsRoute,
+  DashTrpgMailboxRoute: DashTrpgMailboxRoute,
+  DashTrpgMembersRoute: DashTrpgMembersRoute,
+  DashTrpgRewardsRoute: DashTrpgRewardsRoute,
+  DashTrpgServicesRoute: DashTrpgServicesRoute,
   DashUsersRoute: DashUsersRoute,
   DashWechatMenuRoute: DashWechatMenuRoute,
   DashIndexRoute: DashIndexRoute,

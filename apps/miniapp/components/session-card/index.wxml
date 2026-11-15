@@ -1,9 +1,10 @@
 <view class="card" bindtap="open" role="button" aria-label="查看{{session.title}}">
   <view class="row">
     <text class="eyebrow">{{session.gameSystem}}</text>
-    <text class="price">{{session.feeText}}</text>
+    <text class="eyebrow">{{session.typeText}}</text>
   </view>
   <view class="heading">{{session.title}}</view>
+  <view class="price">{{session.feeText}}</view>
   <view class="muted">{{session.timeText}} · {{session.durationMinutes}} 分钟</view>
   <view class="muted">{{session.storeName}} · {{session.hostName}}</view>
   <view class="tags">
