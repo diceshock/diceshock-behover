@@ -8,7 +8,7 @@
     "x": "./x.sh",
     "deploy-diceshock": "pnpm --filter diceshock run deploy",
     "deploy-diceshock:update": "pnpm --filter diceshock run deploy:update",
-    "diceshock:build": "pnpm --filter diceshock run build",
+    "diceshock:build": "pnpm --filter diceshock run build && node scripts/prepare-preview-config.mjs",
     "diceshock:deploy": "pnpm --filter diceshock run deploy",
     "diceshock:deploy:update": "pnpm --filter diceshock run deploy:update",
     "drizzle": "./target/release/ty-jk --run drizzle drizzle-kit",
