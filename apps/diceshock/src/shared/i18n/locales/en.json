@@ -1209,6 +1209,8 @@
     "store": "Store",
     "allStores": "All authorized stores",
     "create": "New session",
+    "createTbd": "New session (venue TBD)",
+    "tbdHelp": "Venue TBD: recruit first, then agree on store, room and time.",
     "edit": "Edit session",
     "refresh": "Refresh",
     "title": "Title",

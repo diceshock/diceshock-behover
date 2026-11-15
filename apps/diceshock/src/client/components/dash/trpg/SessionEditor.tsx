@@ -18,16 +18,17 @@ export function SessionEditor({
   onSaved,
   onClose,
 }: {
-  storeId: string;
+  storeId: string | null;
   canReview: boolean;
   session?: TrpgSessionFieldsFragment;
   onSaved: () => Promise<unknown>;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
+  const tbd = !storeId;
   const requestId = useRef(crypto.randomUUID());
   const [pendingTime, setPendingTime] = useState(
-    session ? !session.startsAt : false,
+    tbd ? true : session ? !session.startsAt : false,
   );
   const [sessionType, setSessionType] = useState<SessionType>(
     (session?.sessionType as SessionType) || "commercial",
@@ -35,10 +36,13 @@ export function SessionEditor({
   const [error, setError] = useState("");
   const [create, creating] = useCreateTrpgSessionMutation();
   const [resubmit, submitting] = useResubmitTrpgSessionMutation();
-  const resources = useTrpgResourcesQuery({ variables: { storeId } });
+  const resources = useTrpgResourcesQuery({
+    variables: { storeId: storeId ?? "" },
+    skip: tbd,
+  });
   const hosts = useTrpgHostsQuery({
-    variables: { storeId },
-    skip: !canReview || !!session,
+    variables: { storeId: storeId ?? "" },
+    skip: tbd || !canReview || !!session,
   });
   const busy = creating.loading || submitting.loading;
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -48,7 +52,7 @@ export function SessionEditor({
     const get = (name: string) => String(values.get(name) || "");
     const input = sessionInput.safeParse({
       requestId: requestId.current,
-      storeId,
+      storeId: tbd ? null : storeId,
       hostId: get("hostId") || undefined,
       tableId: pendingTime ? null : get("tableId"),
       title: get("title"),
@@ -94,6 +98,9 @@ export function SessionEditor({
         <h2 className="card-title">
           {t(session ? "trpg.edit" : "trpg.create")}
         </h2>
+        {tbd && (
+          <p className="text-sm text-base-content/70">{t("trpg.tbdHelp")}</p>
+        )}
         <ErrorMessage
           error={error || resources.error?.message || hosts.error?.message}
         />
@@ -132,7 +139,7 @@ export function SessionEditor({
                 defaultValue={session?.tags.join(", ")}
               />
             </Field>
-            {canReview && !session && (
+            {canReview && !session && !tbd && (
               <Field label={t("trpg.host")}>
                 <select className="select w-full" name="hostId">
                   <option value="">{t("trpg.me")}</option>
@@ -181,15 +188,17 @@ export function SessionEditor({
                 {pricing[sessionType].detail}
               </p>
             </Field>
-            <label className="flex min-h-11 items-center gap-2 md:col-span-2">
-              <input
-                className="checkbox checkbox-sm"
-                type="checkbox"
-                checked={pendingTime}
-                onChange={(e) => setPendingTime(e.target.checked)}
-              />
-              {t("trpg.pendingTime")}
-            </label>
+            {!tbd && (
+              <label className="flex min-h-11 items-center gap-2 md:col-span-2">
+                <input
+                  className="checkbox checkbox-sm"
+                  type="checkbox"
+                  checked={pendingTime}
+                  onChange={(e) => setPendingTime(e.target.checked)}
+                />
+                {t("trpg.pendingTime")}
+              </label>
+            )}
             {pendingTime ? (
               <Field label={t("trpg.timeHint")}>
                 <input
@@ -251,7 +260,12 @@ export function SessionEditor({
             <div className="mt-4 flex gap-2 md:col-span-2">
               <button
                 className="btn btn-primary"
-                disabled={resources.loading || !!resources.error}
+                disabled={
+                  busy ||
+                  (!tbd &&
+                    !pendingTime &&
+                    (resources.loading || !!resources.error))
+                }
               >
                 {busy && (
                   <span className="loading loading-spinner loading-xs" />

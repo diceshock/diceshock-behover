@@ -173,6 +173,7 @@ export function SessionDetails({
             </button>
           )}
           {session.canReview &&
+            session.storeId &&
             session.status === "published" &&
             !session.startsAt && (
               <button

@@ -1298,6 +1298,8 @@
     "store": "门店",
     "allStores": "所有授权门店",
     "create": "新建场次",
+    "createTbd": "新建地点待定场次",
+    "tbdHelp": "地点待定：先招募，人齐后再协商门店、包间与时间。",
     "edit": "修改场次",
     "refresh": "刷新",
     "title": "团名",

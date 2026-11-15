@@ -31,6 +31,7 @@ export function TrpgWorkbench() {
   const [offset, setOffset] = useState(0);
   const [selectedId, setSelectedId] = useState("");
   const [editing, setEditing] = useState(false);
+  const [tbdEditing, setTbdEditing] = useState(false);
   const { data, loading, error, refetch, fetchMore } = useTrpgDashboardQuery({
     variables: {
       filters: {
@@ -104,6 +105,7 @@ export function TrpgWorkbench() {
                 setOffset(0);
                 setSelectedId("");
                 setEditing(false);
+                setTbdEditing(false);
               }}
             >
               <option value="">{t("trpg.allStores")}</option>
@@ -119,12 +121,26 @@ export function TrpgWorkbench() {
               disabled={!storeId || loading}
               onClick={() => {
                 setSelectedId("");
+                setTbdEditing(false);
                 setEditing(false);
                 setEditing(true);
               }}
             >
               <PlusIcon size={18} />
               {t("trpg.create")}
+            </button>
+            <button
+              type="button"
+              className="btn"
+              disabled={loading}
+              onClick={() => {
+                setSelectedId("");
+                setEditing(false);
+                setTbdEditing(true);
+              }}
+            >
+              <PlusIcon size={18} />
+              {t("trpg.createTbd")}
             </button>
             <button
               type="button"
@@ -278,6 +294,15 @@ export function TrpgWorkbench() {
             session={selected}
             onSaved={() => refetch()}
             onClose={() => setEditing(false)}
+          />
+        )}
+        {tbdEditing && (
+          <SessionEditor
+            key="tbd"
+            storeId={null}
+            canReview={!!data?.trpgStores.some((s) => s.canReview)}
+            onSaved={() => refetch()}
+            onClose={() => setTbdEditing(false)}
           />
         )}
         {!editing && selected && (
