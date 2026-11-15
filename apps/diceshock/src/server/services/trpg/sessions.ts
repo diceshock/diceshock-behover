@@ -4,9 +4,13 @@ import { and, eq, sql } from "drizzle-orm";
 import type { SessionInput } from "@/shared/trpg/validation";
 import { forbidden, validationError } from "../../graphql/errors";
 import {
+  canHost,
   canReview,
+  canReviewAny,
   type Operator,
   operator,
+  requireAnyHost,
+  requireAnyReviewer,
   requireHost,
   requireReviewer,
 } from "./access";
@@ -44,25 +48,31 @@ export async function createSession(
   actor: Operator,
   input: SessionInput,
 ) {
-  requireHost(actor, input.storeId);
+  const storeId = input.storeId;
+  if (storeId === null) requireAnyHost(actor);
+  else requireHost(actor, storeId);
   const host =
     input.hostId && input.hostId !== actor.id
       ? await operator(db, input.hostId)
       : actor;
-  requireHost(host, input.storeId);
-  if (host.id !== actor.id) requireReviewer(actor, input.storeId);
+  if (storeId === null) requireAnyHost(host);
+  else requireHost(host, storeId);
+  if (host.id !== actor.id) {
+    if (storeId === null) requireAnyReviewer(actor);
+    else requireReviewer(actor, storeId);
+  }
   const { startsAt, deadline } = times(input);
   const now = Date.now();
-  const status = canReview(actor, input.storeId) ? "published" : "pending";
+  const status = canReview(actor, storeId) ? "published" : "pending";
   // The availability predicate and insert execute as one D1 statement.
   const result = await db.run(sql`INSERT INTO trpg_sessions
     (id,store_id,host_id,table_id,title,description,module_name,game_system,status,starts_at,deadline,
      duration_minutes,session_type,fee_cents,capacity,minimum,time_hint,tags,created_at,updated_at)
-    SELECT ${input.requestId},${input.storeId},${host.id},${input.tableId},${input.title},${input.description},
+    SELECT ${input.requestId},${storeId},${host.id},${input.tableId},${input.title},${input.description},
       ${input.moduleName},${input.gameSystem},${status},${startsAt},${deadline},${input.durationMinutes},
       ${input.sessionType},${input.feeCents},${input.capacity},${input.minimum},${input.timeHint},${JSON.stringify(input.tags)},${now},${now}
-    WHERE EXISTS(SELECT 1 FROM stores WHERE id=${input.storeId} AND is_active=1)
-      AND (${startsAt} IS NULL OR ${suitableTable(input.storeId, input.tableId, input.capacity)})
+    WHERE (${storeId} IS NULL OR EXISTS(SELECT 1 FROM stores WHERE id=${storeId} AND is_active=1))
+      AND (${input.tableId} IS NULL OR ${suitableTable(storeId ?? "", input.tableId, input.capacity)})
       AND (${status}='pending' OR ${startsAt} IS NULL OR ${noOverlap(input.requestId, host.id, input.tableId, startsAt, input.durationMinutes)})
     ON CONFLICT(id) DO NOTHING`);
   if (!result.meta.changes) {
@@ -74,7 +84,7 @@ export async function createSession(
     if (
       !previous ||
       previous.hostId !== host.id ||
-      previous.storeId !== input.storeId ||
+      previous.storeId !== storeId ||
       previous.title !== input.title ||
       previous.description !== input.description ||
       previous.startsAt !== startsAt ||
@@ -103,7 +113,8 @@ export async function resubmitSession(
   input: SessionInput,
 ) {
   const row = await findSession(db, id);
-  requireHost(actor, row.storeId);
+  if (row.storeId === null) requireAnyHost(actor);
+  else requireHost(actor, row.storeId);
   if (row.hostId !== actor.id && !canReview(actor, row.storeId))
     throw forbidden("只能修改自己主持的场次");
   if (
@@ -140,11 +151,12 @@ export async function resubmitSession(
         eq(sessions.id, id),
         eq(sessions.revision, revision),
         eq(sessions.status, "returned"),
-        sql`(${startsAt} IS NULL OR ${suitableTable(row.storeId, input.tableId, input.capacity)})`,
+        sql`(${startsAt} IS NULL OR ${input.tableId} IS NULL OR ${suitableTable(row.storeId ?? "", input.tableId, input.capacity)})`,
       ),
     )
     .run();
-  if (!result.meta.changes) throw conflict("场次已变更或包间或大厅不可用，请刷新");
+  if (!result.meta.changes)
+    throw conflict("场次已变更或包间或大厅不可用，请刷新");
 }
 export async function transition(
   db: Database,
@@ -186,7 +198,9 @@ export async function transition(
         eq(sessions.revision, revision),
         eq(sessions.status, before),
         action === "approve"
-          ? sql`EXISTS(SELECT 1 FROM stores WHERE id=${row.storeId} AND is_active=1)
+          ? row.storeId === null
+            ? sql`(${sessions.startsAt} IS NULL OR ${noOverlap(id, row.hostId, row.tableId, row.startsAt, row.durationMinutes)})`
+            : sql`EXISTS(SELECT 1 FROM stores WHERE id=${row.storeId} AND is_active=1)
       AND (${sessions.startsAt} IS NULL OR (${suitableTable(row.storeId, row.tableId, row.capacity)}
       AND ${noOverlap(id, row.hostId, row.tableId, row.startsAt, row.durationMinutes)}))`
           : undefined,
@@ -203,9 +217,19 @@ export async function scheduleSession(
   tableId: string,
   start: string,
   cutoff: string,
+  storeId?: string | null,
 ) {
   const row = await findSession(db, id);
-  requireReviewer(actor, row.storeId);
+  const targetStore = row.storeId ?? storeId ?? null;
+  if (!targetStore) throw conflict("请选择开团门店和包间");
+  if (row.storeId === null) {
+    if (row.hostId !== actor.id && !canReviewAny(actor))
+      throw forbidden("只能由主持人或审核员确定地点");
+    if (!canReviewAny(actor) && !canHost(actor, targetStore))
+      throw forbidden("没有该门店的主持权限");
+  } else {
+    requireReviewer(actor, row.storeId);
+  }
   const { startsAt, deadline } = times({ startsAt: start, deadline: cutoff });
   if (startsAt === null || deadline === null || deadline > startsAt)
     throw conflict("请核对开团与截止时间");
@@ -215,6 +239,7 @@ export async function scheduleSession(
   const result = await db
     .update(sessions)
     .set({
+      storeId: targetStore,
       startsAt,
       deadline,
       tableId,
@@ -230,7 +255,7 @@ export async function scheduleSession(
         eq(sessions.status, "published"),
         sql`${sessions.startsAt} IS NULL`,
         sql`(${priority}>${now} OR NOT ${interested})`,
-        suitableTable(row.storeId, tableId, row.capacity),
+        suitableTable(targetStore, tableId, row.capacity),
         noOverlap(id, row.hostId, tableId, startsAt, row.durationMinutes),
       ),
     )

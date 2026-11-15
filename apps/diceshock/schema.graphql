@@ -1885,7 +1885,7 @@ extend type Mutation {
 
 type TrpgSession {
   id: ID!
-  storeId: ID!
+  storeId: ID
   storeName: String!
   address: String
   tableId: ID
@@ -1939,7 +1939,7 @@ input TrpgFilters {
 
 input TrpgSessionInput {
   requestId: ID!
-  storeId: ID!
+  storeId: ID
   tableId: ID
   hostId: ID
   title: String!
@@ -1976,7 +1976,7 @@ extend type Mutation {
   createTrpgSession(input: TrpgSessionInput!): TrpgSession!
   resubmitTrpgSession(id: ID!, revision: Int!, input: TrpgSessionInput!): OperationResult!
   transitionTrpgSession(id: ID!, revision: Int!, action: String!, reason: String = ""): OperationResult!
-  scheduleTrpgSession(id: ID!, revision: Int!, tableId: ID!, startsAt: String!, deadline: String!): OperationResult!
+  scheduleTrpgSession(id: ID!, revision: Int!, tableId: ID!, startsAt: String!, deadline: String!, storeId: ID): OperationResult!
   joinTrpgSession(id: ID!): OperationResult!
   withdrawTrpgRegistration(id: ID!): OperationResult!
   reviewTrpgRegistration(id: ID!, registrationId: ID!, decision: String!, depositConfirmed: Boolean = false, reason: String = ""): OperationResult!

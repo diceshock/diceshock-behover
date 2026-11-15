@@ -22,6 +22,7 @@ export function createDatabase() {
   );
   sqlite.exec(readFileSync(new URL("../../../../../drizzle/0057_trpg_session_type.sql", import.meta.url), "utf8"));
   sqlite.exec(readFileSync(new URL("../../../../../drizzle/0058_trpg_member_services.sql", import.meta.url), "utf8"));
+  sqlite.exec(readFileSync(new URL("../../../../../drizzle/0060_trpg_location_tbd.sql", import.meta.url), "utf8"));
   class Statement {
     constructor(
       readonly query: string,

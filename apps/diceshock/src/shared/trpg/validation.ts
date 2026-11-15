@@ -7,7 +7,7 @@ export const trpgReason = z.string().trim().max(300).default("");
 export const sessionInput = z
   .object({
     requestId: z.uuid(),
-    storeId: trpgId,
+    storeId: trpgId.nullable(),
     tableId: trpgId.nullable(),
     hostId: trpgId.optional(),
     title: z.string().trim().min(1).max(100),
@@ -31,11 +31,10 @@ export const sessionInput = z
   .refine(
     (v) =>
       v.minimum <= v.capacity &&
+      (v.tableId === null || v.storeId !== null) &&
       (v.startsAt === null
         ? v.deadline === null && v.tableId === null
-        : !!v.tableId &&
-          !!v.deadline &&
-          Date.parse(v.deadline) <= Date.parse(v.startsAt)),
+        : !!v.deadline && Date.parse(v.deadline) <= Date.parse(v.startsAt)),
     "请核对席位、包间或大厅和报名时间",
   );
 export type SessionInput = z.output<typeof sessionInput>;

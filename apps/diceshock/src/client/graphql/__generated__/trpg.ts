@@ -43,21 +43,21 @@ export type TrpgSessionInput = {
   requestId: string | number;
   sessionType?: string | null | undefined;
   startsAt?: string | null | undefined;
-  storeId: string | number;
+  storeId?: string | number | null | undefined;
   tableId?: string | number | null | undefined;
   tags?: Array<string> | null | undefined;
   timeHint?: string | null | undefined;
   title: string;
 };
 
-export type TrpgSessionFieldsFragment = { id: string, storeId: string, storeName: string, address: string | null, tableId: string | null, tableName: string | null, hostName: string, title: string, description: string, moduleName: string, gameSystem: string, status: string, startsAt: string | null, deadline: string | null, priorityUntil: string | null, durationMinutes: number, sessionType: string, feeCents: number, capacity: number, minimum: number, timeHint: string, tags: Array<string>, revision: number | null, reason: string | null, confirmedCount: number, interestedCount: number, pendingCount: number, remaining: number, canReview: boolean, canEdit: boolean, registrationOpen: boolean };
+export type TrpgSessionFieldsFragment = { id: string, storeId: string | null, storeName: string, address: string | null, tableId: string | null, tableName: string | null, hostName: string, title: string, description: string, moduleName: string, gameSystem: string, status: string, startsAt: string | null, deadline: string | null, priorityUntil: string | null, durationMinutes: number, sessionType: string, feeCents: number, capacity: number, minimum: number, timeHint: string, tags: Array<string>, revision: number | null, reason: string | null, confirmedCount: number, interestedCount: number, pendingCount: number, remaining: number, canReview: boolean, canEdit: boolean, registrationOpen: boolean };
 
 export type TrpgDashboardQueryVariables = Exact<{
   filters?: TrpgFilters | null | undefined;
 }>;
 
 
-export type TrpgDashboardQuery = { trpgStores: Array<{ id: string, name: string, canReview: boolean }>, trpgSessions: { hasMore: boolean, items: Array<{ id: string, storeId: string, storeName: string, address: string | null, tableId: string | null, tableName: string | null, hostName: string, title: string, description: string, moduleName: string, gameSystem: string, status: string, startsAt: string | null, deadline: string | null, priorityUntil: string | null, durationMinutes: number, sessionType: string, feeCents: number, capacity: number, minimum: number, timeHint: string, tags: Array<string>, revision: number | null, reason: string | null, confirmedCount: number, interestedCount: number, pendingCount: number, remaining: number, canReview: boolean, canEdit: boolean, registrationOpen: boolean }> }, trpgProfile: { id: string, nickname: string, admin: boolean } };
+export type TrpgDashboardQuery = { trpgStores: Array<{ id: string, name: string, canReview: boolean }>, trpgSessions: { hasMore: boolean, items: Array<{ id: string, storeId: string | null, storeName: string, address: string | null, tableId: string | null, tableName: string | null, hostName: string, title: string, description: string, moduleName: string, gameSystem: string, status: string, startsAt: string | null, deadline: string | null, priorityUntil: string | null, durationMinutes: number, sessionType: string, feeCents: number, capacity: number, minimum: number, timeHint: string, tags: Array<string>, revision: number | null, reason: string | null, confirmedCount: number, interestedCount: number, pendingCount: number, remaining: number, canReview: boolean, canEdit: boolean, registrationOpen: boolean }> }, trpgProfile: { id: string, nickname: string, admin: boolean } };
 
 export type TrpgResourcesQueryVariables = Exact<{
   storeId: string | number;
@@ -112,14 +112,14 @@ export type TrpgMemberHistoryQueryVariables = Exact<{
 }>;
 
 
-export type TrpgMemberHistoryQuery = { trpgMemberHistory: { hasMore: boolean, items: Array<{ id: string, storeId: string, storeName: string, address: string | null, tableId: string | null, tableName: string | null, hostName: string, title: string, description: string, moduleName: string, gameSystem: string, status: string, startsAt: string | null, deadline: string | null, priorityUntil: string | null, durationMinutes: number, sessionType: string, feeCents: number, capacity: number, minimum: number, timeHint: string, tags: Array<string>, revision: number | null, reason: string | null, confirmedCount: number, interestedCount: number, pendingCount: number, remaining: number, canReview: boolean, canEdit: boolean, registrationOpen: boolean }> } };
+export type TrpgMemberHistoryQuery = { trpgMemberHistory: { hasMore: boolean, items: Array<{ id: string, storeId: string | null, storeName: string, address: string | null, tableId: string | null, tableName: string | null, hostName: string, title: string, description: string, moduleName: string, gameSystem: string, status: string, startsAt: string | null, deadline: string | null, priorityUntil: string | null, durationMinutes: number, sessionType: string, feeCents: number, capacity: number, minimum: number, timeHint: string, tags: Array<string>, revision: number | null, reason: string | null, confirmedCount: number, interestedCount: number, pendingCount: number, remaining: number, canReview: boolean, canEdit: boolean, registrationOpen: boolean }> } };
 
 export type CreateTrpgSessionMutationVariables = Exact<{
   input: TrpgSessionInput;
 }>;
 
 
-export type CreateTrpgSessionMutation = { createTrpgSession: { id: string, storeId: string, storeName: string, address: string | null, tableId: string | null, tableName: string | null, hostName: string, title: string, description: string, moduleName: string, gameSystem: string, status: string, startsAt: string | null, deadline: string | null, priorityUntil: string | null, durationMinutes: number, sessionType: string, feeCents: number, capacity: number, minimum: number, timeHint: string, tags: Array<string>, revision: number | null, reason: string | null, confirmedCount: number, interestedCount: number, pendingCount: number, remaining: number, canReview: boolean, canEdit: boolean, registrationOpen: boolean } };
+export type CreateTrpgSessionMutation = { createTrpgSession: { id: string, storeId: string | null, storeName: string, address: string | null, tableId: string | null, tableName: string | null, hostName: string, title: string, description: string, moduleName: string, gameSystem: string, status: string, startsAt: string | null, deadline: string | null, priorityUntil: string | null, durationMinutes: number, sessionType: string, feeCents: number, capacity: number, minimum: number, timeHint: string, tags: Array<string>, revision: number | null, reason: string | null, confirmedCount: number, interestedCount: number, pendingCount: number, remaining: number, canReview: boolean, canEdit: boolean, registrationOpen: boolean } };
 
 export type ResubmitTrpgSessionMutationVariables = Exact<{
   id: string | number;

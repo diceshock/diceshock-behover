@@ -96,7 +96,13 @@ export const trpgResolvers: ResolverMap = {
         .from(userInfoTable)
         .where(eq(userInfoTable.id, user.id))
         .get();
-      return { ...profile, admin: user.role === "admin", canManage: access.canEnterDashboard(user), canHost: access.canEnterDashboard(user) || user.access.some((a) => a.host) };
+      return {
+        ...profile,
+        admin: user.role === "admin",
+        canManage: access.canEnterDashboard(user),
+        canHost:
+          access.canEnterDashboard(user) || user.access.some((a) => a.host),
+      };
     },
     trpgMyRecords: async (_source, args, ctx) => {
       const user = await actor(ctx);
@@ -254,6 +260,7 @@ export const trpgResolvers: ResolverMap = {
           tableId: trpgId,
           startsAt: z.iso.datetime({ offset: true }),
           deadline: z.iso.datetime({ offset: true }),
+          storeId: trpgId.nullish(),
         }),
         args,
       );
@@ -265,6 +272,7 @@ export const trpgResolvers: ResolverMap = {
         input.tableId,
         input.startsAt,
         input.deadline,
+        input.storeId,
       );
       return ok();
     },

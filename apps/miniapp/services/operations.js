@@ -1,7 +1,7 @@
 const fields = `id title description storeId storeName address tableName hostName moduleName gameSystem status startsAt deadline priorityUntil durationMinutes sessionType feeCents minimum capacity remaining confirmedCount pendingCount timeHint tags registrationOpen`;
 const manageFields = fields + ' tableId revision reason canReview canEdit';
 module.exports = {
- schedule: 'mutation($id:ID!,$revision:Int!,$tableId:ID!,$startsAt:String!,$deadline:String!) { scheduleTrpgSession(id:$id,revision:$revision,tableId:$tableId,startsAt:$startsAt,deadline:$deadline) { success } }',
+ schedule: 'mutation($id:ID!,$revision:Int!,$tableId:ID!,$startsAt:String!,$deadline:String!,$storeId:ID) { scheduleTrpgSession(id:$id,revision:$revision,tableId:$tableId,startsAt:$startsAt,deadline:$deadline,storeId:$storeId) { success } }',
   workbench: `query Workbench($filters:TrpgFilters) { trpgProfile { canManage canHost } trpgStores(managed:true) { id name canReview } trpgSessions(managed:true,filters:$filters) { items { ${manageFields} } hasMore } }`,
   managedSession: `query Managed($id:ID!) { trpgManagedSession(id:$id) { ${manageFields} } }`,
   hostStores: 'query { trpgStores(managed:true) { id name canReview } }',

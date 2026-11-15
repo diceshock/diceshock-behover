@@ -23,6 +23,7 @@ import { notFound } from "../../graphql/errors";
 import {
   canHost,
   canReview,
+  canReviewAny,
   type Operator,
   requireDirectoryReviewer,
   requireHost,
@@ -140,7 +141,7 @@ export function sessionQuery(db: Database) {
       interestedCount: count(["interested"]),
     })
     .from(sessions)
-    .innerJoin(storesTable, eq(storesTable.id, sessions.storeId))
+    .leftJoin(storesTable, eq(storesTable.id, sessions.storeId))
     .innerJoin(users, eq(users.id, sessions.hostId))
     .leftJoin(userInfoTable, eq(userInfoTable.id, sessions.hostId))
     .leftJoin(tablesTable, eq(tablesTable.id, sessions.tableId));
@@ -154,6 +155,7 @@ export function present(row: Row, actor?: Operator) {
     (hostId === actor.id || canReview(actor, row.storeId));
   return {
     ...rest,
+    storeName: row.storeName ?? "地点待定",
     revision: manage ? row.revision : null,
     reason: manage ? row.reason : null,
     remaining: Math.max(0, row.capacity - heldCount),
@@ -216,17 +218,20 @@ export async function listSessions(
             eq(sessions.hostId, actor.id),
             actor.access.some((a) => a.host) ? sql`1=1` : sql`0=1`,
           ),
+          canReviewAny(actor) ? isNull(sessions.storeId) : sql`0=1`,
         )
     : and(
         eq(sessions.status, "published"),
-        eq(storesTable.is_active, 1),
+        or(isNull(sessions.storeId), eq(storesTable.is_active, 1)),
         or(isNull(sessions.startsAt), sql`${sessions.startsAt} > ${now}`),
       );
   const rows = await sessionQuery(db)
     .where(
       and(
         scope,
-        input.storeId ? eq(sessions.storeId, input.storeId) : undefined,
+        input.storeId
+          ? or(eq(sessions.storeId, input.storeId), isNull(sessions.storeId))
+          : undefined,
         input.status ? eq(sessions.status, input.status) : undefined,
         input.hostId ? eq(sessions.hostId, input.hostId) : undefined,
         input.unscheduled ? isNull(sessions.startsAt) : undefined,
@@ -267,7 +272,13 @@ export async function listSessions(
 }
 export async function listStores(db: Database, actor?: Operator) {
   const rows = await db
-    .select({ ...getTableColumns(storesTable), upcoming: sql<number>`(SELECT count(*) FROM trpg_sessions s WHERE s.store_id=stores.id AND s.status='published' AND (s.starts_at IS NULL OR s.starts_at>${Date.now()}))`.mapWith(Number) })
+    .select({
+      ...getTableColumns(storesTable),
+      upcoming:
+        sql<number>`(SELECT count(*) FROM trpg_sessions s WHERE s.store_id=stores.id AND s.status='published' AND (s.starts_at IS NULL OR s.starts_at>${Date.now()}))`.mapWith(
+          Number,
+        ),
+    })
     .from(storesTable)
     .where(eq(storesTable.is_active, 1))
     .orderBy(asc(storesTable.name));

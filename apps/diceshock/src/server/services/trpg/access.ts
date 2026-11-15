@@ -25,12 +25,21 @@ export type Operator = Awaited<ReturnType<typeof operator>>;
 export const canEnterDashboard = (actor: Operator) =>
   actor.role === "admin" ||
   (actor.role === "staff" && actor.access.some((a) => a.staff));
-export const canReview = (actor: Operator, storeId: string) =>
+export const canReviewAny = (actor: Operator) =>
   actor.role === "admin" ||
-  (actor.role === "staff" &&
-    actor.access.some((a) => a.storeId === storeId && a.staff));
-export const canHost = (actor: Operator, storeId: string) =>
-  canReview(actor, storeId) || actor.access.some((a) => a.host);
+  (actor.role === "staff" && actor.access.some((a) => a.staff));
+export const canReview = (actor: Operator, storeId: string | null) =>
+  storeId === null
+    ? canReviewAny(actor)
+    : actor.role === "admin" ||
+      (actor.role === "staff" &&
+        actor.access.some((a) => a.storeId === storeId && a.staff));
+export const canHostAny = (actor: Operator) =>
+  canReviewAny(actor) || actor.access.some((a) => a.host);
+export const canHost = (actor: Operator, storeId: string | null) =>
+  storeId === null
+    ? canHostAny(actor)
+    : canReview(actor, storeId) || actor.access.some((a) => a.host);
 export function requireDirectoryReviewer(actor: Operator) {
   if (
     actor.role !== "admin" &&
@@ -124,10 +133,16 @@ export async function setHost(
     ON CONFLICT(user_id,store_id) DO UPDATE SET host=1`);
   await syncHostIdentity(db, id, target.role, true);
 }
-export function requireHost(actor: Operator, storeId: string) {
+export function requireHost(actor: Operator, storeId: string | null) {
   if (!canHost(actor, storeId)) throw forbidden("没有该门店的主持权限");
 }
-export function requireReviewer(actor: Operator, storeId: string) {
+export function requireAnyHost(actor: Operator) {
+  if (!canHostAny(actor)) throw forbidden("没有主持权限");
+}
+export function requireAnyReviewer(actor: Operator) {
+  if (!canReviewAny(actor)) throw forbidden("没有审核权限");
+}
+export function requireReviewer(actor: Operator, storeId: string | null) {
   if (!canReview(actor, storeId)) throw forbidden("没有该门店的审核权限");
 }
 export async function setAccess(

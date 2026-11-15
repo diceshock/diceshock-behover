@@ -40,8 +40,8 @@ export function SessionDetails({
     fetchPolicy: "network-only",
   });
   const resources = useTrpgResourcesQuery({
-    variables: { storeId: session.storeId },
-    skip: !scheduling,
+    variables: { storeId: session.storeId ?? "" },
+    skip: !scheduling || !session.storeId,
   });
   const [transition, transitioning] = useTransitionTrpgSessionMutation();
   const [review, reviewing] = useReviewTrpgRegistrationMutation();

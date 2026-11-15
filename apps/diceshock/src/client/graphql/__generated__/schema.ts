@@ -793,6 +793,7 @@ export type Mutation = {
   setCaptchaEnabled: CaptchaSettings;
   setTrpgAccess: OperationResult;
   setTrpgHost: OperationResult;
+  setTrpgMember: OperationResult;
   settleOrder: SettlementResult;
   startOrder: TableOccupancy;
   syncMahjongMatchToGsz: GszSyncResult;
@@ -1205,6 +1206,7 @@ export type MutationScheduleTrpgSessionArgs = {
   id: Scalars['ID']['input'];
   revision: Scalars['Int']['input'];
   startsAt: Scalars['String']['input'];
+  storeId?: InputMaybe<Scalars['ID']['input']>;
   tableId: Scalars['ID']['input'];
 };
 
@@ -1243,6 +1245,12 @@ export type MutationSetTrpgAccessArgs = {
 export type MutationSetTrpgHostArgs = {
   host: Scalars['Boolean']['input'];
   id: Scalars['ID']['input'];
+};
+
+
+export type MutationSetTrpgMemberArgs = {
+  id: Scalars['ID']['input'];
+  member: Scalars['Boolean']['input'];
 };
 
 
@@ -2472,6 +2480,7 @@ export type TrpgDirectoryMember = {
   nickname: Scalars['String']['output'];
   phone?: Maybe<Scalars['String']['output']>;
   points: Scalars['Int']['output'];
+  role: Scalars['String']['output'];
   staff: Scalars['Boolean']['output'];
   storedValueMember: Scalars['Boolean']['output'];
   timePlans: Array<TrpgTimePlan>;
@@ -2582,7 +2591,7 @@ export type TrpgSession = {
   sessionType: Scalars['String']['output'];
   startsAt?: Maybe<Scalars['String']['output']>;
   status: Scalars['String']['output'];
-  storeId: Scalars['ID']['output'];
+  storeId?: Maybe<Scalars['ID']['output']>;
   storeName: Scalars['String']['output'];
   tableId?: Maybe<Scalars['ID']['output']>;
   tableName?: Maybe<Scalars['String']['output']>;
@@ -2604,7 +2613,7 @@ export type TrpgSessionInput = {
   requestId: Scalars['ID']['input'];
   sessionType?: InputMaybe<Scalars['String']['input']>;
   startsAt?: InputMaybe<Scalars['String']['input']>;
-  storeId: Scalars['ID']['input'];
+  storeId?: InputMaybe<Scalars['ID']['input']>;
   tableId?: InputMaybe<Scalars['ID']['input']>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   timeHint?: InputMaybe<Scalars['String']['input']>;
