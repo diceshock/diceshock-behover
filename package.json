@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "packageManager": "pnpm@11.8.0",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "x": "node plugins/x.ts",
     "dev": "node plugins/x.ts --dev",
