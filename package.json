@@ -14,7 +14,8 @@
     "backfill": "node scripts/backfill-store-id.ts",
     "test:e2e:diceshock": "pnpm --filter diceshock run test:e2e",
     "test:e2e:diceshock:ui": "pnpm --filter diceshock run test:e2e:ui",
-    "test:e2e:diceshock:report": "pnpm --filter diceshock run test:e2e:report"
+    "test:e2e:diceshock:report": "pnpm --filter diceshock run test:e2e:report",
+    "prepare": "husky"
   },
   "workspaces": [
     "apps/*",
@@ -54,6 +55,7 @@
     "@types/node": "^25.5.0",
     "@vitest/ui": "^4.1.0",
     "drizzle-kit": "^0.31.10",
+    "husky": "^9.1.7",
     "jiti": "^2.6.1",
     "nx": "^22.6.0",
     "typescript": "^5.9.3",
