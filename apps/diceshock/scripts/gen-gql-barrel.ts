@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 /**
  * Post-codegen hook: generates __generated__/index.ts as a barrel that
  * re-exports schema.ts (enum values) and operations.ts (hooks, query types),
@@ -8,16 +10,23 @@ import { join } from "node:path";
 
 const GEN = join("src", "client", "graphql", "__generated__");
 
+interface Exports {
+  values: Set<string>;
+  types: Set<string>;
+}
+
 /**
  * Parse exported names from a generated file, distinguishing values from types.
  * Values: const, function, class, enum, const enum
  * Types: type, interface
  */
-function extractExports(file) {
+function extractExports(file: string): Exports {
   const src = readFileSync(join(GEN, file), "utf8");
-  const values = new Set();
-  const types = new Set();
-  for (const m of src.matchAll(/^export\s+(type|enum|const enum|interface|const|function|class)\s+(\w+)/gm)) {
+  const values = new Set<string>();
+  const types = new Set<string>();
+  for (const m of src.matchAll(
+    /^export\s+(type|enum|const enum|interface|const|function|class)\s+(\w+)/gm,
+  )) {
     const kind = m[1];
     const name = m[2];
     if (kind === "type" || kind === "interface") {
@@ -35,12 +44,11 @@ const ops = extractExports("operations.ts");
 const schemaAll = new Set([...schema.values, ...schema.types]);
 const opsAll = new Set([...ops.values, ...ops.types]);
 
-// Names only in operations (not in schema).
 const opsOnlyValues = [...ops.values].filter((n) => !schemaAll.has(n));
 const opsOnlyTypes = [...ops.types].filter((n) => !schemaAll.has(n));
 const overlap = [...opsAll].filter((n) => schemaAll.has(n));
 
-const lines = [
+const lines: string[] = [
   "/* eslint-disable */",
   "// Auto-generated barrel — do not edit. Regenerate with: pnpm codegen",
   "",
