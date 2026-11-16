@@ -1,6 +1,6 @@
-import { type ChildProcess, spawn } from "node:child_process";
+import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import { resolve } from "node:path";
-import { agentsDir, RotatingLog } from "./log.js";
+import { RotatingLog } from "./log.ts";
 
 const root = process.env.NX_WORKSPACE_ROOT ?? process.cwd();
 const args = process.argv.slice(2);
@@ -85,39 +85,72 @@ function devMode() {
   process.on("SIGTERM", cleanup);
 }
 
+/** Map nx project names → app directories with wrangler.toml */
+const appDirs: Record<string, string> = {
+  diceshock: "apps/diceshock",
+  rolesandbox: "apps/rolesandbox",
+};
+
+/** Targets that should run wrangler directly instead of nx */
+const wranglerTargets = new Set(["preview", "deploy-preview", "deploy", "deploy:update"]);
+
 function nxMode() {
   const target = args[0];
   if (!target) {
     console.error("usage: pnpm x <project:target> [args...]");
     process.exit(1);
   }
-  const name = target.replace(/:/g, "-");
+
+  const sep = target.indexOf(":");
+  const project = sep > 0 ? target.slice(0, sep) : "";
+  const task = sep > 0 ? target.slice(sep + 1) : target;
   const extra = args.slice(1);
 
-  const child = run({
-    name,
-    cmd: [resolve(root, "node_modules/.bin/nx"), "run", target, ...extra],
-    cwd: root,
-  });
+  // Wrangler commands: run directly with --config pointing to the app
+  if (project && wranglerTargets.has(task)) {
+    const appDir = appDirs[project];
+    if (!appDir) {
+      console.error(`unknown project: ${project}`);
+      process.exit(1);
+    }
+    const configPath = resolve(root, appDir, "wrangler.toml");
+    const wranglerArgs: string[] = [];
+    if (task === "preview" || task === "deploy-preview") {
+      wranglerArgs.push("preview", "--config", configPath);
+    } else if (task === "deploy") {
+      wranglerArgs.push("deploy", "--config", configPath);
+    } else if (task === "deploy:update") {
+      wranglerArgs.push("versions", "upload", "--config", configPath);
+    }
+    const result = spawnSync(
+      resolve(root, "node_modules/.bin/wrangler"),
+      [...wranglerArgs, ...extra],
+      { cwd: root, stdio: "inherit", env: cleanNpmEnv() },
+    );
+    process.exit(result.status ?? 1);
+  }
 
-  child.on("close", (code) => process.exit(code ?? 0));
-  process.on("SIGINT", () => child.kill("SIGINT"));
-  process.on("SIGTERM", () => child.kill("SIGTERM"));
+  // Default: nx run
+  const result = spawnSync(
+    resolve(root, "node_modules/.bin/nx"),
+    ["run", target, ...extra],
+    { cwd: root, stdio: "inherit", env: cleanNpmEnv() },
+  );
+  process.exit(result.status ?? 1);
 }
 
 function cmdMode() {
-  const name = args[1];
   const cmd = args.slice(2);
-  if (!name || cmd.length === 0) {
+  if (args.length < 3 || cmd.length === 0) {
     console.error("usage: pnpm x --run <name> <command...>");
     process.exit(1);
   }
-
-  const child = run({ name, cmd, cwd: root });
-
-  child.on("close", (code) => process.exit(code ?? 0));
-  process.on("SIGINT", () => child.kill("SIGINT"));
-  process.on("SIGTERM", () => child.kill("SIGTERM"));
+  const result = spawnSync(cmd[0], cmd.slice(1), {
+    cwd: root,
+    stdio: "inherit",
+    env: cleanNpmEnv(),
+  });
+  process.exit(result.status ?? 1);
 }
 
 if (args[0] === "--dev") {
