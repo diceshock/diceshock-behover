@@ -147,13 +147,16 @@ export function CardShell({ children }: PropsWithChildren) {
     <html>
       <head>
         <meta charSet="utf-8" />
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: server-side OG card rendering, no user input */}
         <style dangerouslySetInnerHTML={{ __html: CARD_SHELL_CSS }} />
       </head>
       <body>
         {children}
+        {/* biome-ignore-start lint/security/noDangerouslySetInnerHtml: server-side OG card rendering, no user input */}
         <script
           dangerouslySetInnerHTML={{ __html: "window.__ready = true;" }}
         />
+        {/* biome-ignore-end lint/security/noDangerouslySetInnerHtml: server-side OG card rendering, no user input */}
       </body>
     </html>
   );

@@ -202,7 +202,11 @@ export async function uploadArticleBodyImage(
 
   const url = `${WECHAT_API_BASE}/cgi-bin/media/uploadimg?access_token=${token}`;
   const res = await fetch(url, { method: "POST", body: formData });
-  const data = (await res.json()) as { url?: string; errcode?: number; errmsg?: string };
+  const data = (await res.json()) as {
+    url?: string;
+    errcode?: number;
+    errmsg?: string;
+  };
 
   if (data.errcode || !data.url) {
     console.error("[wechat:api] uploadimg failed:", data);

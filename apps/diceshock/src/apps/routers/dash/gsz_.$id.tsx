@@ -4,7 +4,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import { useMsg } from "@/client/components/diceshock/Msg";
-import { useTranslation } from "@/client/hooks/useTranslation";
 import type { MahjongMatchQuery } from "@/client/graphql/__generated__";
 import {
   MahjongFormat,
@@ -13,6 +12,7 @@ import {
   SyncMahjongMatchToGszDocument,
   UpdateMahjongScoreDocument,
 } from "@/client/graphql/__generated__";
+import { useTranslation } from "@/client/hooks/useTranslation";
 import type { Seat } from "@/shared/mahjong/constants";
 import { SEAT_LABELS } from "@/shared/mahjong/constants";
 import { formatPP, getMatchPPIfValid } from "@/shared/mahjong/pp";
@@ -129,7 +129,13 @@ function MatchDetailPage() {
     return (
       <main className="size-full flex flex-col items-center justify-center gap-4">
         <p className="text-base-content/60">{t("dashGsz.notFound")}</p>
-        <Link to="/dash/gsz" search={{ q: "", page: 1 }} className="btn btn-primary btn-sm">{t("dashGsz.backToList")}</Link>
+        <Link
+          to="/dash/gsz"
+          search={{ q: "", page: 1 }}
+          className="btn btn-primary btn-sm"
+        >
+          {t("dashGsz.backToList")}
+        </Link>
       </main>
     );
   }
@@ -148,7 +154,6 @@ function MatchDetailPage() {
 
   return (
     <main className="size-full overflow-y-auto">
-
       <div className="mx-auto w-full max-w-4xl px-4 pb-20">
         <h1 className="text-2xl font-bold mb-2">立直麻将详情</h1>
 

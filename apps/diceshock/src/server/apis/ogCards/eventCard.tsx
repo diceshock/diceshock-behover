@@ -45,6 +45,7 @@ function CoverEventCard({
     <html>
       <head>
         <meta charSet="utf-8" />
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: server-side OG card rendering, no user input */}
         <style dangerouslySetInnerHTML={{ __html: COVER_CARD_CSS }} />
       </head>
       <body>
@@ -65,6 +66,7 @@ function CoverEventCard({
             <span>diceshock.com</span>
           </div>
         </div>
+        {/* biome-ignore-start lint/security/noDangerouslySetInnerHtml: server-side OG card rendering, no user input */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -73,6 +75,7 @@ if (img.complete && img.naturalWidth > 0) { window.__ready = true; }
 else { img.onload = () => { window.__ready = true; }; img.onerror = () => { window.__ready = true; }; }`,
           }}
         />
+        {/* biome-ignore-end lint/security/noDangerouslySetInnerHtml: server-side OG card rendering, no user input */}
       </body>
     </html>
   );

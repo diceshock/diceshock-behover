@@ -9,8 +9,20 @@ export const CATEGORIES: CategoryDef[] = [
     searchKeys: ["nickname", "phone", "uid"],
     fields: [
       { type: "text", key: "name", label: "昵称", placeholder: "搜索昵称…" },
-      { type: "text", key: "uid", label: "UID", placeholder: "UID…", operators: ["eq", "include"] },
-      { type: "text", key: "phone", label: "手机号", placeholder: "手机号…", operators: ["eq", "include"] },
+      {
+        type: "text",
+        key: "uid",
+        label: "UID",
+        placeholder: "UID…",
+        operators: ["eq", "include"],
+      },
+      {
+        type: "text",
+        key: "phone",
+        label: "手机号",
+        placeholder: "手机号…",
+        operators: ["eq", "include"],
+      },
       {
         type: "enum",
         key: "role",
@@ -21,10 +33,15 @@ export const CATEGORIES: CategoryDef[] = [
           { value: "authenticated", label: "顾客" },
         ],
       },
-      { type: "enum", key: "store", label: "门店", options: [
-        { value: "gg", label: "光谷" },
-        { value: "jdk", label: "街道口" },
-      ]},
+      {
+        type: "enum",
+        key: "store",
+        label: "门店",
+        options: [
+          { value: "gg", label: "光谷" },
+          { value: "jdk", label: "街道口" },
+        ],
+      },
       { type: "boolean", key: "disabled", label: "已禁用" },
       { type: "number", key: "stored_value", label: "储值余额", unit: "元" },
       { type: "date", key: "created", label: "注册时间", granularity: "day" },
@@ -54,10 +71,15 @@ export const CATEGORIES: CategoryDef[] = [
           { value: "ended", label: "已结束" },
         ],
       },
-      { type: "enum", key: "store", label: "门店", options: [
-        { value: "gg", label: "光谷" },
-        { value: "jdk", label: "街道口" },
-      ]},
+      {
+        type: "enum",
+        key: "store",
+        label: "门店",
+        options: [
+          { value: "gg", label: "光谷" },
+          { value: "jdk", label: "街道口" },
+        ],
+      },
       { type: "date", key: "date", label: "日期", granularity: "day" },
       { type: "date", key: "start_at", label: "开始时间", granularity: "hour" },
       { type: "date", key: "end_at", label: "结束时间", granularity: "hour" },
@@ -98,11 +120,21 @@ export const CATEGORIES: CategoryDef[] = [
           { value: "inactive", label: "停用" },
         ],
       },
-      { type: "enum", key: "store", label: "门店", options: [
-        { value: "gg", label: "光谷" },
-        { value: "jdk", label: "街道口" },
-      ]},
-      { type: "date", key: "created_at", label: "创建时间", granularity: "day" },
+      {
+        type: "enum",
+        key: "store",
+        label: "门店",
+        options: [
+          { value: "gg", label: "光谷" },
+          { value: "jdk", label: "街道口" },
+        ],
+      },
+      {
+        type: "date",
+        key: "created_at",
+        label: "创建时间",
+        granularity: "day",
+      },
     ],
     sortFields: [
       { key: "created_at", label: "创建时间" },
@@ -116,7 +148,12 @@ export const CATEGORIES: CategoryDef[] = [
     route: "/dash/actives",
     searchKeys: ["title", "creator"],
     fields: [
-      { type: "text", key: "creator", label: "发起人", placeholder: "搜索发起人…" },
+      {
+        type: "text",
+        key: "creator",
+        label: "发起人",
+        placeholder: "搜索发起人…",
+      },
       { type: "text", key: "type", label: "类型", placeholder: "类型…" },
       {
         type: "enum",
@@ -127,12 +164,22 @@ export const CATEGORIES: CategoryDef[] = [
           { value: "expired", label: "已过期" },
         ],
       },
-      { type: "enum", key: "store", label: "门店", options: [
-        { value: "gg", label: "光谷" },
-        { value: "jdk", label: "街道口" },
-      ]},
+      {
+        type: "enum",
+        key: "store",
+        label: "门店",
+        options: [
+          { value: "gg", label: "光谷" },
+          { value: "jdk", label: "街道口" },
+        ],
+      },
       { type: "date", key: "date", label: "日期", granularity: "day" },
-      { type: "date", key: "start_time", label: "开始时间", granularity: "hour" },
+      {
+        type: "date",
+        key: "start_time",
+        label: "开始时间",
+        granularity: "hour",
+      },
     ],
     sortFields: [
       { key: "created_at", label: "创建时间" },
@@ -157,12 +204,22 @@ export const CATEGORIES: CategoryDef[] = [
           { value: "upcoming", label: "即将开始" },
         ],
       },
-      { type: "enum", key: "store", label: "门店", options: [
-        { value: "gg", label: "光谷" },
-        { value: "jdk", label: "街道口" },
-      ]},
+      {
+        type: "enum",
+        key: "store",
+        label: "门店",
+        options: [
+          { value: "gg", label: "光谷" },
+          { value: "jdk", label: "街道口" },
+        ],
+      },
       { type: "date", key: "date", label: "日期", granularity: "day" },
-      { type: "date", key: "start_date", label: "开始日期", granularity: "day" },
+      {
+        type: "date",
+        key: "start_date",
+        label: "开始日期",
+        granularity: "day",
+      },
     ],
     sortFields: [
       { key: "created_at", label: "创建时间" },
@@ -205,7 +262,12 @@ export const CATEGORIES: CategoryDef[] = [
         ],
       },
       { type: "date", key: "date", label: "日期", granularity: "day" },
-      { type: "date", key: "created_at", label: "创建时间", granularity: "day" },
+      {
+        type: "date",
+        key: "created_at",
+        label: "创建时间",
+        granularity: "day",
+      },
     ],
     sortFields: [
       { key: "created_at", label: "创建时间" },

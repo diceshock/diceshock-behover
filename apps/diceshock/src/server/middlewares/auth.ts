@@ -4,12 +4,10 @@ import { type AuthConfig, getAuthUser, initAuthConfig } from "@hono/auth-js";
 import db, {
   accounts,
   drizzle,
-  storesTable,
   type UserRole,
   userInfoTable,
   users,
 } from "@lib/db";
-import { eq } from "drizzle-orm";
 import { createSelectSchema } from "drizzle-zod";
 import type { Context } from "hono";
 import { nanoid } from "nanoid/non-secure";
@@ -57,10 +55,15 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
     async getUserByAccount(
       providerAccount: ProviderAccountLookup,
     ): Promise<AdapterAccountUser> {
-      console.log("[auth:adapter] getUserByAccount", { provider: providerAccount.provider, accountId: providerAccount.providerAccountId.slice(-8) });
+      console.log("[auth:adapter] getUserByAccount", {
+        provider: providerAccount.provider,
+        accountId: providerAccount.providerAccountId.slice(-8),
+      });
       const result = await baseAdapter.getUserByAccount!(providerAccount);
       if (result) {
-        console.log("[auth:adapter] found user directly", { userId: result.id.slice(-8) });
+        console.log("[auth:adapter] found user directly", {
+          userId: result.id.slice(-8),
+        });
         return result;
       }
 
@@ -73,7 +76,10 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
           provider: altProvider,
         });
         if (altResult) {
-          console.log("[auth:adapter] found user via alt provider", { altProvider, userId: altResult.id.slice(-8) });
+          console.log("[auth:adapter] found user via alt provider", {
+            altProvider,
+            userId: altResult.id.slice(-8),
+          });
           await tdb
             .insert(accounts)
             .values({
@@ -111,10 +117,20 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
         console.error("[Auth.js:error]", code);
         for (const m of message) {
           if (m && typeof m === "object") {
-            const err = m as { cause?: unknown; message?: string; name?: string; stack?: string };
-            if (err.message) console.error("[Auth.js:error] message:", err.message);
+            const err = m as {
+              cause?: unknown;
+              message?: string;
+              name?: string;
+              stack?: string;
+            };
+            if (err.message)
+              console.error("[Auth.js:error] message:", err.message);
             if (err.name) console.error("[Auth.js:error] name:", err.name);
-            if (err.cause) console.error("[Auth.js:error] cause:", JSON.stringify(err.cause, null, 2));
+            if (err.cause)
+              console.error(
+                "[Auth.js:error] cause:",
+                JSON.stringify(err.cause, null, 2),
+              );
             if (err.stack) console.error("[Auth.js:error] stack:", err.stack);
           } else if (m != null) {
             console.error("[Auth.js:error] detail:", m);
@@ -146,17 +162,24 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
 
         if (account && profile && token.sub) {
           try {
-            console.log("[auth:jwt] START merge block", { provider: account.provider, sub: (token.sub as string).slice(-8) });
+            console.log("[auth:jwt] START merge block", {
+              provider: account.provider,
+              sub: (token.sub as string).slice(-8),
+            });
             const unionid = getWechatProfileString(profile, "unionid");
             if (unionid) {
-              console.log("[auth:jwt] calling mergeByUnionid", { unionid: unionid.slice(0, 8) });
+              console.log("[auth:jwt] calling mergeByUnionid", {
+                unionid: unionid.slice(0, 8),
+              });
               const unionidResult = await mergeByUnionid(
                 c.env.DB,
                 c.env.KV,
                 token.sub as string,
                 unionid,
               );
-              console.log("[auth:jwt] mergeByUnionid RETURNED", { merged: unionidResult.merged });
+              console.log("[auth:jwt] mergeByUnionid RETURNED", {
+                merged: unionidResult.merged,
+              });
               if (unionidResult.merged) {
                 console.log("[auth:unionid-merge]", {
                   userId: (token.sub as string).slice(-8),
@@ -174,14 +197,18 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
                 columns: { phone: true },
               });
             if (userInfoForMerge?.phone) {
-              console.log("[auth:jwt] calling mergeByPhone", { phone: userInfoForMerge.phone });
+              console.log("[auth:jwt] calling mergeByPhone", {
+                phone: userInfoForMerge.phone,
+              });
               const phoneResult = await mergeByPhone(
                 c.env.DB,
                 c.env.KV,
                 token.sub as string,
                 userInfoForMerge.phone,
               );
-              console.log("[auth:jwt] mergeByPhone RETURNED", { merged: phoneResult.merged });
+              console.log("[auth:jwt] mergeByPhone RETURNED", {
+                merged: phoneResult.merged,
+              });
               if (phoneResult.merged) {
                 console.log("[auth:wechat-phone-merge]", {
                   userId: (token.sub as string).slice(-8),
@@ -192,7 +219,10 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
             }
             console.log("[auth:jwt] END merge block OK");
           } catch (mergeErr) {
-            console.error("[auth:merge-failed] Non-fatal merge error:", mergeErr);
+            console.error(
+              "[auth:merge-failed] Non-fatal merge error:",
+              mergeErr,
+            );
           }
         }
 
@@ -216,7 +246,10 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
             }
             token.role = mergeResult.role as UserRole;
           } catch (mergeErr) {
-            console.error("[auth:sms-merge-failed] Non-fatal merge error during SMS login:", mergeErr);
+            console.error(
+              "[auth:sms-merge-failed] Non-fatal merge error during SMS login:",
+              mergeErr,
+            );
           }
         }
 
@@ -259,7 +292,10 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
         });
       },
       createUser({ user }) {
-        console.log("[Auth.js:event] createUser", { userId: user?.id?.slice(-8), name: user?.name });
+        console.log("[Auth.js:event] createUser", {
+          userId: user?.id?.slice(-8),
+          name: user?.name,
+        });
       },
       linkAccount({ user, account }) {
         console.log("[Auth.js:event] linkAccount", {
@@ -268,8 +304,11 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
           providerAccountId: account?.providerAccountId?.slice(-8),
         });
       },
-      signOut({ token }) {
-        console.log("[Auth.js:event] signOut", { sub: (token as { sub?: string })?.sub?.slice(-8) });
+      signOut(message) {
+        const token = "token" in message ? message.token : null;
+        console.log("[Auth.js:event] signOut", {
+          sub: (token as { sub?: string } | null)?.sub?.slice(-8),
+        });
       },
     },
   };

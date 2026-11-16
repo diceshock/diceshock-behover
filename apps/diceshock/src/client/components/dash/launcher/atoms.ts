@@ -2,7 +2,6 @@ import { produce } from "immer";
 import { atom } from "jotai";
 import type {
   FieldDef,
-  FilterOperator,
   FilterValue,
   LauncherMode,
   SearchResultItem,
@@ -38,7 +37,6 @@ const INITIAL_STATE: LauncherFormState = {
 // ─── Single source of truth ──────────────────────────────────────────────────
 
 export const launcherAtom = atom<LauncherFormState>(INITIAL_STATE);
-
 
 // ─── Derived read-only atoms ─────────────────────────────────────────────────
 
@@ -160,10 +158,7 @@ export const launcherAddFilterAtom = atom(
       launcherAtom,
       produce(get(launcherAtom), (d) => {
         // For sort, replace any existing sort filter
-        if (
-          filter.operator === "sort_asc" ||
-          filter.operator === "sort_desc"
-        ) {
+        if (filter.operator === "sort_asc" || filter.operator === "sort_desc") {
           d.filters = d.filters.filter(
             (f) => f.operator !== "sort_asc" && f.operator !== "sort_desc",
           );
@@ -182,17 +177,14 @@ export const launcherAddFilterAtom = atom(
 );
 
 /** Remove a filter by key */
-export const launcherRemoveFilterAtom = atom(
-  null,
-  (get, set, key: string) => {
-    set(
-      launcherAtom,
-      produce(get(launcherAtom), (d) => {
-        d.filters = d.filters.filter((f) => f.key !== key);
-      }),
-    );
-  },
-);
+export const launcherRemoveFilterAtom = atom(null, (get, set, key: string) => {
+  set(
+    launcherAtom,
+    produce(get(launcherAtom), (d) => {
+      d.filters = d.filters.filter((f) => f.key !== key);
+    }),
+  );
+});
 
 /**
  * Open launcher directly at operator-select for a specific field.

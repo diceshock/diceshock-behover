@@ -61,7 +61,10 @@ function getArgumentValue(args: SubscriptionArgs, names: string[]): string {
   throw new Error(`Missing argument: ${names.join(" or ")}`);
 }
 
-function tryGetArgumentValue(args: SubscriptionArgs, names: string[]): string | null {
+function tryGetArgumentValue(
+  args: SubscriptionArgs,
+  names: string[],
+): string | null {
   for (const name of names) {
     const value = args[name];
     if (typeof value === "string" && value.length > 0) return value;

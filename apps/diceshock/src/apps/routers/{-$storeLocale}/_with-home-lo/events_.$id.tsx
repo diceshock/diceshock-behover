@@ -1,5 +1,5 @@
 import { ClientOnly, createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import MarkdownViewer from "@/client/components/diceshock/MarkdownEditor/MarkdownViewer";
 import { useGetEventQuery } from "@/client/graphql/__generated__";
 import { useMessages } from "@/client/hooks/useMessages";
@@ -27,14 +27,10 @@ export const Route = createFileRoute(
   component: EventDetailPage,
 });
 
-type EventDetail = NonNullable<
-  ReturnType<typeof useGetEventQuery>["data"]
->["event"];
-
 function EventDetailPage() {
   const { id } = Route.useParams();
   const { t } = useTranslation();
-  const messages = useMessages();
+  const _messages = useMessages();
 
   const { data, loading, refetch } = useGetEventQuery({ variables: { id } });
   const event = data?.event ?? null;

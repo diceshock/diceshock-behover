@@ -104,7 +104,8 @@ export async function graphqlHandler(
         return c.json({ errors: ["Missing or invalid 'query' field"] }, 400);
       }
 
-      const operationName = body.query.match(/(?:mutation|query)\s+(\w+)/)?.[1] ?? "anonymous";
+      const operationName =
+        body.query.match(/(?:mutation|query)\s+(\w+)/)?.[1] ?? "anonymous";
 
       const database = db(c.env.DB);
 
@@ -113,14 +114,22 @@ export async function graphqlHandler(
         userId,
         openId: "",
         auth: { role, userId },
-        env: { ...c.env, aliyunClient: c.get("AliyunClient") } as GraphQLContext["env"],
+        env: {
+          ...c.env,
+          aliyunClient: c.get("AliyunClient"),
+        } as GraphQLContext["env"],
         role,
         preferredStoreId,
       };
 
       const result = await executeGraphQL(body.query, body.variables, context);
       if (result.errors?.length) {
-        console.error("[graphql] errors in", operationName, ":", JSON.stringify(result.errors));
+        console.error(
+          "[graphql] errors in",
+          operationName,
+          ":",
+          JSON.stringify(result.errors),
+        );
       }
       return c.json(result);
     }

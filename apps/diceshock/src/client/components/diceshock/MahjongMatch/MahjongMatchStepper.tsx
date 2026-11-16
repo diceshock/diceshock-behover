@@ -718,7 +718,7 @@ function ScoringCard({
   const playerScore = state.pendingScores[targetId];
   const submitter = state.scoreSubmitters[targetId];
   const submittedBySelf = submitter === targetId;
-  const allSubmitted = engine.allScoresSubmitted(state);
+  const _allSubmitted = engine.allScoresSubmitted(state);
 
   const canEdit = !hasScore || (isMe ? true : !submittedBySelf);
 

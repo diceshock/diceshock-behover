@@ -1,6 +1,12 @@
 import { getAuthUser } from "@hono/auth-js";
 import db from "@lib/db";
-import { buildStoreLocalePrefix, DEFAULT_LOCALE, DEFAULT_STORE, type LocaleCode, type StoreCode } from "@/shared/store-locale";
+import {
+  buildStoreLocalePrefix,
+  DEFAULT_LOCALE,
+  DEFAULT_STORE,
+  type LocaleCode,
+  type StoreCode,
+} from "@/shared/store-locale";
 import { FACTORY } from "../factory";
 
 const seatRedirect = FACTORY.createMiddleware(async (c, next) => {

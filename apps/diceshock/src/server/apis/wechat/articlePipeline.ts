@@ -1,15 +1,15 @@
 import type { Context } from "hono";
+import type { HonoCtxEnv } from "@/shared/types";
 import type { ImageProcessMessage } from "../imageProcess";
 import { pollForImageResult } from "../imageProcess";
-import type { HonoCtxEnv } from "@/shared/types";
 import { fetchAsDataUrl, LOGO_URL } from "../ogCards/shared";
+import type { ArticleData } from "./articleCard";
 import {
   ARTICLE_WIDTH,
   buildArticleHtml,
   fetchActiveArticleData,
   fetchEventArticleData,
 } from "./articleCard";
-import type { ArticleData } from "./articleCard";
 import {
   createDraft,
   submitPublish,
@@ -113,8 +113,7 @@ export async function publishActivityArticle(
   // 6. Build article HTML body from image slices
   const articleBody = imageUrls
     .map(
-      (url) =>
-        `<p><img src="${url}" style="width:100%;display:block;" /></p>`,
+      (url) => `<p><img src="${url}" style="width:100%;display:block;" /></p>`,
     )
     .join("\n");
 
@@ -220,8 +219,7 @@ function readPngHeight(buf: Uint8Array): number | null {
   if (buf.length < 24) return null;
   if (buf[0] !== 0x89 || buf[1] !== 0x50 || buf[2] !== 0x4e || buf[3] !== 0x47)
     return null;
-  const height =
-    (buf[20] << 24) | (buf[21] << 16) | (buf[22] << 8) | buf[23];
+  const height = (buf[20] << 24) | (buf[21] << 16) | (buf[22] << 8) | buf[23];
   return height > 0 ? height : null;
 }
 

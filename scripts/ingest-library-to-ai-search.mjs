@@ -20,15 +20,13 @@ const DELAY_MS = 1000;
 // ─── CLI Args ──────────────────────────────────────────────────────────────
 
 const DRY_RUN = process.argv.includes("--dry-run");
-const PREFIX = process.argv
-  .find((a) => a.startsWith("--prefix="))
-  ?.split("=")[1] || "";
+const PREFIX =
+  process.argv.find((a) => a.startsWith("--prefix="))?.split("=")[1] || "";
 
 // ─── Auth ──────────────────────────────────────────────────────────────────
 
 function getCfApiToken() {
-  const token =
-    process.env.CLOUDFLARE_API_TOKEN || process.env.CF_API_TOKEN;
+  const token = process.env.CLOUDFLARE_API_TOKEN || process.env.CF_API_TOKEN;
   if (token) return token;
   try {
     const toml = readFileSync(
@@ -37,7 +35,9 @@ function getCfApiToken() {
     );
     const match = toml.match(/oauth_token\s*=\s*"([^"]+)"/);
     if (match) return match[1];
-  } catch (e) { console.error("[ingest-library] wrangler config read error", e); }
+  } catch (e) {
+    console.error("[ingest-library] wrangler config read error", e);
+  }
   throw new Error("Missing CLOUDFLARE_API_TOKEN");
 }
 
@@ -61,14 +61,15 @@ async function listLibraryKeys(prefix) {
     );
     const data = await res.json();
 
-    if (!data.success) throw new Error(`List failed: ${JSON.stringify(data.errors)}`);
+    if (!data.success)
+      throw new Error(`List failed: ${JSON.stringify(data.errors)}`);
 
     for (const obj of data.result || []) {
       if (obj.key?.endsWith(".md")) keys.push(obj.key);
     }
 
     const pageItems = data.result || [];
-    cursor = pageItems.length >= 1000 ? (data.result_info?.cursor || "") : "";
+    cursor = pageItems.length >= 1000 ? data.result_info?.cursor || "" : "";
   } while (cursor);
 
   return keys;
@@ -109,9 +110,7 @@ async function uploadToAiSearch(token, filename, content) {
 // ─── Main ──────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log(
-    `📚 Ingest ds-library → AI Search${DRY_RUN ? " (DRY RUN)" : ""}`,
-  );
+  console.log(`📚 Ingest ds-library → AI Search${DRY_RUN ? " (DRY RUN)" : ""}`);
   console.log(`   Instance: ${AI_SEARCH_INSTANCE}`);
   console.log(`   Prefix: ${PREFIX || "(all)"}`);
   console.log("═".repeat(60));
@@ -127,7 +126,9 @@ async function main() {
     return;
   }
 
-  let success = 0, failed = 0, skipped = 0;
+  let success = 0,
+    failed = 0,
+    skipped = 0;
 
   for (let i = 0; i < keys.length; i += BATCH_SIZE) {
     const batch = keys.slice(i, i + BATCH_SIZE);

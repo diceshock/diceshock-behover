@@ -1,5 +1,4 @@
 import { renderSchema } from "./_schema";
-import { MUTATE_SYNTAX, QUERY_SYNTAX } from "./_syntax";
 
 export interface SkillNode {
   id: string;
@@ -23,7 +22,11 @@ const NODES: Record<string, SkillNode> = {
 在架条件: removeDate eq "1970-01-01T00:00:00.000Z" (这是epoch零值,表示未下架)
 推荐: 查 gstone_rating gte 6.5 的前30款在架游戏, 从结果中按 player_num/category 筛选
 链接: https://diceshock.com/inventory/{id}`,
-    children: ["boardgame.search", "boardgame.recommend", "boardgame.mechanism"],
+    children: [
+      "boardgame.search",
+      "boardgame.recommend",
+      "boardgame.mechanism",
+    ],
   },
 
   "boardgame.search": {
@@ -42,8 +45,7 @@ const NODES: Record<string, SkillNode> = {
     id: "boardgame.recommend",
     keywords: ["推荐", "适合", "好玩", "什么桌游", "策略"],
     description: "按人数/评分/类型/玩法推荐桌游",
-    content:
-      () => `执行步骤(严格按顺序,只需1次query):
+    content: () => `执行步骤(严格按顺序,只需1次query):
 1. 查询: { boardGamesTable(where: {removeDate: {eq: "1970-01-01T00:00:00.000Z"}, gstone_rating: {gte: 6}}, orderBy: {gstone_rating: {direction: desc, priority: 1}}, limit: 30) { id sch_name eng_name player_num best_player_num gstone_rating category } }
 2. 从结果中筛选: 用你的桌游知识判断哪些符合用户要求的玩法/机制/人数
 3. 推荐3-5款, 附评分+一句话玩法简介+链接
@@ -59,11 +61,24 @@ const NODES: Record<string, SkillNode> = {
   "boardgame.mechanism": {
     id: "boardgame.mechanism",
     keywords: [
-      "引擎构筑", "滚雪球", "工人放置", "区域控制",
-      "卡牌驱动", "成套收集", "轮抽", "甲板构建",
-      "行动点", "网络建设", "拍卖", "手牌管理",
-      "engine building", "snowball", "worker placement",
-      "area control", "deck building", "drafting",
+      "引擎构筑",
+      "滚雪球",
+      "工人放置",
+      "区域控制",
+      "卡牌驱动",
+      "成套收集",
+      "轮抽",
+      "甲板构建",
+      "行动点",
+      "网络建设",
+      "拍卖",
+      "手牌管理",
+      "engine building",
+      "snowball",
+      "worker placement",
+      "area control",
+      "deck building",
+      "drafting",
     ],
     description: "按桌游机制/玩法推荐(引擎构筑/工人放置/区域控制等)",
     content: () => `## 机制查询策略

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { z } from "zod/v4";
 import { useCallback, useEffect, useState } from "react";
+import { z } from "zod/v4";
 import { useMessages } from "@/client/hooks/useMessages";
 import { CATEGORY_LABELS } from "@/shared/preferences/constants";
 import { rruleToHumanReadable } from "@/shared/preferences/rruleDisplay";
@@ -25,7 +25,11 @@ type PreferenceItem = {
   displayText: string;
 };
 
-const inputSchema = z.string().trim().min(1, "内容不能为空").max(500, "内容过长");
+const inputSchema = z
+  .string()
+  .trim()
+  .min(1, "内容不能为空")
+  .max(500, "内容过长");
 
 function PreferencesPage() {
   const messages = useMessages();
@@ -88,14 +92,14 @@ function PreferencesPage() {
     } finally {
       setIsCreating(false);
     }
-  }, [parseResult, inputText, messages]);
+  }, [parseResult, messages]);
 
   const handleCancelAdd = useCallback(() => {
     setParseResult(null);
   }, []);
 
   const handleDelete = useCallback(
-    async (id: string) => {
+    async (_id: string) => {
       try {
         messages.error("偏好删除功能暂不可用");
       } catch {
@@ -106,7 +110,7 @@ function PreferencesPage() {
   );
 
   const handleToggle = useCallback(
-    async (id: string) => {
+    async (_id: string) => {
       try {
         messages.error("偏好切换功能暂不可用");
       } catch {
@@ -124,7 +128,10 @@ function PreferencesPage() {
           描述你的活动时间和类型偏好, 系统会自动为你匹配合适的活动
         </p>
 
-        <form onSubmit={handleInputSubmit} className="sticky top-16 z-10 bg-base-100 pb-3">
+        <form
+          onSubmit={handleInputSubmit}
+          className="sticky top-16 z-10 bg-base-100 pb-3"
+        >
           <div className="relative">
             <input
               type="text"

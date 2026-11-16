@@ -24,10 +24,14 @@ import {
   useRestorePricingSnapshotMutation,
   useSavePricingSnapshotMutation,
 } from "@/client/graphql/__generated__";
-import { useAdminStoreFilter } from "@/client/hooks/useAdminStoreFilter";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import { formatMessage } from "@/shared/i18n";
-import { pricingStoreAtom, EMPTY_DATA, type SnapshotData, type PlanEntry } from "./pricing.store";
+import {
+  EMPTY_DATA,
+  type PlanEntry,
+  pricingStoreAtom,
+  type SnapshotData,
+} from "./pricing.store";
 
 function isEqual(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
@@ -212,17 +216,17 @@ function parseSnapshotData(raw: {
 function PricingPage() {
   const msg = useMsg();
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const { storeFilter } = useAdminStoreFilter();
+  const _navigate = useNavigate();
 
   const [store, setStore] = useImmerAtom(pricingStoreAtom);
 
   const { data: qlData, loading } = usePricingDraftQuery();
-  const { data: snapshotsData, refetch: refetchSnapshots } = usePricingSnapshotsQuery();
+  const { data: snapshotsData, refetch: refetchSnapshots } =
+    usePricingSnapshotsQuery();
   const [saveSnapshot] = useSavePricingSnapshotMutation();
   const [publishSnapshot] = usePublishPricingSnapshotMutation();
   const [restoreSnapshot] = useRestorePricingSnapshotMutation();
-  const { data: detailData, refetch: refetchDetail } = usePricingSnapshotQuery({
+  const { refetch: refetchDetail } = usePricingSnapshotQuery({
     variables: { id: "" },
     skip: true,
   });
@@ -245,7 +249,10 @@ function PricingPage() {
 
   const effectiveData = store.data;
   const hasChanges = !isEqual(effectiveData, store.savedData);
-  const hasDraft = snapshots.some((s: PricingSnapshotsQuery["pricingSnapshots"][number]) => s.status === "DRAFT");
+  const hasDraft = snapshots.some(
+    (s: PricingSnapshotsQuery["pricingSnapshots"][number]) =>
+      s.status === "DRAFT",
+  );
 
   const fallbackPlan =
     effectiveData.plans.find(
@@ -272,9 +279,10 @@ function PricingPage() {
       draft.data.plans.push({
         plan_type: "conditional",
         name: t("dashPricing.defaultConditionalPlanName"),
-        sort_order: draft.data.plans.filter(
-          (p: Record<string, unknown>) => p.plan_type === "conditional",
-        ).length + 1,
+        sort_order:
+          draft.data.plans.filter(
+            (p: Record<string, unknown>) => p.plan_type === "conditional",
+          ).length + 1,
         enabled: true,
         conditions: {
           date: { type: "workdays" },
@@ -378,7 +386,8 @@ function PricingPage() {
 
   const handleToggle = (globalIdx: number) => {
     setStore((draft) => {
-      draft.data.plans[globalIdx].enabled = !draft.data.plans[globalIdx].enabled;
+      draft.data.plans[globalIdx].enabled =
+        !draft.data.plans[globalIdx].enabled;
     });
   };
 
@@ -510,7 +519,14 @@ function PricingPage() {
       <div className="mx-auto w-full max-w-4xl px-4 pb-28 space-y-6 pt-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex-1 min-w-0">
-            <EditableTitle value={store.snapshotName} onChange={(v) => setStore((draft) => { draft.snapshotName = v; })} />
+            <EditableTitle
+              value={store.snapshotName}
+              onChange={(v) =>
+                setStore((draft) => {
+                  draft.snapshotName = v;
+                })
+              }
+            />
           </div>
           {hasChanges && (
             <span className="badge badge-warning badge-sm">
@@ -755,62 +771,67 @@ function PricingPage() {
                   {t("dashPricing.noSaveRecords")}
                 </div>
               ) : (
-                snapshots.map((s: PricingSnapshotsQuery["pricingSnapshots"][number]) => (
-                  <div
-                    key={s.id}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-base-200 rounded-lg px-4 py-3 gap-2 sm:gap-4"
-                  >
-                    <div className="flex flex-col gap-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <span
-                          className={`badge badge-sm shrink-0 ${s.status === "PUBLISHED" ? "badge-success" : "badge-ghost"}`}
-                        >
-                          {s.status === "PUBLISHED"
-                            ? t("dashPricing.published")
-                            : t("dashPricing.draft")}
-                        </span>
-                        <span className="text-sm font-medium truncate">
-                          {s.name}
-                        </span>
-                        <span className="text-xs text-base-content/40 whitespace-nowrap">
-                          {formatTime(s.createdAt)}
-                        </span>
-                        {s.publishedAt && (
-                          <span className="text-xs text-base-content/50 whitespace-nowrap">
-                            {formatMessage(t("dashPricing.publishedAtPrefix"), {
-                              time: formatTime(s.publishedAt),
-                            })}
+                snapshots.map(
+                  (s: PricingSnapshotsQuery["pricingSnapshots"][number]) => (
+                    <div
+                      key={s.id}
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-base-200 rounded-lg px-4 py-3 gap-2 sm:gap-4"
+                    >
+                      <div className="flex flex-col gap-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <span
+                            className={`badge badge-sm shrink-0 ${s.status === "PUBLISHED" ? "badge-success" : "badge-ghost"}`}
+                          >
+                            {s.status === "PUBLISHED"
+                              ? t("dashPricing.published")
+                              : t("dashPricing.draft")}
                           </span>
-                        )}
+                          <span className="text-sm font-medium truncate">
+                            {s.name}
+                          </span>
+                          <span className="text-xs text-base-content/40 whitespace-nowrap">
+                            {formatTime(s.createdAt)}
+                          </span>
+                          {s.publishedAt && (
+                            <span className="text-xs text-base-content/50 whitespace-nowrap">
+                              {formatMessage(
+                                t("dashPricing.publishedAtPrefix"),
+                                {
+                                  time: formatTime(s.publishedAt),
+                                },
+                              )}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-xs text-base-content/50 line-clamp-2">
+                          {s.summary}
+                        </span>
                       </div>
-                      <span className="text-xs text-base-content/50 line-clamp-2">
-                        {s.summary}
-                      </span>
+                      <div className="flex items-center gap-1 shrink-0 self-end sm:self-center">
+                        <button
+                          type="button"
+                          className="btn btn-xs btn-ghost gap-1"
+                          onClick={() => void handleViewDetail(s.id)}
+                          disabled={detailLoading}
+                        >
+                          <EyeIcon className="size-3.5" />
+                          {t("dashPricing.view")}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-xs btn-ghost gap-1"
+                          onClick={() => void handleRestore(s.id)}
+                          disabled={restorePending === s.id}
+                        >
+                          <ArrowCounterClockwiseIcon className="size-3.5" />
+                          {restorePending === s.id
+                            ? t("dashPricing.restoring")
+                            : t("dashPricing.restore")}
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0 self-end sm:self-center">
-                      <button
-                        type="button"
-                        className="btn btn-xs btn-ghost gap-1"
-                        onClick={() => void handleViewDetail(s.id)}
-                        disabled={detailLoading}
-                      >
-                        <EyeIcon className="size-3.5" />
-                        {t("dashPricing.view")}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-xs btn-ghost gap-1"
-                        onClick={() => void handleRestore(s.id)}
-                        disabled={restorePending === s.id}
-                      >
-                        <ArrowCounterClockwiseIcon className="size-3.5" />
-                        {restorePending === s.id
-                          ? t("dashPricing.restoring")
-                          : t("dashPricing.restore")}
-                      </button>
-                    </div>
-                  </div>
-                ))
+                  ),
+                )
               )}
             </div>
           )}
@@ -828,11 +849,7 @@ function PricingPage() {
           className="btn btn-sm gap-2"
           onClick={() => saveDialogRef.current?.showModal()}
           disabled={savePending || !hasChanges}
-          title={
-            !hasChanges
-              ? t("dashPricing.noChangesToSave")
-              : ""
-          }
+          title={!hasChanges ? t("dashPricing.noChangesToSave") : ""}
         >
           <FloppyDiskIcon className="size-4" />
           {savePending ? t("dashPricing.saving") : t("dashPricing.saveDraft")}
@@ -966,7 +983,11 @@ function PricingPage() {
               type="text"
               className="input input-bordered w-full"
               value={store.snapshotName}
-              onChange={(e) => setStore((draft) => { draft.snapshotName = e.target.value; })}
+              onChange={(e) =>
+                setStore((draft) => {
+                  draft.snapshotName = e.target.value;
+                })
+              }
               placeholder={t("dashPricing.snapshotNamePlaceholder")}
               maxLength={50}
             />
@@ -1056,7 +1077,9 @@ function PricingPage() {
                 let parsedPlans: Record<string, unknown>[] = [];
                 try {
                   parsedPlans = JSON.parse(detailSnapshot.data.plans);
-                } catch (e) { console.error("[pricing] plans parse error", e); }
+                } catch (e) {
+                  console.error("[pricing] plans parse error", e);
+                }
                 return parsedPlans.map((plan, i) => {
                   const p = plan as Record<string, unknown>;
                   const cond = (p.conditions as Conditions) ?? null;
@@ -1192,7 +1215,9 @@ function PricingPage() {
                 let parsedPlans: Record<string, unknown>[] = [];
                 try {
                   parsedPlans = JSON.parse(detailSnapshot.data.plans);
-                } catch (e) { console.error("[pricing] plans parse error", e); }
+                } catch (e) {
+                  console.error("[pricing] plans parse error", e);
+                }
                 if (parsedPlans.length === 0)
                   return (
                     <div className="py-6 text-center text-base-content/50">
@@ -1243,20 +1268,22 @@ function FallbackSection({
                 )}
                 onChange={(e) => {
                   const n = Number.parseFloat(e.target.value);
-                  onChange({ price: Number.isNaN(n) ? 0 : Math.round(n * 100) });
+                  onChange({
+                    price: Number.isNaN(n) ? 0 : Math.round(n * 100),
+                  });
                 }}
                 min={0}
                 step={0.01}
               />
             </label>
             <label className="flex flex-col gap-2 flex-1">
-              <span className="label text-sm font-semibold">
-                点/小时
-              </span>
+              <span className="label text-sm font-semibold">点/小时</span>
               <input
                 type="number"
                 className="input input-bordered w-full max-w-xs"
-                value={((plan as Record<string, unknown>).points as number) ?? 0}
+                value={
+                  ((plan as Record<string, unknown>).points as number) ?? 0
+                }
                 onChange={(e) => {
                   const n = Number.parseInt(e.target.value, 10);
                   onChange({ points: Number.isNaN(n) ? 0 : n });
@@ -1338,13 +1365,14 @@ function FallbackSection({
                   />
                 </label>
                 <label className="flex flex-col gap-1 flex-1 max-w-xs">
-                  <span className="text-sm text-base-content/60">
-                    封顶点数
-                  </span>
+                  <span className="text-sm text-base-content/60">封顶点数</span>
                   <input
                     type="number"
                     className="input input-bordered input-sm w-full"
-                    value={((plan as Record<string, unknown>).cap_points as number) ?? 0}
+                    value={
+                      ((plan as Record<string, unknown>)
+                        .cap_points as number) ?? 0
+                    }
                     onChange={(e) => {
                       const n = Number.parseInt(e.target.value, 10);
                       onChange({
@@ -1367,7 +1395,8 @@ function FallbackSection({
                       type="number"
                       className="input input-bordered input-sm w-full"
                       value={centsToYuan(
-                        (plan as Record<string, unknown>).cap_price_day as number,
+                        (plan as Record<string, unknown>)
+                          .cap_price_day as number,
                       )}
                       onChange={(e) => {
                         const n = Number.parseFloat(e.target.value);
@@ -1388,7 +1417,10 @@ function FallbackSection({
                     <input
                       type="number"
                       className="input input-bordered input-sm w-full"
-                      value={((plan as Record<string, unknown>).cap_points_day as number) ?? 0}
+                      value={
+                        ((plan as Record<string, unknown>)
+                          .cap_points_day as number) ?? 0
+                      }
                       onChange={(e) => {
                         const n = Number.parseInt(e.target.value, 10);
                         onChange({
@@ -1431,7 +1463,10 @@ function FallbackSection({
                     <input
                       type="number"
                       className="input input-bordered input-sm w-full"
-                      value={((plan as Record<string, unknown>).cap_points_night as number) ?? 0}
+                      value={
+                        ((plan as Record<string, unknown>)
+                          .cap_points_night as number) ?? 0
+                      }
                       onChange={(e) => {
                         const n = Number.parseInt(e.target.value, 10);
                         onChange({

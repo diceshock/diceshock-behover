@@ -13,7 +13,7 @@ type FetchState =
 
 function ReferencePage() {
   const { id } = Route.useParams();
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const [state, setState] = useState<FetchState>({ status: "loading" });
 
   useEffect(() => {
@@ -129,13 +129,7 @@ function buildToc(data: ReferencePageData): string[] {
 
 type ReferenceRef = ReferencePageData["references"][number];
 
-function ReferenceCard({
-  ref_,
-  index,
-}: {
-  ref_: ReferenceRef;
-  index: number;
-}) {
+function ReferenceCard({ ref_, index }: { ref_: ReferenceRef; index: number }) {
   const [expanded, setExpanded] = useState(true);
   const hasIframe = !!ref_.originalUrl;
   const label = ref_.source || `来源 ${index + 1}`;

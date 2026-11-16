@@ -68,10 +68,14 @@ function ActiveEditorPage() {
       });
 
       setJoinedUsers(
-        active.registrations.filter((r: Registration) => !r.isWatching) as Registration[],
+        active.registrations.filter(
+          (r: Registration) => !r.isWatching,
+        ) as Registration[],
       );
       setWatchingUsers(
-        active.registrations.filter((r: Registration) => r.isWatching) as Registration[],
+        active.registrations.filter(
+          (r: Registration) => r.isWatching,
+        ) as Registration[],
       );
     },
     onError: (err) => {
@@ -179,13 +183,15 @@ function ActiveEditorPage() {
   return (
     <ClientOnly>
       <main className="size-full overflow-y-auto">
-
         <div className="mx-auto w-full max-w-2xl px-4 pb-20">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold">活动详情</h1>
             <button
               type="button"
-              className={clsx("btn btn-sm btn-primary gap-1", publishing && "loading")}
+              className={clsx(
+                "btn btn-sm btn-primary gap-1",
+                publishing && "loading",
+              )}
               onClick={() => publishDialogRef.current?.showModal()}
               disabled={publishing}
             >
@@ -222,7 +228,11 @@ function ActiveEditorPage() {
                   placeholder="活动标题"
                   className="input input-bordered w-full"
                   value={form.title}
-                  onChange={(e) => updateForm((d) => { d.title = e.target.value; })}
+                  onChange={(e) =>
+                    updateForm((d) => {
+                      d.title = e.target.value;
+                    })
+                  }
                   maxLength={100}
                   required
                 />
@@ -235,7 +245,11 @@ function ActiveEditorPage() {
                     type="date"
                     className="input input-bordered w-full"
                     value={form.date}
-                    onChange={(e) => updateForm((d) => { d.date = e.target.value; })}
+                    onChange={(e) =>
+                      updateForm((d) => {
+                        d.date = e.target.value;
+                      })
+                    }
                     required
                   />
                 </label>
@@ -248,7 +262,11 @@ function ActiveEditorPage() {
                     type="time"
                     className="input input-bordered w-full"
                     value={form.time}
-                    onChange={(e) => updateForm((d) => { d.time = e.target.value; })}
+                    onChange={(e) =>
+                      updateForm((d) => {
+                        d.time = e.target.value;
+                      })
+                    }
                   />
                 </label>
               </div>
@@ -259,7 +277,11 @@ function ActiveEditorPage() {
                   type="number"
                   className="input input-bordered w-full"
                   value={form.maxPlayers}
-                  onChange={(e) => updateForm((d) => { d.maxPlayers = Number(e.target.value); })}
+                  onChange={(e) =>
+                    updateForm((d) => {
+                      d.maxPlayers = Number(e.target.value);
+                    })
+                  }
                   min={1}
                   max={100}
                   required
@@ -275,7 +297,11 @@ function ActiveEditorPage() {
                   placeholder="桌游ID"
                   className="input input-bordered w-full"
                   value={form.boardGameId}
-                  onChange={(e) => updateForm((d) => { d.boardGameId = e.target.value; })}
+                  onChange={(e) =>
+                    updateForm((d) => {
+                      d.boardGameId = e.target.value;
+                    })
+                  }
                 />
               </label>
 
@@ -284,7 +310,11 @@ function ActiveEditorPage() {
                   type="checkbox"
                   className="checkbox"
                   checked={form.isGame}
-                  onChange={(e) => updateForm((d) => { d.isGame = e.target.checked; })}
+                  onChange={(e) =>
+                    updateForm((d) => {
+                      d.isGame = e.target.checked;
+                    })
+                  }
                 />
                 <span className="text-sm font-semibold">是否桌游</span>
               </label>
@@ -295,7 +325,11 @@ function ActiveEditorPage() {
                 </span>
                 <TiptapEditor
                   content={form.content}
-                  onChange={(val: string) => updateForm((d) => { d.content = val; })}
+                  onChange={(val: string) =>
+                    updateForm((d) => {
+                      d.content = val;
+                    })
+                  }
                   placeholder="活动详情..."
                 />
               </div>

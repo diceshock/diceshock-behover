@@ -1,19 +1,25 @@
+import CaptchaClient, {
+  VerifyIntelligentCaptchaRequest,
+} from "@alicloud/captcha20230305";
 import type { AdapterAccountType } from "@auth/core/adapters";
-import dbFactory, { accounts, drizzle, storesTable, userInfoTable, users } from "@lib/db";
+import dbFactory, {
+  accounts,
+  drizzle,
+  storesTable,
+  userInfoTable,
+  users,
+} from "@lib/db";
 import { customAlphabet } from "nanoid";
 import { z } from "zod";
 import { getSmsTmpCodeKey } from "@/server/utils/auth";
 import { ADMIN_PHONES_KV_KEY, mergeByPhone } from "@/server/utils/phoneMerge";
-import { LOCALES, STORES } from "@/shared/store-locale";
+import { LOCALES } from "@/shared/store-locale";
+import { cfImageUrl } from "@/shared/utils/cfImage";
 import { generateTOTP, generateTotpSecret } from "@/shared/utils/totp";
 import type { GQLContext } from "../context";
 import { internalError, notFound, validationError } from "../errors";
 import { requireAdmin, requireAuth } from "../guards";
 import { zodToGraphQLError } from "../validate";
-import { cfImageUrl } from "@/shared/utils/cfImage";
-import CaptchaClient, {
-  VerifyIntelligentCaptchaRequest,
-} from "@alicloud/captcha20230305";
 
 const smsCodeSchema = z.object({
   phone: z.string().regex(/^1[3-9]\d{9}$/, "Invalid phone number format"),
@@ -35,14 +41,8 @@ const updatePreferencesSchema = z.object({
     .nullable()
     .optional()
     .refine((value) => value == null || value in LOCALES, "Invalid locale"),
-  preferredStoreId: z
-    .string()
-    .nullable()
-    .optional(),
-  preferredTheme: z
-    .enum(["light", "dark"])
-    .nullable()
-    .optional(),
+  preferredStoreId: z.string().nullable().optional(),
+  preferredTheme: z.enum(["light", "dark"]).nullable().optional(),
 });
 
 const verifyTotpSchema = z.object({
@@ -80,7 +80,7 @@ async function getUserProfile(ctx: GQLContext, userId: string) {
     with: { userInfo: true, membershipPlans: true },
   });
 
-  if (!user || !user.userInfo) {
+  if (!user?.userInfo) {
     throw notFound("User profile not found");
   }
 
@@ -90,7 +90,9 @@ async function getUserProfile(ctx: GQLContext, userId: string) {
     name: user.name,
     email: user.email,
     image: user.image,
-    avatarUrl: user.userInfo.avatar_url ? cfImageUrl(user.userInfo.avatar_url) : null,
+    avatarUrl: user.userInfo.avatar_url
+      ? cfImageUrl(user.userInfo.avatar_url)
+      : null,
     role: user.role.toUpperCase(),
     nickname: user.userInfo.nickname,
     phone: user.userInfo.phone,
@@ -171,7 +173,8 @@ async function verifyCaptchaToken(
     const CaptchaClientMod =
       typeof CaptchaClient === "function"
         ? CaptchaClient
-        : (CaptchaClient as unknown as { default: typeof CaptchaClient }).default;
+        : (CaptchaClient as unknown as { default: typeof CaptchaClient })
+            .default;
 
     const client = new CaptchaClientMod(config);
 
@@ -183,7 +186,7 @@ async function verifyCaptchaToken(
     const response = await client.verifyIntelligentCaptcha(request);
     const result = response.body?.result;
     return result?.verifyResult === true;
-  } catch (err) {
+  } catch (_err) {
     // 验证服务异常时放行，避免阻塞用户
     return true;
   }
@@ -437,7 +440,10 @@ export const authResolvers = {
               drizzle.and(
                 drizzle.eq(accounts.userId, ctx.userId),
                 drizzle.eq(accounts.provider, "SMS"),
-                drizzle.eq(accounts.providerAccountId, anySmS.providerAccountId),
+                drizzle.eq(
+                  accounts.providerAccountId,
+                  anySmS.providerAccountId,
+                ),
               ),
             );
         } else {
@@ -649,8 +655,14 @@ export const authResolvers = {
       requireAuth(ctx);
       const schema = z.object({
         nickname: z.string().trim().min(1).max(30).nullish(),
-        phone: z.string().regex(/^1[3-9]\d{9}$/).nullish(),
-        code: z.string().regex(/^\d{6}$/).nullish(),
+        phone: z
+          .string()
+          .regex(/^1[3-9]\d{9}$/)
+          .nullish(),
+        code: z
+          .string()
+          .regex(/^\d{6}$/)
+          .nullish(),
       });
       const input = zodToGraphQLError(schema, args.input);
 
@@ -667,7 +679,10 @@ export const authResolvers = {
       // Update phone if provided (requires valid SMS code)
       if (input.phone) {
         if (!input.code) {
-          throw validationError("code", "SMS code is required when updating phone");
+          throw validationError(
+            "code",
+            "SMS code is required when updating phone",
+          );
         }
         const kvKey = getSmsTmpCodeKey(input.phone);
         const storedCode = await ctx.env.KV.get(kvKey);
@@ -717,7 +732,10 @@ export const authResolvers = {
                 drizzle.and(
                   drizzle.eq(accounts.userId, ctx.userId),
                   drizzle.eq(accounts.provider, "SMS"),
-                  drizzle.eq(accounts.providerAccountId, anySms.providerAccountId),
+                  drizzle.eq(
+                    accounts.providerAccountId,
+                    anySms.providerAccountId,
+                  ),
                 ),
               );
           } else {

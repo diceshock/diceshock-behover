@@ -1,4 +1,10 @@
-export type Role = "public" | "customer" | "authenticated" | "staff" | "admin" | "agent";
+export type Role =
+  | "public"
+  | "customer"
+  | "authenticated"
+  | "staff"
+  | "admin"
+  | "agent";
 
 const ROLE_HIERARCHY: Record<Role, number> = {
   public: 0,

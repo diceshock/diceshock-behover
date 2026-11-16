@@ -1,6 +1,5 @@
 import dbFactory, {
   drizzle,
-  leaderboardSnapshotsTable,
   mahjongMatchesTable,
   mahjongRegistrationsTable,
   type userBadgesTable,
@@ -15,7 +14,7 @@ import {
 } from "@/shared/mahjong/pp";
 import type { MatchType } from "@/shared/mahjong/types";
 import type { GQLContext } from "../context";
-import { forbidden, notFound, validationError } from "../errors";
+import { notFound, validationError } from "../errors";
 import { requireAuth, requireStaff } from "../guards";
 import { zodToGraphQLError } from "../validate";
 

@@ -18,10 +18,6 @@ export class PubSubDO extends DurableObject<Cloudflare.Env> {
   private sseClients = new Map<string, SSEClient>();
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 
-  constructor(ctx: DurableObjectState, env: Cloudflare.Env) {
-    super(ctx, env);
-  }
-
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
 

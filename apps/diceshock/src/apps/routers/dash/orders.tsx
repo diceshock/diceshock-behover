@@ -9,12 +9,12 @@ import {
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import clsx from "clsx";
-import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSetAtom } from "jotai";
-import { DataTable } from "@/client/components/dash/DataTable"
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { DataTable } from "@/client/components/dash/DataTable";
+import { IdCell } from "@/client/components/dash/IdCell";
 import { launcherOpenForFieldAtom } from "@/client/components/dash/launcher/atoms";
 import { getCategoryById } from "@/client/components/dash/launcher/categories";
-import { IdCell } from "@/client/components/dash/IdCell";
 import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
@@ -36,6 +36,7 @@ import {
   useRouteFilters,
 } from "@/client/hooks/useRouteFilters";
 import { useTranslation } from "@/client/hooks/useTranslation";
+import type { ParsedSearch } from "@/client/lib/searchParser";
 import { formatMessage } from "@/shared/i18n";
 import dayjs from "@/shared/utils/dayjs-config";
 import {
@@ -45,7 +46,78 @@ import {
   type SnapshotData,
 } from "@/shared/utils/pricing";
 
-const BATCH_SIZE = 100
+const BATCH_SIZE = 100;
+
+const FILTER_PAGE_SIZE = 50;
+
+const ORDER_STATUS_MAP: Record<string, string> = {
+  active: "ACTIVE",
+  paused: "PAUSED",
+  ended: "SETTLED",
+};
+
+/** Build a GQL OrderFilterInput from parsed search bar input. Exported for unit tests. */
+export function buildFilter(
+  parsed: ParsedSearch,
+  page: number,
+  sorting: SortingState,
+  groupBy?: string,
+): OrderFilterInput {
+  const input: OrderFilterInput = {};
+
+  // Combine freeText + user into search
+  const searchParts: string[] = [];
+  if (parsed.freeText) searchParts.push(parsed.freeText);
+  if (parsed.filters.user && typeof parsed.filters.user.value === "string")
+    searchParts.push(parsed.filters.user.value);
+  if (searchParts.length > 0) input.search = searchParts.join(" ");
+
+  // Status from 'status' or 'is' filter
+  const statusFilter = parsed.filters.is ?? parsed.filters.status;
+  if (statusFilter) {
+    const toMapped = (v: string): string =>
+      ORDER_STATUS_MAP[v] ?? v.toUpperCase();
+    if (typeof statusFilter.value === "string") {
+      input.status = [toMapped(statusFilter.value)];
+    } else if (Array.isArray(statusFilter.value)) {
+      input.status = (statusFilter.value as string[]).map(toMapped);
+    }
+  }
+
+  if (parsed.filters.table && typeof parsed.filters.table.value === "string")
+    input.tableCode = parsed.filters.table.value;
+  if (parsed.filters.store && typeof parsed.filters.store.value === "string")
+    input.store = parsed.filters.store.value;
+
+  // Date filters
+  const dateVal = parsed.filters.date;
+  if (dateVal) {
+    if (dateVal.operator === "eq" && typeof dateVal.value === "string") {
+      input.dateFrom = dateVal.value;
+      input.dateTo = dateVal.value;
+    } else if (dateVal.operator === "range" && Array.isArray(dateVal.value)) {
+      input.dateFrom = dateVal.value[0];
+      input.dateTo = dateVal.value[1];
+    } else if (dateVal.operator === "gt" && typeof dateVal.value === "string") {
+      input.dateFrom = dateVal.value;
+    } else if (dateVal.operator === "lt" && typeof dateVal.value === "string") {
+      input.dateTo = dateVal.value;
+    }
+  }
+
+  if (sorting.length > 0) {
+    input.sortBy = sorting[0].id;
+    input.sortOrder = sorting[0].desc ? SortOrder.Desc : SortOrder.Asc;
+  }
+
+  if (groupBy) input.groupBy = groupBy;
+
+  input.pagination = {
+    offset: (page - 1) * FILTER_PAGE_SIZE,
+    limit: FILTER_PAGE_SIZE,
+  };
+  return input;
+}
 
 interface OrderItem {
   id: string;
@@ -362,7 +434,7 @@ function RouteComponent() {
     }
   };
 
-  const selectAllByStatus = (targetStatus: "ACTIVE" | "PAUSED") => {
+  const _selectAllByStatus = (targetStatus: "ACTIVE" | "PAUSED") => {
     setSelectedIds(
       new Set(
         items
@@ -738,27 +810,37 @@ function RouteComponent() {
 
   return (
     <main className="flex-1 min-h-0 flex flex-col">
-      <DataTable columns={columns}
-      data={items}
-      loading={loading}
-      hasMore={hasMore}
-      onLoadMore={loadMore}
-      sorting={sorting}
-      onSortingChange={setSorting}
-      sortableColumns={["start_at", "end_at", "status", "amount"]}
-      filterableColumns={["table", "user", "status", "store", "date", "start_at", "end_at"]}
-      onColumnFilter={handleColumnFilter}
-      enableRowSelection
-      selectedRows={selectedIds}
-      onSelectedRowsChange={setSelectedIds}
-      getRowId={(row) => row.id}
-      emptyMessage={
-        query.trim()
-          ? t("dashOrders.noMatchedOrders")
-          : t("dashOrders.noOrders")
-      }
-      renderActions={renderActions}
-      actionsColumnSize={280} />
+      <DataTable
+        columns={columns}
+        data={items}
+        loading={loading}
+        hasMore={hasMore}
+        onLoadMore={loadMore}
+        sorting={sorting}
+        onSortingChange={setSorting}
+        sortableColumns={["start_at", "end_at", "status", "amount"]}
+        filterableColumns={[
+          "table",
+          "user",
+          "status",
+          "store",
+          "date",
+          "start_at",
+          "end_at",
+        ]}
+        onColumnFilter={handleColumnFilter}
+        enableRowSelection
+        selectedRows={selectedIds}
+        onSelectedRowsChange={setSelectedIds}
+        getRowId={(row) => row.id}
+        emptyMessage={
+          query.trim()
+            ? t("dashOrders.noMatchedOrders")
+            : t("dashOrders.noOrders")
+        }
+        renderActions={renderActions}
+        actionsColumnSize={280}
+      />
       {selectedIds.size > 0 && (
         <BatchActionBar
           count={selectedIds.size}

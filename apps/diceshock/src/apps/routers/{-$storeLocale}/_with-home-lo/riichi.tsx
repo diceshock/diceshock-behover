@@ -9,7 +9,7 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute } from "@tanstack/react-router";
 import clsx from "clsx";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   type LeaderboardCategory,
   type LeaderboardPeriod,
@@ -358,7 +358,7 @@ function LeaderboardPanel() {
 
 function GszPage() {
   const { t } = useTranslation();
-  const { session, userInfo } = useAuth();
+  const { session } = useAuth();
   const isLoggedIn = !!session?.user?.id;
 
   return (

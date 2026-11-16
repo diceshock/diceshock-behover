@@ -1,11 +1,10 @@
-import type { D1Database } from "@cloudflare/workers-types";
 import { authHandler } from "@hono/auth-js";
 import { Hono } from "hono";
 import apisRoot from "@/server/apis/apisRoot";
 import { avatarCard } from "@/server/apis/avatarCard";
 import avatarUpload from "@/server/apis/avatarUpload";
-import { cdnProxy } from "@/server/apis/cdnProxy";
 import { boardGameCard } from "@/server/apis/boardGameCard";
+import { cdnProxy } from "@/server/apis/cdnProxy";
 import confirmMutation from "@/server/apis/chat/confirmMutation";
 import chatSessions from "@/server/apis/chat/sessions";
 import chatSpike from "@/server/apis/chat/spike";
@@ -63,7 +62,6 @@ export const app = new Hono<HonoCtxEnv>();
 
 app.use(requestEndpoint);
 app.use(aliyunInj);
-
 
 // Serve R2 assets through the worker (bypass GFW for assets.runespark.fun)
 app.get("/cdn/*", cdnProxy);
@@ -176,7 +174,6 @@ export default {
     env: HonoCtxEnv["Bindings"],
     _ctx: ExecutionContext,
   ) => {
-
     if (event.cron === "0 4-22 * * *") {
       const { computeLeaderboards } = await import("./server/cron/leaderboard");
       await computeLeaderboards({ DB: env.DB });

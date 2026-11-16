@@ -1,7 +1,7 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import type { VoxelWorld, Voxel } from "./VoxelWorld";
+import type { VoxelWorld } from "./VoxelWorld";
 
 interface VoxelEditorProps {
   world: VoxelWorld;
@@ -49,7 +49,7 @@ export function VoxelEditor({
     const instancedMesh = new THREE.InstancedMesh(
       geometry,
       material,
-      voxels.length
+      voxels.length,
     );
 
     const matrix = new THREE.Matrix4();

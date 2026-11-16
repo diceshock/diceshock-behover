@@ -1,10 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import * as Y from "yjs";
-import {
-  applyUpdate,
-  encodeStateAsUpdate,
-  encodeStateVector,
-} from "yjs";
+import { applyUpdate, encodeStateAsUpdate, encodeStateVector } from "yjs";
 
 /**
  * VoxelSyncDO — Cloudflare Durable Object that holds a Yjs document
@@ -23,7 +19,7 @@ const MSG_SYNC_STEP1 = 1;
 const MSG_SYNC_STEP2 = 2;
 const MSG_AWARENESS = 3;
 
-export class VoxelSyncDO extends DurableObject {
+export class VoxelSyncDO extends DurableObject<Record<string, unknown>> {
   private doc: Y.Doc;
   private conns = new Set<WebSocket>();
 
@@ -65,7 +61,7 @@ export class VoxelSyncDO extends DurableObject {
       this.conns.add(server);
 
       // Send sync step 1 response immediately: full state as update
-      const sv = encodeStateVector(this.doc);
+      const _sv = encodeStateVector(this.doc);
       const update = encodeStateAsUpdate(this.doc);
       const step2 = new Uint8Array(1 + update.byteLength);
       step2[0] = MSG_SYNC_STEP2;
@@ -87,7 +83,7 @@ export class VoxelSyncDO extends DurableObject {
 
   override async webSocketMessage(
     ws: WebSocket,
-    message: ArrayBuffer | string
+    message: ArrayBuffer | string,
   ): Promise<void> {
     if (typeof message === "string") return;
 

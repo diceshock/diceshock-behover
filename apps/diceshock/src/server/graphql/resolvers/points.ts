@@ -1,5 +1,9 @@
-import dbFactory, { drizzle, userInfoTable, userMembershipPlansTable } from "@lib/db";
 import type { Database } from "@lib/db";
+import dbFactory, {
+  drizzle,
+  userInfoTable,
+  userMembershipPlansTable,
+} from "@lib/db";
 import { z } from "zod/v4";
 import type { GQLContext } from "../context";
 import { notFound } from "../errors";
@@ -10,7 +14,9 @@ type PlanRow = typeof userMembershipPlansTable.$inferSelect;
 
 function toIsoString(value: Date | number | null): string | null {
   if (value == null) return null;
-  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+  return value instanceof Date
+    ? value.toISOString()
+    : new Date(value).toISOString();
 }
 
 function mapRow(row: PlanRow) {

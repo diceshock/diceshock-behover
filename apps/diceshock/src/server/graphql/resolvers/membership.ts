@@ -1,5 +1,9 @@
-import dbFactory, { drizzle, userInfoTable, userMembershipPlansTable } from "@lib/db";
 import type { Database } from "@lib/db";
+import dbFactory, {
+  drizzle,
+  userInfoTable,
+  userMembershipPlansTable,
+} from "@lib/db";
 import { z } from "zod/v4";
 import type { GQLContext } from "../context";
 import { notFound, validationError } from "../errors";
@@ -37,10 +41,7 @@ function findOverlaps(
   return ids;
 }
 
-async function getAllTimePlans(
-  tdb: Database,
-  userId: string,
-) {
+async function getAllTimePlans(tdb: Database, userId: string) {
   const all = await tdb.query.userMembershipPlansTable.findMany({
     where: (p, { eq, and, inArray }) =>
       and(eq(p.user_id, userId), inArray(p.plan_type, [...TIME_PLAN_TYPES])),

@@ -1,10 +1,4 @@
-import db, {
-  activeRegistrationsTable,
-  activesTable,
-  boardGamesTable,
-  eventsTable,
-  storesTable,
-} from "@lib/db";
+import db, { activesTable, eventsTable } from "@lib/db";
 import dayjs from "dayjs";
 import { eq } from "drizzle-orm";
 import { renderToString } from "react-dom/server";
@@ -282,6 +276,7 @@ function ActiveArticleView({
     <html>
       <head>
         <meta charSet="utf-8" />
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: server-side OG card rendering, no user input */}
         <style dangerouslySetInnerHTML={{ __html: ARTICLE_CSS }} />
       </head>
       <body>
@@ -363,7 +358,11 @@ function ActiveArticleView({
             </span>
           </div>
         </div>
-        <script dangerouslySetInnerHTML={{ __html: "window.__ready = true;" }} />
+        {/* biome-ignore-start lint/security/noDangerouslySetInnerHtml: server-side OG card rendering, no user input */}
+        <script
+          dangerouslySetInnerHTML={{ __html: "window.__ready = true;" }}
+        />
+        {/* biome-ignore-end lint/security/noDangerouslySetInnerHtml: server-side OG card rendering, no user input */}
       </body>
     </html>
   );
@@ -380,6 +379,7 @@ function EventArticleView({
     <html>
       <head>
         <meta charSet="utf-8" />
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: server-side OG card rendering, no user input */}
         <style dangerouslySetInnerHTML={{ __html: ARTICLE_CSS }} />
       </head>
       <body>
@@ -414,7 +414,11 @@ function EventArticleView({
             </span>
           </div>
         </div>
-        <script dangerouslySetInnerHTML={{ __html: "window.__ready = true;" }} />
+        {/* biome-ignore-start lint/security/noDangerouslySetInnerHtml: server-side OG card rendering, no user input */}
+        <script
+          dangerouslySetInnerHTML={{ __html: "window.__ready = true;" }}
+        />
+        {/* biome-ignore-end lint/security/noDangerouslySetInnerHtml: server-side OG card rendering, no user input */}
       </body>
     </html>
   );

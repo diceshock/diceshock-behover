@@ -7,9 +7,9 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
-import { useCallback, useMemo, useRef, useState } from "react";
 import { useSetAtom } from "jotai";
-import { DataTable } from "@/client/components/dash/DataTable"
+import { useCallback, useMemo, useRef, useState } from "react";
+import { DataTable } from "@/client/components/dash/DataTable";
 import { IdCell } from "@/client/components/dash/IdCell";
 import { launcherOpenForFieldAtom } from "@/client/components/dash/launcher/atoms";
 import { getCategoryById } from "@/client/components/dash/launcher/categories";
@@ -31,12 +31,66 @@ import {
   useRouteFilters,
 } from "@/client/hooks/useRouteFilters";
 import { useTranslation } from "@/client/hooks/useTranslation";
+import type { ParsedSearch } from "@/client/lib/searchParser";
 import { formatMessage } from "@/shared/i18n";
 import dayjs from "@/shared/utils/dayjs-config";
 
-const BATCH_SIZE = 100
+const BATCH_SIZE = 100;
 
-function formatCreateAt(val: unknown): string {
+const FILTER_PAGE_SIZE = 20;
+
+/** Build a GQL ActiveFilterInput from parsed search bar input. Exported for unit tests. */
+export function buildFilter(
+  parsed: ParsedSearch,
+  sorting: SortingState,
+  cursor?: string,
+): ActiveFilterInput {
+  const toArray = (v: unknown): string[] | undefined => {
+    if (typeof v === "string") return [v];
+    if (Array.isArray(v)) return v as string[];
+    return undefined;
+  };
+
+  const input: ActiveFilterInput = {};
+  if (parsed.freeText) input.search = parsed.freeText;
+  if (parsed.filters.status)
+    input.status = toArray(parsed.filters.status.value);
+  if (parsed.filters.type)
+    input.type =
+      typeof parsed.filters.type.value === "string"
+        ? parsed.filters.type.value
+        : undefined;
+  if (parsed.filters.creator)
+    input.creator =
+      typeof parsed.filters.creator.value === "string"
+        ? parsed.filters.creator.value
+        : undefined;
+  if (parsed.filters.store)
+    input.store =
+      typeof parsed.filters.store.value === "string"
+        ? parsed.filters.store.value
+        : undefined;
+  if (parsed.filters.dateFrom)
+    input.dateFrom =
+      typeof parsed.filters.dateFrom.value === "string"
+        ? parsed.filters.dateFrom.value
+        : undefined;
+  if (parsed.filters.dateTo)
+    input.dateTo =
+      typeof parsed.filters.dateTo.value === "string"
+        ? parsed.filters.dateTo.value
+        : undefined;
+
+  if (sorting.length > 0) {
+    input.sortBy = sorting[0].id;
+    input.sortOrder = sorting[0].desc ? SortOrder.Desc : SortOrder.Asc;
+  }
+
+  input.pagination = { cursor, limit: FILTER_PAGE_SIZE };
+  return input;
+}
+
+function _formatCreateAt(val: unknown): string {
   if (!val) return "—";
   try {
     const d = dayjs.tz(val as string | number | Date, "Asia/Shanghai");
@@ -68,13 +122,15 @@ function RouteComponent() {
   const openForField = useSetAtom(launcherOpenForFieldAtom);
   const activesCategory = getCategoryById("actives");
 
-  const handleColumnFilter = useCallback((columnId: string) => {
-    if (!activesCategory) return;
-    const field = activesCategory.fields.find((f) => f.key === columnId);
-    if (!field) return;
-    openForField({ field, filters, query, categoryId: "actives" });
-  }, [activesCategory, openForField, filters, query]);
-
+  const handleColumnFilter = useCallback(
+    (columnId: string) => {
+      if (!activesCategory) return;
+      const field = activesCategory.fields.find((f) => f.key === columnId);
+      if (!field) return;
+      openForField({ field, filters, query, categoryId: "actives" });
+    },
+    [activesCategory, openForField, filters, query],
+  );
 
   const gqlVars = useMemo(
     () => filtersToGqlVariables(filters, query),
@@ -84,7 +140,10 @@ function RouteComponent() {
   const filter = useMemo<ActiveFilterInput>(() => {
     const input: ActiveFilterInput = {};
     if (gqlVars.search) input.search = gqlVars.search as string;
-    if (gqlVars.status) input.status = Array.isArray(gqlVars.status) ? gqlVars.status : [gqlVars.status as string];
+    if (gqlVars.status)
+      input.status = Array.isArray(gqlVars.status)
+        ? gqlVars.status
+        : [gqlVars.status as string];
     if (gqlVars.type) input.type = gqlVars.type as string;
     if (gqlVars.creator) input.creator = gqlVars.creator as string;
     if (gqlVars.store) input.store = gqlVars.store as string;
@@ -93,7 +152,8 @@ function RouteComponent() {
 
     if (gqlVars.sortBy) {
       input.sortBy = gqlVars.sortBy as string;
-      input.sortOrder = gqlVars.sortOrder === "asc" ? SortOrder.Asc : SortOrder.Desc;
+      input.sortOrder =
+        gqlVars.sortOrder === "asc" ? SortOrder.Asc : SortOrder.Desc;
     } else if (sorting.length > 0) {
       input.sortBy = sorting[0].id;
       input.sortOrder = sorting[0].desc ? SortOrder.Desc : SortOrder.Asc;
@@ -157,7 +217,11 @@ function RouteComponent() {
     try {
       const { data } = await publishArticleMutation({
         variables: {
-          input: { type: ArticleType.Active, id: publishTarget.id, autoPublish },
+          input: {
+            type: ArticleType.Active,
+            id: publishTarget.id,
+            autoPublish,
+          },
         },
       });
       const result = data?.publishArticleToWechat;
@@ -201,7 +265,9 @@ function RouteComponent() {
       }
     }
     if (failCount === 0) {
-      msg.success(`${successCount} 条活动已${autoPublish ? "发布" : "创建草稿"}`);
+      msg.success(
+        `${successCount} 条活动已${autoPublish ? "发布" : "创建草稿"}`,
+      );
     } else {
       msg.error(`成功 ${successCount} 条，失败 ${failCount} 条`);
     }
@@ -364,91 +430,97 @@ function RouteComponent() {
 
   return (
     <main className="flex-1 min-h-0 flex flex-col">
-      <DataTable columns={columns}
-      data={actives}
-      loading={loading}
-      hasMore={hasMore}
-      onLoadMore={loadMore}
-      sorting={sorting}
-      onSortingChange={setSorting}
-      sortableColumns={["title", "date", "maxPlayers", "createdAt"]}
-      filterableColumns={["creator", "type", "status", "store", "date", "start_time"]}
-      onColumnFilter={handleColumnFilter}
-      enableRowSelection
-      selectedRows={selectedIds}
-      onSelectedRowsChange={setSelectedIds}
-      getRowId={(row) => row.id}
-      emptyMessage={t("dashActives.noData")}
-      renderActions={(row) =>
-        isMobile ? (
-          <div className="dropdown dropdown-end">
-            <div
-              tabIndex={0}
-              role="button"
-              className="btn btn-xs btn-ghost btn-square"
-            >
-              <DotsThreeVerticalIcon className="size-4" weight="bold" />
+      <DataTable
+        columns={columns}
+        data={actives}
+        loading={loading}
+        hasMore={hasMore}
+        onLoadMore={loadMore}
+        sorting={sorting}
+        onSortingChange={setSorting}
+        sortableColumns={["title", "date", "maxPlayers", "createdAt"]}
+        filterableColumns={[
+          "creator",
+          "type",
+          "status",
+          "store",
+          "date",
+          "start_time",
+        ]}
+        onColumnFilter={handleColumnFilter}
+        enableRowSelection
+        selectedRows={selectedIds}
+        onSelectedRowsChange={setSelectedIds}
+        getRowId={(row) => row.id}
+        emptyMessage={t("dashActives.noData")}
+        renderActions={(row) =>
+          isMobile ? (
+            <div className="dropdown dropdown-end">
+              <div
+                tabIndex={0}
+                role="button"
+                className="btn btn-xs btn-ghost btn-square"
+              >
+                <DotsThreeVerticalIcon className="size-4" weight="bold" />
+              </div>
+              <ul
+                tabIndex={0}
+                className="dropdown-content menu bg-base-200 rounded-box z-50 w-32 p-2 shadow-lg"
+              >
+                <li>
+                  <Link to="/dash/actives/$id" params={{ id: row.id }}>
+                    <EyeIcon className="size-4" />
+                    {t("dashActives.details")}
+                  </Link>
+                </li>
+                <li>
+                  <button type="button" onClick={() => openPublishDialog(row)}>
+                    <PaperPlaneTiltIcon className="size-4" />
+                    发布微信
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    className="text-error"
+                    onClick={() => openDeleteDialog(row)}
+                  >
+                    <TrashIcon className="size-4" />
+                    {t("dashActives.delete")}
+                  </button>
+                </li>
+              </ul>
             </div>
-            <ul
-              tabIndex={0}
-              className="dropdown-content menu bg-base-200 rounded-box z-50 w-32 p-2 shadow-lg"
-            >
-              <li>
-                <Link to="/dash/actives/$id" params={{ id: row.id }}>
-                  <EyeIcon className="size-4" />
-                  {t("dashActives.details")}
-                </Link>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => openPublishDialog(row)}
-                >
-                  <PaperPlaneTiltIcon className="size-4" />
-                  发布微信
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  className="text-error"
-                  onClick={() => openDeleteDialog(row)}
-                >
-                  <TrashIcon className="size-4" />
-                  {t("dashActives.delete")}
-                </button>
-              </li>
-            </ul>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1">
-            <Link
-              to="/dash/actives/$id"
-              params={{ id: row.id }}
-              className="btn btn-xs btn-ghost"
-            >
-              <EyeIcon className="size-4" />
-              {t("dashActives.details")}
-            </Link>
-            <button
-              type="button"
-              className="btn btn-xs btn-ghost"
-              onClick={() => openPublishDialog(row)}
-              title="发布到微信"
-            >
-              <PaperPlaneTiltIcon className="size-4" />
-            </button>
-            <button
-              type="button"
-              className="btn btn-xs btn-ghost btn-error"
-              onClick={() => openDeleteDialog(row)}
-            >
-              {t("dashActives.delete")}
-              <TrashIcon />
-            </button>
-          </div>
-        )
-      } />
+          ) : (
+            <div className="flex items-center gap-1">
+              <Link
+                to="/dash/actives/$id"
+                params={{ id: row.id }}
+                className="btn btn-xs btn-ghost"
+              >
+                <EyeIcon className="size-4" />
+                {t("dashActives.details")}
+              </Link>
+              <button
+                type="button"
+                className="btn btn-xs btn-ghost"
+                onClick={() => openPublishDialog(row)}
+                title="发布到微信"
+              >
+                <PaperPlaneTiltIcon className="size-4" />
+              </button>
+              <button
+                type="button"
+                className="btn btn-xs btn-ghost btn-error"
+                onClick={() => openDeleteDialog(row)}
+              >
+                {t("dashActives.delete")}
+                <TrashIcon />
+              </button>
+            </div>
+          )
+        }
+      />
 
       {selectedIds.size > 0 && (
         <BatchActionBar
@@ -612,7 +684,8 @@ function RouteComponent() {
         <div className="modal-box">
           <h3 className="font-bold text-lg mb-4">批量发布到微信</h3>
           <p className="text-sm text-base-content/70">
-            将选中的 <strong>{selectedIds.size}</strong> 条活动逐一渲染并同步到微信服务号。
+            将选中的 <strong>{selectedIds.size}</strong>{" "}
+            条活动逐一渲染并同步到微信服务号。
           </p>
           <p className="text-sm text-base-content/70 mt-2">
             批量发布可能耗时较长，请耐心等待。

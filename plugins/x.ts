@@ -1,6 +1,6 @@
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
-import { readdirSync, existsSync } from "node:fs";
-import { resolve, join } from "node:path";
+import { existsSync, readdirSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { RotatingLog } from "./log.ts";
 
 const root = process.env.NX_WORKSPACE_ROOT ?? process.cwd();
@@ -23,11 +23,19 @@ function stripAnsi(s: string): string {
 /** Strip pnpm-injected npm_config_ env vars that npm 11 doesn't recognize. */
 function cleanNpmEnv(): NodeJS.ProcessEnv {
   const env = { ...process.env };
-  const bad = ["npm_config__jsr-registry", "npm_config_npm-globalconfig", "npm_config_verify_deps_before_run"];
+  const bad = [
+    "npm_config__jsr-registry",
+    "npm_config_npm-globalconfig",
+    "npm_config_verify_deps_before_run",
+  ];
   for (const key of bad) delete env[key];
   // Also drop any npm_config_ keys with hyphens (pnpm-specific, not valid for npm 11)
   for (const key of Object.keys(env)) {
-    if (key.startsWith("npm_config_") && key !== "npm_config_user_agent" && key.includes("-")) {
+    if (
+      key.startsWith("npm_config_") &&
+      key !== "npm_config_user_agent" &&
+      key.includes("-")
+    ) {
       delete env[key];
     }
   }
@@ -93,7 +101,12 @@ const appDirs: Record<string, string> = {
 };
 
 /** Targets that should run wrangler directly instead of nx */
-const wranglerTargets = new Set(["preview", "deploy-preview", "deploy", "deploy:update"]);
+const wranglerTargets = new Set([
+  "preview",
+  "deploy-preview",
+  "deploy",
+  "deploy:update",
+]);
 
 function nxMode() {
   const target = args[0];
