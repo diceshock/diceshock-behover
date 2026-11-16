@@ -300,3 +300,19 @@ remote = true
 # Version metadata
 [env.preview.version_metadata]
 binding = "CF_VERSION_METADATA"
+
+# Observability: mirror production settings
+[env.preview.observability]
+enabled = false
+head_sampling_rate = 1
+
+[env.preview.observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true
+
+[env.preview.observability.traces]
+enabled = false
+persist = true
+head_sampling_rate = 1
