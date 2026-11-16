@@ -949,31 +949,6 @@ extend type Mutation {
 }
 
 
-type CrawlerStats {
-  total: Int!
-  crawled: Int!
-  errors: Int!
-  imagesCached: Int!
-  maxId: Int!
-  estimatedMax: Int!
-}
-
-type CrawlerError {
-  gstoneId: Int!
-  error: String
-  retryCount: Int!
-  updatedAt: String
-}
-
-extend type Query {
-  crawlerStats: CrawlerStats! # @auth(role: STAFF)
-  crawlerErrors(limit: Int = 20): [CrawlerError!]! # @auth(role: STAFF)
-}
-
-extend type Mutation {
-  resetCrawlerErrors: CrawlerStats! # @auth(role: STAFF)
-}
-
 
 enum WechatTemplateSlotKey {
   ORDER_START
