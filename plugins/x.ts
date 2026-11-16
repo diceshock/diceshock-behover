@@ -1,5 +1,6 @@
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
-import { resolve } from "node:path";
+import { readdirSync, existsSync } from "node:fs";
+import { resolve, join } from "node:path";
 import { RotatingLog } from "./log.ts";
 
 const root = process.env.NX_WORKSPACE_ROOT ?? process.cwd();
@@ -113,14 +114,46 @@ function nxMode() {
       console.error(`unknown project: ${project}`);
       process.exit(1);
     }
+
+    // Deploy/upload: use Vite build output (dist/*/wrangler.json) which has
+    // pre-bundled code. Running wrangler against source wrangler.toml fails
+    // because wrangler's esbuild can't handle Vite-specific imports (?react, ?raw).
+    if (task === "deploy" || task === "deploy:update") {
+      const distDir = resolve(root, appDir, "dist");
+      let buildConfig: string | undefined;
+      if (existsSync(distDir)) {
+        for (const entry of readdirSync(distDir)) {
+          const candidate = join(distDir, entry, "wrangler.json");
+          if (existsSync(candidate)) {
+            buildConfig = candidate;
+            break;
+          }
+        }
+      }
+      if (!buildConfig) {
+        console.error(
+          `No build output found at ${distDir}/*/wrangler.json\n` +
+            `Run 'pnpm x ${project}:build' first.`,
+        );
+        process.exit(1);
+      }
+      const wranglerArgs =
+        task === "deploy"
+          ? ["deploy", "--config", buildConfig]
+          : ["versions", "upload", "--config", buildConfig];
+      const result = spawnSync(
+        resolve(root, "node_modules/.bin/wrangler"),
+        [...wranglerArgs, ...extra],
+        { cwd: root, stdio: "inherit", env: cleanNpmEnv() },
+      );
+      process.exit(result.status ?? 1);
+    }
+
+    // Preview: use source wrangler.toml directly
     const configPath = resolve(root, appDir, "wrangler.toml");
     const wranglerArgs: string[] = [];
     if (task === "preview" || task === "deploy-preview") {
       wranglerArgs.push("preview", "--config", configPath);
-    } else if (task === "deploy") {
-      wranglerArgs.push("deploy", "--config", configPath);
-    } else if (task === "deploy:update") {
-      wranglerArgs.push("versions", "upload", "--config", configPath);
     }
     const result = spawnSync(
       resolve(root, "node_modules/.bin/wrangler"),
