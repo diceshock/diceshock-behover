@@ -85,13 +85,52 @@ function devMode() {
   process.on("SIGTERM", cleanup);
 }
 
+/** Map nx project names → app directories with wrangler.toml */
+const appDirs: Record<string, string> = {
+  diceshock: "apps/diceshock",
+  rolesandbox: "apps/rolesandbox",
+};
+
+/** Targets that should run wrangler directly instead of nx */
+const wranglerTargets = new Set(["deploy-preview", "deploy", "deploy:update"]);
+
 function nxMode() {
   const target = args[0];
   if (!target) {
     console.error("usage: pnpm x <project:target> [args...]");
     process.exit(1);
   }
+
+  const sep = target.indexOf(":");
+  const project = sep > 0 ? target.slice(0, sep) : "";
+  const task = sep > 0 ? target.slice(sep + 1) : target;
   const extra = args.slice(1);
+
+  // Wrangler commands: run directly with --config pointing to the app
+  if (project && wranglerTargets.has(task)) {
+    const appDir = appDirs[project];
+    if (!appDir) {
+      console.error(`unknown project: ${project}`);
+      process.exit(1);
+    }
+    const configPath = resolve(root, appDir, "wrangler.toml");
+    const wranglerArgs: string[] = [];
+    if (task === "deploy-preview") {
+      wranglerArgs.push("preview", "--config", configPath);
+    } else if (task === "deploy") {
+      wranglerArgs.push("deploy", "--config", configPath);
+    } else if (task === "deploy:update") {
+      wranglerArgs.push("versions", "upload", "--config", configPath);
+    }
+    const result = spawnSync(
+      resolve(root, "node_modules/.bin/wrangler"),
+      [...wranglerArgs, ...extra],
+      { cwd: root, stdio: "inherit", env: cleanNpmEnv() },
+    );
+    process.exit(result.status ?? 1);
+  }
+
+  // Default: nx run
   const result = spawnSync(
     resolve(root, "node_modules/.bin/nx"),
     ["run", target, ...extra],
