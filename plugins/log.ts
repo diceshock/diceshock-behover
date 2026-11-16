@@ -10,7 +10,7 @@ import {
 import { resolve } from "node:path";
 
 const MAX_LINES = 20_000;
-const MAX_FILES = 3;
+const _MAX_FILES = 3;
 const MAX_TRASH = 15;
 
 const root = process.env.NX_WORKSPACE_ROOT ?? process.cwd();
@@ -27,7 +27,9 @@ function timestamp(): string {
 function moveToTrash(filePath: string, fileName: string) {
   try {
     renameSync(filePath, resolve(trashDir, fileName));
-  } catch (e) { console.error("[log] moveToTrash error", e); }
+  } catch (e) {
+    console.error("[log] moveToTrash error", e);
+  }
 }
 
 function pruneTrash() {
@@ -43,9 +45,13 @@ function pruneTrash() {
     for (const f of files.slice(MAX_TRASH)) {
       try {
         unlinkSync(resolve(trashDir, f.name));
-      } catch (e) { console.error("[log] pruneTrash unlink error", e); }
+      } catch (e) {
+        console.error("[log] pruneTrash unlink error", e);
+      }
     }
-  } catch (e) { console.error("[log] pruneTrash error", e); }
+  } catch (e) {
+    console.error("[log] pruneTrash error", e);
+  }
 }
 
 export class RotatingLog {
@@ -97,7 +103,9 @@ export class RotatingLog {
       for (const f of files) {
         moveToTrash(resolve(agentsDir, f), f);
       }
-    } catch (e) { console.error("[log] archiveExisting error", e); }
+    } catch (e) {
+      console.error("[log] archiveExisting error", e);
+    }
   }
 
   private flushPending() {
@@ -137,7 +145,9 @@ export class RotatingLog {
     const newPath = resolve(agentsDir, newName);
     try {
       renameSync(oldPath, newPath);
-    } catch (e) { console.error("[log] finalizeFileName error", e); }
+    } catch (e) {
+      console.error("[log] finalizeFileName error", e);
+    }
   }
 
   private rotate() {

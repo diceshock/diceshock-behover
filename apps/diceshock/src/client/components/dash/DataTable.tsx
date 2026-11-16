@@ -1,7 +1,7 @@
 import {
   ArrowDownIcon,
-  ArrowUpIcon,
   ArrowsDownUpIcon,
+  ArrowUpIcon,
   FunnelIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import type { Column, ColumnDef, SortingState } from "@tanstack/react-table";
@@ -19,8 +19,8 @@ import {
   useEffect,
   useRef,
 } from "react";
-import { useTranslation } from "@/client/hooks/useTranslation";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
+import { useTranslation } from "@/client/hooks/useTranslation";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -219,8 +219,7 @@ export function DataTable<TData>({
     estimateSize: () => estimateRowHeight,
     getScrollElement: () => tableContainerRef.current,
     measureElement:
-      typeof window !== "undefined" &&
-      !navigator.userAgent.includes("Firefox")
+      typeof window !== "undefined" && !navigator.userAgent.includes("Firefox")
         ? (element) => element?.getBoundingClientRect().height
         : undefined,
     overscan: 10,
@@ -304,7 +303,8 @@ export function DataTable<TData>({
               <tr key={hg.id} style={{ display: "flex", width: "100%" }}>
                 {hg.headers.map((header) => {
                   const canSort = isSortable(header.id);
-                  const canFilter = filterableColumns?.includes(header.id) ?? false;
+                  const canFilter =
+                    filterableColumns?.includes(header.id) ?? false;
                   const sorted = sorting.find((s) => s.id === header.id);
                   const pinningStyles = getColumnPinningStyles(header.column);
                   const isPinned = header.column.getIsPinned();
@@ -387,9 +387,7 @@ export function DataTable<TData>({
                     }}
                   >
                     {row.getVisibleCells().map((cell) => {
-                      const pinningStyles = getColumnPinningStyles(
-                        cell.column,
-                      );
+                      const pinningStyles = getColumnPinningStyles(cell.column);
                       const isPinned = cell.column.getIsPinned();
 
                       return (
@@ -491,3 +489,42 @@ export function DataTable<TData>({
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Utility helpers (exported for unit tests)
+// ---------------------------------------------------------------------------
+
+/**
+ * Given a column id, current sorting state, and list of sortable column IDs,
+ * return the next sorting state (asc → desc → clear).
+ */
+export function buildNextSortingState(
+  columnId: string,
+  currentSorting: SortingState,
+  sortableColumns: string[],
+): SortingState {
+  if (!sortableColumns.includes(columnId)) return [];
+  const current = currentSorting.find((s) => s.id === columnId);
+  if (!current) return [{ id: columnId, desc: false }];
+  if (!current.desc) return [{ id: columnId, desc: true }];
+  return [];
+}
+
+/**
+ * Build a human-readable "Showing X-Y of Z" summary from pagination state.
+ */
+export function getPageSummary(
+  p: DataTablePagination,
+  t: (key: string) => string,
+): string {
+  if (p.total === 0) return t("dashTable.showingEmpty");
+  const start = p.offset + 1;
+  const end = Math.min(p.offset + p.limit, p.total);
+  return t("dashTable.showingRange")
+    .replace("{start}", String(start))
+    .replace("{end}", String(end))
+    .replace("{total}", String(p.total));
+}
+
+/** Legacy alias — use DataTable in new code. */
+export { DataTable as DashTable };

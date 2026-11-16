@@ -37,10 +37,10 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# agents
+# agent working dirs
 .agents/
 .sisyphus/
-agents.md
+.omo/
 
 # misc
 .DS_Store

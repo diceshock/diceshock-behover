@@ -14,7 +14,6 @@ import { mergeTrpgAccount } from "../services/trpg/mergeAccount";
 
 import db, {
   accounts,
-  drizzle,
   mahjongRegistrationsTable,
   tableOccupancyTable,
   type UserRole,
@@ -358,7 +357,7 @@ export async function mergeByPhone(
 // Unionid-based merge (WeChat Open Platform ↔ WeChat MP)
 // ---------------------------------------------------------------------------
 
-const WECHAT_PROVIDERS = ["wechat-open", "wechat-mp", "wechat-mp-silent"];
+const _WECHAT_PROVIDERS = ["wechat-open", "wechat-mp", "wechat-mp-silent"];
 
 /**
  * Merge all accounts sharing the given WeChat unionid into `targetUserId`.

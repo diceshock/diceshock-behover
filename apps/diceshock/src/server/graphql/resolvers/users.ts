@@ -1,11 +1,8 @@
 import dbFactory, {
-  activeRegistrationsTable,
-  activesTable,
   boardGamesTable,
   drizzle,
   sessions,
   userBusinessCardTable,
-  userInfoTable,
   users,
 } from "@lib/db";
 import { BoardGame } from "@lib/utils";
@@ -30,7 +27,7 @@ async function getUserProfile(ctx: GQLContext, userId: string) {
     with: { userInfo: true, membershipPlans: true },
   });
 
-  if (!user || !user.userInfo) return null;
+  if (!user?.userInfo) return null;
 
   return {
     id: user.id,
@@ -853,7 +850,10 @@ export const usersResolvers = {
       if (!userProfile) throw notFound("User not found");
 
       // Mark user as disabled
-      await tdb.update(users).set({ disabled: true }).where(drizzle.eq(users.id, input.id));
+      await tdb
+        .update(users)
+        .set({ disabled: true })
+        .where(drizzle.eq(users.id, input.id));
 
       // Disable by deleting all active sessions
       await tdb.delete(sessions).where(drizzle.eq(sessions.userId, input.id));
@@ -865,7 +865,10 @@ export const usersResolvers = {
       requireStaff(ctx);
       const input = zodToGraphQLError(disableUserSchema, args);
       const tdb = dbFactory(ctx.env.DB);
-      await tdb.update(users).set({ disabled: false }).where(drizzle.eq(users.id, input.id));
+      await tdb
+        .update(users)
+        .set({ disabled: false })
+        .where(drizzle.eq(users.id, input.id));
       const userProfile = await getUserProfile(ctx, input.id);
       if (!userProfile) throw notFound("User not found");
       return userProfile;

@@ -1,7 +1,6 @@
 import dbFactory, { drizzle, userPreferencesTable } from "@lib/db";
 import { z } from "zod/v4";
 import { PREFERENCE_CATEGORIES } from "@/shared/preferences/constants";
-import { rruleToHumanReadable } from "@/shared/preferences/rruleDisplay";
 import type { PreferenceCategory } from "@/shared/preferences/types";
 import type { GQLContext } from "../context";
 import { notFound, validationError } from "../errors";
@@ -284,7 +283,7 @@ export const preferencesResolvers = {
           playerCount,
           confidence,
         };
-      } catch (e) {
+      } catch (_e) {
         return {
           __typename: "PreferenceParseError",
           success: false,

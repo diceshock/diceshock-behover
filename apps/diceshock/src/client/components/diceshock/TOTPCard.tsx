@@ -28,13 +28,15 @@ export default function TOTPCard() {
   useEffect(() => {
     if (!qrPayload || !canvasRef.current) return;
 
-    import("qrcode").then((QRCode) =>
-      QRCode.default.toCanvas(canvasRef.current!, qrPayload, {
-        width: 180,
-        margin: 1,
-        color: { dark: "#000000", light: "#ffffff" },
-      }),
-    ).catch(() => setQrError(true));
+    import("qrcode")
+      .then((QRCode) =>
+        QRCode.default.toCanvas(canvasRef.current!, qrPayload, {
+          width: 180,
+          margin: 1,
+          color: { dark: "#000000", light: "#ffffff" },
+        }),
+      )
+      .catch(() => setQrError(true));
   }, [qrPayload]);
 
   const progress = remainingSeconds / TOTP_TIME_STEP;

@@ -1,7 +1,4 @@
-import db, {
-  orderPauseLogsTable,
-  tableOccupancyTable,
-} from "@lib/db";
+import db, { orderPauseLogsTable, tableOccupancyTable } from "@lib/db";
 import { eq, or } from "drizzle-orm";
 
 /**

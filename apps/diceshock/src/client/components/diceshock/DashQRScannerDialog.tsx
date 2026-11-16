@@ -188,9 +188,17 @@ export default function DashQRScannerDialog({
     if (scanState.status !== "resolved") return;
 
     if (scanState.type === "table") {
-      navigate({ to: "/dash/tables/$id", params: { id: scanState.tableId }, search: { tab: "basic" } });
+      navigate({
+        to: "/dash/tables/$id",
+        params: { id: scanState.tableId },
+        search: { tab: "basic" },
+      });
     } else {
-      navigate({ to: "/dash/users/$id", params: { id: scanState.userId }, search: { tab: "basic" } });
+      navigate({
+        to: "/dash/users/$id",
+        params: { id: scanState.userId },
+        search: { tab: "basic" },
+      });
     }
     handleClose();
   }, [scanState, navigate, handleClose]);

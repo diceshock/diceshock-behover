@@ -1,7 +1,7 @@
-import { cloudflare } from "@cloudflare/vite-plugin";
-import { defineConfig, mergeConfig } from "vite";
-import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
+import { cloudflare } from "@cloudflare/vite-plugin";
+import tailwindcss from "@tailwindcss/vite";
+import { defineConfig, mergeConfig } from "vite";
 import baseConfig from "../../vite.config.base";
 
 const workspaceRoot = path.resolve(__dirname, "../..");

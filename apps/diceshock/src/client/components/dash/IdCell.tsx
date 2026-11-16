@@ -14,11 +14,7 @@ interface IdCellProps {
  * Compact ID cell: shows first N chars with tooltip (full value on hover)
  * and a copy button.
  */
-export function IdCell({
-  value,
-  truncate = 5,
-  fallback = "—",
-}: IdCellProps) {
+export function IdCell({ value, truncate = 5, fallback = "—" }: IdCellProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(() => {

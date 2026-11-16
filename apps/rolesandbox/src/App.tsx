@@ -1,5 +1,5 @@
+import { useVoxelSync, VoxelEditor } from "@lib/rolesandbox-client";
 import { useMemo } from "react";
-import { VoxelEditor, VoxelWorld, useVoxelSync } from "@lib/rolesandbox-client";
 
 export function App() {
   // Build WS URL relative to current origin
@@ -18,9 +18,7 @@ export function App() {
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-4">
       <header className="mb-4 text-center">
-        <h1 className="text-2xl font-bold text-white">
-          RoleSandbox
-        </h1>
+        <h1 className="text-2xl font-bold text-white">RoleSandbox</h1>
         <p className="text-gray-400 text-sm mt-1">
           三维体素协作沙箱编辑器 ·{" "}
           <span className={connected ? "text-green-400" : "text-red-400"}>

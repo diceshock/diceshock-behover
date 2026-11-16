@@ -1,8 +1,8 @@
+import type { WechatMenuData } from "@lib/db";
 import dbFactory, {
   drizzle as drizzleOp,
   wechatMenuSnapshotsTable,
 } from "@lib/db";
-import type { WechatMenuData } from "@lib/db";
 import { desc, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { getWechatAccessToken } from "@/server/apis/wechat/wechatApi";
@@ -16,7 +16,7 @@ function db(ctx: GQLContext) {
   return dbFactory(ctx.env.DB);
 }
 
-function storeCondition(
+function _storeCondition(
   tableColumn: unknown,
   storeId: string | null | undefined,
 ) {
@@ -60,44 +60,138 @@ function buildMenuSummary(data: WechatMenuData | null): string {
 
 const DEFAULT_MENU: WechatMenuData = {
   buttons: [
-    { id: "default01", type: "click", name: "会员中心", key: "MEMBERSHIP_PLAN", notification: { message: "{{user_nickname}}，您好！您当前是{{user_membership}}会员，余额{{user_balance}}元，积分{{user_points}}。到期时间：{{user_membership_expiry}}", translations: {} } },
+    {
+      id: "default01",
+      type: "click",
+      name: "会员中心",
+      key: "MEMBERSHIP_PLAN",
+      notification: {
+        message:
+          "{{user_nickname}}，您好！您当前是{{user_membership}}会员，余额{{user_balance}}元，积分{{user_points}}。到期时间：{{user_membership_expiry}}",
+        translations: {},
+      },
+    },
     {
       id: "default02",
       name: "快捷功能",
       items: [
-        { id: "default03", type: "view", name: "桌游库存", link_target: "/inventory" },
-        { id: "default04", type: "view", name: "日麻战绩", link_target: "/riichi" },
-        { id: "default05", type: "view", name: "约局", link_target: "/actives" },
+        {
+          id: "default03",
+          type: "view",
+          name: "桌游库存",
+          link_target: "/inventory",
+        },
+        {
+          id: "default04",
+          type: "view",
+          name: "日麻战绩",
+          link_target: "/riichi",
+        },
+        {
+          id: "default05",
+          type: "view",
+          name: "约局",
+          link_target: "/actives",
+        },
       ],
     },
     {
       id: "default06",
       name: "使用帮助",
       items: [
-        { id: "default07", type: "click", name: "如何对话", key: "HELP_GUIDE", notification: { message: "您好{{user_nickname}}！直接在对话框输入文字即可与我交流。您可以查询桌游库存、预约座位、了解会员权益等。今日有{{active_count}}场约局开放中。", translations: {} } },
+        {
+          id: "default07",
+          type: "click",
+          name: "如何对话",
+          key: "HELP_GUIDE",
+          notification: {
+            message:
+              "您好{{user_nickname}}！直接在对话框输入文字即可与我交流。您可以查询桌游库存、预约座位、了解会员权益等。今日有{{active_count}}场约局开放中。",
+            translations: {},
+          },
+        },
         { id: "default08", type: "view", name: "进入店铺", link_target: "/" },
-        { id: "default09", type: "view", name: "联系我们", link_target: "/contact-us" },
+        {
+          id: "default09",
+          type: "view",
+          name: "联系我们",
+          link_target: "/contact-us",
+        },
         { id: "default10", type: "view", name: "个人信息", link_target: "/me" },
       ],
     },
   ],
 };
 
-
 // ─── Available variables for notification templates ────────────────────────
 
 const MENU_VARIABLES = [
-  { id: "user_nickname", label: "用户昵称", description: "当前用户的微信昵称", example: "张三" },
-  { id: "user_balance", label: "用户余额", description: "储值余额 (元)", example: "128.00" },
-  { id: "user_points", label: "用户积分", description: "当前可用积分", example: "520" },
-  { id: "user_membership", label: "会员类型", description: "用户会员计划名称", example: "桌面通行证" },
-  { id: "user_membership_expiry", label: "会员到期时间", description: "会员到期日期", example: "2025-12-31" },
-  { id: "store_name", label: "店铺名称", description: "当前店铺名称", example: "骰子奇兵 古城店" },
-  { id: "system_date", label: "当前日期", description: "当天日期", example: "2025-07-01" },
-  { id: "system_time", label: "当前时间", description: "当前时间", example: "14:30" },
-  { id: "system_weekday", label: "星期几", description: "当前星期", example: "星期二" },
-  { id: "active_count", label: "今日约局数", description: "当天开放约局数量", example: "3" },
-  { id: "next_event", label: "下一场活动", description: "最近一场活动名称", example: "周末桌游之夜" },
+  {
+    id: "user_nickname",
+    label: "用户昵称",
+    description: "当前用户的微信昵称",
+    example: "张三",
+  },
+  {
+    id: "user_balance",
+    label: "用户余额",
+    description: "储值余额 (元)",
+    example: "128.00",
+  },
+  {
+    id: "user_points",
+    label: "用户积分",
+    description: "当前可用积分",
+    example: "520",
+  },
+  {
+    id: "user_membership",
+    label: "会员类型",
+    description: "用户会员计划名称",
+    example: "桌面通行证",
+  },
+  {
+    id: "user_membership_expiry",
+    label: "会员到期时间",
+    description: "会员到期日期",
+    example: "2025-12-31",
+  },
+  {
+    id: "store_name",
+    label: "店铺名称",
+    description: "当前店铺名称",
+    example: "骰子奇兵 古城店",
+  },
+  {
+    id: "system_date",
+    label: "当前日期",
+    description: "当天日期",
+    example: "2025-07-01",
+  },
+  {
+    id: "system_time",
+    label: "当前时间",
+    description: "当前时间",
+    example: "14:30",
+  },
+  {
+    id: "system_weekday",
+    label: "星期几",
+    description: "当前星期",
+    example: "星期二",
+  },
+  {
+    id: "active_count",
+    label: "今日约局数",
+    description: "当天开放约局数量",
+    example: "3",
+  },
+  {
+    id: "next_event",
+    label: "下一场活动",
+    description: "最近一场活动名称",
+    example: "周末桌游之夜",
+  },
 ];
 
 // ─── Translation via DeepSeek ─────────────────────────────────────────────
@@ -172,7 +266,10 @@ async function translateText(
   }
 
   try {
-    const translations = JSON.parse(jsonMatch[0]) as { locale: string; text: string }[];
+    const translations = JSON.parse(jsonMatch[0]) as {
+      locale: string;
+      text: string;
+    }[];
     return translations.filter(
       (t) => targetLocales.includes(t.locale) && typeof t.text === "string",
     );
@@ -202,7 +299,9 @@ function convertToWechatApi(data: WechatMenuData): { button: unknown[] } {
   return { button: buttons };
 }
 
-function convertMenuItem(item: import("@lib/db").WechatMenuItem): Record<string, unknown> {
+function convertMenuItem(
+  item: import("@lib/db").WechatMenuItem,
+): Record<string, unknown> {
   if (item.type === "view") {
     return {
       type: "view",
@@ -233,9 +332,7 @@ export const wechatMenuResolvers = {
 
       const latest = await tdb.query.wechatMenuSnapshotsTable.findFirst({
         where: (s, { and: a, eq: e }) =>
-          storeId
-            ? a(e(s.store_id, storeId))
-            : undefined,
+          storeId ? a(e(s.store_id, storeId)) : undefined,
         orderBy: (s) => desc(s.created_at),
       });
 
@@ -266,9 +363,7 @@ export const wechatMenuResolvers = {
       const storeId = args.storeId ?? ctx.preferredStoreId;
 
       const rows = await tdb.query.wechatMenuSnapshotsTable.findMany({
-        where: storeId
-          ? (s, { eq: e }) => e(s.store_id, storeId)
-          : undefined,
+        where: storeId ? (s, { eq: e }) => e(s.store_id, storeId) : undefined,
         orderBy: (s) => desc(s.created_at),
         limit: 50,
       });
@@ -362,10 +457,7 @@ export const wechatMenuResolvers = {
 
       const latestDraft = await tdb.query.wechatMenuSnapshotsTable.findFirst({
         where: (s, { and: a, eq: e }) =>
-          a(
-            e(s.status, "draft"),
-            storeId ? e(s.store_id, storeId) : undefined,
-          ),
+          a(e(s.status, "draft"), storeId ? e(s.store_id, storeId) : undefined),
         orderBy: (s) => desc(s.created_at),
       });
 
@@ -387,7 +479,10 @@ export const wechatMenuResolvers = {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(menuPayload),
         });
-        const resData = (await res.json()) as { errcode: number; errmsg: string };
+        const resData = (await res.json()) as {
+          errcode: number;
+          errmsg: string;
+        };
         if (resData.errcode !== 0) {
           return {
             success: false,
@@ -468,10 +563,17 @@ export const wechatMenuResolvers = {
         throw validationError("text", "Text cannot be empty");
       }
       if (!args.targetLocales.length) {
-        throw validationError("targetLocales", "Must specify at least one target locale");
+        throw validationError(
+          "targetLocales",
+          "Must specify at least one target locale",
+        );
       }
 
-      const translations = await translateText(ctx.env, args.text, args.targetLocales);
+      const translations = await translateText(
+        ctx.env,
+        args.text,
+        args.targetLocales,
+      );
       return { translations };
     },
   },

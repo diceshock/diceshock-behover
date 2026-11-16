@@ -3,20 +3,20 @@ import { trpgMemberResolvers } from "./trpg-member-services";
 import baseSchema from "../../../../schema.graphql?raw";
 import type { ResolverMap } from "../schema";
 import { activesResolvers } from "./actives";
-import { articleResolvers } from "./article";
 import { adminResolvers } from "./admin";
+import { articleResolvers } from "./article";
 import { authResolvers } from "./auth";
+import { globalSearchResolvers } from "./globalSearch";
 import { mahjongResolvers } from "./mahjong";
 import { membershipResolvers } from "./membership";
 import { ordersResolvers } from "./orders";
 import { pointsResolvers } from "./points";
 import { preferencesResolvers } from "./preferences";
+import { searchHistoryResolvers } from "./searchHistory";
 import { subscriptionResolvers } from "./subscriptions";
 import { tablesResolvers } from "./tables";
 import { usersResolvers } from "./users";
 import { wechatMenuResolvers } from "./wechatMenu";
-import { searchHistoryResolvers } from "./searchHistory";
-import { globalSearchResolvers } from "./globalSearch";
 
 function mergeResolverMaps(
   ...maps: Record<string, Record<string, unknown>>[]

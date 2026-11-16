@@ -29,5 +29,8 @@ const config: CodegenConfig = {
       },
     },
   },
+  hooks: {
+    afterAllFileWrite: ["node scripts/gen-gql-barrel.ts"],
+  },
 };
 export default config;

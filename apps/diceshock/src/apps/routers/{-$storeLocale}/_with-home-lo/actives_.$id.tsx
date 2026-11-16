@@ -2,9 +2,6 @@ import { useApolloClient } from "@apollo/client";
 import {
   CalendarBlankIcon,
   ClockIcon,
-  EyeIcon,
-  HandIcon,
-  SignInIcon,
   UsersIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import {
@@ -13,7 +10,6 @@ import {
   Link,
   useNavigate,
 } from "@tanstack/react-router";
-import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import BusinessCardModal from "@/client/components/diceshock/BusinessCardModal";
 import ParticipantsCardModal from "@/client/components/diceshock/ParticipantsCardModal";
@@ -59,13 +55,13 @@ function ActiveDetailPage() {
   const client = useApolloClient();
   const { id } = Route.useParams();
   const { t } = useTranslation();
-  const { userInfo, session } = useAuth();
+  const { session } = useAuth();
   const messages = useMessages();
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
 
   const [active, setActive] = useState<ActiveDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [_actionLoading, setActionLoading] = useState(false);
   const [showBusinessCard, setShowBusinessCard] = useState(false);
   const [showParticipantsModal, setShowParticipantsModal] = useState(false);
 
@@ -77,7 +73,7 @@ function ActiveDetailPage() {
     active?.registrations.filter((r) => !r.isWatching).length ?? 0;
   const watchingCount =
     active?.registrations.filter((r) => r.isWatching).length ?? 0;
-  const isFull = active ? joinedCount >= active.maxPlayers : false;
+  const _isFull = active ? joinedCount >= active.maxPlayers : false;
   const isExpired = active
     ? active.date < dayjs().tz("Asia/Shanghai").format("YYYY-MM-DD")
     : false;
@@ -112,7 +108,7 @@ function ActiveDetailPage() {
     }
   }, [activeQueryData]);
 
-  const handleJoin = useCallback(
+  const _handleJoin = useCallback(
     async (isWatching: boolean) => {
       if (!userId) {
         messages.warning(t("actives.needLogin"));
@@ -193,13 +189,13 @@ function ActiveDetailPage() {
     }
   }, [id, messages, refetch, t, joinActiveMutation]);
 
-  const handleLeave = useCallback(async () => {
+  const _handleLeave = useCallback(async () => {
     setActionLoading(true);
     try {
       await leaveActiveMutation({ variables: { activeId: id } });
       messages.success(t("actives.leaveSuccess"));
       refetch();
-    } catch (error) {
+    } catch (_error) {
       messages.error(t("errors.operationFailed"));
     } finally {
       setActionLoading(false);

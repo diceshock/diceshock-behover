@@ -8,14 +8,18 @@ function readFromStorage(): StoreCode {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === "gg" || stored === "jdk") return stored;
-  } catch (e) { console.error("[useAdminStoreFilter] read error", e); }
+  } catch (e) {
+    console.error("[useAdminStoreFilter] read error", e);
+  }
   return DEFAULT_STORE;
 }
 
 function writeToStorage(value: StoreCode): void {
   try {
     localStorage.setItem(STORAGE_KEY, value);
-  } catch (e) { console.error("[useAdminStoreFilter] write error", e); }
+  } catch (e) {
+    console.error("[useAdminStoreFilter] write error", e);
+  }
 }
 
 export function useAdminStoreFilter() {

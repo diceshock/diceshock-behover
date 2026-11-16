@@ -20,6 +20,7 @@ import {
 import { useTranslation } from "@/client/hooks/useTranslation";
 import { formatMessage } from "@/shared/i18n";
 
+
 export const Route = createFileRoute("/dash/")({
   component: RouteComponent,
 });
@@ -79,7 +80,7 @@ function RouteComponent() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Link
             to="/dash/users"
-            search={{ q: "", page: 1 }}
+            search={{ q: "", page: "1" }}
             className="card bg-base-100 shadow-sm hover:bg-base-200/50 transition-colors"
           >
             <div className="card-body p-4">
@@ -96,6 +97,7 @@ function RouteComponent() {
           </Link>
 
           <Link
+
             to="/dash/gsz"
             search={{ q: "", page: 1 }}
             className="card bg-base-100 shadow-sm hover:bg-base-200/50 transition-colors"

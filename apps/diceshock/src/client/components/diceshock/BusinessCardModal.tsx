@@ -3,7 +3,6 @@ import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import Modal from "@/client/components/modal";
 import {
-  type GetMyBusinessCardQuery,
   useGetMyBusinessCardQuery,
   useUpsertBusinessCardMutation,
 } from "@/client/graphql/__generated__";
@@ -15,8 +14,6 @@ type BusinessCardModalProps = {
   onSuccess?: () => void;
   required?: boolean; // 是否必须填写（报名时）
 };
-
-type BusinessCardData = NonNullable<GetMyBusinessCardQuery["myBusinessCard"]>;
 
 export default function BusinessCardModal({
   isOpen,
@@ -56,7 +53,7 @@ export default function BusinessCardModal({
 
   const [upsertBusinessCard] = useUpsertBusinessCardMutation({
     refetchQueries: ["GetMyBusinessCard"],
-    onCompleted: (data) => {
+    onCompleted: (_data) => {
       messages.success("名片保存成功");
       onSuccess?.();
       if (!required) {

@@ -174,7 +174,12 @@ export function calculatePrice(
   snapshot: SnapshotData | null,
   pauseLogs?: Array<{ pausedAt: number; resumedAt: number | null }>,
 ): PriceBreakdown | null {
-  if (!snapshot || !Array.isArray(snapshot.plans) || snapshot.plans.length === 0) return null;
+  if (
+    !snapshot ||
+    !Array.isArray(snapshot.plans) ||
+    snapshot.plans.length === 0
+  )
+    return null;
 
   const totalMs = Math.max(0, endAt - startAt);
   const totalMinutes = Math.floor(totalMs / 60000);
@@ -231,7 +236,10 @@ export function calculatePrice(
   let rawPrice = 0;
   let rawPoints = 0;
   // Count half-hour segments per plan, then price = plan.price × (segments × 0.5)
-  const planSegments = new Map<string, { halfHours: number; plan: PlanEntry; firstTs: number; lastTs: number }>();
+  const planSegments = new Map<
+    string,
+    { halfHours: number; plan: PlanEntry; firstTs: number; lastTs: number }
+  >();
   let lastMatchedPlan: PlanEntry | null = null;
 
   for (const segTs of activeSegmentStarts) {
@@ -243,7 +251,12 @@ export function calculatePrice(
 
     if (plan.billing_type === "fixed") {
       if (!planSegments.has(plan.name)) {
-        planSegments.set(plan.name, { halfHours: 0, plan, firstTs: segTs, lastTs: segTs });
+        planSegments.set(plan.name, {
+          halfHours: 0,
+          plan,
+          firstTs: segTs,
+          lastTs: segTs,
+        });
       }
     } else {
       const existing = planSegments.get(plan.name);
@@ -251,7 +264,12 @@ export function calculatePrice(
         existing.halfHours += 1;
         existing.lastTs = segTs;
       } else {
-        planSegments.set(plan.name, { halfHours: 1, plan, firstTs: segTs, lastTs: segTs });
+        planSegments.set(plan.name, {
+          halfHours: 1,
+          plan,
+          firstTs: segTs,
+          lastTs: segTs,
+        });
       }
     }
   }
@@ -319,10 +337,17 @@ export function calculatePrice(
     finalPrice += price;
     finalPoints += points;
 
-    const billableHoursForDetail = plan.billing_type === "fixed" ? 0 : Math.round(entry.halfHours * 0.5);
+    const billableHoursForDetail =
+      plan.billing_type === "fixed" ? 0 : Math.round(entry.halfHours * 0.5);
     const startFmt = new Date(entry.firstTs).toTimeString().slice(0, 5);
-    const endFmt = new Date(entry.lastTs + HALF_HOUR_MS).toTimeString().slice(0, 5);
-    const planCapApplied = price < (plan.billing_type === "fixed" ? plan.price : plan.price * billableHoursForDetail);
+    const endFmt = new Date(entry.lastTs + HALF_HOUR_MS)
+      .toTimeString()
+      .slice(0, 5);
+    const planCapApplied =
+      price <
+      (plan.billing_type === "fixed"
+        ? plan.price
+        : plan.price * billableHoursForDetail);
     planDetails.push({
       planName: plan.name,
       planType: plan.plan_type,
@@ -404,19 +429,26 @@ function computeActiveSegmentStarts(
 
   while (starts.length < billableHalfHours && cursor < endAt) {
     // Skip into any pause that covers cursor
-    while (pauseIdx < sortedPauses.length && sortedPauses[pauseIdx].end <= cursor) {
+    while (
+      pauseIdx < sortedPauses.length &&
+      sortedPauses[pauseIdx].end <= cursor
+    ) {
       pauseIdx++;
     }
-    if (pauseIdx < sortedPauses.length && sortedPauses[pauseIdx].start <= cursor) {
+    if (
+      pauseIdx < sortedPauses.length &&
+      sortedPauses[pauseIdx].start <= cursor
+    ) {
       cursor = sortedPauses[pauseIdx].end;
       pauseIdx++;
       continue;
     }
 
     // Find end of current active chunk
-    const chunkEnd = pauseIdx < sortedPauses.length
-      ? Math.min(sortedPauses[pauseIdx].start, endAt)
-      : endAt;
+    const chunkEnd =
+      pauseIdx < sortedPauses.length
+        ? Math.min(sortedPauses[pauseIdx].start, endAt)
+        : endAt;
 
     // Walk this active chunk in half-hour segments
     while (cursor < chunkEnd && starts.length < billableHalfHours) {
@@ -451,7 +483,10 @@ export function formatPoints(points: number): string {
  * Format dual price display: shows whichever is non-zero, or both if both are present.
  * Supports negative values for deductions.
  */
-export function formatDualPrice(cents: number | null | undefined, points: number | null | undefined): string {
+export function formatDualPrice(
+  cents: number | null | undefined,
+  points: number | null | undefined,
+): string {
   const c = cents ?? 0;
   const p = points ?? 0;
   const parts: string[] = [];

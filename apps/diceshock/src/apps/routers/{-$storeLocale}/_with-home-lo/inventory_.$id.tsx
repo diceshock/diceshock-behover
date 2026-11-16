@@ -11,7 +11,7 @@ import {
   UsersIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import LoadingImg from "@/client/components/diceshock/GameList/LoadingImg";
 import type { GetOwnedBoardGameQuery } from "@/client/graphql/__generated__";
 import { useGetOwnedBoardGameQuery } from "@/client/graphql/__generated__";
@@ -255,7 +255,10 @@ function BoardGameDetailPage() {
     );
   }
 
-  const safeJsonParse = <T,>(val: string | null | undefined, fallback: T): T => {
+  const safeJsonParse = <T,>(
+    val: string | null | undefined,
+    fallback: T,
+  ): T => {
     if (!val) return fallback;
     try {
       return JSON.parse(val) as T;

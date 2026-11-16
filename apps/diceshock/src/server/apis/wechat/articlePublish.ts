@@ -1,7 +1,7 @@
 import type { Context } from "hono";
+import type { HonoCtxEnv } from "@/shared/types";
 import type { ImageProcessMessage } from "../imageProcess";
 import { pollForImageResult } from "../imageProcess";
-import type { HonoCtxEnv } from "@/shared/types";
 import { fetchAsDataUrl, LOGO_URL } from "../ogCards/shared";
 import {
   ARTICLE_WIDTH,
@@ -9,10 +9,7 @@ import {
   fetchActiveArticleData,
   fetchEventArticleData,
 } from "./articleCard";
-import {
-  sendCustomerImageMessage,
-  uploadImageToWechat,
-} from "./wechatApi";
+import { sendCustomerImageMessage, uploadImageToWechat } from "./wechatApi";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -255,8 +252,7 @@ function readPngHeight(buf: Uint8Array): number | null {
   if (buf[0] !== 0x89 || buf[1] !== 0x50 || buf[2] !== 0x4e || buf[3] !== 0x47)
     return null;
   // Height is at offset 20 (after 8 sig + 4 length + 4 "IHDR" + 4 width)
-  const height =
-    (buf[20] << 24) | (buf[21] << 16) | (buf[22] << 8) | buf[23];
+  const height = (buf[20] << 24) | (buf[21] << 16) | (buf[22] << 8) | buf[23];
   return height > 0 ? height : null;
 }
 

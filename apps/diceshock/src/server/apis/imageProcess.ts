@@ -75,7 +75,7 @@ export async function imageProcessSubmit(c: Context<HonoCtxEnv>) {
 }
 
 export async function imageProcessStatus(c: Context<HonoCtxEnv>) {
-  const taskId = c.req.param("taskId");
+  const taskId = c.req.param("taskId") ?? "";
 
   // Check if result exists in R2
   const formats = ["png", "jpeg", "webp"];
@@ -92,7 +92,9 @@ export async function imageProcessStatus(c: Context<HonoCtxEnv>) {
   }
 
   // Check if error marker exists
-  const errorObj = await c.env.R2.get(`${PROCESS_PREFIX}${taskId}${ERROR_SUFFIX}`);
+  const errorObj = await c.env.R2.get(
+    `${PROCESS_PREFIX}${taskId}${ERROR_SUFFIX}`,
+  );
   if (errorObj) {
     const error = await errorObj.text();
     return c.json({
@@ -124,7 +126,9 @@ export async function pollForImageResult(
     }
 
     // Check error marker
-    const errorObj = await env.R2.head(`${PROCESS_PREFIX}${taskId}${ERROR_SUFFIX}`);
+    const errorObj = await env.R2.head(
+      `${PROCESS_PREFIX}${taskId}${ERROR_SUFFIX}`,
+    );
     if (errorObj) return null;
 
     const { promise, resolve } = Promise.withResolvers<void>();

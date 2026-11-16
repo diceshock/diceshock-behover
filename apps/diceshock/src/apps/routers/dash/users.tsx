@@ -6,13 +6,13 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
-import { useCallback, useMemo, useRef, useState } from "react";
 import { useSetAtom } from "jotai";
-import { DataTable } from "@/client/components/dash/DataTable"
+import { useCallback, useMemo, useRef, useState } from "react";
+import { DataTable } from "@/client/components/dash/DataTable";
 import { IdCell } from "@/client/components/dash/IdCell";
-import type { FilterValue } from "@/client/components/dash/launcher/types";
 import { launcherOpenForFieldAtom } from "@/client/components/dash/launcher/atoms";
 import { getCategoryById } from "@/client/components/dash/launcher/categories";
+import type { FilterValue } from "@/client/components/dash/launcher/types";
 import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
@@ -23,6 +23,7 @@ import {
   type MembershipPlan,
 } from "@/client/components/diceshock/MembershipBadge";
 import { useMsg } from "@/client/components/diceshock/Msg";
+import type { UserFilterInput } from "@/client/graphql/__generated__";
 import {
   MembershipPlanType,
   SortOrder,
@@ -36,6 +37,7 @@ import {
   useRouteFilters,
 } from "@/client/hooks/useRouteFilters";
 import { useTranslation } from "@/client/hooks/useTranslation";
+import type { ParsedSearch } from "@/client/lib/searchParser";
 import dayjs from "@/shared/utils/dayjs-config";
 
 /** Shape of a single user item from the UsersQuery response */
@@ -67,7 +69,49 @@ interface UserItem {
   }>;
 }
 
-const BATCH_SIZE = 100
+const BATCH_SIZE = 100;
+
+const FILTER_PAGE_SIZE = 30;
+
+/** Build a GQL UserFilterInput from parsed search bar input. Exported for unit tests. */
+export function buildFilter(
+  parsed: ParsedSearch,
+  page: number,
+  sorting: SortingState,
+): UserFilterInput {
+  const toUpperArray = (v: unknown): string[] | undefined => {
+    if (typeof v === "string") return [v.toUpperCase()];
+    if (Array.isArray(v)) return (v as string[]).map((s) => s.toUpperCase());
+    return undefined;
+  };
+
+  const input: UserFilterInput = {};
+
+  // Combine freeText + name into search
+  const searchParts: string[] = [];
+  if (parsed.freeText) searchParts.push(parsed.freeText);
+  if (parsed.filters.name && typeof parsed.filters.name.value === "string")
+    searchParts.push(parsed.filters.name.value);
+  if (searchParts.length > 0) input.search = searchParts.join(" ");
+
+  if (parsed.filters.role) input.role = toUpperArray(parsed.filters.role.value);
+  if (parsed.filters.store)
+    input.store =
+      typeof parsed.filters.store.value === "string"
+        ? parsed.filters.store.value
+        : undefined;
+
+  if (sorting.length > 0) {
+    input.sortBy = sorting[0].id;
+    input.sortOrder = sorting[0].desc ? SortOrder.Desc : SortOrder.Asc;
+  }
+
+  input.pagination = {
+    offset: (page - 1) * FILTER_PAGE_SIZE,
+    limit: FILTER_PAGE_SIZE,
+  };
+  return input;
+}
 
 const PLAN_TYPE_BY_RAW: Record<string, MembershipPlan["plan_type"]> = {
   [MembershipPlanType.Monthly]: "monthly",
@@ -93,18 +137,20 @@ function buildQueryFilter(
   const name = typeof vars.name === "string" ? vars.name : undefined;
   const uid = typeof vars.uid === "string" ? vars.uid : undefined;
   const phone = typeof vars.phone === "string" ? vars.phone : undefined;
-  const role = typeof vars.role === "string"
-    ? [vars.role.toUpperCase()]
-    : undefined;
+  const role =
+    typeof vars.role === "string" ? [vars.role.toUpperCase()] : undefined;
   const store = typeof vars.store === "string" ? vars.store : undefined;
-  const dateFrom = typeof vars.createdFrom === "string" ? vars.createdFrom : undefined;
-  const dateTo = typeof vars.createdTo === "string" ? vars.createdTo : undefined;
+  const dateFrom =
+    typeof vars.createdFrom === "string" ? vars.createdFrom : undefined;
+  const dateTo =
+    typeof vars.createdTo === "string" ? vars.createdTo : undefined;
 
-  const sortBy = sorting.length > 0
-    ? sorting[0].id
-    : typeof vars.sortBy === "string"
-      ? vars.sortBy
-      : undefined;
+  const sortBy =
+    sorting.length > 0
+      ? sorting[0].id
+      : typeof vars.sortBy === "string"
+        ? vars.sortBy
+        : undefined;
   const sortOrder = sorting[0]?.desc
     ? SortOrder.Desc
     : vars.sortOrder === "desc"
@@ -146,12 +192,15 @@ function RouteComponent() {
   const openForField = useSetAtom(launcherOpenForFieldAtom);
   const usersCategory = getCategoryById("users");
 
-  const handleColumnFilter = useCallback((columnId: string) => {
-    if (!usersCategory) return;
-    const field = usersCategory.fields.find((f) => f.key === columnId);
-    if (!field) return;
-    openForField({ field, filters, query, categoryId: "users" });
-  }, [usersCategory, openForField, filters, query]);
+  const handleColumnFilter = useCallback(
+    (columnId: string) => {
+      if (!usersCategory) return;
+      const field = usersCategory.fields.find((f) => f.key === columnId);
+      if (!field) return;
+      openForField({ field, filters, query, categoryId: "users" });
+    },
+    [usersCategory, openForField, filters, query],
+  );
 
   // Raw membership plan data shape from GraphQL query
   interface RawMembershipPlan {
@@ -400,7 +449,10 @@ function RouteComponent() {
     setOffset(nextOffset);
     void fetchMore({
       variables: {
-        filter: { ...filter, pagination: { offset: nextOffset, limit: BATCH_SIZE } },
+        filter: {
+          ...filter,
+          pagination: { offset: nextOffset, limit: BATCH_SIZE },
+        },
       },
       updateQuery: (prev, { fetchMoreResult }) => {
         if (!fetchMoreResult) return prev;
@@ -445,97 +497,112 @@ function RouteComponent() {
 
   return (
     <main className="flex-1 min-h-0 flex flex-col">
-      <DataTable columns={columns}
-      data={users}
-      loading={loading}
-      emptyMessage={t("dashUsers.noData")}
-      hasMore={hasMore}
-      onLoadMore={handleLoadMore}
-      sorting={sorting}
-      onSortingChange={setSorting}
-      sortableColumns={["nickname", "role", "points", "createdAt"]}
-      filterableColumns={["name", "uid", "phone", "role", "store", "disabled", "stored_value", "created"]}
-      onColumnFilter={handleColumnFilter}
-      enableRowSelection
-      selectedRows={selectedIds}
-      onSelectedRowsChange={setSelectedIds}
-      getRowId={(row) => row.id}
-      renderActions={(row) =>
-        isMobile ? (
-          <div className="dropdown dropdown-end">
-            <div
-              tabIndex={0}
-              role="button"
-              className="btn btn-xs btn-ghost btn-square"
-            >
-              <DotsThreeVerticalIcon className="size-4" weight="bold" />
+      <DataTable
+        columns={columns}
+        data={users}
+        loading={loading}
+        emptyMessage={t("dashUsers.noData")}
+        hasMore={hasMore}
+        onLoadMore={handleLoadMore}
+        sorting={sorting}
+        onSortingChange={setSorting}
+        sortableColumns={["nickname", "role", "points", "createdAt"]}
+        filterableColumns={[
+          "name",
+          "uid",
+          "phone",
+          "role",
+          "store",
+          "disabled",
+          "stored_value",
+          "created",
+        ]}
+        onColumnFilter={handleColumnFilter}
+        enableRowSelection
+        selectedRows={selectedIds}
+        onSelectedRowsChange={setSelectedIds}
+        getRowId={(row) => row.id}
+        renderActions={(row) =>
+          isMobile ? (
+            <div className="dropdown dropdown-end">
+              <div
+                tabIndex={0}
+                role="button"
+                className="btn btn-xs btn-ghost btn-square"
+              >
+                <DotsThreeVerticalIcon className="size-4" weight="bold" />
+              </div>
+              <ul
+                tabIndex={0}
+                className="dropdown-content menu bg-base-200 rounded-box z-50 w-32 p-2 shadow-lg"
+              >
+                <li>
+                  <Link
+                    to="/dash/users/$id"
+                    params={{ id: row.id }}
+                    search={{ tab: "basic" }}
+                  >
+                    <EyeIcon className="size-4" />
+                    {t("dashUsers.details")}
+                  </Link>
+                </li>
+                <li>
+                  {row.disabled ? (
+                    <button
+                      type="button"
+                      className="text-success"
+                      onClick={() => confirmEnable(row.id)}
+                    >
+                      <UserMinusIcon className="size-4" />
+                      {t("dashUsers.restore")}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="text-error"
+                      onClick={() => openDisableDialog(row)}
+                    >
+                      <UserMinusIcon className="size-4" />
+                      {t("dashUsers.disable")}
+                    </button>
+                  )}
+                </li>
+              </ul>
             </div>
-            <ul
-              tabIndex={0}
-              className="dropdown-content menu bg-base-200 rounded-box z-50 w-32 p-2 shadow-lg"
-            >
-              <li>
-                <Link to="/dash/users/$id" params={{ id: row.id }} search={{ tab: "basic" }}>
-                  <EyeIcon className="size-4" />
-                  {t("dashUsers.details")}
-                </Link>
-              </li>
-              <li>
-                {row.disabled ? (
-                  <button
-                    type="button"
-                    className="text-success"
-                    onClick={() => confirmEnable(row.id)}
-                  >
-                    <UserMinusIcon className="size-4" />
-                    {t("dashUsers.restore")}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="text-error"
-                    onClick={() => openDisableDialog(row)}
-                  >
-                    <UserMinusIcon className="size-4" />
-                    {t("dashUsers.disable")}
-                  </button>
-                )}
-              </li>
-            </ul>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1">
-            <Link
-              to="/dash/users/$id"
-              params={{ id: row.id }}
-              search={{ tab: "basic" }}
-              className="btn btn-xs btn-ghost btn-primary"
-            >
-              {t("dashUsers.details")}
-              <EyeIcon />
-            </Link>
-            {row.disabled ? (
-              <button
-                type="button"
-                className="btn btn-xs btn-ghost btn-success"
-                onClick={() => confirmEnable(row.id)}
+          ) : (
+            <div className="flex items-center gap-1">
+              <Link
+                to="/dash/users/$id"
+                params={{ id: row.id }}
+                search={{ tab: "basic" }}
+                className="btn btn-xs btn-ghost btn-primary"
               >
-                {t("dashUsers.restore")}
-                <UserMinusIcon />
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="btn btn-xs btn-ghost btn-error"
-                onClick={() => openDisableDialog(row)}
-              >
-                {t("dashUsers.disable")}
-                <UserMinusIcon />
-              </button>
-            )}
-          </div>
-        )
-      } />
+                {t("dashUsers.details")}
+                <EyeIcon />
+              </Link>
+              {row.disabled ? (
+                <button
+                  type="button"
+                  className="btn btn-xs btn-ghost btn-success"
+                  onClick={() => confirmEnable(row.id)}
+                >
+                  {t("dashUsers.restore")}
+                  <UserMinusIcon />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-xs btn-ghost btn-error"
+                  onClick={() => openDisableDialog(row)}
+                >
+                  {t("dashUsers.disable")}
+                  <UserMinusIcon />
+                </button>
+              )}
+            </div>
+          )
+        }
+      />
 
       <BatchActionBar
         count={selectedIds.size}

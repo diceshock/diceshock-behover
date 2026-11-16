@@ -3,10 +3,7 @@ import db, { mahjongMatchesTable } from "@lib/db";
 import { eq } from "drizzle-orm";
 import { queueNotification } from "@/server/apis/wechat/templateMessage";
 import { gszFetch } from "@/server/utils/gszFetch";
-import {
-  fetchTableStateForDO,
-  fetchTableStateForDOByCode,
-} from "@/server/utils/seatTimer";
+import { fetchTableStateForDOByCode } from "@/server/utils/seatTimer";
 import type { Seat } from "@/shared/mahjong/constants";
 import { COUNTDOWN_SECONDS } from "@/shared/mahjong/constants";
 import * as engine from "@/shared/mahjong/engine";
@@ -102,10 +99,6 @@ export class DsSubscriptionDO extends DurableObject<Cloudflare.Env> {
   private sseClients = new Map<string, SSEClient>();
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 
-  constructor(ctx: DurableObjectState, env: Cloudflare.Env) {
-    super(ctx, env);
-  }
-
   private ensureHeartbeat(): void {
     if (this.heartbeatInterval) return;
     this.heartbeatInterval = setInterval(() => {
@@ -133,7 +126,9 @@ export class DsSubscriptionDO extends DurableObject<Cloudflare.Env> {
         this.tableInfo = state.table as TableInfo;
         this.occupancies = state.occupancies as OccupancyInfo[];
       }
-    } catch (e) { console.error("[DsSubscriptionDO] hydrate error", e); }
+    } catch (e) {
+      console.error("[DsSubscriptionDO] hydrate error", e);
+    }
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -311,7 +306,7 @@ export class DsSubscriptionDO extends DurableObject<Cloudflare.Env> {
   }
 
   private async saveMatchToDB(): Promise<void> {
-    if (!this.mahjongState || this.mahjongState.phase !== "ended") return;
+    if (this.mahjongState?.phase !== "ended") return;
     const result = engine.serializeForDB(this.mahjongState);
     if (!result) return;
 

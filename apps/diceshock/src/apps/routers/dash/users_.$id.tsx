@@ -30,14 +30,12 @@ import MembershipBadge, {
   type PlanType,
 } from "@/client/components/diceshock/MembershipBadge";
 import { useMsg } from "@/client/components/diceshock/Msg";
-import { useTranslation } from "@/client/hooks/useTranslation";
 import {
   ActiveMahjongMatchesDocument,
-  MembershipPlanType,
   type MembershipPlansByUserQuery,
+  MembershipPlanType,
   SendWechatTemplateTestDocument,
   UserRole,
-  type useActiveMahjongMatchesQuery,
   useBatchPauseOrdersMutation,
   useBatchResumeOrdersMutation,
   useCreateMembershipPlanMutation,
@@ -53,11 +51,15 @@ import {
   useUpdateUserRoleMutation,
   useUserQuery,
 } from "@/client/graphql/__generated__";
-import type { Wind } from "@/shared/mahjong/constants";
-import { WIND_LABELS } from "@/shared/mahjong/constants";
+import { useTranslation } from "@/client/hooks/useTranslation";
 import dayjs from "@/shared/utils/dayjs-config";
-import { editUserSchema, addPlanSchema, editPlanSchema, deductSchema } from "./users-detail.store";
-import { formatDualPrice, formatPoints, formatPrice } from "@/shared/utils/pricing";
+import { formatDualPrice, formatPoints } from "@/shared/utils/pricing";
+import {
+  addPlanSchema,
+  deductSchema,
+  editPlanSchema,
+  editUserSchema,
+} from "./users-detail.store";
 
 export const Route = createFileRoute("/dash/users_/$id")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -69,10 +71,6 @@ export const Route = createFileRoute("/dash/users_/$id")({
   }),
   component: UserDetailPage,
 });
-
-type UserDetail = NonNullable<
-  NonNullable<ReturnType<typeof useUserQuery>["data"]>["user"]
->;
 
 type ActiveMatch = {
   id: string;
@@ -219,8 +217,9 @@ function UserDetailPage() {
     nickname: "",
     phone: "",
   });
-  const updateEditForm = (recipe: (draft: { name: string; nickname: string; phone: string }) => void) =>
-    setEditForm(produce(recipe));
+  const _updateEditForm = (
+    recipe: (draft: { name: string; nickname: string; phone: string }) => void,
+  ) => setEditForm(produce(recipe));
   const [editPending, setEditPending] = useState(false);
   const [rolePending, setRolePending] = useState(false);
 
@@ -230,22 +229,28 @@ function UserDetailPage() {
   });
   const membershipPlans: MembershipPlan[] = useMemo(
     () =>
-      (plansQlData?.membershipPlansByUser ?? []).map((p: MembershipPlansByUserQuery["membershipPlansByUser"][number]) => ({
-        id: p.id,
-        user_id: p.userId,
-        plan_type: p.planType.toLowerCase() as PlanType,
-        amount: p.amount,
-        start_date: p.startDate ?? null,
-        end_date: p.endDate ?? null,
-        create_at: p.createdAt ?? null,
-        update_at: p.updatedAt ?? null,
-      })),
+      (plansQlData?.membershipPlansByUser ?? []).map(
+        (p: MembershipPlansByUserQuery["membershipPlansByUser"][number]) => ({
+          id: p.id,
+          user_id: p.userId,
+          plan_type: p.planType.toLowerCase() as PlanType,
+          amount: p.amount,
+          start_date: p.startDate ?? null,
+          end_date: p.endDate ?? null,
+          create_at: p.createdAt ?? null,
+          update_at: p.updatedAt ?? null,
+        }),
+      ),
     [plansQlData],
   );
+  type RawPlan = MembershipPlansByUserQuery["membershipPlansByUser"][number];
   const rawPlansById = useMemo(
     () =>
-      new Map(
-        (plansQlData?.membershipPlansByUser ?? []).map((p: any) => [p.id, p]),
+      new Map<string, RawPlan>(
+        (plansQlData?.membershipPlansByUser ?? []).map((p: RawPlan) => [
+          p.id,
+          p,
+        ]),
       ),
     [plansQlData],
   );
@@ -273,8 +278,15 @@ function UserDetailPage() {
     startDate: dayjs().format("YYYY-MM-DD"),
     endDate: dayjs().add(30, "day").format("YYYY-MM-DD"),
   });
-  const updateAddForm = (recipe: (draft: { planType: PlanType; amount: string; pointsChange: string; startDate: string; endDate: string }) => void) =>
-    setAddForm(produce(recipe));
+  const _updateAddForm = (
+    recipe: (draft: {
+      planType: PlanType;
+      amount: string;
+      pointsChange: string;
+      startDate: string;
+      endDate: string;
+    }) => void,
+  ) => setAddForm(produce(recipe));
   const [addPending, setAddPending] = useState(false);
   const [addFormError, setAddFormError] = useState("");
 
@@ -285,8 +297,14 @@ function UserDetailPage() {
     note: "",
     date: dayjs().format("YYYY-MM-DD"),
   });
-  const updateDeductForm = (recipe: (draft: { amount: string; deductPoints: string; note: string; date: string }) => void) =>
-    setDeductForm(produce(recipe));
+  const updateDeductForm = (
+    recipe: (draft: {
+      amount: string;
+      deductPoints: string;
+      note: string;
+      date: string;
+    }) => void,
+  ) => setDeductForm(produce(recipe));
   const [deductPending, setDeductPending] = useState(false);
 
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
@@ -296,8 +314,14 @@ function UserDetailPage() {
     startDate: "",
     endDate: "",
   });
-  const updateEditPlanForm = (recipe: (draft: { planType: PlanType; amount: string; startDate: string; endDate: string }) => void) =>
-    setEditPlanForm(produce(recipe));
+  const _updateEditPlanForm = (
+    recipe: (draft: {
+      planType: PlanType;
+      amount: string;
+      startDate: string;
+      endDate: string;
+    }) => void,
+  ) => setEditPlanForm(produce(recipe));
   const [editPlanPending, setEditPlanPending] = useState(false);
   const [editPlanError, setEditPlanError] = useState("");
 
@@ -340,7 +364,6 @@ function UserDetailPage() {
     skip: !id,
   });
   const rawOccupancies = occupanciesQlData?.occupanciesByUser ?? [];
-
 
   const [orderActionPending, setOrderActionPending] = useState<string | null>(
     null,
@@ -580,14 +603,18 @@ function UserDetailPage() {
         if (Array.isArray((inner as Record<string, unknown>).conflictIds))
           return (inner as Record<string, unknown>).conflictIds as string[];
       }
-    } catch (e) { console.error("[users] conflictIds parse error", e); }
+    } catch (e) {
+      console.error("[users] conflictIds parse error", e);
+    }
     try {
       const match = err.message.match(/\{.*"conflictIds".*\}/);
       if (match) {
         const inner = JSON.parse(match[0]);
         if (Array.isArray(inner.conflictIds)) return inner.conflictIds;
       }
-    } catch (e) { console.error("[users] conflictIds regex parse error", e); }
+    } catch (e) {
+      console.error("[users] conflictIds regex parse error", e);
+    }
     return [];
   }
 
@@ -674,7 +701,8 @@ function UserDetailPage() {
         },
       });
       const successParts = ["会员计划已添加"];
-      if (ptsChange) successParts.push(`积分${ptsChange > 0 ? "+" : ""}${ptsChange}`);
+      if (ptsChange)
+        successParts.push(`积分${ptsChange > 0 ? "+" : ""}${ptsChange}`);
       msg.success(successParts.join("，"));
       addDialogRef.current?.close();
       setAddForm({
@@ -1159,7 +1187,12 @@ function UserDetailPage() {
                     type="button"
                     className="btn btn-accent btn-sm"
                     onClick={() => {
-                      setDeductForm({ amount: "", deductPoints: "", note: "", date: dayjs().format("YYYY-MM-DD") });
+                      setDeductForm({
+                        amount: "",
+                        deductPoints: "",
+                        note: "",
+                        date: dayjs().format("YYYY-MM-DD"),
+                      });
                       deductDialogRef.current?.showModal();
                     }}
                   >
@@ -1314,37 +1347,43 @@ function UserDetailPage() {
                               </td>
                               <td>—</td>
                               <td>
-                                <form onSubmit={(e) => { e.preventDefault(); handleUpdatePlan(plan.id); }}>
-                                <div className="flex flex-col gap-1">
-                                  <div className="flex items-center gap-2">
-                                    <button
-                                      type="submit"
-                                      className="btn btn-xs btn-primary"
-                                      disabled={
-                                        editPlanPending ||
-                                        !!editPlanOverlapError
-                                      }
-                                    >
-                                      {editPlanPending ? "保存中..." : "保存"}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="btn btn-xs btn-ghost"
-                                      onClick={() => {
-                                        setEditingPlanId(null);
-                                        setEditPlanError("");
-                                      }}
-                                    >
-                                      取消
-                                    </button>
+                                <form
+                                  onSubmit={(e) => {
+                                    e.preventDefault();
+                                    handleUpdatePlan(plan.id);
+                                  }}
+                                >
+                                  <div className="flex flex-col gap-1">
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        type="submit"
+                                        className="btn btn-xs btn-primary"
+                                        disabled={
+                                          editPlanPending ||
+                                          !!editPlanOverlapError
+                                        }
+                                      >
+                                        {editPlanPending ? "保存中..." : "保存"}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="btn btn-xs btn-ghost"
+                                        onClick={() => {
+                                          setEditingPlanId(null);
+                                          setEditPlanError("");
+                                        }}
+                                      >
+                                        取消
+                                      </button>
+                                    </div>
+                                    {(editPlanOverlapError ||
+                                      editPlanError) && (
+                                      <span className="text-error text-xs flex items-center gap-1">
+                                        <WarningCircleIcon className="size-3" />
+                                        {editPlanOverlapError || editPlanError}
+                                      </span>
+                                    )}
                                   </div>
-                                  {(editPlanOverlapError || editPlanError) && (
-                                    <span className="text-error text-xs flex items-center gap-1">
-                                      <WarningCircleIcon className="size-3" />
-                                      {editPlanOverlapError || editPlanError}
-                                    </span>
-                                  )}
-                                </div>
                                 </form>
                               </td>
                             </tr>
@@ -1395,12 +1434,18 @@ function UserDetailPage() {
                             </td>
                             <td>
                               {(() => {
-                                const raw = rawPlansById.get(plan.id) as any;
+                                const raw = rawPlansById.get(plan.id);
                                 const pts = raw?.points ?? 0;
                                 if (pts === 0 || pts == null) return "—";
                                 return (
-                                  <span className={clsx("text-sm font-mono", pts > 0 ? "text-success" : "text-error")}>
-                                    {pts > 0 ? "+" : ""}{pts}点
+                                  <span
+                                    className={clsx(
+                                      "text-sm font-mono",
+                                      pts > 0 ? "text-success" : "text-error",
+                                    )}
+                                  >
+                                    {pts > 0 ? "+" : ""}
+                                    {pts}点
                                   </span>
                                 );
                               })()}
@@ -1418,7 +1463,7 @@ function UserDetailPage() {
                             <td>
                               {(() => {
                                 const raw = rawPlansById.get(plan.id);
-                                const orderId = (raw as any)?.orderId;
+                                const orderId = raw?.orderId;
                                 if (orderId) {
                                   return (
                                     <Link
@@ -1535,78 +1580,72 @@ function UserDetailPage() {
                   该用户暂无订单
                 </div>
               ) : (
-                <>
-                  <div className="overflow-x-auto">
-                    <table className="table table-sm">
-                      <thead>
-                        <tr>
-                          <td className="w-10">
-                            <input
-                              type="checkbox"
-                              className="checkbox checkbox-sm"
-                              checked={
-                                rawOccupancies.filter(
-                                  (o: UserOccupancy) => {
-                                    const s = (o.status as string).toLowerCase();
-                                    return s !== "ended" && s !== "settled";
-                                  },
-                                ).length > 0 &&
-                                rawOccupancies
-                                  .filter(
-                                    (o: UserOccupancy) => {
-                                      const s = (o.status as string).toLowerCase();
-                                      return s !== "ended" && s !== "settled";
-                                    },
-                                  )
-                                  .every((o: UserOccupancy) =>
-                                    selectedOccIds.has(o.id),
-                                  )
+                <div className="overflow-x-auto">
+                  <table className="table table-sm">
+                    <thead>
+                      <tr>
+                        <td className="w-10">
+                          <input
+                            type="checkbox"
+                            className="checkbox checkbox-sm"
+                            checked={
+                              rawOccupancies.filter((o: UserOccupancy) => {
+                                const s = (o.status as string).toLowerCase();
+                                return s !== "ended" && s !== "settled";
+                              }).length > 0 &&
+                              rawOccupancies
+                                .filter((o: UserOccupancy) => {
+                                  const s = (o.status as string).toLowerCase();
+                                  return s !== "ended" && s !== "settled";
+                                })
+                                .every((o: UserOccupancy) =>
+                                  selectedOccIds.has(o.id),
+                                )
+                            }
+                            onChange={() => {
+                              const actionable = rawOccupancies
+                                .filter((o: UserOccupancy) => {
+                                  const s = (o.status as string).toLowerCase();
+                                  return s !== "ended" && s !== "settled";
+                                })
+                                .map((o: UserOccupancy) => o.id);
+                              if (
+                                actionable.every((oid: string) =>
+                                  selectedOccIds.has(oid),
+                                )
+                              ) {
+                                setSelectedOccIds(new Set());
+                              } else {
+                                setSelectedOccIds(new Set(actionable));
                               }
-                              onChange={() => {
-                                const actionable = rawOccupancies
-                                  .filter(
-                                    (o: UserOccupancy) => {
-                                      const s = (o.status as string).toLowerCase();
-                                      return s !== "ended" && s !== "settled";
-                                    },
-                                  )
-                                  .map((o: UserOccupancy) => o.id);
-                                if (
-                                  actionable.every((oid: string) =>
-                                    selectedOccIds.has(oid),
-                                  )
-                                ) {
-                                  setSelectedOccIds(new Set());
-                                } else {
-                                  setSelectedOccIds(new Set(actionable));
-                                }
-                              }}
-                            />
-                          </td>
-                          <td>状态</td>
-                          <td>桌台</td>
-                          <td>开始时间</td>
-                          <td>时长</td>
-                          <td>费用</td>
-                          <th>操作</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {rawOccupancies.map((occ: UserOccupancy) => {
-                          const start = dayjs(occ.startAt);
-                          const diffMin = dayjs().diff(start, "minute");
-                          const hours = Math.floor(diffMin / 60);
-                          const minutes = diffMin % 60;
-                          const durationStr =
-                            hours > 0 ? `${hours}h${minutes}m` : `${minutes}m`;
-                          const occStatus = (
-                            occ.status as string
-                          ).toLowerCase() as OccStatus;
+                            }}
+                          />
+                        </td>
+                        <td>状态</td>
+                        <td>桌台</td>
+                        <td>开始时间</td>
+                        <td>时长</td>
+                        <td>费用</td>
+                        <th>操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rawOccupancies.map((occ: UserOccupancy) => {
+                        const start = dayjs(occ.startAt);
+                        const diffMin = dayjs().diff(start, "minute");
+                        const hours = Math.floor(diffMin / 60);
+                        const minutes = diffMin % 60;
+                        const durationStr =
+                          hours > 0 ? `${hours}h${minutes}m` : `${minutes}m`;
+                        const occStatus = (
+                          occ.status as string
+                        ).toLowerCase() as OccStatus;
 
-                          return (
-                            <tr key={occ.id}>
-                              <td>
-                                {occStatus !== "ended" && occStatus !== "settled" && (
+                        return (
+                          <tr key={occ.id}>
+                            <td>
+                              {occStatus !== "ended" &&
+                                occStatus !== "settled" && (
                                   <input
                                     type="checkbox"
                                     className="checkbox checkbox-sm"
@@ -1614,112 +1653,116 @@ function UserDetailPage() {
                                     onChange={() => toggleOccSelect(occ.id)}
                                   />
                                 )}
-                              </td>
-                              <td>
-                                {occStatus === "active" ? (
-                                  <span className="badge badge-success badge-sm">
-                                    进行中
-                                  </span>
-                                ) : occStatus === "paused" ? (
-                                  <span className="badge badge-neutral badge-sm">
-                                    已暂停
-                                  </span>
-                                ) : occStatus === "settled" ? (
-                                  <span className="badge badge-info badge-sm">
-                                    已结算
-                                  </span>
-                                ) : (
-                                  <span className="badge badge-ghost badge-sm">
-                                    已结束
-                                  </span>
-                                )}
-                              </td>
-                              <td>
-                                <Link
-                                  to="/dash/tables/$id"
-                                  params={{
-                                    id: occ.tableId,
-                                  }}
-                                  search={{ tab: "basic" }}
-                                  className="link link-hover"
-                                >
-                                  {occ.table?.name ?? occ.tableId}
-                                </Link>
-                              </td>
-                              <td className="text-sm">
-                                {start.isValid()
-                                  ? start.format("MM/DD HH:mm")
+                            </td>
+                            <td>
+                              {occStatus === "active" ? (
+                                <span className="badge badge-success badge-sm">
+                                  进行中
+                                </span>
+                              ) : occStatus === "paused" ? (
+                                <span className="badge badge-neutral badge-sm">
+                                  已暂停
+                                </span>
+                              ) : occStatus === "settled" ? (
+                                <span className="badge badge-info badge-sm">
+                                  已结算
+                                </span>
+                              ) : (
+                                <span className="badge badge-ghost badge-sm">
+                                  已结束
+                                </span>
+                              )}
+                            </td>
+                            <td>
+                              <Link
+                                to="/dash/tables/$id"
+                                params={{
+                                  id: occ.tableId,
+                                }}
+                                search={{ tab: "basic" }}
+                                className="link link-hover"
+                              >
+                                {occ.table?.name ?? occ.tableId}
+                              </Link>
+                            </td>
+                            <td className="text-sm">
+                              {start.isValid()
+                                ? start.format("MM/DD HH:mm")
+                                : "—"}
+                            </td>
+                            <td className="text-sm">{durationStr}</td>
+                            <td className="font-mono text-sm">
+                              {occ.finalPrice != null || occ.finalPoints != null
+                                ? formatDualPrice(
+                                    occ.finalPrice ?? null,
+                                    occ.finalPoints ?? null,
+                                  )
+                                : occ.settledPrice != null ||
+                                    occ.settledPoints != null
+                                  ? formatDualPrice(
+                                      occ.settledPrice ?? null,
+                                      occ.settledPoints ?? null,
+                                    )
                                   : "—"}
-                              </td>
-                              <td className="text-sm">{durationStr}</td>
-                              <td className="font-mono text-sm">
-                                {occ.finalPrice != null || (occ as any).finalPoints != null
-                                  ? formatDualPrice(occ.finalPrice ?? null, (occ as any).finalPoints ?? null)
-                                  : occ.settledPrice != null || (occ as any).settledPoints != null
-                                    ? formatDualPrice(occ.settledPrice ?? null, (occ as any).settledPoints ?? null)
-                                    : "—"}
-                              </td>
-                              <th>
-                                <div className="flex items-center gap-1">
-                                  {occStatus === "active" && (
-                                    <button
-                                      type="button"
-                                      className="btn btn-xs btn-ghost"
-                                      onClick={() =>
-                                        void handlePauseOccOrder(occ.id)
-                                      }
-                                      disabled={orderActionPending === occ.id}
-                                    >
-                                      <PauseIcon className="size-3.5" />
-                                      暂停
-                                    </button>
-                                  )}
-                                  {occStatus === "paused" && (
-                                    <button
-                                      type="button"
-                                      className="btn btn-xs btn-ghost btn-success"
-                                      onClick={() =>
-                                        void handleResumeOccOrder(occ.id)
-                                      }
-                                      disabled={orderActionPending === occ.id}
-                                    >
-                                      <PlayIcon className="size-3.5" />
-                                      继续
-                                    </button>
-                                  )}
-                                  {(occStatus === "active" || occStatus === "paused") && (
-                                    <button
-                                      type="button"
-                                      className="btn btn-xs btn-ghost btn-error"
-                                      onClick={() =>
-                                        void handleEndOccOrder(
-                                          occ.id,
-                                          occStatus,
-                                        )
-                                      }
-                                      disabled={orderActionPending === occ.id}
-                                    >
-                                      <StopIcon className="size-3.5" />
-                                      终止
-                                    </button>
-                                  )}
-                                  <Link
-                                    to="/dash/orders/settle"
-                                    search={{ ids: [occ.id] }}
+                            </td>
+                            <th>
+                              <div className="flex items-center gap-1">
+                                {occStatus === "active" && (
+                                  <button
+                                    type="button"
                                     className="btn btn-xs btn-ghost"
+                                    onClick={() =>
+                                      void handlePauseOccOrder(occ.id)
+                                    }
+                                    disabled={orderActionPending === occ.id}
                                   >
-                                    <EyeIcon className="size-3.5" />
-                                    详情
-                                  </Link>
-                                </div>
-                              </th>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
+                                    <PauseIcon className="size-3.5" />
+                                    暂停
+                                  </button>
+                                )}
+                                {occStatus === "paused" && (
+                                  <button
+                                    type="button"
+                                    className="btn btn-xs btn-ghost btn-success"
+                                    onClick={() =>
+                                      void handleResumeOccOrder(occ.id)
+                                    }
+                                    disabled={orderActionPending === occ.id}
+                                  >
+                                    <PlayIcon className="size-3.5" />
+                                    继续
+                                  </button>
+                                )}
+                                {(occStatus === "active" ||
+                                  occStatus === "paused") && (
+                                  <button
+                                    type="button"
+                                    className="btn btn-xs btn-ghost btn-error"
+                                    onClick={() =>
+                                      void handleEndOccOrder(occ.id, occStatus)
+                                    }
+                                    disabled={orderActionPending === occ.id}
+                                  >
+                                    <StopIcon className="size-3.5" />
+                                    终止
+                                  </button>
+                                )}
+                                <Link
+                                  to="/dash/orders/settle"
+                                  search={{ ids: [occ.id] }}
+                                  className="btn btn-xs btn-ghost"
+                                >
+                                  <EyeIcon className="size-3.5" />
+                                  详情
+                                </Link>
+                              </div>
+                            </th>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           )}
@@ -1979,21 +2022,27 @@ function UserDetailPage() {
                   type="number"
                   className="input input-bordered w-full"
                   value={deductForm.amount}
-                  onChange={(e) => updateDeductForm((d) => { d.amount = e.target.value; })}
+                  onChange={(e) =>
+                    updateDeductForm((d) => {
+                      d.amount = e.target.value;
+                    })
+                  }
                   placeholder="输入划扣金额（可留空）"
                   min="0"
                   step="1"
                 />
               </label>
               <label className="flex flex-col gap-2">
-                <span className="label text-sm font-semibold">
-                  划扣积分
-                </span>
+                <span className="label text-sm font-semibold">划扣积分</span>
                 <input
                   type="number"
                   className="input input-bordered w-full"
                   value={deductForm.deductPoints}
-                  onChange={(e) => updateDeductForm((d) => { d.deductPoints = e.target.value; })}
+                  onChange={(e) =>
+                    updateDeductForm((d) => {
+                      d.deductPoints = e.target.value;
+                    })
+                  }
                   placeholder="输入划扣积分（可留空）"
                   min="0"
                   step="1"
@@ -2005,7 +2054,11 @@ function UserDetailPage() {
                   type="text"
                   className="input input-bordered w-full"
                   value={deductForm.note}
-                  onChange={(e) => updateDeductForm((d) => { d.note = e.target.value; })}
+                  onChange={(e) =>
+                    updateDeductForm((d) => {
+                      d.note = e.target.value;
+                    })
+                  }
                   placeholder="例：活动消费、桌游租赁"
                 />
               </label>
@@ -2015,7 +2068,11 @@ function UserDetailPage() {
                   type="date"
                   className="input input-bordered w-full"
                   value={deductForm.date}
-                  onChange={(e) => updateDeductForm((d) => { d.date = e.target.value; })}
+                  onChange={(e) =>
+                    updateDeductForm((d) => {
+                      d.date = e.target.value;
+                    })
+                  }
                 />
               </label>
             </div>
@@ -2024,7 +2081,9 @@ function UserDetailPage() {
               <button
                 type="submit"
                 className="btn btn-accent"
-                disabled={deductPending || !deductForm.note.trim() || !deductForm.date}
+                disabled={
+                  deductPending || !deductForm.note.trim() || !deductForm.date
+                }
               >
                 {deductPending ? "划扣中..." : "确认划扣"}
               </button>

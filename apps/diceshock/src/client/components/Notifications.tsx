@@ -28,7 +28,9 @@ function getLastSeenTimestamp(): number {
 function setLastSeenTimestamp(ts: number): void {
   try {
     localStorage.setItem(LAST_SEEN_KEY, String(ts));
-  } catch (e) { console.error("[Notifications] setLastSeenTimestamp error", e); }
+  } catch (e) {
+    console.error("[Notifications] setLastSeenTimestamp error", e);
+  }
 }
 
 function formatNotificationText(n: NotificationItem): string {

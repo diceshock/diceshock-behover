@@ -44,6 +44,7 @@ export const CATEGORIES: CategoryDef[] = [
           { value: "jdk", label: "街道口" },
         ],
       },
+
       { type: "boolean", key: "disabled", label: "已禁用" },
       { type: "number", key: "stored_value", label: "储值余额", unit: "元" },
       { type: "date", key: "created", label: "注册时间", granularity: "day" },
@@ -55,6 +56,7 @@ export const CATEGORIES: CategoryDef[] = [
     ],
   },
   {
+
     id: "gsz",
     label: "雀庄",
     icon: "Sword",

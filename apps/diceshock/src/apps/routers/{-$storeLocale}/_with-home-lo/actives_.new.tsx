@@ -12,8 +12,8 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import clsx from "clsx";
-import { useCallback, useEffect, useRef, useState } from "react";
 import { produce } from "immer";
+import { useCallback, useEffect, useRef, useState } from "react";
 import TiptapEditor from "@/client/components/diceshock/TiptapEditor";
 import {
   CreateActiveDocument,
@@ -137,7 +137,11 @@ function NewActivePage() {
                 placeholder={t("actives.newTitlePlaceholder")}
                 className="input input-bordered w-full"
                 value={form.title}
-                onChange={(e) => updateForm((d) => { d.title = e.target.value; })}
+                onChange={(e) =>
+                  updateForm((d) => {
+                    d.title = e.target.value;
+                  })
+                }
                 maxLength={100}
                 required
               />
@@ -157,7 +161,9 @@ function NewActivePage() {
                     type="button"
                     className="btn btn-ghost btn-xs"
                     onClick={() => {
-                      updateForm((d) => { d.boardGameId = undefined; });
+                      updateForm((d) => {
+                        d.boardGameId = undefined;
+                      });
                       setBoardGameName("");
                     }}
                   >
@@ -167,7 +173,9 @@ function NewActivePage() {
               ) : (
                 <BoardGameSearch
                   onSelect={(id, name) => {
-                    updateForm((d) => { d.boardGameId = id; });
+                    updateForm((d) => {
+                      d.boardGameId = id;
+                    });
                     setBoardGameName(name);
                   }}
                 />
@@ -184,7 +192,11 @@ function NewActivePage() {
                   type="date"
                   className="input input-bordered w-full"
                   value={form.date}
-                  onChange={(e) => updateForm((d) => { d.date = e.target.value; })}
+                  onChange={(e) =>
+                    updateForm((d) => {
+                      d.date = e.target.value;
+                    })
+                  }
                   min={dayjs().tz("Asia/Shanghai").format("YYYY-MM-DD")}
                   required
                 />
@@ -199,7 +211,11 @@ function NewActivePage() {
                   type="time"
                   className="input input-bordered w-full"
                   value={form.time}
-                  onChange={(e) => updateForm((d) => { d.time = e.target.value; })}
+                  onChange={(e) =>
+                    updateForm((d) => {
+                      d.time = e.target.value;
+                    })
+                  }
                 />
               </label>
             </div>
@@ -215,7 +231,10 @@ function NewActivePage() {
                 value={form.maxPlayers}
                 onChange={(e) =>
                   updateForm((d) => {
-                    d.maxPlayers = Math.max(1, Math.min(100, Number(e.target.value)));
+                    d.maxPlayers = Math.max(
+                      1,
+                      Math.min(100, Number(e.target.value)),
+                    );
                   })
                 }
                 min={1}
@@ -229,7 +248,11 @@ function NewActivePage() {
               </span>
               <TiptapEditor
                 content={form.content}
-                onChange={(val: string) => updateForm((d) => { d.content = val; })}
+                onChange={(val: string) =>
+                  updateForm((d) => {
+                    d.content = val;
+                  })
+                }
                 placeholder={t("actives.newContentPlaceholder")}
               />
             </div>

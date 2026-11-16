@@ -1,11 +1,11 @@
 import puppeteer from "@cloudflare/puppeteer";
+import { renderToString } from "react-dom/server";
 import type {
   Html2ImagePayload,
   ImageProcessMessage,
   QrCodePayload,
   TranscodePayload,
 } from "@/server/apis/imageProcess";
-import { renderToString } from "react-dom/server";
 
 const PROCESS_PREFIX = "processed/";
 const ERROR_SUFFIX = ".error";
@@ -57,11 +57,9 @@ export async function handleImageQueue(
 
       // On final retry, write error marker to R2 so callers stop waiting
       if (msg.attempts >= 2) {
-        await env.R2.put(
-          `${PROCESS_PREFIX}${taskId}${ERROR_SUFFIX}`,
-          errMsg,
-          { httpMetadata: { contentType: "text/plain" } },
-        );
+        await env.R2.put(`${PROCESS_PREFIX}${taskId}${ERROR_SUFFIX}`, errMsg, {
+          httpMetadata: { contentType: "text/plain" },
+        });
         msg.ack(); // stop retrying
       } else {
         msg.retry();
@@ -192,6 +190,7 @@ function TranscodeView({
     <html>
       <body style={{ margin: 0, background: "transparent" }}>
         <canvas id="canvas" width={w} height={h} />
+        {/* biome-ignore-start lint/security/noDangerouslySetInnerHtml: server-side OG card rendering, no user input */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -208,6 +207,7 @@ function TranscodeView({
             `,
           }}
         />
+        {/* biome-ignore-end lint/security/noDangerouslySetInnerHtml: server-side OG card rendering, no user input */}
       </body>
     </html>
   );
@@ -237,6 +237,7 @@ function QrCodeView({
       </head>
       <body style={{ margin: 0, background: "transparent" }}>
         <canvas id="canvas" width={size} height={size} />
+        {/* biome-ignore-start lint/security/noDangerouslySetInnerHtml: server-side OG card rendering, no user input */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -271,6 +272,7 @@ function QrCodeView({
             `,
           }}
         />
+        {/* biome-ignore-end lint/security/noDangerouslySetInnerHtml: server-side OG card rendering, no user input */}
       </body>
     </html>
   );

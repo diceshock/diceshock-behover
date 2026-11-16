@@ -21,6 +21,7 @@ import {
 import { createFileRoute, Link } from "@tanstack/react-router";
 import clsx from "clsx";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { z } from "zod/v4";
 import BusinessCardModal from "@/client/components/diceshock/BusinessCardModal";
 import QRScannerDialog from "@/client/components/diceshock/Header/QRScannerDialog";
 import GszRegistrationModal from "@/client/components/diceshock/MahjongMatch/GszRegistrationModal";
@@ -62,10 +63,16 @@ import {
 } from "@/shared/store-locale";
 import { avatarCardUrl } from "@/shared/utils/cfImage";
 import dayjs from "@/shared/utils/dayjs-config";
-import { z } from "zod/v4";
 
-const nicknameSchema = z.string().trim().min(1, "昵称不能为空").max(30, "昵称最多30字符");
-const phoneSchema = z.string().trim().regex(/^1[3-9]\d{9}$/, "手机号格式错误");
+const nicknameSchema = z
+  .string()
+  .trim()
+  .min(1, "昵称不能为空")
+  .max(30, "昵称最多30字符");
+const phoneSchema = z
+  .string()
+  .trim()
+  .regex(/^1[3-9]\d{9}$/, "手机号格式错误");
 
 type GqlMembershipPlan = NonNullable<
   NonNullable<
@@ -275,8 +282,10 @@ function RouteComponent() {
       })
       .then(({ data }) => {
         setCaptchaEnabled(data.captchaSettings.enabled);
-        if (data.captchaSettings.prefix) setCaptchaPrefix(data.captchaSettings.prefix);
-        if (data.captchaSettings.sceneId) setCaptchaSceneId(data.captchaSettings.sceneId);
+        if (data.captchaSettings.prefix)
+          setCaptchaPrefix(data.captchaSettings.prefix);
+        if (data.captchaSettings.sceneId)
+          setCaptchaSceneId(data.captchaSettings.sceneId);
       })
       .catch(() => {});
   }, [client]);
@@ -370,6 +379,7 @@ function RouteComponent() {
     displayInfo?.preferred_locale,
     displayInfo?.preferred_store_id,
     ssrUserInfo,
+    displayInfo,
   ]);
 
   const {
@@ -452,7 +462,14 @@ function RouteComponent() {
         setIsLoading(false);
       }
     },
-    [nickname, userInfo?.nickname, setUserInfoIm, messages, updateMyUserInfo],
+    [
+      nickname,
+      userInfo?.nickname,
+      setUserInfoIm,
+      messages,
+      updateMyUserInfo,
+      t,
+    ],
   );
 
   const handleCopyUid = useCallback(async () => {
@@ -468,7 +485,7 @@ function RouteComponent() {
     } else {
       messages.error(t("me.copyFailed"));
     }
-  }, [displayInfo?.uid, messages]);
+  }, [displayInfo?.uid, messages, t]);
 
   const handleEditPhoneClick = useCallback(() => {
     setPhone("");
@@ -490,12 +507,14 @@ function RouteComponent() {
 
       const phoneParsed = phoneSchema.safeParse(phone);
       if (!phoneParsed.success) {
-        messages.error(phoneParsed.error.issues[0]?.message ?? "手机号格式错误");
+        messages.error(
+          phoneParsed.error.issues[0]?.message ?? "手机号格式错误",
+        );
         return;
       }
       const trimmedPhone = phoneParsed.data;
 
-      if (!smsForm.code || smsForm.code.length !== 6) {
+      if (smsForm.code?.length !== 6) {
         messages.error(t("me.codeRequired"));
         return;
       }
@@ -543,6 +562,7 @@ function RouteComponent() {
       messages,
       handleClosePhone,
       updateMyUserInfo,
+      t,
     ],
   );
 
@@ -570,7 +590,7 @@ function RouteComponent() {
         setIsSavingPrefs(false);
       }
     },
-    [preferredStore, displayInfo, messages, updateMyPreferences],
+    [preferredStore, displayInfo, messages, updateMyPreferences, t],
   );
 
   const handleSaveStore = useCallback(
@@ -596,7 +616,7 @@ function RouteComponent() {
         setIsSavingPrefs(false);
       }
     },
-    [preferredLocale, displayInfo, messages, updateMyPreferences],
+    [preferredLocale, displayInfo, messages, updateMyPreferences, t],
   );
 
   return (
@@ -1068,9 +1088,15 @@ function RouteComponent() {
                 disabled={verifying || countdown > 0 || isLoadingPhone}
               >
                 {verifying ? (
-                  <><span className="loading loading-spinner loading-xs" />验证中</>
+                  <>
+                    <span className="loading loading-spinner loading-xs" />
+                    验证中
+                  </>
                 ) : countdown > 0 ? (
-                  <><span className="loading loading-ring loading-xs" />{countdown}s</>
+                  <>
+                    <span className="loading loading-ring loading-xs" />
+                    {countdown}s
+                  </>
                 ) : (
                   t("me.getCode")
                 )}

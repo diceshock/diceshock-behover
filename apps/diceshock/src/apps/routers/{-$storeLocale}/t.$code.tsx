@@ -152,7 +152,7 @@ function SeatTimerPage() {
   const { t } = useTranslation();
   const { identity, ready: identityReady } = useSeatIdentity();
   const { setUserInfoIm } = useAuth();
-  const [redirectedFrom, setRedirectedFrom] = useState(from || "");
+  const [redirectedFrom, _setRedirectedFrom] = useState(from || "");
 
   const [tableData, setTableData] = useState<
     TableByCodeQuery["tableByCode"] | null
@@ -224,7 +224,7 @@ function SeatTimerPage() {
     } finally {
       setLoading(false);
     }
-  }, [code, client]);
+  }, [code, client, t]);
 
   useEffect(() => {
     void fetchTable();
@@ -234,7 +234,9 @@ function SeatTimerPage() {
   useOrderStatusChangedSubscription({
     variables: { tableId: tableData?.id ?? undefined },
     skip: !tableData?.id,
-    onData: () => { void fetchTable(); },
+    onData: () => {
+      void fetchTable();
+    },
   });
 
   useEffect(() => {
@@ -249,7 +251,7 @@ function SeatTimerPage() {
         setGszName(data.myMahjongRegistration.gszName ?? null);
       })
       .catch(() => {});
-  }, [identity]);
+  }, [identity, client.query]);
 
   const handleGszRegistered = useCallback(
     (name: string, nicknameSynced: boolean) => {
@@ -594,7 +596,7 @@ function SeatTimerPage() {
 function TableInfoSection({
   table,
   totalOccupied,
-  connected,
+  connected: _connected,
   signalLevel,
 }: {
   table: {
@@ -762,13 +764,15 @@ function TOTPDisplay({
     prevQrPayloadRef.current = qrPayload;
 
     setQrError(false);
-    import("qrcode").then((QRCode) =>
-      QRCode.default.toCanvas(canvasRef.current!, qrPayload, {
-        width: 200,
-        margin: 1,
-        color: { dark: "#000000", light: "#ffffff" },
-      }),
-    ).catch(() => setQrError(true));
+    import("qrcode")
+      .then((QRCode) =>
+        QRCode.default.toCanvas(canvasRef.current!, qrPayload, {
+          width: 200,
+          margin: 1,
+          color: { dark: "#000000", light: "#ffffff" },
+        }),
+      )
+      .catch(() => setQrError(true));
   }, [qrPayload]);
 
   return (

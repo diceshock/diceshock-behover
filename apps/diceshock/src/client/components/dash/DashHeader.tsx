@@ -3,7 +3,12 @@ import {
   ScanIcon,
   StorefrontIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import { Link, useLocation, useMatches, useRouter } from "@tanstack/react-router";
+import {
+  Link,
+  useLocation,
+  useMatches,
+  useRouter,
+} from "@tanstack/react-router";
 import clsx from "clsx";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -56,13 +61,21 @@ export function DashHeader() {
   // Chips come from URL search params, NOT launcher atoms
   const { filters, query: routeQuery, categoryId } = useRouteFilters();
   const category = categoryId
-    ? getCategoryByRoute("/dash/" + categoryId)
+    ? getCategoryByRoute(`/dash/${categoryId}`)
     : getCategoryByRoute(location.pathname);
   const hasFilters = filters.length > 0 || !!category;
 
   // Ref for fresh filter state in stable keydown handler
-  const filtersRef = useRef({ filters, query: routeQuery, categoryId: categoryId ?? category?.id ?? null });
-  filtersRef.current = { filters, query: routeQuery, categoryId: categoryId ?? category?.id ?? null };
+  const filtersRef = useRef({
+    filters,
+    query: routeQuery,
+    categoryId: categoryId ?? category?.id ?? null,
+  });
+  filtersRef.current = {
+    filters,
+    query: routeQuery,
+    categoryId: categoryId ?? category?.id ?? null,
+  };
 
   // Breadcrumbs from route matches
   const crumbs = matches
@@ -111,7 +124,10 @@ export function DashHeader() {
           </button>
           <DashNavMenuButton />
           <nav className="hidden sm:flex items-center gap-1 text-xs text-base-content/60 min-w-0">
-            <Link to="/dash" className="hover:text-base-content transition-colors">
+            <Link
+              to="/dash"
+              className="hover:text-base-content transition-colors"
+            >
               {t("dashNav.dashboard")}
             </Link>
             {crumbs.map((c) => (
@@ -132,7 +148,13 @@ export function DashHeader() {
         <div className="flex-1 flex justify-center min-w-0">
           <button
             type="button"
-            onClick={() => toggleLauncher({ filters, query: routeQuery, categoryId: categoryId ?? category?.id ?? null })}
+            onClick={() =>
+              toggleLauncher({
+                filters,
+                query: routeQuery,
+                categoryId: categoryId ?? category?.id ?? null,
+              })
+            }
             className={clsx(
               "flex items-center gap-1.5 h-7 rounded-lg",
               "bg-base-200/60 border border-base-300/50",
@@ -159,7 +181,9 @@ export function DashHeader() {
                 ))}
               </div>
             ) : (
-              <span className="truncate flex-1 text-left">搜索, 排序和筛选</span>
+              <span className="truncate flex-1 text-left">
+                搜索, 排序和筛选
+              </span>
             )}
             <span className="shrink-0 inline-flex items-center gap-0.5">
               <kbd className="kbd kbd-xs">{isMac ? "⌘" : "ctrl"}</kbd>

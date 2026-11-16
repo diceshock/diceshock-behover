@@ -38,7 +38,8 @@ export async function fetchTableStateForDO(
     where: (t, { eq }) => eq(t.id, tableId),
     with: {
       occupancies: {
-        where: (o, { and, ne }) => and(ne(o.status, "ended"), ne(o.status, "settled")),
+        where: (o, { and, ne }) =>
+          and(ne(o.status, "ended"), ne(o.status, "settled")),
       },
     },
   });
@@ -63,7 +64,9 @@ export async function fetchTableStateForDO(
             columns: { nickname: true },
           });
           nickname = tempInfo?.nickname ?? nickname;
-        } catch (e) { console.error("[seatTimer] tempIdentity lookup error", e); }
+        } catch (e) {
+          console.error("[seatTimer] tempIdentity lookup error", e);
+        }
         uid = `temp:${occ.temp_id}`;
       }
 

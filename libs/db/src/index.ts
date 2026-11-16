@@ -15,4 +15,3 @@ export default function db(d1: D1Database) {
 
 /** The Drizzle ORM instance returned by the default db factory. */
 export type Database = ReturnType<typeof db>;
-

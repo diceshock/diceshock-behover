@@ -37,10 +37,12 @@ import {
   useRouteFilters,
 } from "@/client/hooks/useRouteFilters";
 import { useTranslation } from "@/client/hooks/useTranslation";
+import type { ParsedSearch } from "@/client/lib/searchParser";
 import { formatMessage } from "@/shared/i18n";
 import dayjs from "@/shared/utils/dayjs-config";
 
 const BATCH_SIZE = 100;
+
 
 /** Extracted from generated query return type (codegen owns the shape). */
 type ActivesList = NonNullable<

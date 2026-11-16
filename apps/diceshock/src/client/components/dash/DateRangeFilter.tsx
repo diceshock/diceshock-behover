@@ -38,7 +38,10 @@ export function DateRangeFilter({
       const from =
         days === 0
           ? to
-          : dayjs().tz("Asia/Shanghai").subtract(days, "day").format("YYYY-MM-DD");
+          : dayjs()
+              .tz("Asia/Shanghai")
+              .subtract(days, "day")
+              .format("YYYY-MM-DD");
       onChange({ from, to });
       setOpen(false);
     },
@@ -83,7 +86,8 @@ export function DateRangeFilter({
             className="hover:bg-primary-content/20 rounded-full p-0.5"
             onClick={handleClear}
             onKeyDown={(e) => {
-              if (e.key === "Enter") handleClear(e as unknown as React.MouseEvent);
+              if (e.key === "Enter")
+                handleClear(e as unknown as React.MouseEvent);
             }}
           >
             <XIcon className="size-3" />

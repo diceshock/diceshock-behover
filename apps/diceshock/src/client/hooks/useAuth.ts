@@ -2,7 +2,7 @@ import { useApolloClient } from "@apollo/client";
 import type { Session } from "@auth/core/types";
 import { signOut as signOutAuthJs, useSession } from "@hono/auth-js/react";
 import { produce } from "immer";
-import { atom, useAtom, type WritableAtom } from "jotai";
+import { atom, useAtom } from "jotai";
 import { useHydrateAtoms } from "jotai/utils";
 import { useCallback, useMemo } from "react";
 import {
@@ -70,7 +70,9 @@ export default function useAuth() {
           }
         }
       }
-    } catch (e) { console.error("[useAuth] pre-signout cleanup error", e); }
+    } catch (e) {
+      console.error("[useAuth] pre-signout cleanup error", e);
+    }
 
     await signOutAuthJs({ callbackUrl: "/" });
   }, [session, client]);

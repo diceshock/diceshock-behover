@@ -8,7 +8,6 @@ import {
   parse,
 } from "graphql";
 import type { GQLContext } from "./context";
-import { internalError } from "./errors";
 
 export type ResolverFn<
   TResult = unknown,

@@ -1,7 +1,7 @@
 import type { Context } from "hono";
+import type { HonoCtxEnv } from "@/shared/types";
 import type { ImageProcessMessage } from "../imageProcess";
 import { pollForImageResult } from "../imageProcess";
-import type { HonoCtxEnv } from "@/shared/types";
 import { fetchAsDataUrl, LOGO_URL } from "../ogCards/shared";
 import {
   ARTICLE_WIDTH,

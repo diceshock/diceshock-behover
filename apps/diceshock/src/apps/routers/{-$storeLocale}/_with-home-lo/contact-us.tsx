@@ -29,12 +29,15 @@ function RouteComponent() {
   const [qrSrc, setQrSrc] = useState<string>("");
 
   useEffect(() => {
-    import("qrcode").then((QRCode) =>
-      QRCode.default.toDataURL(WECHAT_OA_URL, {
-        width: 180,
-        margin: 1,
-      }),
-    ).then(setQrSrc).catch(() => {});
+    import("qrcode")
+      .then((QRCode) =>
+        QRCode.default.toDataURL(WECHAT_OA_URL, {
+          width: 180,
+          margin: 1,
+        }),
+      )
+      .then(setQrSrc)
+      .catch(() => {});
   }, []);
 
   return (
@@ -111,7 +114,9 @@ function RouteComponent() {
             <div className="card-body items-center">
               <h2 className="card-title">{t("contact.officialAccount")}</h2>
               <p className="text-sm opacity-70">DiceShockDS</p>
-              {qrSrc && <img src={qrSrc} alt="DiceShockDS" width={180} height={180} />}
+              {qrSrc && (
+                <img src={qrSrc} alt="DiceShockDS" width={180} height={180} />
+              )}
             </div>
           </div>
         </Swing>

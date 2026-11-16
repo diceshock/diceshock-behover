@@ -1,8 +1,8 @@
 import type { Context } from "hono";
+import type { HonoCtxEnv } from "@/shared/types";
+import { publishActivityArticle } from "../../apis/wechat/articlePipeline";
 import type { GQLContext } from "../context";
 import { requireStaff } from "../guards";
-import { publishActivityArticle } from "../../apis/wechat/articlePipeline";
-import type { HonoCtxEnv } from "@/shared/types";
 
 // ─── Resolver ─────────────────────────────────────────────────────────────────
 

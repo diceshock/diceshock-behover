@@ -1,3 +1,3 @@
-export { VoxelSyncDO } from "./VoxelSyncDO";
-export { createRoleSandboxRouter } from "./router";
 export type { RoleSandboxEnv } from "./router";
+export { createRoleSandboxRouter } from "./router";
+export { VoxelSyncDO } from "./VoxelSyncDO";

@@ -8,14 +8,14 @@ import {
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import clsx from "clsx";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSetAtom } from "jotai";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DataTable } from "@/client/components/dash/DataTable";
 import { DateRangeFilter } from "@/client/components/dash/DateRangeFilter";
-import { usePendingSearch } from "@/client/components/dash/SearchBridge";
-import { TableToolbar } from "@/client/components/dash/TableToolbar";
 import { launcherOpenForFieldAtom } from "@/client/components/dash/launcher/atoms";
 import { getCategoryById } from "@/client/components/dash/launcher/categories";
+import { usePendingSearch } from "@/client/components/dash/SearchBridge";
+import { TableToolbar } from "@/client/components/dash/TableToolbar";
 import { useSelectedTableData } from "@/client/components/dash/useSelectedTableData";
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
@@ -32,10 +32,8 @@ import {
   useTerminateMahjongMatchMutation,
 } from "@/client/graphql/__generated__";
 import { useIsMobile } from "@/client/hooks/useIsMobile";
+import { useRouteFilters } from "@/client/hooks/useRouteFilters";
 import { useTranslation } from "@/client/hooks/useTranslation";
-import {
-  useRouteFilters,
-} from "@/client/hooks/useRouteFilters";
 import {
   GSZ_SEARCH_GRAMMAR,
   type ParsedSearch,
@@ -212,12 +210,15 @@ function RouteComponent() {
   const openForField = useSetAtom(launcherOpenForFieldAtom);
   const gszCategory = getCategoryById("gsz");
 
-  const handleColumnFilter = useCallback((columnId: string) => {
-    if (!gszCategory) return;
-    const field = gszCategory.fields.find((f) => f.key === columnId);
-    if (!field) return;
-    openForField({ field, filters, query: routeQuery, categoryId: "gsz" });
-  }, [gszCategory, openForField, filters, routeQuery]);
+  const handleColumnFilter = useCallback(
+    (columnId: string) => {
+      if (!gszCategory) return;
+      const field = gszCategory.fields.find((f) => f.key === columnId);
+      if (!field) return;
+      openForField({ field, filters, query: routeQuery, categoryId: "gsz" });
+    },
+    [gszCategory, openForField, filters, routeQuery],
+  );
 
   const parsed = useMemo(() => parseSearch(q, GSZ_SEARCH_GRAMMAR), [q]);
   const filter = useMemo(
@@ -462,9 +463,13 @@ function RouteComponent() {
         cell: ({ row }) => (
           <span
             className="max-w-[200px] truncate inline-block"
-            title={row.original.players.map((p: MatchItem["players"][number]) => p.nickname).join(", ")}
+            title={row.original.players
+              .map((p: MatchItem["players"][number]) => p.nickname)
+              .join(", ")}
           >
-            {row.original.players.map((p: MatchItem["players"][number]) => p.nickname).join(", ") || "—"}
+            {row.original.players
+              .map((p: MatchItem["players"][number]) => p.nickname)
+              .join(", ") || "—"}
           </span>
         ),
       },
@@ -584,7 +589,10 @@ function RouteComponent() {
                     if (!range) {
                       delete nextFilters.date;
                     } else if (range.from && range.to) {
-                      nextFilters.date = { operator: "range", value: [range.from, range.to] };
+                      nextFilters.date = {
+                        operator: "range",
+                        value: [range.from, range.to],
+                      };
                     } else if (range.from) {
                       nextFilters.date = { operator: "gt", value: range.from };
                     } else if (range.to) {
@@ -625,11 +633,13 @@ function RouteComponent() {
                     }}
                   >
                     <option value="">{t("dashGsz.allTables")}</option>
-                    {tableOptions.map((tbl: { id: string; name: string; code: string }) => (
-                      <option key={tbl.id} value={tbl.code}>
-                        {tbl.name}
-                      </option>
-                    ))}
+                    {tableOptions.map(
+                      (tbl: { id: string; name: string; code: string }) => (
+                        <option key={tbl.id} value={tbl.code}>
+                          {tbl.name}
+                        </option>
+                      ),
+                    )}
                   </select>
                 )}
               </div>
@@ -670,7 +680,14 @@ function RouteComponent() {
           sorting={sorting}
           onSortingChange={setSorting}
           sortableColumns={["startedAt", "endedAt"]}
-          filterableColumns={["table", "mode", "format", "completion", "date", "created_at"]}
+          filterableColumns={[
+            "table",
+            "mode",
+            "format",
+            "completion",
+            "date",
+            "created_at",
+          ]}
           onColumnFilter={handleColumnFilter}
           getRowId={(row) => row.id}
           enableRowSelection={true}
@@ -813,7 +830,9 @@ function ActiveMatchesSection({
                 </span>
               </div>
               <div className="text-xs text-base-content/50 mt-1 truncate">
-                {m.players.map((p: ActiveMatch["players"][number]) => p.nickname).join(", ")}
+                {m.players
+                  .map((p: ActiveMatch["players"][number]) => p.nickname)
+                  .join(", ")}
               </div>
             </div>
             <button

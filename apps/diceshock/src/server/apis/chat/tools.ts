@@ -18,10 +18,10 @@ import {
   TABLE_SEARCH_GRAMMAR,
   USER_SEARCH_GRAMMAR,
 } from "@/client/lib/searchParser";
+import { resolveSourceUrl } from "@/server/utils/rulesSourceUrl";
 import { generateTOTP, getRemainingSeconds } from "@/shared/utils/totp";
 import { executeGraphQL, type GraphQLContext } from "../wechat/graphql";
 import { normalizeQuery } from "../wechat/graphql/normalize";
-import { resolveSourceUrl } from "@/server/utils/rulesSourceUrl";
 import type { Role } from "../wechat/graphql/permissions";
 import { validateQueryString } from "../wechat/graphql/queryValidation";
 

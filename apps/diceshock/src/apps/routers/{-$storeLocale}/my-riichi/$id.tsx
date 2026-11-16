@@ -532,7 +532,7 @@ function MyGszProfile() {
     return params;
   }, [matchTypeFilter, modeFilter, formatFilter, startDate, endDate]);
 
-  const { data: matchHistoryData, fetchMore } = useGetMahjongMatchHistoryQuery({
+  const { fetchMore } = useGetMahjongMatchHistoryQuery({
     variables: {
       input: {
         userId: profileUserId,
@@ -589,7 +589,9 @@ function MyGszProfile() {
           setMatchCursor(data.pageInfo.nextCursor);
           setHasMoreMatches(!!data.pageInfo.nextCursor);
         }
-      } catch (e) { console.error("[my-riichi] fetchMatches error", e); }
+      } catch (e) {
+        console.error("[my-riichi] fetchMatches error", e);
+      }
     },
     [profileUserId, buildFilterParams, fetchMore],
   );
@@ -606,7 +608,9 @@ function MyGszProfile() {
                 ppStatsData.myPPStats.categories,
               ) as PPStat[];
               setPpStats(parsed);
-            } catch (e) { console.error("[my-riichi] ppStats parse error", e); }
+            } catch (e) {
+              console.error("[my-riichi] ppStats parse error", e);
+            }
           }
         }),
         Promise.resolve().then(() => {
@@ -617,7 +621,9 @@ function MyGszProfile() {
                 number
               >;
               setHeatmap(parsed);
-            } catch (e) { console.error("[my-riichi] heatmap parse error", e); }
+            } catch (e) {
+              console.error("[my-riichi] heatmap parse error", e);
+            }
           }
         }),
         Promise.resolve().then(() => {
@@ -641,7 +647,6 @@ function MyGszProfile() {
       ]).finally(() => setIsLoading(false));
     }
   }, [
-    profileUserId,
     currentUserId,
     isOwnProfile,
     ppStatsData,

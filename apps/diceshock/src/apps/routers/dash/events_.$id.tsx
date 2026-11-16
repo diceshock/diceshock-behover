@@ -119,7 +119,7 @@ function EventEditorPage() {
           },
         });
         msg.success("活动已保存");
-        navigate({ to: "/dash/events", search: { q: "", page: 1 } });
+        navigate({ to: "/dash/events", search: { q: "", page: "1" } });
       } catch (err) {
         msg.error(err instanceof Error ? err.message : "保存失败");
       } finally {
@@ -140,13 +140,15 @@ function EventEditorPage() {
   return (
     <ClientOnly>
       <main className="size-full overflow-y-auto">
-
         <div className="mx-auto w-full max-w-2xl px-4 pb-20">
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-2xl font-bold">活动详情</h1>
             <button
               type="button"
-              className={clsx("btn btn-sm btn-primary gap-1", publishing && "loading")}
+              className={clsx(
+                "btn btn-sm btn-primary gap-1",
+                publishing && "loading",
+              )}
               onClick={() => publishDialogRef.current?.showModal()}
               disabled={publishing}
             >
@@ -163,7 +165,11 @@ function EventEditorPage() {
                 placeholder="活动标题"
                 className="input input-bordered w-full"
                 value={form.title}
-                onChange={(e) => updateForm((d) => { d.title = e.target.value; })}
+                onChange={(e) =>
+                  updateForm((d) => {
+                    d.title = e.target.value;
+                  })
+                }
                 maxLength={200}
                 required
               />
@@ -175,7 +181,11 @@ function EventEditorPage() {
                 placeholder="活动描述，会显示在列表页卡片上"
                 className="textarea textarea-bordered w-full"
                 value={form.description}
-                onChange={(e) => updateForm((d) => { d.description = e.target.value; })}
+                onChange={(e) =>
+                  updateForm((d) => {
+                    d.description = e.target.value;
+                  })
+                }
                 rows={3}
               />
             </label>
@@ -192,7 +202,11 @@ function EventEditorPage() {
                 placeholder="https://example.com/image.jpg"
                 className="input input-bordered w-full"
                 value={form.coverImageUrl}
-                onChange={(e) => updateForm((d) => { d.coverImageUrl = e.target.value; })}
+                onChange={(e) =>
+                  updateForm((d) => {
+                    d.coverImageUrl = e.target.value;
+                  })
+                }
               />
               {form.coverImageUrl && (
                 <img
@@ -207,7 +221,11 @@ function EventEditorPage() {
               <span className="label text-sm font-semibold">正文</span>
               <MarkdownTextEditor
                 content={form.content}
-                onChange={(val) => updateForm((d) => { d.content = val; })}
+                onChange={(val) =>
+                  updateForm((d) => {
+                    d.content = val;
+                  })
+                }
                 placeholder="活动详情..."
               />
             </div>
@@ -217,7 +235,7 @@ function EventEditorPage() {
                 type="button"
                 className="btn btn-ghost"
                 onClick={() =>
-                  navigate({ to: "/dash/events", search: { q: "", page: 1 } })
+                  navigate({ to: "/dash/events", search: { q: "", page: "1" } })
                 }
                 disabled={submitting}
               >
