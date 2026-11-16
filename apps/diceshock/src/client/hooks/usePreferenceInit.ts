@@ -1,9 +1,9 @@
-import { useEffect, useRef } from "react";
 import { useAtom } from "jotai";
-import { useUpdateMyPreferencesMutation } from "@/client/graphql/__generated__";
+import { useEffect, useRef } from "react";
 import { themeA } from "@/client/components/ThemeSwap";
-import useAuth from "./useAuth";
+import { useUpdateMyPreferencesMutation } from "@/client/graphql/__generated__";
 import { DEFAULT_LOCALE, DEFAULT_STORE } from "@/shared/store-locale";
+import useAuth from "./useAuth";
 
 /**
  * Ensures user preferences (locale, store, theme) are always initialized.
@@ -33,7 +33,10 @@ export default function usePreferenceInit() {
     // All set → nothing to do
     if (currentLocale && currentStore && currentTheme) {
       // Sync jotai atom with DB theme
-      if (theme === null && (currentTheme === "light" || currentTheme === "dark")) {
+      if (
+        theme === null &&
+        (currentTheme === "light" || currentTheme === "dark")
+      ) {
         setTheme(currentTheme);
       }
       return;
@@ -47,7 +50,10 @@ export default function usePreferenceInit() {
     let resolvedTheme = currentTheme;
     if (!resolvedTheme) {
       // Detect system preference, fallback to light
-      if (typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches) {
+      if (
+        typeof window !== "undefined" &&
+        window.matchMedia?.("(prefers-color-scheme: dark)").matches
+      ) {
         resolvedTheme = "dark";
       } else {
         resolvedTheme = "light";

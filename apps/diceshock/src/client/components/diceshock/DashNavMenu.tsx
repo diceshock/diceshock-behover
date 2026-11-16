@@ -151,7 +151,8 @@ function AccountSettingsModal({
       ? userInfo.preferred_store_id
       : DEFAULT_STORE;
   const preferredTheme =
-    typeof (userInfo as Record<string, unknown> | null)?.preferred_theme === "string"
+    typeof (userInfo as Record<string, unknown> | null)?.preferred_theme ===
+    "string"
       ? ((userInfo as Record<string, unknown>).preferred_theme as string)
       : (theme ?? "light");
 
@@ -170,7 +171,9 @@ function AccountSettingsModal({
             },
           },
         });
-      } catch (e) { console.error("[DashNavMenu] updateThemePreference error", e); }
+      } catch (e) {
+        console.error("[DashNavMenu] updateThemePreference error", e);
+      }
     },
     [preferredLocale, preferredStore, setTheme, updateMyPreferences],
   );
@@ -188,7 +191,9 @@ function AccountSettingsModal({
           },
         });
         window.location.reload();
-      } catch (e) { console.error("[DashNavMenu] updateLocalePreference error", e); }
+      } catch (e) {
+        console.error("[DashNavMenu] updateLocalePreference error", e);
+      }
     },
     [preferredStore, preferredTheme, updateMyPreferences],
   );
@@ -206,7 +211,9 @@ function AccountSettingsModal({
           },
         });
         window.location.reload();
-      } catch (e) { console.error("[DashNavMenu] updateStorePreference error", e); }
+      } catch (e) {
+        console.error("[DashNavMenu] updateStorePreference error", e);
+      }
     },
     [preferredLocale, preferredTheme, updateMyPreferences],
   );

@@ -1,0 +1,21 @@
+#!/bin/sh
+
+echo "🔍 pre-push: biome check"
+pnpm exec biome check --error-on-warnings . || {
+  echo "❌ Biome check failed. Fix all errors and warnings before pushing."
+  exit 1
+}
+
+echo "🔍 pre-push: tsc (diceshock)"
+pnpm exec tsc --noEmit -p apps/diceshock/tsconfig.json || {
+  echo "❌ TypeScript check failed (diceshock). Fix all errors before pushing."
+  exit 1
+}
+
+echo "🔍 pre-push: tsc (rolesandbox)"
+pnpm exec tsc --noEmit -p apps/rolesandbox/tsconfig.json || {
+  echo "❌ TypeScript check failed (rolesandbox). Fix all errors before pushing."
+  exit 1
+}
+
+echo "✅ pre-push checks passed."

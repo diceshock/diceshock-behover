@@ -1,9 +1,10 @@
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
+import type React from "react";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { SearchGrammar } from "@/client/lib/searchParser";
-import { buildNextSortingState, DashTable, getPageSummary } from "@/client/components/dash/DashTable";
+import { buildNextSortingState, type DataTableProps, DashTable, getPageSummary } from "@/client/components/dash/DataTable";
 import { SearchBar } from "@/client/components/dash/SearchBar";
 import { TableToolbar } from "@/client/components/dash/TableToolbar";
 import { I18nProvider } from "@/client/providers/I18nProvider";
@@ -39,6 +40,9 @@ const grammar: SearchGrammar = {
   user: { type: "string" },
 };
 
+
+/** Cast DashTable for use with createElement — generic inference needs help */
+const TypedTable = DashTable as React.FC<DataTableProps<Row>>;
 describe("DashTable", () => {
   beforeAll(async () => {
     setTranslations("en", await loadLocale("en"));
@@ -46,17 +50,18 @@ describe("DashTable", () => {
 
   it("renders a DaisyUI table with columns, rows, selection, actions, and pagination", () => {
     const html = renderToString(
-      createElement(I18nProvider, { locale: "en" },
-        createElement(DashTable<Row>, {
+      createElement(I18nProvider, {
+        locale: "en",
+        children: createElement(TypedTable, {
           columns,
           data: rows,
           enableRowSelection: true,
           selectedRows: new Set(["a"]),
-          getRowId: (row) => row.id,
+          getRowId: (row: Row) => row.id,
           pagination: { offset: 0, limit: 10, total: 25, hasMore: true },
-          renderActions: (row) => createElement("button", null, `Open ${row.id}`),
+          renderActions: (row: Row) => createElement("button", null, `Open ${row.id}`),
         }),
-      ),
+      }),
     );
 
     expect(html).toContain("table table-lg table-pin-rows min-w-full");
@@ -70,18 +75,20 @@ describe("DashTable", () => {
 
   it("renders loading and empty states with full-width table rows", () => {
     const loadingHtml = renderToString(
-      createElement(I18nProvider, { locale: "en" },
-        createElement(DashTable<Row>, { columns, data: [], loading: true }),
-      ),
+      createElement(I18nProvider, {
+        locale: "en",
+        children: createElement(TypedTable, { columns, data: [] as Row[], loading: true }),
+      }),
     );
     const emptyHtml = renderToString(
-      createElement(I18nProvider, { locale: "en" },
-        createElement(DashTable<Row>, {
+      createElement(I18nProvider, {
+        locale: "en",
+        children: createElement(TypedTable, {
           columns,
           data: [],
           emptyMessage: "Nothing here",
         }),
-      ),
+      }),
     );
 
     expect(loadingHtml).toContain("loading loading-dots loading-lg");

@@ -9,7 +9,9 @@ interface __BaseEnv_CloudflareBindings {
   LIBRARY: R2Bucket;
   DB: D1Database;
   AI_SEARCH: AiSearchInstance;
-  WECHAT_AGENT: DurableObjectNamespace<import("../server/durableObjects/WechatAgentDO").WechatAgentDO>;
+  WECHAT_AGENT: DurableObjectNamespace<
+    import("../server/durableObjects/WechatAgentDO").WechatAgentDO
+  >;
   WECHAT_MP_TOKEN: string;
   WECHAT_MP_APP_ID: string;
   WECHAT_MP_APP_SECRET: string;

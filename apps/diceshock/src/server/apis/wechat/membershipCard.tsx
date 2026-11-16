@@ -8,8 +8,8 @@ import dayjs from "dayjs";
 import type { Context } from "hono";
 import { renderToString } from "react-dom/server";
 import type { ImageProcessMessage } from "@/server/apis/imageProcess";
-import { pollForImageResult } from "../imageProcess";
 import type { HonoCtxEnv } from "@/shared/types";
+import { pollForImageResult } from "../imageProcess";
 import {
   sendCustomerImageMessage,
   sendCustomerTextMessage,
@@ -116,7 +116,6 @@ export async function generateAndSendMembershipCard(
   await sendCustomerImageMessage(env, openId, mediaId);
 }
 
-
 function planTypeLabel(type: string): string {
   switch (type) {
     case "monthly":
@@ -164,6 +163,7 @@ function MembershipCardView({ data }: { data: MembershipCardData }) {
     <html>
       <head>
         <meta charSet="utf-8" />
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: server-side OG card rendering, no user input */}
         <style dangerouslySetInnerHTML={{ __html: MEMBERSHIP_CSS }} />
       </head>
       <body>
@@ -230,9 +230,11 @@ function MembershipCardView({ data }: { data: MembershipCardData }) {
         <div className="footer">
           diceshock.com · {dayjs().format("YYYY-MM-DD HH:mm")} 生成
         </div>
+        {/* biome-ignore-start lint/security/noDangerouslySetInnerHtml: server-side OG card rendering, no user input */}
         <script
           dangerouslySetInnerHTML={{ __html: "window.__ready = true;" }}
         />
+        {/* biome-ignore-end lint/security/noDangerouslySetInnerHtml: server-side OG card rendering, no user input */}
       </body>
     </html>
   );

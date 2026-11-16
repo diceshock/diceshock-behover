@@ -89,7 +89,11 @@ const INITIAL_SMS_FORM_STATE: SmsFormState = {
   code: "",
 };
 
-const phoneSchema = z.string().min(6).max(20).regex(/^[0-9]*$/);
+const phoneSchema = z
+  .string()
+  .min(6)
+  .max(20)
+  .regex(/^[0-9]*$/);
 
 export default function useSmsCode({
   phone,
@@ -165,10 +169,13 @@ export default function useSmsCode({
           // 等 DOM 就绪（modal 可能还在渲染），每 100ms 重试
           retryTimer = window.setTimeout(tryInit, 100);
         } else {
-          console.warn("[useSmsCode] button/container not found after retries", {
-            buttonId,
-            containerId,
-          });
+          console.warn(
+            "[useSmsCode] button/container not found after retries",
+            {
+              buttonId,
+              containerId,
+            },
+          );
         }
         return;
       }
@@ -214,7 +221,7 @@ export default function useSmsCode({
             const msg = data?.requestSmsCode?.message;
             setError(msg ? `发送失败：${msg}` : "发送失败，请稍后重试");
             return { captchaResult: true, bizResult: false };
-          } catch (err) {
+          } catch (_err) {
             setError("网络异常，请检查网络后重试");
             return { captchaResult: true, bizResult: false };
           }
@@ -245,7 +252,14 @@ export default function useSmsCode({
         captchaInstanceRef.current = null;
       }
     };
-  }, [enabled, skipCaptcha, buttonId, containerId, captchaPrefix, captchaSceneId]);
+  }, [
+    enabled,
+    skipCaptcha,
+    buttonId,
+    containerId,
+    captchaPrefix,
+    captchaSceneId,
+  ]);
 
   // ========== getSmsCode: 仅用于 skipCaptcha / 非生产模式的直接发送 ==========
   const getSmsCode = useCallback(async () => {
@@ -255,7 +269,9 @@ export default function useSmsCode({
       // SDK 已绑定按钮，不需要手动触发。
       // 如果 SDK 没正确初始化，给出提示。
       if (!captchaInstanceRef.current) {
-        console.warn("[useSmsCode:getSmsCode] captcha not initialized, fallback direct send");
+        console.warn(
+          "[useSmsCode:getSmsCode] captcha not initialized, fallback direct send",
+        );
       } else {
         // SDK 已初始化并绑定了按钮，点击已被 SDK 处理
         // 这里可能是因为 disabled 按钮被移除后触发的
@@ -289,7 +305,7 @@ export default function useSmsCode({
         const msg = result?.message;
         setError(msg ? `发送失败：${msg}` : "发送失败，请稍后重试");
       }
-    } catch (err) {
+    } catch (_err) {
       setError("网络异常，请检查网络后重试");
     } finally {
       setVerifying(false);

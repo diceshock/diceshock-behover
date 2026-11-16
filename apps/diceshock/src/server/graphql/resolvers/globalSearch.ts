@@ -8,9 +8,9 @@ import dbFactory, {
   users,
 } from "@lib/db";
 import { desc, eq, like, or, type SQL } from "drizzle-orm";
+import { cfImageUrl } from "@/shared/utils/cfImage";
 import type { GQLContext } from "../context";
 import { requireStaff } from "../guards";
-import { cfImageUrl } from "@/shared/utils/cfImage";
 
 function db(ctx: GQLContext) {
   return dbFactory(ctx.env.DB);
@@ -84,7 +84,9 @@ async function searchUsers(
       detail: JSON.stringify({ uid: ui.uid, phone: ui.phone }),
       href: `/dash/users/${ui.id}`,
       avatar: ui.avatar_url ? cfImageUrl(ui.avatar_url) : null,
-      searchableFields: [ui.nickname, ui.uid, ui.phone].filter(Boolean).join(" "),
+      searchableFields: [ui.nickname, ui.uid, ui.phone]
+        .filter(Boolean)
+        .join(" "),
     });
   }
 
@@ -149,7 +151,9 @@ async function searchOrders(
   return rows.map((r) => {
     const user = r.userNickname || r.userName || r.userUid || "未知";
     const table = r.tableName || "?";
-    const startAt = r.start_at ? new Date(r.start_at as unknown as number).toLocaleDateString("zh-CN") : "";
+    const startAt = r.start_at
+      ? new Date(r.start_at as unknown as number).toLocaleDateString("zh-CN")
+      : "";
     return {
       id: r.id,
       category: "orders",
@@ -163,7 +167,15 @@ async function searchOrders(
       }),
       href: `/dash/orders/${r.id}/settle`,
       avatar: null,
-      searchableFields: [r.tableName, r.tableCode, r.userNickname, r.userName, r.userUid, r.userPhone, r.id]
+      searchableFields: [
+        r.tableName,
+        r.tableCode,
+        r.userNickname,
+        r.userName,
+        r.userUid,
+        r.userPhone,
+        r.id,
+      ]
         .filter(Boolean)
         .join(" "),
     };
@@ -189,7 +201,12 @@ async function searchTables(
     category: "tables",
     title: r.name,
     subtitle: `${r.type} · ${r.status} · ${r.code}`,
-    detail: JSON.stringify({ name: r.name, code: r.code, type: r.type, status: r.status }),
+    detail: JSON.stringify({
+      name: r.name,
+      code: r.code,
+      type: r.type,
+      status: r.status,
+    }),
     href: `/dash/tables/${r.id}`,
     avatar: null,
     searchableFields: [r.name, r.code, r.type].filter(Boolean).join(" "),
@@ -230,10 +247,16 @@ async function searchActives(
     category: "actives",
     title: r.title,
     subtitle: `${r.creatorNickname || "?"} · ${r.date}${r.time ? ` ${r.time}` : ""}`,
-    detail: JSON.stringify({ title: r.title, creator: r.creatorNickname, date: r.date }),
+    detail: JSON.stringify({
+      title: r.title,
+      creator: r.creatorNickname,
+      date: r.date,
+    }),
     href: `/dash/actives/${r.id}`,
     avatar: null,
-    searchableFields: [r.title, r.creatorNickname, r.creatorUid, r.date].filter(Boolean).join(" "),
+    searchableFields: [r.title, r.creatorNickname, r.creatorUid, r.date]
+      .filter(Boolean)
+      .join(" "),
   }));
 }
 
@@ -248,7 +271,9 @@ async function searchEvents(
   const rows = await tdb
     .select()
     .from(eventsTable)
-    .where(or(like(eventsTable.title, term), like(eventsTable.description, term)))
+    .where(
+      or(like(eventsTable.title, term), like(eventsTable.description, term)),
+    )
     .orderBy(desc(eventsTable.create_at))
     .limit(limit);
 
@@ -257,10 +282,15 @@ async function searchEvents(
     category: "events",
     title: r.title,
     subtitle: r.description?.slice(0, 50) || null,
-    detail: JSON.stringify({ title: r.title, description: r.description?.slice(0, 100) }),
+    detail: JSON.stringify({
+      title: r.title,
+      description: r.description?.slice(0, 100),
+    }),
     href: `/dash/events/${r.id}`,
     avatar: r.cover_image_url ? cfImageUrl(r.cover_image_url) : null,
-    searchableFields: [r.title, r.description?.slice(0, 100)].filter(Boolean).join(" "),
+    searchableFields: [r.title, r.description?.slice(0, 100)]
+      .filter(Boolean)
+      .join(" "),
   }));
 }
 
@@ -292,9 +322,10 @@ async function searchGsz(
   // Also search by player nickname in JSON (D1 supports json_extract but it's slow;
   // fallback: pull recent and filter client-side)
   const results: DashSearchResultItem[] = rows.map((r) => {
-    const playerNames = (r.players as Array<{ nickname: string }> | null)
-      ?.map((p) => p.nickname)
-      .join(", ") || "";
+    const playerNames =
+      (r.players as Array<{ nickname: string }> | null)
+        ?.map((p) => p.nickname)
+        .join(", ") || "";
     const dateStr = r.started_at
       ? new Date(r.started_at as unknown as number).toLocaleDateString("zh-CN")
       : "";
@@ -303,10 +334,17 @@ async function searchGsz(
       category: "gsz",
       title: `${r.tableName || "?"} · ${r.mode === "3p" ? "三麻" : "四麻"} ${r.format === "tonpuu" ? "东风" : "半庄"}`,
       subtitle: `${playerNames} · ${dateStr}`,
-      detail: JSON.stringify({ table: r.tableName, players: playerNames, mode: r.mode, format: r.format }),
+      detail: JSON.stringify({
+        table: r.tableName,
+        players: playerNames,
+        mode: r.mode,
+        format: r.format,
+      }),
       href: `/dash/gsz/${r.id}`,
       avatar: null,
-      searchableFields: [r.tableName, r.tableCode, playerNames].filter(Boolean).join(" "),
+      searchableFields: [r.tableName, r.tableCode, playerNames]
+        .filter(Boolean)
+        .join(" "),
     };
   });
 
@@ -337,17 +375,26 @@ async function searchGsz(
       if (!playerNames.toLowerCase().includes(lowerQuery)) continue;
 
       const dateStr = r.started_at
-        ? new Date(r.started_at as unknown as number).toLocaleDateString("zh-CN")
+        ? new Date(r.started_at as unknown as number).toLocaleDateString(
+            "zh-CN",
+          )
         : "";
       results.push({
         id: r.id,
         category: "gsz",
         title: `${r.tableName || "?"} · ${r.mode === "3p" ? "三麻" : "四麻"} ${r.format === "tonpuu" ? "东风" : "半庄"}`,
         subtitle: `${playerNames} · ${dateStr}`,
-        detail: JSON.stringify({ table: r.tableName, players: playerNames, mode: r.mode, format: r.format }),
+        detail: JSON.stringify({
+          table: r.tableName,
+          players: playerNames,
+          mode: r.mode,
+          format: r.format,
+        }),
         href: `/dash/gsz/${r.id}`,
         avatar: null,
-        searchableFields: [r.tableName, r.tableCode, playerNames].filter(Boolean).join(" "),
+        searchableFields: [r.tableName, r.tableCode, playerNames]
+          .filter(Boolean)
+          .join(" "),
       });
       if (results.length >= limit) break;
     }
@@ -360,7 +407,11 @@ async function searchGsz(
 
 const CATEGORY_SEARCHERS: Record<
   string,
-  (ctx: GQLContext, query: string, limit: number) => Promise<DashSearchResultItem[]>
+  (
+    ctx: GQLContext,
+    query: string,
+    limit: number,
+  ) => Promise<DashSearchResultItem[]>
 > = {
   users: searchUsers,
   orders: searchOrders,
@@ -378,7 +429,11 @@ export const globalSearchResolvers = {
   Query: {
     dashGlobalSearch: async (
       _: unknown,
-      args: { query: string; categories?: string[] | null; limit?: number | null },
+      args: {
+        query: string;
+        categories?: string[] | null;
+        limit?: number | null;
+      },
       ctx: GQLContext,
     ): Promise<DashGlobalSearchResult[]> => {
       requireStaff(ctx);

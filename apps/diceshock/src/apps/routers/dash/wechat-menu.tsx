@@ -10,17 +10,16 @@ import {
   LinkIcon,
   ListPlusIcon,
   PlusIcon,
-  TrashIcon,
   TranslateIcon,
+  TrashIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute } from "@tanstack/react-router";
-import { nanoid } from "nanoid";
 import { produce } from "immer";
+import { nanoid } from "nanoid";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod/v4";
-import { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import {
-  type WechatMenuSnapshotsQuery,
   usePublishWechatMenuSnapshotMutation,
   useRestoreWechatMenuSnapshotMutation,
   useSaveWechatMenuSnapshotMutation,
@@ -28,6 +27,7 @@ import {
   useWechatMenuDraftQuery,
   useWechatMenuSnapshotsQuery,
   useWechatMenuVariablesQuery,
+  type WechatMenuSnapshotsQuery,
 } from "@/client/graphql/__generated__";
 import { useTranslation } from "@/client/hooks/useTranslation";
 import { formatMessage } from "@/shared/i18n";
@@ -66,10 +66,26 @@ function isEqual(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-const SUPPORTED_LOCALES = ["zh_Hant", "en", "ja", "ru", "es", "pt", "fr", "de"] as const;
+const SUPPORTED_LOCALES = [
+  "zh_Hant",
+  "en",
+  "ja",
+  "ru",
+  "es",
+  "pt",
+  "fr",
+  "de",
+] as const;
 const LOCALE_NAMES: Record<string, string> = {
-  zh_Hans: "简体中文", zh_Hant: "繁體中文", en: "English", ja: "日本語",
-  ru: "Русский", es: "Español", pt: "Português", fr: "Français", de: "Deutsch",
+  zh_Hans: "简体中文",
+  zh_Hant: "繁體中文",
+  en: "English",
+  ja: "日本語",
+  ru: "Русский",
+  es: "Español",
+  pt: "Português",
+  fr: "Français",
+  de: "Deutsch",
 };
 
 const ROUTE_OPTIONS = [
@@ -96,15 +112,20 @@ const wechatMenuCategorySchema = z.object({
   items: z.array(wechatMenuItemSchema),
 });
 const wechatMenuDataSchema = z.object({
-  buttons: z.array(z.union([wechatMenuItemSchema, wechatMenuCategorySchema])).max(10),
+  buttons: z
+    .array(z.union([wechatMenuItemSchema, wechatMenuCategorySchema]))
+    .max(10),
 });
 
 function parseMenuData(raw: string | null | undefined): WechatMenuData | null {
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
-    if (parsed && Array.isArray(parsed.buttons)) return parsed as WechatMenuData;
-  } catch (e) { console.error("[wechat-menu] parseMenuData error", e); }
+    if (parsed && Array.isArray(parsed.buttons))
+      return parsed as WechatMenuData;
+  } catch (e) {
+    console.error("[wechat-menu] parseMenuData error", e);
+  }
   return null;
 }
 
@@ -112,7 +133,12 @@ function formatTime(val: string | null | undefined): string {
   if (!val) return "";
   const d = new Date(val);
   if (Number.isNaN(d.getTime())) return val;
-  return d.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleString("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function WechatMenuPage() {
@@ -131,7 +157,8 @@ function WechatMenuPage() {
   const [restoreSnapshot] = useRestoreWechatMenuSnapshotMutation();
   const [translateText] = useTranslateWechatMenuTextMutation();
 
-  const snapshots: WechatMenuSnapshotsQuery["wechatMenuSnapshots"] = snapshotsData?.wechatMenuSnapshots ?? [];
+  const snapshots: WechatMenuSnapshotsQuery["wechatMenuSnapshots"] =
+    snapshotsData?.wechatMenuSnapshots ?? [];
   const variables = variablesData?.wechatMenuVariables ?? [];
 
   useEffect(() => {
@@ -148,51 +175,74 @@ function WechatMenuPage() {
   const hasDraft = snapshots.some((s) => s.status === "DRAFT");
 
   const updateButton = useCallback((index: number, updated: ButtonEntry) => {
-    setData(produce((draft) => {
-      draft.buttons[index] = updated;
-    }));
+    setData(
+      produce((draft) => {
+        draft.buttons[index] = updated;
+      }),
+    );
   }, []);
 
   const removeButton = useCallback((index: number) => {
-    setData(produce((draft) => {
-      draft.buttons.splice(index, 1);
-    }));
+    setData(
+      produce((draft) => {
+        draft.buttons.splice(index, 1);
+      }),
+    );
   }, []);
 
   const moveButton = useCallback((index: number, direction: -1 | 1) => {
-    setData(produce((draft) => {
-      const target = index + direction;
-      if (target < 0 || target >= draft.buttons.length) return;
-      const temp = draft.buttons[index]!;
-      draft.buttons[index] = draft.buttons[target]!;
-      draft.buttons[target] = temp;
-    }));
+    setData(
+      produce((draft) => {
+        const target = index + direction;
+        if (target < 0 || target >= draft.buttons.length) return;
+        const temp = draft.buttons[index]!;
+        draft.buttons[index] = draft.buttons[target]!;
+        draft.buttons[target] = temp;
+      }),
+    );
   }, []);
 
   const addItem = () => {
-    const newItem: WechatMenuItem = { id: nanoid(8), type: "view", name: "", link_target: "/" };
-    setData(produce((draft) => { draft.buttons.push(newItem); }));
+    const newItem: WechatMenuItem = {
+      id: nanoid(8),
+      type: "view",
+      name: "",
+      link_target: "/",
+    };
+    setData(
+      produce((draft) => {
+        draft.buttons.push(newItem);
+      }),
+    );
   };
 
   const addCategory = () => {
     const newCat: WechatMenuCategory = { id: nanoid(8), name: "", items: [] };
-    setData(produce((draft) => { draft.buttons.push(newCat); }));
+    setData(
+      produce((draft) => {
+        draft.buttons.push(newCat);
+      }),
+    );
   };
 
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const dragItemRef = useRef<number | null>(null);
 
-  const handleDragStart = (idx: number) => { dragItemRef.current = idx; };
+  const handleDragStart = (idx: number) => {
+    dragItemRef.current = idx;
+  };
 
   const handleDrop = (targetIdx: number) => {
     setDragOverIdx(null);
     const sourceIdx = dragItemRef.current;
     dragItemRef.current = null;
     if (sourceIdx == null || sourceIdx === targetIdx) return;
-    setData(produce((draft) => {
-      const [moved] = draft.buttons.splice(sourceIdx, 1);
-      if (moved) draft.buttons.splice(targetIdx, 0, moved);
-    }));
+    setData(
+      produce((draft) => {
+        const [moved] = draft.buttons.splice(sourceIdx, 1);
+        if (moved) draft.buttons.splice(targetIdx, 0, moved);
+      }),
+    );
   };
 
   const [savePending, setSavePending] = useState(false);
@@ -226,12 +276,21 @@ function WechatMenuPage() {
     setSavePending(true);
     try {
       await saveSnapshot({
-        variables: { input: { name: snapshotName.trim() || t("dashWechatMenu.title"), data: JSON.stringify(data) } },
+        variables: {
+          input: {
+            name: snapshotName.trim() || t("dashWechatMenu.title"),
+            data: JSON.stringify(data),
+          },
+        },
       });
       setSavedData(data);
       msg.success(t("dashWechatMenu.messages.draftSaved"));
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : t("dashWechatMenu.errors.saveFailed"));
+      msg.error(
+        err instanceof Error
+          ? err.message
+          : t("dashWechatMenu.errors.saveFailed"),
+      );
     } finally {
       setSavePending(false);
     }
@@ -252,7 +311,11 @@ function WechatMenuPage() {
         msg.success(t("dashWechatMenu.messages.published"));
       }
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : t("dashWechatMenu.errors.publishFailed"));
+      msg.error(
+        err instanceof Error
+          ? err.message
+          : t("dashWechatMenu.errors.publishFailed"),
+      );
     } finally {
       setPublishPending(false);
     }
@@ -262,13 +325,19 @@ function WechatMenuPage() {
     setRestorePending(snapshotId);
     try {
       const result = await restoreSnapshot({ variables: { id: snapshotId } });
-      const parsed = parseMenuData(result.data?.restoreWechatMenuSnapshot?.data);
+      const parsed = parseMenuData(
+        result.data?.restoreWechatMenuSnapshot?.data,
+      );
       const d = parsed ?? EMPTY_DATA;
       setData(d);
       setSavedData(d);
       msg.success(t("dashWechatMenu.messages.restored"));
     } catch (err) {
-      msg.error(err instanceof Error ? err.message : t("dashWechatMenu.errors.restoreFailed"));
+      msg.error(
+        err instanceof Error
+          ? err.message
+          : t("dashWechatMenu.errors.restoreFailed"),
+      );
     } finally {
       setRestorePending(null);
     }
@@ -284,10 +353,11 @@ function WechatMenuPage() {
 
   return (
     <main className="size-full overflow-y-auto">
-
       <div className="mx-auto w-full max-w-4xl px-4 pb-28 space-y-6 mt-4">
         {data.buttons.length === 0 ? (
-          <div className="py-12 text-center text-base-content/60">{t("dashWechatMenu.noItems")}</div>
+          <div className="py-12 text-center text-base-content/60">
+            {t("dashWechatMenu.noItems")}
+          </div>
         ) : (
           <div className="flex flex-col gap-3">
             {data.buttons.map((entry, idx) => (
@@ -295,9 +365,15 @@ function WechatMenuPage() {
                 key={entry.id}
                 draggable
                 onDragStart={() => handleDragStart(idx)}
-                onDragOver={(e) => { e.preventDefault(); setDragOverIdx(idx); }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOverIdx(idx);
+                }}
                 onDragLeave={() => setDragOverIdx(null)}
-                onDrop={(e) => { e.preventDefault(); handleDrop(idx); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  handleDrop(idx);
+                }}
                 className={`card bg-base-100 shadow-sm transition-all ${dragOverIdx === idx ? "ring-2 ring-primary" : ""}`}
                 style={{ opacity: dragOverIdx === idx ? 0.6 : 1 }}
               >
@@ -367,11 +443,19 @@ function WechatMenuPage() {
         )}
 
         <div className="flex items-center gap-2">
-          <button type="button" className="btn btn-sm btn-primary gap-2" onClick={addItem}>
+          <button
+            type="button"
+            className="btn btn-sm btn-primary gap-2"
+            onClick={addItem}
+          >
             <PlusIcon className="size-4" />
             {t("dashWechatMenu.addButton")}
           </button>
-          <button type="button" className="btn btn-sm btn-outline gap-2" onClick={addCategory}>
+          <button
+            type="button"
+            className="btn btn-sm btn-outline gap-2"
+            onClick={addCategory}
+          >
             <ListPlusIcon className="size-4" />
             {t("dashWechatMenu.addCategory")}
           </button>
@@ -387,7 +471,9 @@ function WechatMenuPage() {
             <CaretDownIcon
               className={`size-4 transition-transform ${historyOpen ? "rotate-0" : "-rotate-90"}`}
             />
-            {formatMessage(t("dashWechatMenu.historyWithCount"), { count: snapshots.length })}
+            {formatMessage(t("dashWechatMenu.historyWithCount"), {
+              count: snapshots.length,
+            })}
           </button>
 
           {historyOpen && (
@@ -407,15 +493,21 @@ function WechatMenuPage() {
                         <span
                           className={`badge badge-sm shrink-0 ${s.status === "PUBLISHED" ? "badge-success" : "badge-ghost"}`}
                         >
-                          {s.status === "PUBLISHED" ? t("dashWechatMenu.published") : t("dashWechatMenu.draft")}
+                          {s.status === "PUBLISHED"
+                            ? t("dashWechatMenu.published")
+                            : t("dashWechatMenu.draft")}
                         </span>
-                        <span className="text-sm font-medium truncate">{s.name}</span>
+                        <span className="text-sm font-medium truncate">
+                          {s.name}
+                        </span>
                         <span className="text-xs text-base-content/40 whitespace-nowrap">
                           {formatTime(s.createdAt)}
                         </span>
                       </div>
                       {s.summary && (
-                        <span className="text-xs text-base-content/50 line-clamp-2">{s.summary}</span>
+                        <span className="text-xs text-base-content/50 line-clamp-2">
+                          {s.summary}
+                        </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1 shrink-0 self-end sm:self-center">
@@ -426,7 +518,9 @@ function WechatMenuPage() {
                         disabled={restorePending === s.id}
                       >
                         <ArrowCounterClockwiseIcon className="size-3.5" />
-                        {restorePending === s.id ? t("dashWechatMenu.restoring") : t("dashWechatMenu.restore")}
+                        {restorePending === s.id
+                          ? t("dashWechatMenu.restoring")
+                          : t("dashWechatMenu.restore")}
                       </button>
                     </div>
                   </div>
@@ -438,9 +532,14 @@ function WechatMenuPage() {
       </div>
 
       {/* Fixed bottom action bar */}
-      <form onSubmit={(e) => void handleSaveDraft(e)} className="fixed bottom-0 right-0 left-0 lg:left-16 bg-base-100 border-t border-base-200 px-4 py-2 flex items-center justify-end gap-2 z-30">
+      <form
+        onSubmit={(e) => void handleSaveDraft(e)}
+        className="fixed bottom-0 right-0 left-0 lg:left-16 bg-base-100 border-t border-base-200 px-4 py-2 flex items-center justify-end gap-2 z-30"
+      >
         {hasChanges && (
-          <span className="text-xs text-warning mr-auto">{t("dashWechatMenu.unsavedChanges")}</span>
+          <span className="text-xs text-warning mr-auto">
+            {t("dashWechatMenu.unsavedChanges")}
+          </span>
         )}
         <button
           type="submit"
@@ -455,26 +554,43 @@ function WechatMenuPage() {
           className="btn btn-sm btn-primary gap-2"
           onClick={() => void handlePublish()}
           disabled={publishPending || hasChanges || !hasDraft}
-          title={hasChanges ? t("dashWechatMenu.saveDraftFirst") : !hasDraft ? t("dashWechatMenu.noDraftToPublish") : ""}
+          title={
+            hasChanges
+              ? t("dashWechatMenu.saveDraftFirst")
+              : !hasDraft
+                ? t("dashWechatMenu.noDraftToPublish")
+                : ""
+          }
         >
           <CloudArrowUpIcon className="size-4" />
-          {publishPending ? t("dashWechatMenu.publishing") : t("dashWechatMenu.publish")}
+          {publishPending
+            ? t("dashWechatMenu.publishing")
+            : t("dashWechatMenu.publish")}
         </button>
       </form>
 
       {/* Delete confirmation dialog */}
       <dialog ref={deleteDialogRef} className="modal">
         <div className="modal-box">
-          <h3 className="font-bold text-lg mb-4">{t("dashWechatMenu.confirmDelete")}</h3>
+          <h3 className="font-bold text-lg mb-4">
+            {t("dashWechatMenu.confirmDelete")}
+          </h3>
           <div className="modal-action mt-6">
             <button
               type="button"
               className="btn"
-              onClick={() => { deleteDialogRef.current?.close(); setPendingDeleteIdx(null); }}
+              onClick={() => {
+                deleteDialogRef.current?.close();
+                setPendingDeleteIdx(null);
+              }}
             >
               Cancel
             </button>
-            <button type="button" className="btn btn-error" onClick={confirmDelete}>
+            <button
+              type="button"
+              className="btn btn-error"
+              onClick={confirmDelete}
+            >
               <TrashIcon className="size-4" />
               {t("dashWechatMenu.confirmDelete")}
             </button>
@@ -495,7 +611,12 @@ function ItemEditor({
 }: {
   item: WechatMenuItem;
   onChange: (updated: WechatMenuItem) => void;
-  variables: Array<{ id: string; label: string; description?: string | null; example?: string | null }>;
+  variables: Array<{
+    id: string;
+    label: string;
+    description?: string | null;
+    example?: string | null;
+  }>;
   translateText: ReturnType<typeof useTranslateWechatMenuTextMutation>[0];
   t: ReturnType<typeof useTranslation>["t"];
   msg: ReturnType<typeof useMsg>;
@@ -513,8 +634,11 @@ function ItemEditor({
       const result = await translateText({
         variables: { text: message, targetLocales: [...SUPPORTED_LOCALES] },
       });
-      const translations: Record<string, string> = { ...(item.notification?.translations ?? {}) };
-      for (const tr of result.data?.translateWechatMenuText?.translations ?? []) {
+      const translations: Record<string, string> = {
+        ...(item.notification?.translations ?? {}),
+      };
+      for (const tr of result.data?.translateWechatMenuText?.translations ??
+        []) {
         translations[tr.locale] = tr.text;
       }
       onChange({ ...item, notification: { message, translations } });
@@ -537,7 +661,10 @@ function ItemEditor({
     const newMsg = current.slice(0, start) + insert + current.slice(end);
     onChange({
       ...item,
-      notification: { ...(item.notification ?? { message: "", translations: {} }), message: newMsg },
+      notification: {
+        ...(item.notification ?? { message: "", translations: {} }),
+        message: newMsg,
+      },
     });
     setTimeout(() => {
       textarea.focus();
@@ -545,7 +672,9 @@ function ItemEditor({
     }, 0);
   };
 
-  const isCustomUrl = item.type === "view" && item.link_target != null &&
+  const isCustomUrl =
+    item.type === "view" &&
+    item.link_target != null &&
     !ROUTE_OPTIONS.some((r) => r.value === item.link_target);
 
   return (
@@ -561,12 +690,17 @@ function ItemEditor({
         <select
           className="select select-bordered select-sm"
           value={item.type}
-          onChange={(e) => onChange({
-            ...item,
-            type: e.target.value as "view" | "click",
-            link_target: e.target.value === "view" ? "/" : undefined,
-            notification: e.target.value === "click" ? { message: "", translations: {} } : undefined,
-          })}
+          onChange={(e) =>
+            onChange({
+              ...item,
+              type: e.target.value as "view" | "click",
+              link_target: e.target.value === "view" ? "/" : undefined,
+              notification:
+                e.target.value === "click"
+                  ? { message: "", translations: {} }
+                  : undefined,
+            })
+          }
         >
           <option value="view">{t("dashWechatMenu.itemType.view")}</option>
           <option value="click">{t("dashWechatMenu.itemType.click")}</option>
@@ -588,16 +722,22 @@ function ItemEditor({
             }}
           >
             {ROUTE_OPTIONS.map((r) => (
-              <option key={r.value} value={r.value}>{t(r.labelKey)}</option>
+              <option key={r.value} value={r.value}>
+                {t(r.labelKey)}
+              </option>
             ))}
-            <option value="__custom__">{t("dashWechatMenu.linkTarget.custom")}</option>
+            <option value="__custom__">
+              {t("dashWechatMenu.linkTarget.custom")}
+            </option>
           </select>
           {isCustomUrl && (
             <input
               type="url"
               className="input input-bordered input-sm flex-1 min-w-[200px]"
               value={item.link_target ?? ""}
-              onChange={(e) => onChange({ ...item, link_target: e.target.value })}
+              onChange={(e) =>
+                onChange({ ...item, link_target: e.target.value })
+              }
               placeholder="https://..."
             />
           )}
@@ -623,7 +763,10 @@ function ItemEditor({
             {variablePickerOpen && (
               <VariablePickerDialog
                 variables={variables}
-                onInsert={(varId) => { insertVariable(varId); setVariablePickerOpen(false); }}
+                onInsert={(varId) => {
+                  insertVariable(varId);
+                  setVariablePickerOpen(false);
+                }}
                 onClose={() => setVariablePickerOpen(false)}
                 t={t}
                 msg={msg}
@@ -634,10 +777,15 @@ function ItemEditor({
             ref={messageRef}
             className="textarea textarea-bordered text-sm min-h-[60px]"
             value={item.notification?.message ?? ""}
-            onChange={(e) => onChange({
-              ...item,
-              notification: { ...(item.notification ?? { message: "", translations: {} }), message: e.target.value },
-            })}
+            onChange={(e) =>
+              onChange({
+                ...item,
+                notification: {
+                  ...(item.notification ?? { message: "", translations: {} }),
+                  message: e.target.value,
+                },
+              })
+            }
           />
           <div className="flex items-center gap-2">
             <button
@@ -647,31 +795,47 @@ function ItemEditor({
               disabled={translating || !item.notification?.message?.trim()}
             >
               <TranslateIcon className="size-3.5" />
-              {translating ? t("dashWechatMenu.notification.translating") : t("dashWechatMenu.notification.translate")}
+              {translating
+                ? t("dashWechatMenu.notification.translating")
+                : t("dashWechatMenu.notification.translate")}
             </button>
-            {item.notification?.translations && Object.keys(item.notification.translations).length > 0 && (
-              <button
-                type="button"
-                className="btn btn-xs btn-ghost gap-1"
-                onClick={() => setShowTranslations(!showTranslations)}
-              >
-                <CaretDownIcon className={`size-3 transition-transform ${showTranslations ? "rotate-0" : "-rotate-90"}`} />
-                {t("dashWechatMenu.notification.translations")}
-              </button>
-            )}
+            {item.notification?.translations &&
+              Object.keys(item.notification.translations).length > 0 && (
+                <button
+                  type="button"
+                  className="btn btn-xs btn-ghost gap-1"
+                  onClick={() => setShowTranslations(!showTranslations)}
+                >
+                  <CaretDownIcon
+                    className={`size-3 transition-transform ${showTranslations ? "rotate-0" : "-rotate-90"}`}
+                  />
+                  {t("dashWechatMenu.notification.translations")}
+                </button>
+              )}
           </div>
           {showTranslations && item.notification?.translations && (
             <div className="flex flex-col gap-1.5 mt-1">
               {SUPPORTED_LOCALES.map((locale) => (
                 <div key={locale} className="flex items-center gap-2">
-                  <span className="text-xs w-16 shrink-0 text-base-content/60">{LOCALE_NAMES[locale]}</span>
+                  <span className="text-xs w-16 shrink-0 text-base-content/60">
+                    {LOCALE_NAMES[locale]}
+                  </span>
                   <input
                     type="text"
                     className="input input-bordered input-xs flex-1"
                     value={item.notification?.translations?.[locale] ?? ""}
                     onChange={(e) => {
-                      const translations = { ...(item.notification?.translations ?? {}), [locale]: e.target.value };
-                      onChange({ ...item, notification: { ...(item.notification ?? { message: "" }), translations } });
+                      const translations = {
+                        ...(item.notification?.translations ?? {}),
+                        [locale]: e.target.value,
+                      };
+                      onChange({
+                        ...item,
+                        notification: {
+                          ...(item.notification ?? { message: "" }),
+                          translations,
+                        },
+                      });
                     }}
                   />
                 </div>
@@ -694,22 +858,38 @@ function CategoryEditor({
 }: {
   category: WechatMenuCategory;
   onChange: (updated: WechatMenuCategory) => void;
-  variables: Array<{ id: string; label: string; description?: string | null; example?: string | null }>;
+  variables: Array<{
+    id: string;
+    label: string;
+    description?: string | null;
+    example?: string | null;
+  }>;
   translateText: ReturnType<typeof useTranslateWechatMenuTextMutation>[0];
   t: ReturnType<typeof useTranslation>["t"];
   msg: ReturnType<typeof useMsg>;
 }) {
   const addSubItem = () => {
-    const newItem: WechatMenuItem = { id: nanoid(8), type: "view", name: "", link_target: "/" };
+    const newItem: WechatMenuItem = {
+      id: nanoid(8),
+      type: "view",
+      name: "",
+      link_target: "/",
+    };
     onChange({ ...category, items: [...category.items, newItem] });
   };
 
   const updateSubItem = (idx: number, updated: WechatMenuItem) => {
-    onChange({ ...category, items: category.items.map((item, i) => (i === idx ? updated : item)) });
+    onChange({
+      ...category,
+      items: category.items.map((item, i) => (i === idx ? updated : item)),
+    });
   };
 
   const removeSubItem = (idx: number) => {
-    onChange({ ...category, items: category.items.filter((_, i) => i !== idx) });
+    onChange({
+      ...category,
+      items: category.items.filter((_, i) => i !== idx),
+    });
   };
 
   const moveSubItem = (idx: number, direction: -1 | 1) => {
@@ -723,7 +903,9 @@ function CategoryEditor({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
-        <span className="badge badge-outline badge-sm">{t("dashWechatMenu.category.title")}</span>
+        <span className="badge badge-outline badge-sm">
+          {t("dashWechatMenu.category.title")}
+        </span>
         <input
           type="text"
           className="input input-bordered input-sm w-40"
@@ -734,11 +916,16 @@ function CategoryEditor({
       </div>
 
       {category.items.length === 0 ? (
-        <div className="text-xs text-base-content/50 pl-4">{t("dashWechatMenu.category.empty")}</div>
+        <div className="text-xs text-base-content/50 pl-4">
+          {t("dashWechatMenu.category.empty")}
+        </div>
       ) : (
         <div className="flex flex-col gap-2 pl-4 border-l-2 border-base-300">
           {category.items.map((item, idx) => (
-            <div key={item.id} className="rounded-lg border border-base-200 overflow-hidden">
+            <div
+              key={item.id}
+              className="rounded-lg border border-base-200 overflow-hidden"
+            >
               <div className="p-2.5">
                 <ItemEditor
                   item={item}
@@ -783,7 +970,11 @@ function CategoryEditor({
         </div>
       )}
 
-      <button type="button" className="btn btn-xs btn-ghost gap-1 self-start ml-4" onClick={addSubItem}>
+      <button
+        type="button"
+        className="btn btn-xs btn-ghost gap-1 self-start ml-4"
+        onClick={addSubItem}
+      >
         <PlusIcon className="size-3.5" />
         {t("dashWechatMenu.category.addItem")}
       </button>
@@ -793,11 +984,31 @@ function CategoryEditor({
 
 // ─── Variable categories for the split-panel picker ─────────────────────────
 
-const VARIABLE_CATEGORIES: Array<{ key: string; labelKey: string; prefixes: string[] }> = [
-  { key: "user", labelKey: "dashWechatMenu.variableCategory.user", prefixes: ["user_"] },
-  { key: "store", labelKey: "dashWechatMenu.variableCategory.store", prefixes: ["store_"] },
-  { key: "system", labelKey: "dashWechatMenu.variableCategory.system", prefixes: ["system_"] },
-  { key: "activity", labelKey: "dashWechatMenu.variableCategory.activity", prefixes: ["active_", "next_"] },
+const VARIABLE_CATEGORIES: Array<{
+  key: string;
+  labelKey: string;
+  prefixes: string[];
+}> = [
+  {
+    key: "user",
+    labelKey: "dashWechatMenu.variableCategory.user",
+    prefixes: ["user_"],
+  },
+  {
+    key: "store",
+    labelKey: "dashWechatMenu.variableCategory.store",
+    prefixes: ["store_"],
+  },
+  {
+    key: "system",
+    labelKey: "dashWechatMenu.variableCategory.system",
+    prefixes: ["system_"],
+  },
+  {
+    key: "activity",
+    labelKey: "dashWechatMenu.variableCategory.activity",
+    prefixes: ["active_", "next_"],
+  },
 ];
 
 function VariablePickerDialog({
@@ -807,14 +1018,21 @@ function VariablePickerDialog({
   t,
   msg,
 }: {
-  variables: Array<{ id: string; label: string; description?: string | null; example?: string | null }>;
+  variables: Array<{
+    id: string;
+    label: string;
+    description?: string | null;
+    example?: string | null;
+  }>;
   onInsert: (varId: string) => void;
   onClose: () => void;
   t: ReturnType<typeof useTranslation>["t"];
   msg: ReturnType<typeof useMsg>;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [activeCategory, setActiveCategory] = useState(VARIABLE_CATEGORIES[0]!.key);
+  const [activeCategory, setActiveCategory] = useState(
+    VARIABLE_CATEGORIES[0]!.key,
+  );
 
   useEffect(() => {
     dialogRef.current?.showModal();
@@ -823,7 +1041,9 @@ function VariablePickerDialog({
   const grouped = useMemo(() => {
     const map: Record<string, typeof variables> = {};
     for (const cat of VARIABLE_CATEGORIES) {
-      map[cat.key] = variables.filter((v) => cat.prefixes.some((p) => v.id.startsWith(p)));
+      map[cat.key] = variables.filter((v) =>
+        cat.prefixes.some((p) => v.id.startsWith(p)),
+      );
     }
     return map;
   }, [variables]);
@@ -843,12 +1063,22 @@ function VariablePickerDialog({
       ref={dialogRef}
       className="modal"
       onClose={handleClose}
-      onClick={(e) => { if (e.target === dialogRef.current) handleClose(); }}
+      onClick={(e) => {
+        if (e.target === dialogRef.current) handleClose();
+      }}
     >
       <div className="modal-box max-w-2xl w-[95vw] p-0 flex flex-col max-h-[80vh] sm:max-h-[28rem]">
         <div className="flex items-center justify-between px-4 py-3 border-b border-base-200">
-          <h3 className="font-bold text-base">{t("dashWechatMenu.variablePicker.title")}</h3>
-          <button type="button" className="btn btn-ghost btn-sm btn-square" onClick={handleClose}>✕</button>
+          <h3 className="font-bold text-base">
+            {t("dashWechatMenu.variablePicker.title")}
+          </h3>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm btn-square"
+            onClick={handleClose}
+          >
+            ✕
+          </button>
         </div>
         {/* Category tabs - horizontal on mobile, vertical nav on sm+ */}
         <div className="flex flex-col sm:flex-row flex-1 min-h-0">
@@ -871,17 +1101,25 @@ function VariablePickerDialog({
           {/* Variable list */}
           <div className="flex-1 overflow-y-auto p-3 space-y-2">
             {(grouped[activeCategory] ?? []).map((v) => (
-              <div key={v.id} className="rounded-lg border border-base-200 p-3 space-y-2">
+              <div
+                key={v.id}
+                className="rounded-lg border border-base-200 p-3 space-y-2"
+              >
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <code className="text-xs font-mono bg-base-200 px-1.5 py-0.5 rounded">{`{{${v.id}}}`}</code>
                   <span className="text-sm font-medium">{v.label}</span>
                 </div>
                 {v.description && (
-                  <p className="text-xs text-base-content/60">{v.description}</p>
+                  <p className="text-xs text-base-content/60">
+                    {v.description}
+                  </p>
                 )}
                 {v.example && (
                   <p className="text-xs text-base-content/40">
-                    {t("dashWechatMenu.variablePicker.example")}: <code className="bg-base-200 px-1 rounded">{v.example}</code>
+                    {t("dashWechatMenu.variablePicker.example")}:{" "}
+                    <code className="bg-base-200 px-1 rounded">
+                      {v.example}
+                    </code>
                   </p>
                 )}
                 <div className="flex flex-wrap gap-1 pt-1 border-t border-base-200">

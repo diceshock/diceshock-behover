@@ -54,7 +54,7 @@ export const searchHistoryResolvers = {
       const userId = ctx.userId!;
 
       // Dedupe: remove existing entry with same route+params for this user
-      const dedupeId = `${categoryId}:${params}`;
+      const _dedupeId = `${categoryId}:${params}`;
       await db(ctx)
         .delete(dashSearchHistoryTable)
         .where(
@@ -126,7 +126,7 @@ export const searchHistoryResolvers = {
     ) => {
       requireStaff(ctx);
       // Only delete if owned by current user
-      const deleted = await db(ctx)
+      const _deleted = await db(ctx)
         .delete(dashSearchHistoryTable)
         .where(
           and(

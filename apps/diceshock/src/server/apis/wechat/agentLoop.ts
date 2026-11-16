@@ -203,8 +203,9 @@ export async function runAgentLoop(
     };
   }
 
-  const baseUrl = env.DEEPSEEK_BASE_URL
-    || (gatewayId
+  const baseUrl =
+    env.DEEPSEEK_BASE_URL ||
+    (gatewayId
       ? `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/deepseek`
       : "https://api.deepseek.com/v1");
 
@@ -257,9 +258,7 @@ export async function runAgentLoop(
           model: "deepseek-v4-flash",
           messages,
           // Last round: no tools, force text-only conclusion
-          ...(round < MAX_ROUNDS
-            ? { tools: TOOLS, tool_choice: "auto" }
-            : {}),
+          ...(round < MAX_ROUNDS ? { tools: TOOLS, tool_choice: "auto" } : {}),
         }),
       },
       signal,
@@ -283,7 +282,8 @@ export async function runAgentLoop(
     const content = assistantMsg.content || "";
 
     // DeepSeek sometimes leaks internal DSML markup into content
-    const isDsmlGarbage = /\|\|DSML\|\|/.test(content) || /invoke>/.test(content);
+    const isDsmlGarbage =
+      /\|\|DSML\|\|/.test(content) || /invoke>/.test(content);
     const hasEnd = content.includes("[END]");
     const cleanContent = isDsmlGarbage
       ? ""
@@ -291,9 +291,12 @@ export async function runAgentLoop(
 
     if (cleanContent) {
       // Detect truncation: finish_reason "length" means max_tokens hit mid-sentence
-      const truncated = choice.finish_reason === "length" && !assistantMsg.tool_calls?.length;
+      const truncated =
+        choice.finish_reason === "length" && !assistantMsg.tool_calls?.length;
       if (truncated && /[,，、\-—]$/.test(cleanContent)) {
-        collectedReplies.push(cleanContent + "\n\n（以上为部分结果，如需更多推荐请追问）");
+        collectedReplies.push(
+          `${cleanContent}\n\n（以上为部分结果，如需更多推荐请追问）`,
+        );
       } else {
         collectedReplies.push(cleanContent);
       }
@@ -308,7 +311,9 @@ export async function runAgentLoop(
     if (!assistantMsg.tool_calls?.length) {
       if (isDsmlGarbage) {
         // Garbage output — don't treat as conclusion, force summary later
-        console.log(`[agent-loop] round ${round} DSML garbage detected, skipping`);
+        console.log(
+          `[agent-loop] round ${round} DSML garbage detected, skipping`,
+        );
         break;
       }
       concludedNaturally = true;
@@ -426,8 +431,7 @@ export async function runAgentLoop(
   // Force a final summarizing call when:
   // 1. Loop exhausted MAX_ROUNDS without [END] or natural conclusion, OR
   // 2. No text was collected at all
-  const needsForcedSummary =
-    !concludedNaturally && !signal.aborted;
+  const needsForcedSummary = !concludedNaturally && !signal.aborted;
 
   if (needsForcedSummary) {
     console.log("[agent-loop] forcing final call (rounds exhausted)");
@@ -479,7 +483,10 @@ export async function runAgentLoop(
       let finalContent = finalData.choices?.[0]?.message?.content ?? "";
       // Strip DSML garbage that sometimes wraps the actual response
       finalContent = finalContent
-        .replace(/<[｜|]+DSML[｜|]+[^>]*>[\s\S]*?<\/[｜|]*DSML[｜|]*[^>]*>/g, "")
+        .replace(
+          /<[｜|]+DSML[｜|]+[^>]*>[\s\S]*?<\/[｜|]*DSML[｜|]*[^>]*>/g,
+          "",
+        )
         .replace(/<[｜|]+DSML[｜|]+[^>]*>/g, "")
         .replace(/\|\|DSML\|\|[\s\S]*/g, "")
         .replace("[END]", "")
@@ -492,10 +499,14 @@ export async function runAgentLoop(
         }
         collectedReplies.push(finalContent);
       } else {
-        console.warn("[agent-loop] forced summary returned empty/garbage content");
+        console.warn(
+          "[agent-loop] forced summary returned empty/garbage content",
+        );
       }
     } else {
-      console.error("[agent-loop] forced summary failed", { status: finalRes?.status });
+      console.error("[agent-loop] forced summary failed", {
+        status: finalRes?.status,
+      });
     }
   }
 
@@ -542,7 +553,11 @@ async function fetchWithTimeout(
         body: errText.slice(0, 300),
       });
 
-      if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+      if (
+        response.status >= 400 &&
+        response.status < 500 &&
+        response.status !== 429
+      ) {
         return response;
       }
     } catch (e) {
@@ -553,7 +568,14 @@ async function fetchWithTimeout(
     if (attempt < MAX_RETRIES && !signal.aborted) {
       const { promise, resolve } = Promise.withResolvers<void>();
       const id = setTimeout(resolve, 800 * (attempt + 1));
-      signal.addEventListener("abort", () => { clearTimeout(id); resolve(); }, { once: true });
+      signal.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(id);
+          resolve();
+        },
+        { once: true },
+      );
       await promise;
     }
   }
@@ -575,7 +597,10 @@ async function executeToolCall(
     case "mutate":
       return await executeMutateTool(parsedArgs as never, toolContext);
     case "generate_totp":
-      return await executeGenerateTotp(parsedArgs, toolContext);
+      return await executeGenerateTotp(
+        parsedArgs as Record<string, never>,
+        toolContext,
+      );
     case "query_active_participants":
       return await executeQueryActiveParticipants(
         parsedArgs as { active_id: string },
@@ -737,7 +762,10 @@ async function resolveUserIdentity(
 }
 
 function buildAliyunClient(env: AgentEnv): unknown {
-  if (!env.ALIBABA_CLOUD_ACCESS_KEY_ID || !env.ALIBABA_CLOUD_ACCESS_KEY_SECRET) {
+  if (
+    !env.ALIBABA_CLOUD_ACCESS_KEY_ID ||
+    !env.ALIBABA_CLOUD_ACCESS_KEY_SECRET
+  ) {
     return undefined;
   }
   const Dysmsapi20170525 =

@@ -1,7 +1,7 @@
-import { useApolloClient, gql } from "@apollo/client";
-import { produce } from "immer";
+import { gql, useApolloClient } from "@apollo/client";
 import { ShieldCheckIcon, TrashIcon } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute } from "@tanstack/react-router";
+import { produce } from "immer";
 import { useCallback, useEffect, useState } from "react";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import { addPhoneSchema, removePhoneSchema } from "./admin-phones.store";
@@ -44,17 +44,19 @@ function AdminPhonesPage() {
   const [loading, setLoading] = useState(true);
 
   // Add form state
-  const [addForm, setAddForm] = useState({ phone: '', smsCode: '' });
-  const updateAddForm = (recipe: (draft: { phone: string; smsCode: string }) => void) =>
-    setAddForm(produce(recipe));
+  const [addForm, setAddForm] = useState({ phone: "", smsCode: "" });
+  const updateAddForm = (
+    recipe: (draft: { phone: string; smsCode: string }) => void,
+  ) => setAddForm(produce(recipe));
   const [smsSent, setSmsSent] = useState(false);
   const [sending, setSending] = useState(false);
   const [adding, setAdding] = useState(false);
 
   // Remove form state
-  const [removeForm, setRemoveForm] = useState({ phone: '', removeCode: '' });
-  const updateRemoveForm = (recipe: (draft: { phone: string; removeCode: string }) => void) =>
-    setRemoveForm(produce(recipe));
+  const [removeForm, setRemoveForm] = useState({ phone: "", removeCode: "" });
+  const updateRemoveForm = (
+    recipe: (draft: { phone: string; removeCode: string }) => void,
+  ) => setRemoveForm(produce(recipe));
   const [removeSmsSent, setRemoveSmsSent] = useState(false);
 
   const fetchPhones = useCallback(async () => {
@@ -110,10 +112,12 @@ function AdminPhonesPage() {
     try {
       const { data } = await client.mutate({
         mutation: ADD_ADMIN_PHONE,
-        variables: { input: { phone: result.data.phone, code: result.data.smsCode } },
+        variables: {
+          input: { phone: result.data.phone, code: result.data.smsCode },
+        },
       });
       setPhones(data.addAdminPhone);
-      setAddForm({ phone: '', smsCode: '' });
+      setAddForm({ phone: "", smsCode: "" });
       setSmsSent(false);
       msg.success("管理员手机号已添加");
     } catch (err) {
@@ -124,7 +128,9 @@ function AdminPhonesPage() {
   };
 
   const handleRemoveSendCode = async (phone: string) => {
-    updateRemoveForm((draft) => { draft.phone = phone; });
+    updateRemoveForm((draft) => {
+      draft.phone = phone;
+    });
     setSending(true);
     try {
       const { data } = await client.mutate({
@@ -152,10 +158,12 @@ function AdminPhonesPage() {
     try {
       const { data } = await client.mutate({
         mutation: REMOVE_ADMIN_PHONE,
-        variables: { input: { phone: result.data.phone, code: result.data.removeCode } },
+        variables: {
+          input: { phone: result.data.phone, code: result.data.removeCode },
+        },
       });
       setPhones(data.removeAdminPhone);
-      setRemoveForm({ phone: '', removeCode: '' });
+      setRemoveForm({ phone: "", removeCode: "" });
       setRemoveSmsSent(false);
       msg.success("管理员手机号已移除");
     } catch (err) {
@@ -173,7 +181,6 @@ function AdminPhonesPage() {
 
   return (
     <main className="min-h-screen bg-base-200/50 pb-20">
-
       <div className="mx-auto w-full max-w-lg px-4">
         <h1 className="flex items-center gap-2 text-xl font-bold mt-4 mb-6">
           <ShieldCheckIcon className="size-6" weight="duotone" />
@@ -217,7 +224,8 @@ function AdminPhonesPage() {
             <div className="card bg-warning/10 border border-warning shadow-sm mb-6">
               <div className="card-body p-4">
                 <h2 className="card-title text-sm">
-                  确认移除 {removeForm.phone.slice(0, 3)}****{removeForm.phone.slice(-4)}
+                  确认移除 {removeForm.phone.slice(0, 3)}****
+                  {removeForm.phone.slice(-4)}
                 </h2>
                 <p className="text-xs text-base-content/60">
                   已向该手机号发送验证码，输入后确认移除
@@ -230,7 +238,11 @@ function AdminPhonesPage() {
                     className="input input-bordered input-sm flex-1"
                     placeholder="6位验证码"
                     value={removeForm.removeCode}
-                    onChange={(e) => updateRemoveForm((draft) => { draft.removeCode = e.target.value; })}
+                    onChange={(e) =>
+                      updateRemoveForm((draft) => {
+                        draft.removeCode = e.target.value;
+                      })
+                    }
                   />
                   <button
                     type="submit"
@@ -243,7 +255,7 @@ function AdminPhonesPage() {
                     type="button"
                     className="btn btn-ghost btn-sm"
                     onClick={() => {
-                      setRemoveForm({ phone: '', removeCode: '' });
+                      setRemoveForm({ phone: "", removeCode: "" });
                       setRemoveSmsSent(false);
                     }}
                   >
@@ -269,7 +281,11 @@ function AdminPhonesPage() {
                     className="input input-bordered input-sm flex-1"
                     placeholder="手机号"
                     value={addForm.phone}
-                    onChange={(e) => updateAddForm((draft) => { draft.phone = e.target.value; })}
+                    onChange={(e) =>
+                      updateAddForm((draft) => {
+                        draft.phone = e.target.value;
+                      })
+                    }
                     disabled={smsSent}
                   />
                   <button
@@ -291,7 +307,11 @@ function AdminPhonesPage() {
                       className="input input-bordered input-sm flex-1"
                       placeholder="6位验证码"
                       value={addForm.smsCode}
-                      onChange={(e) => updateAddForm((draft) => { draft.smsCode = e.target.value; })}
+                      onChange={(e) =>
+                        updateAddForm((draft) => {
+                          draft.smsCode = e.target.value;
+                        })
+                      }
                     />
                     <button
                       type="submit"
@@ -305,7 +325,7 @@ function AdminPhonesPage() {
                       className="btn btn-ghost btn-sm"
                       onClick={() => {
                         setSmsSent(false);
-                        setAddForm({ phone: '', smsCode: '' });
+                        setAddForm({ phone: "", smsCode: "" });
                       }}
                     >
                       取消

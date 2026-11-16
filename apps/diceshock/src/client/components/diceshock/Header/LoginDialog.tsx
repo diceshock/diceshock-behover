@@ -10,7 +10,6 @@ import {
   WechatOpenConfigDocument,
 } from "@/client/graphql/__generated__";
 import { useTranslation } from "@/client/hooks/useTranslation";
-import { formatMessage } from "@/shared/i18n";
 import useSmsCode from "../../../hooks/useSmsCode";
 import useTempIdentity from "../../../hooks/useTempIdentity";
 import Modal from "../../modal";
@@ -25,7 +24,7 @@ function WechatQREmbed({ onFallback }: { onFallback: () => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [appId, setAppId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [key, setKey] = useState(0);
+  const [_key, setKey] = useState(0);
   const client = useApolloClient();
 
   useEffect(() => {
@@ -60,7 +59,7 @@ function WechatQREmbed({ onFallback }: { onFallback: () => void }) {
 
     containerRef.current.innerHTML = "";
     containerRef.current.appendChild(iframe);
-  }, [appId, key]);
+  }, [appId]);
 
   useEffect(() => {
     if (!loading && !appId) {
@@ -105,7 +104,7 @@ export default function LoginDialog({
   isSeatPage?: boolean;
 }) {
   const isInWechat = useMemo(() => isWechatBrowser(), []);
-  const { t, locale } = useTranslation();
+  const { t } = useTranslation();
 
   const [activeTab, setActiveTab] = useState<"wechat" | "phonenumber">(
     isInWechat ? "phonenumber" : "wechat",
@@ -126,8 +125,10 @@ export default function LoginDialog({
       .query({ query: CaptchaSettingsDocument })
       .then(({ data }) => {
         setCaptchaEnabled(data.captchaSettings.enabled);
-        if (data.captchaSettings.prefix) setCaptchaPrefix(data.captchaSettings.prefix);
-        if (data.captchaSettings.sceneId) setCaptchaSceneId(data.captchaSettings.sceneId);
+        if (data.captchaSettings.prefix)
+          setCaptchaPrefix(data.captchaSettings.prefix);
+        if (data.captchaSettings.sceneId)
+          setCaptchaSceneId(data.captchaSettings.sceneId);
       })
       .catch(() => {});
   }, [client]);
@@ -195,7 +196,9 @@ export default function LoginDialog({
                 localStorage.removeItem("diceshock_temp_identity");
               }
             }
-          } catch (e) { console.error("[LoginDialog] post-login seat claim error", e); }
+          } catch (e) {
+            console.error("[LoginDialog] post-login seat claim error", e);
+          }
         }
         return window.location.reload();
       }
@@ -243,7 +246,7 @@ export default function LoginDialog({
     } finally {
       setCreatingTemp(false);
     }
-  }, [createTempIdentity, onClose, setError]);
+  }, [createTempIdentity, onClose, setError, t]);
 
   const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
 
@@ -383,13 +386,23 @@ export default function LoginDialog({
                 id="login-sms-btn"
                 type="button"
                 className="btn btn-sm w-28"
-                onClick={!import.meta.env.PROD || !captchaEnabled ? getSmsCode : undefined}
+                onClick={
+                  !import.meta.env.PROD || !captchaEnabled
+                    ? getSmsCode
+                    : undefined
+                }
                 disabled={verifying || countdown > 0}
               >
                 {verifying ? (
-                  <><span className="loading loading-spinner loading-xs" />验证中</>
+                  <>
+                    <span className="loading loading-spinner loading-xs" />
+                    验证中
+                  </>
                 ) : countdown > 0 ? (
-                  <><span className="loading loading-ring loading-xs" />{countdown}s</>
+                  <>
+                    <span className="loading loading-ring loading-xs" />
+                    {countdown}s
+                  </>
                 ) : (
                   t("login.getCode")
                 )}

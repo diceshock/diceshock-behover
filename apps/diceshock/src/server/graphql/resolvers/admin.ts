@@ -3,20 +3,8 @@ import dbFactory, {
   eventsTable,
   pricingSnapshotsTable,
 } from "@lib/db";
-import {
-  and,
-  asc,
-  desc,
-  eq,
-  gte,
-  isNotNull,
-  isNull,
-  like,
-  lte,
-  sql,
-} from "drizzle-orm";
+import { and, asc, desc, eq, gte, isNull, like, lte, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { z } from "zod";
 import {
   notifyGszSync,
   notifyMahjongStart,
@@ -29,11 +17,10 @@ import {
   resolveUserOpenId,
 } from "@/server/apis/wechat/templateMessage";
 import { getWechatAccessToken } from "@/server/apis/wechat/wechatApi";
-import type { GQLContext } from "../context";
-import { forbidden, internalError, notFound, validationError } from "../errors";
-import { requireAuth, requireStaff } from "../guards";
-import { zodToGraphQLError } from "../validate";
 import { cdnUrl, cfImageUrl } from "@/shared/utils/cfImage";
+import type { GQLContext } from "../context";
+import { notFound, validationError } from "../errors";
+import { requireStaff } from "../guards";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -131,7 +118,7 @@ type PricingPlan = {
 type PricingConfigData = { daytime_start: string; daytime_end: string };
 type SnapshotData = { config: PricingConfigData; plans: PricingPlan[] };
 
-const EMPTY_DATA: SnapshotData = {
+const _EMPTY_DATA: SnapshotData = {
   config: { daytime_start: "10:00", daytime_end: "18:00" },
   plans: [],
 };
@@ -329,7 +316,7 @@ export const adminResolvers = {
       if (!args.filter) {
         const storeId = args.storeId ?? ctx.preferredStoreId;
         const rows = await tdb.query.eventsTable.findMany({
-          where: (e, { eq }) => storeCondition(e.store_id, storeId),
+          where: (e, { eq: _eq }) => storeCondition(e.store_id, storeId),
           orderBy: (e, { desc }) => desc(e.create_at),
         });
         return rows.map(mapEventRow);
@@ -502,9 +489,8 @@ export const adminResolvers = {
     ) {
       const KV_KEY = "settings:captcha_disabled_until";
       const disabledUntil = await ctx.env.KV.get(KV_KEY);
-      const env = ctx.env as Record<string, unknown>;
-      const prefix = (env.CAPTCHA_PREFIX as string) || null;
-      const sceneId = (env.CAPTCHA_SCENE_ID as string) || null;
+      const prefix = ctx.env.CAPTCHA_PREFIX || null;
+      const sceneId = ctx.env.CAPTCHA_SCENE_ID || null;
       if (!disabledUntil) {
         return { enabled: true, disabledUntil: null, prefix, sceneId };
       }
@@ -524,7 +510,6 @@ export const adminResolvers = {
       const appId = ctx.env.WECHAT_OPEN_APP_ID || null;
       return { appId };
     },
-
 
     // ── Wechat Templates (staff) ─────────────────────────────────────────
     async wechatTemplates(
@@ -643,7 +628,7 @@ export const adminResolvers = {
       const tdb = db(ctx);
       const storeId = args.storeId ?? ctx.preferredStoreId;
       const latest = await tdb.query.pricingSnapshotsTable.findFirst({
-        where: (s, { eq: eq2 }) => {
+        where: (s, { eq: _eq2 }) => {
           const store = storeCondition(s.store_id, storeId);
           const notArchived = sql`${s.status} != 'archived'`;
           return store ? and(store, notArchived) : notArchived;
@@ -681,7 +666,7 @@ export const adminResolvers = {
       const tdb = db(ctx);
       const storeId = args.storeId ?? ctx.preferredStoreId;
       const rows = await tdb.query.pricingSnapshotsTable.findMany({
-        where: (s, { eq: eq2 }) => {
+        where: (s, { eq: _eq2 }) => {
           const store = storeCondition(s.store_id, storeId);
           const notArchived = sql`${s.status} != 'archived'`;
           return store ? and(store, notArchived) : notArchived;
@@ -1045,7 +1030,6 @@ export const adminResolvers = {
         active: true,
       };
     },
-
 
     // ── Wechat Templates (staff) ─────────────────────────────────────────
     async addWechatTemplateFromLibrary(

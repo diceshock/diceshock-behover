@@ -1,27 +1,16 @@
+import type { Database } from "@lib/db";
 import dbFactory, {
   drizzle,
   orderPauseLogsTable,
   type pricingSnapshotsTable,
   tableOccupancyTable,
   tablesTable,
-  tempIdentitiesTable,
   userInfoTable,
   userMembershipPlansTable,
   users,
 } from "@lib/db";
-import type { Database } from "@lib/db";
 import type { SQL } from "drizzle-orm";
-import {
-  and,
-  asc,
-  desc,
-  eq,
-  gte,
-  inArray,
-  like,
-  lte,
-  or,
-} from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, like, lte, or } from "drizzle-orm";
 import { z } from "zod/v4";
 import {
   calculatePrice,
@@ -233,9 +222,6 @@ async function fetchFilteredOrders(tdb: Database, filter: OrderFilter) {
       case "created_at":
       case "create_at":
         return orderFn(tableOccupancyTable.id);
-      case "start_at":
-      case "started_at":
-      case "START_AT":
       default:
         return orderFn(tableOccupancyTable.start_at);
     }
@@ -324,14 +310,19 @@ const settleOrderSchema = z.object({
 const batchSettleSchema = z.object({
   input: z.object({
     ids: z.array(z.string().min(1)).min(1),
-    items: z.array(z.object({
-      orderId: z.string().min(1),
-      deductFromStoredValue: z.boolean().default(false),
-      deductAmount: z.number().int().nullable().optional(),
-      deductPoints: z.number().int().nullable().optional(),
-      pointsChange: z.number().int().default(0),
-      note: z.string().nullable().optional(),
-    })).nullable().optional(),
+    items: z
+      .array(
+        z.object({
+          orderId: z.string().min(1),
+          deductFromStoredValue: z.boolean().default(false),
+          deductAmount: z.number().int().nullable().optional(),
+          deductPoints: z.number().int().nullable().optional(),
+          pointsChange: z.number().int().default(0),
+          note: z.string().nullable().optional(),
+        }),
+      )
+      .nullable()
+      .optional(),
     deductFromStoredValue: z.boolean().default(false),
     deductAmount: z.number().int().nullable().optional(),
     note: z.string().nullable().optional(),
@@ -460,7 +451,11 @@ async function publishOrderEvent(
     const enrichedPayload = options?.order
       ? { ...payload, order: options.order }
       : payload;
-    const body = JSON.stringify({ type, payload: enrichedPayload, timestamp: Date.now() });
+    const body = JSON.stringify({
+      type,
+      payload: enrichedPayload,
+      timestamp: Date.now(),
+    });
     // Publish to specific order channel
     const pubsubId = env.PUBSUB.idFromName(`order:${orderId}`);
     const stub = env.PUBSUB.get(pubsubId);
@@ -471,11 +466,18 @@ async function publishOrderEvent(
     await allStub.fetch("https://internal/publish", { method: "POST", body });
     // Publish to table channel for user-facing listeners
     if (options?.tableId) {
-      const tableChannelId = env.PUBSUB.idFromName(`order-table:${options.tableId}`);
+      const tableChannelId = env.PUBSUB.idFromName(
+        `order-table:${options.tableId}`,
+      );
       const tableStub = env.PUBSUB.get(tableChannelId);
-      await tableStub.fetch("https://internal/publish", { method: "POST", body });
+      await tableStub.fetch("https://internal/publish", {
+        method: "POST",
+        body,
+      });
     }
-  } catch (e) { console.error("[orders] publishOrderEvent error", e); }
+  } catch (e) {
+    console.error("[orders] publishOrderEvent error", e);
+  }
 }
 
 async function fetchOrder(
@@ -498,7 +500,10 @@ async function fetchOrderOrThrow(
   return order;
 }
 
-function assertStoreAccess(order: OccupancyRow, storeId?: string | null): void {
+function _assertStoreAccess(
+  order: OccupancyRow,
+  storeId?: string | null,
+): void {
   if (storeId && order.table?.store_id !== storeId) {
     throw notFound("Order not found");
   }
@@ -585,7 +590,11 @@ async function buildSettlementData(
     console.warn("[settle:pricing] calculatePrice returned null!", {
       snapshotNull: !snapshotData,
       plansEmpty: !snapshotData?.plans?.length,
-      plans: snapshotData?.plans?.map((p) => ({ name: p.name, type: p.plan_type, enabled: p.enabled })),
+      plans: snapshotData?.plans?.map((p) => ({
+        name: p.name,
+        type: p.plan_type,
+        enabled: p.enabled,
+      })),
     });
   }
   const totalMinutes = Math.floor(Math.max(0, endAt - startAt) / 60000);
@@ -694,7 +703,9 @@ async function toGqlSettlementPreview(
         columns: { nickname: true },
       });
       nickname = tempInfo?.nickname ?? null;
-    } catch { /* ignore lookup error for temp identity */ }
+    } catch {
+      /* ignore lookup error for temp identity */
+    }
     uid = data.order.temp_id ? `temp:${data.order.temp_id}` : null;
   }
 
@@ -866,23 +877,33 @@ async function settleOrderById(
 
   // Stored value deduction
   const deductTarget = input.deductFromStoredValue
-    ? (input.deductAmount != null ? input.deductAmount : data.finalPrice)
+    ? input.deductAmount != null
+      ? input.deductAmount
+      : data.finalPrice
     : 0;
-  const storedValueDeduction = deductTarget > 0
-    ? await applyStoredValueDeduction(
-        tdb,
-        existing.user_id,
-        deductTarget,
-        note,
-        input.id,
-      )
-    : null;
+  const storedValueDeduction =
+    deductTarget > 0
+      ? await applyStoredValueDeduction(
+          tdb,
+          existing.user_id,
+          deductTarget,
+          note,
+          input.id,
+        )
+      : null;
 
   // Points deduction
-  const pointsDeductTarget = input.deductPoints != null ? input.deductPoints : 0;
-  const pointsDeduction = pointsDeductTarget > 0
-    ? await applyPointsDeduction(tdb, existing.user_id, pointsDeductTarget, note)
-    : null;
+  const pointsDeductTarget =
+    input.deductPoints != null ? input.deductPoints : 0;
+  const pointsDeduction =
+    pointsDeductTarget > 0
+      ? await applyPointsDeduction(
+          tdb,
+          existing.user_id,
+          pointsDeductTarget,
+          note,
+        )
+      : null;
 
   // Points change (bonus/penalty, separate from deduction)
   if (input.pointsChange && input.pointsChange !== 0 && existing.user_id) {
@@ -927,14 +948,20 @@ async function settleOrderById(
 
   const updated = await fetchOrderOrThrow(tdb, input.id);
   const gqlOrder = toGqlOrder(updated);
-  await publishOrderEvent(ctx, input.id, "ORDER_STATUS_CHANGED", {
-    orderId: input.id,
-    previousStatus: normalizeStatus(existing),
-    currentStatus: "SETTLED",
-    status: "SETTLED",
-    amount: data.finalPrice,
-    points: data.finalPoints,
-  }, { tableId: updated.table_id, order: gqlOrder });
+  await publishOrderEvent(
+    ctx,
+    input.id,
+    "ORDER_STATUS_CHANGED",
+    {
+      orderId: input.id,
+      previousStatus: normalizeStatus(existing),
+      currentStatus: "SETTLED",
+      status: "SETTLED",
+      amount: data.finalPrice,
+      points: data.finalPoints,
+    },
+    { tableId: updated.table_id, order: gqlOrder },
+  );
 
   return {
     order: gqlOrder,
@@ -1127,8 +1154,11 @@ export const ordersResolvers = {
       const orderId = input.orderId ?? input.id;
       if (!orderId) throw validationError("orderId", "orderId is required");
       const tdb = dbFactory(ctx.env.DB);
-      const order = await fetchOrderOrThrow(tdb, orderId);
-      return toGqlSettlementPreview(tdb, await buildSettlementData(tdb, orderId));
+      const _order = await fetchOrderOrThrow(tdb, orderId);
+      return toGqlSettlementPreview(
+        tdb,
+        await buildSettlementData(tdb, orderId),
+      );
     },
   },
   Mutation: {
@@ -1144,14 +1174,24 @@ export const ordersResolvers = {
       const tdb = dbFactory(ctx.env.DB);
       const results = await Promise.allSettled(
         orderIds.map((id) =>
-          buildSettlementData(tdb, id).then((data) => toGqlSettlementPreview(tdb, data)),
+          buildSettlementData(tdb, id).then((data) =>
+            toGqlSettlementPreview(tdb, data),
+          ),
         ),
       );
       const previews = results
-        .filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof toGqlSettlementPreview>>> => r.status === "fulfilled")
+        .filter(
+          (
+            r,
+          ): r is PromiseFulfilledResult<
+            Awaited<ReturnType<typeof toGqlSettlementPreview>>
+          > => r.status === "fulfilled",
+        )
         .map((r) => r.value);
       if (previews.length === 0) {
-        const firstErr = results.find((r) => r.status === "rejected") as PromiseRejectedResult | undefined;
+        const firstErr = results.find((r) => r.status === "rejected") as
+          | PromiseRejectedResult
+          | undefined;
         throw firstErr?.reason ?? notFound("Order not found");
       }
       return previews;
@@ -1170,7 +1210,11 @@ export const ordersResolvers = {
         throw validationError("tableId", "Table is inactive");
       const existing = await tdb.query.tableOccupancyTable.findFirst({
         where: (o, { and, eq, ne }) =>
-          and(eq(o.table_id, input.tableId), ne(o.status, "ended"), ne(o.status, "settled")),
+          and(
+            eq(o.table_id, input.tableId),
+            ne(o.status, "ended"),
+            ne(o.status, "settled"),
+          ),
       });
       if (existing)
         throw validationError("tableId", "Table already has an active order");
@@ -1188,11 +1232,17 @@ export const ordersResolvers = {
         .returning();
       const order = await fetchOrderOrThrow(tdb, inserted.id);
       const gqlOrder = toGqlOrder(order);
-      await publishOrderEvent(ctx, inserted.id, "ORDER_STATUS_CHANGED", {
-        orderId: inserted.id,
-        currentStatus: "ACTIVE",
-        status: "ACTIVE",
-      }, { tableId: order.table_id, order: gqlOrder });
+      await publishOrderEvent(
+        ctx,
+        inserted.id,
+        "ORDER_STATUS_CHANGED",
+        {
+          orderId: inserted.id,
+          currentStatus: "ACTIVE",
+          status: "ACTIVE",
+        },
+        { tableId: order.table_id, order: gqlOrder },
+      );
       return gqlOrder;
     },
     async endOrder(_source: unknown, args: unknown, ctx: GQLContext) {
@@ -1214,12 +1264,18 @@ export const ordersResolvers = {
         .where(drizzle.eq(tableOccupancyTable.id, input.id));
       const updated = await fetchOrderOrThrow(tdb, input.id);
       const gqlOrder = toGqlOrder(updated);
-      await publishOrderEvent(ctx, input.id, "ORDER_STATUS_CHANGED", {
-        orderId: input.id,
-        previousStatus,
-        currentStatus: "ENDED",
-        status: "ENDED",
-      }, { tableId: updated.table_id, order: gqlOrder });
+      await publishOrderEvent(
+        ctx,
+        input.id,
+        "ORDER_STATUS_CHANGED",
+        {
+          orderId: input.id,
+          previousStatus,
+          currentStatus: "ENDED",
+          status: "ENDED",
+        },
+        { tableId: updated.table_id, order: gqlOrder },
+      );
       return gqlOrder;
     },
     async pauseOrder(_source: unknown, args: unknown, ctx: GQLContext) {
@@ -1238,12 +1294,18 @@ export const ordersResolvers = {
         .where(drizzle.eq(tableOccupancyTable.id, input.id));
       const updated = await fetchOrderOrThrow(tdb, input.id);
       const gqlOrder = toGqlOrder(updated);
-      await publishOrderEvent(ctx, input.id, "ORDER_STATUS_CHANGED", {
-        orderId: input.id,
-        previousStatus: "ACTIVE",
-        currentStatus: "PAUSED",
-        status: "PAUSED",
-      }, { tableId: updated.table_id, order: gqlOrder });
+      await publishOrderEvent(
+        ctx,
+        input.id,
+        "ORDER_STATUS_CHANGED",
+        {
+          orderId: input.id,
+          previousStatus: "ACTIVE",
+          currentStatus: "PAUSED",
+          status: "PAUSED",
+        },
+        { tableId: updated.table_id, order: gqlOrder },
+      );
       return gqlOrder;
     },
     async resumeOrder(_source: unknown, args: unknown, ctx: GQLContext) {
@@ -1260,12 +1322,18 @@ export const ordersResolvers = {
         .where(drizzle.eq(tableOccupancyTable.id, input.id));
       const updated = await fetchOrderOrThrow(tdb, input.id);
       const gqlOrder = toGqlOrder(updated);
-      await publishOrderEvent(ctx, input.id, "ORDER_STATUS_CHANGED", {
-        orderId: input.id,
-        previousStatus: "PAUSED",
-        currentStatus: "ACTIVE",
-        status: "ACTIVE",
-      }, { tableId: updated.table_id, order: gqlOrder });
+      await publishOrderEvent(
+        ctx,
+        input.id,
+        "ORDER_STATUS_CHANGED",
+        {
+          orderId: input.id,
+          previousStatus: "PAUSED",
+          currentStatus: "ACTIVE",
+          status: "ACTIVE",
+        },
+        { tableId: updated.table_id, order: gqlOrder },
+      );
       return gqlOrder;
     },
     async settleOrder(_source: unknown, args: unknown, ctx: GQLContext) {
@@ -1316,7 +1384,7 @@ export const ordersResolvers = {
         z.object({ ids: z.array(z.string().min(1)).min(1) }),
         args,
       );
-      const tdb = dbFactory(ctx.env.DB);
+      const _tdb = dbFactory(ctx.env.DB);
       const results: Array<{ id: string; success: boolean; error?: string }> =
         [];
       for (const id of input.ids) {
@@ -1343,7 +1411,7 @@ export const ordersResolvers = {
         z.object({ ids: z.array(z.string().min(1)).min(1) }),
         args,
       );
-      const tdb = dbFactory(ctx.env.DB);
+      const _tdb = dbFactory(ctx.env.DB);
       const results: Array<{ id: string; success: boolean; error?: string }> =
         [];
       for (const id of input.ids) {
@@ -1383,12 +1451,18 @@ export const ordersResolvers = {
         .where(drizzle.eq(tableOccupancyTable.id, input.id));
       const updated = await fetchOrderOrThrow(tdb, input.id);
       const gqlOrder = toGqlOrder(updated);
-      await publishOrderEvent(ctx, input.id, "ORDER_STATUS_CHANGED", {
-        orderId: input.id,
-        previousStatus: "SETTLED",
-        currentStatus: "ENDED",
-        status: "ENDED",
-      }, { tableId: updated.table_id, order: gqlOrder });
+      await publishOrderEvent(
+        ctx,
+        input.id,
+        "ORDER_STATUS_CHANGED",
+        {
+          orderId: input.id,
+          previousStatus: "SETTLED",
+          currentStatus: "ENDED",
+          status: "ENDED",
+        },
+        { tableId: updated.table_id, order: gqlOrder },
+      );
       return {
         id: input.id,
         success: true,
@@ -1464,11 +1538,17 @@ export const ordersResolvers = {
             .set({ status: "ended", end_at: now })
             .where(drizzle.eq(tableOccupancyTable.id, order.id));
           actions.push(`Ended orphaned order ${order.id}`);
-          await publishOrderEvent(ctx, order.id, "ORDER_STATUS_CHANGED", {
-            orderId: order.id,
-            currentStatus: "ENDED",
-            status: "ENDED",
-          }, { tableId: order.table_id });
+          await publishOrderEvent(
+            ctx,
+            order.id,
+            "ORDER_STATUS_CHANGED",
+            {
+              orderId: order.id,
+              currentStatus: "ENDED",
+              status: "ENDED",
+            },
+            { tableId: order.table_id },
+          );
         }
         for (const log of orphanedPauseLogs) {
           await tdb

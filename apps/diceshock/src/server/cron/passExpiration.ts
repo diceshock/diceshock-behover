@@ -1,4 +1,4 @@
-import db, { userMembershipPlansTable } from "@lib/db";
+import db from "@lib/db";
 import {
   queueNotification,
   resolveUsersOpenIds,

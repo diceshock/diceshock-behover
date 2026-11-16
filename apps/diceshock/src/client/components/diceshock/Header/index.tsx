@@ -92,7 +92,7 @@ function Header() {
     [t],
   );
 
-  const isInWechat = useMemo(() => {
+  const _isInWechat = useMemo(() => {
     const ua =
       crossData?.UserAgentMeta?.userAgent ??
       (typeof navigator !== "undefined" ? navigator.userAgent : "");

@@ -45,6 +45,7 @@ export async function avatarCard(c: Context<HonoCtxEnv>) {
     <html>
       <head>
         <meta charSet="utf-8" />
+        {/* biome-ignore-start lint/security/noDangerouslySetInnerHtml: server-side OG card rendering, no user input */}
         <style
           dangerouslySetInnerHTML={{
             __html: `
@@ -67,12 +68,15 @@ body {
 }`,
           }}
         />
+        {/* biome-ignore-end lint/security/noDangerouslySetInnerHtml: server-side OG card rendering, no user input */}
       </head>
       <body>
         <div className="initial">{initial}</div>
+        {/* biome-ignore-start lint/security/noDangerouslySetInnerHtml: server-side OG card rendering, no user input */}
         <script
           dangerouslySetInnerHTML={{ __html: "window.__ready = true;" }}
         />
+        {/* biome-ignore-end lint/security/noDangerouslySetInnerHtml: server-side OG card rendering, no user input */}
       </body>
     </html>,
   )}`;

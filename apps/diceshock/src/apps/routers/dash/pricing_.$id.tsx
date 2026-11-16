@@ -3,9 +3,9 @@ import {
   createFileRoute,
   useNavigate,
 } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent } from "react";
-import { useImmerAtom } from "jotai-immer";
 import { produce } from "immer";
+import { useImmerAtom } from "jotai-immer";
+import { type FormEvent, useEffect, useState } from "react";
 import { z } from "zod/v4";
 import { useMsg } from "@/client/components/diceshock/Msg";
 import { useTranslation } from "@/client/hooks/useTranslation";
@@ -45,7 +45,7 @@ const PLAN_TYPE_OPTIONS = [
   { value: "stored_value", label: "Table AGENT 储值卡" },
 ];
 
-const SCOPE_OPTIONS = [
+const _SCOPE_OPTIONS = [
   { value: "boardgame", label: "桌游" },
   { value: "mahjong", label: "日麻" },
   { value: "trpg", label: "跑团" },
@@ -399,7 +399,7 @@ function SubOptions({ children }: { children: React.ReactNode }) {
   );
 }
 
-function PriceInput({
+function _PriceInput({
   label,
   value,
   onChange,
@@ -951,26 +951,44 @@ function ConditionFormFields({
               label="固定费用"
               desc="一口价，不按时间计费"
               selected={billingType === "fixed"}
-              onClick={() => updateForm((d) => { d.billingType = "fixed"; })}
+              onClick={() =>
+                updateForm((d) => {
+                  d.billingType = "fixed";
+                })
+              }
             />
             <OptionCard
               icon={"⏱️"}
               label="小时计费"
               desc="按实际使用时长计费"
               selected={billingType === "hourly"}
-              onClick={() => updateForm((d) => { d.billingType = "hourly"; })}
+              onClick={() =>
+                updateForm((d) => {
+                  d.billingType = "hourly";
+                })
+              }
             />
           </div>
 
           <SubOptions>
             <DualPriceInput
               label={
-                billingType === "fixed" ? "固定价格（元/点）" : "每小时价格（元/点）"
+                billingType === "fixed"
+                  ? "固定价格（元/点）"
+                  : "每小时价格（元/点）"
               }
               priceValue={price}
               pointsValue={points}
-              onPriceChange={(v) => updateForm((d) => { d.price = v; })}
-              onPointsChange={(v) => updateForm((d) => { d.points = v; })}
+              onPriceChange={(v) =>
+                updateForm((d) => {
+                  d.price = v;
+                })
+              }
+              onPointsChange={(v) =>
+                updateForm((d) => {
+                  d.points = v;
+                })
+              }
             />
 
             {billingType === "hourly" && (
@@ -985,14 +1003,22 @@ function ConditionFormFields({
                     label="按天封顶"
                     desc="每自然日一个封顶额"
                     selected={capUnit === "per_day"}
-                    onClick={() => updateForm((d) => { d.capUnit = "per_day"; })}
+                    onClick={() =>
+                      updateForm((d) => {
+                        d.capUnit = "per_day";
+                      })
+                    }
                   />
                   <OptionCard
                     icon={"🌗"}
                     label="分时段封顶"
                     desc="白天和晚上各有封顶额"
                     selected={capUnit === "split_day_night"}
-                    onClick={() => updateForm((d) => { d.capUnit = "split_day_night"; })}
+                    onClick={() =>
+                      updateForm((d) => {
+                        d.capUnit = "split_day_night";
+                      })
+                    }
                   />
                 </div>
                 {capUnit === "per_day" ? (
@@ -1000,8 +1026,16 @@ function ConditionFormFields({
                     label="封顶价格（元/点）"
                     priceValue={capPrice}
                     pointsValue={capPoints}
-                    onPriceChange={(v) => updateForm((d) => { d.capPrice = v; })}
-                    onPointsChange={(v) => updateForm((d) => { d.capPoints = v; })}
+                    onPriceChange={(v) =>
+                      updateForm((d) => {
+                        d.capPrice = v;
+                      })
+                    }
+                    onPointsChange={(v) =>
+                      updateForm((d) => {
+                        d.capPoints = v;
+                      })
+                    }
                   />
                 ) : (
                   <div className="flex gap-4">
@@ -1009,15 +1043,31 @@ function ConditionFormFields({
                       label="白天封顶（元/点）"
                       priceValue={capPriceDay}
                       pointsValue={capPointsDay}
-                      onPriceChange={(v) => updateForm((d) => { d.capPriceDay = v; })}
-                      onPointsChange={(v) => updateForm((d) => { d.capPointsDay = v; })}
+                      onPriceChange={(v) =>
+                        updateForm((d) => {
+                          d.capPriceDay = v;
+                        })
+                      }
+                      onPointsChange={(v) =>
+                        updateForm((d) => {
+                          d.capPointsDay = v;
+                        })
+                      }
                     />
                     <DualPriceInput
                       label="晚上封顶（元/点）"
                       priceValue={capPriceNight}
                       pointsValue={capPointsNight}
-                      onPriceChange={(v) => updateForm((d) => { d.capPriceNight = v; })}
-                      onPointsChange={(v) => updateForm((d) => { d.capPointsNight = v; })}
+                      onPriceChange={(v) =>
+                        updateForm((d) => {
+                          d.capPriceNight = v;
+                        })
+                      }
+                      onPointsChange={(v) =>
+                        updateForm((d) => {
+                          d.capPointsNight = v;
+                        })
+                      }
                     />
                   </div>
                 )}

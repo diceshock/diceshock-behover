@@ -8,13 +8,13 @@ import db, {
   userInfoTable,
   userPreferencesTable,
 } from "@lib/db";
+import { mergeByPhone } from "@/server/utils/phoneMerge";
 import { CATEGORY_LABELS } from "@/shared/preferences/constants";
 import { rruleToHumanReadable } from "@/shared/preferences/rruleDisplay";
 import type { PreferenceCategory } from "@/shared/preferences/types";
 import type { MutateAction, MutateArgs } from "../graphql/mutateActions";
 import { MUTATE_ACTIONS } from "../graphql/mutateActions";
 import { SITE_LINKS } from "../linkRegistry";
-import { mergeByPhone } from "@/server/utils/phoneMerge";
 import type { ToolContext } from "./totp";
 
 const { and, eq } = drizzle;
@@ -843,8 +843,9 @@ async function parsePreferenceWithDeepSeek(
     return { success: false, error: "AI 服务未配置，请联系管理员" };
   }
 
-  const baseUrl = env.DEEPSEEK_BASE_URL
-    || (gatewayId
+  const baseUrl =
+    env.DEEPSEEK_BASE_URL ||
+    (gatewayId
       ? `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/deepseek`
       : "https://api.deepseek.com/v1");
 
@@ -891,10 +892,7 @@ async function parsePreferenceWithDeepSeek(
     }
 
     const byDayMatch = rrule.match(/BYDAY=([A-Z,]+)/);
-    if (
-      !byDayMatch ||
-      !byDayMatch[1].split(",").every((d) => VALID_WEEKDAYS.includes(d))
-    ) {
+    if (!byDayMatch?.[1].split(",").every((d) => VALID_WEEKDAYS.includes(d))) {
       return { success: false, error: "解析失败：时间格式不合法" };
     }
 
@@ -1148,7 +1146,7 @@ async function handleSendSmsCode(
 async function handleVerifyPhone(
   env: MutateEnv,
   userId: string,
-  openId: string,
+  _openId: string,
   params: Record<string, unknown>,
 ): Promise<string> {
   const kv = env.KV;
@@ -1292,7 +1290,7 @@ async function handleBindGsz(
       }
     }
     gszSynced = gszId !== null;
-  } catch (e) {
+  } catch (_e) {
     gszError = "公式战系统暂时不可用";
   }
 

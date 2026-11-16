@@ -7,10 +7,10 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
-import { useCallback, useMemo, useRef, useState } from "react";
 import { produce } from "immer";
 import { useSetAtom } from "jotai";
-import { DataTable } from "@/client/components/dash/DataTable"
+import { useCallback, useMemo, useRef, useState } from "react";
+import { DataTable } from "@/client/components/dash/DataTable";
 import { IdCell } from "@/client/components/dash/IdCell";
 import { launcherOpenForFieldAtom } from "@/client/components/dash/launcher/atoms";
 import { getCategoryById } from "@/client/components/dash/launcher/categories";
@@ -18,7 +18,10 @@ import { useSelectedTableData } from "@/client/components/dash/useSelectedTableD
 import type { BatchAction } from "@/client/components/diceshock/BatchActionBar";
 import BatchActionBar from "@/client/components/diceshock/BatchActionBar";
 import { useMsg } from "@/client/components/diceshock/Msg";
-import type { ManagedTablesQuery } from "@/client/graphql/__generated__";
+import type {
+  ManagedTablesQuery,
+  TableFilterInput,
+} from "@/client/graphql/__generated__";
 import {
   SortOrder,
   TableScope,
@@ -29,16 +32,61 @@ import {
   useRemoveTableMutation,
   useToggleTableStatusMutation,
 } from "@/client/graphql/__generated__";
+import { useIsMobile } from "@/client/hooks/useIsMobile";
 import {
   filtersToGqlVariables,
   useRouteFilters,
 } from "@/client/hooks/useRouteFilters";
-import { useIsMobile } from "@/client/hooks/useIsMobile";
 import { useTranslation } from "@/client/hooks/useTranslation";
+import type { ParsedSearch } from "@/client/lib/searchParser";
 import dayjs from "@/shared/utils/dayjs-config";
 import { tableCreateSchema } from "./tables.store";
 
-const BATCH_SIZE = 100
+const BATCH_SIZE = 100;
+
+const FILTER_PAGE_SIZE = 20;
+
+/** Build a GQL TableFilterInput from parsed search bar input. Exported for unit tests. */
+export function buildFilter(
+  parsed: ParsedSearch,
+  page: number,
+  sorting: SortingState,
+): TableFilterInput {
+  const toUpperArray = (v: unknown): string[] | undefined => {
+    if (typeof v === "string") return [v.toUpperCase()];
+    if (Array.isArray(v)) return (v as string[]).map((s) => s.toUpperCase());
+    return undefined;
+  };
+
+  const input: TableFilterInput = {};
+
+  // Combine freeText + name into search
+  const searchParts: string[] = [];
+  if (parsed.freeText) searchParts.push(parsed.freeText);
+  if (parsed.filters.name && typeof parsed.filters.name.value === "string")
+    searchParts.push(parsed.filters.name.value);
+  if (searchParts.length > 0) input.search = searchParts.join(" ");
+
+  if (parsed.filters.type) input.type = toUpperArray(parsed.filters.type.value);
+  if (parsed.filters.status)
+    input.status = toUpperArray(parsed.filters.status.value);
+  if (parsed.filters.store)
+    input.store =
+      typeof parsed.filters.store.value === "string"
+        ? parsed.filters.store.value
+        : undefined;
+
+  if (sorting.length > 0) {
+    input.sortBy = sorting[0].id;
+    input.sortOrder = sorting[0].desc ? SortOrder.Desc : SortOrder.Asc;
+  }
+
+  input.pagination = {
+    offset: (page - 1) * FILTER_PAGE_SIZE,
+    limit: FILTER_PAGE_SIZE,
+  };
+  return input;
+}
 
 const TYPE_LABEL_KEYS: Record<string, string> = {
   FIXED: "dashTables.fixedTable",
@@ -83,17 +131,23 @@ function RouteComponent() {
   const openForField = useSetAtom(launcherOpenForFieldAtom);
   const tablesCategory = getCategoryById("tables");
 
-  const handleColumnFilter = useCallback((columnId: string) => {
-    if (!tablesCategory) return;
-    const field = tablesCategory.fields.find((f) => f.key === columnId);
-    if (!field) return;
-    openForField({ field, filters, query, categoryId: "tables" });
-  }, [tablesCategory, openForField, filters, query]);
+  const handleColumnFilter = useCallback(
+    (columnId: string) => {
+      if (!tablesCategory) return;
+      const field = tablesCategory.fields.find((f) => f.key === columnId);
+      if (!field) return;
+      openForField({ field, filters, query, categoryId: "tables" });
+    },
+    [tablesCategory, openForField, filters, query],
+  );
   const [sorting, setSorting] = useState<SortingState>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [offset, setOffset] = useState(0);
 
-  const gqlVars = useMemo(() => filtersToGqlVariables(filters, query), [filters, query]);
+  const gqlVars = useMemo(
+    () => filtersToGqlVariables(filters, query),
+    [filters, query],
+  );
 
   const filter = useMemo(
     () => ({
@@ -109,7 +163,9 @@ function RouteComponent() {
           : [String(gqlVars.status).toUpperCase()]
         : undefined,
       store: gqlVars.store as string | undefined,
-      sortBy: (gqlVars.sortBy as string) ?? (sorting.length > 0 ? sorting[0].id : undefined),
+      sortBy:
+        (gqlVars.sortBy as string) ??
+        (sorting.length > 0 ? sorting[0].id : undefined),
       sortOrder:
         (gqlVars.sortOrder as SortOrder) ??
         (sorting.length > 0
@@ -137,12 +193,18 @@ function RouteComponent() {
     setOffset(nextOffset);
     void fetchMore({
       variables: {
-        filter: { ...filter, pagination: { offset: nextOffset, limit: BATCH_SIZE } },
+        filter: {
+          ...filter,
+          pagination: { offset: nextOffset, limit: BATCH_SIZE },
+        },
       },
       updateQuery: (prev, { fetchMoreResult }) => {
         if (!fetchMoreResult) return prev;
         return {
-          managedTables: [...prev.managedTables, ...fetchMoreResult.managedTables],
+          managedTables: [
+            ...prev.managedTables,
+            ...fetchMoreResult.managedTables,
+          ],
         };
       },
     });
@@ -166,7 +228,11 @@ function RouteComponent() {
     scope: "boardgame" as "trpg" | "boardgame" | "console" | "mahjong",
     capacity: 4,
   });
-  const updateCreateForm = useCallback((recipe: (draft: typeof createForm) => void) => setCreateForm(produce(recipe)), []);
+  const updateCreateForm = useCallback(
+    (recipe: (draft: typeof createForm) => void) =>
+      setCreateForm(produce(recipe)),
+    [],
+  );
   const [createPending, setCreatePending] = useState(false);
   const [batchPending, setBatchPending] = useState(false);
 
@@ -383,96 +449,102 @@ function RouteComponent() {
 
   return (
     <main className="flex-1 min-h-0 flex flex-col">
-      <DataTable columns={columns}
-      data={tables}
-      loading={loading}
-      hasMore={hasMore}
-      onLoadMore={handleLoadMore}
-      sorting={sorting}
-      onSortingChange={setSorting}
-      sortableColumns={["name", "type", "status", "capacity", "createdAt"]}
-      filterableColumns={["name", "type", "status", "store", "created_at"]}
-      onColumnFilter={handleColumnFilter}
-      enableRowSelection
-      selectedRows={selectedIds}
-      onSelectedRowsChange={setSelectedIds}
-      getRowId={(row) => row.id}
-      emptyMessage={t("dashTables.noMatchedTables")}
-      renderActions={(row) =>
-        isMobile ? (
-          <div className="dropdown dropdown-end">
-            <div
-              tabIndex={0}
-              role="button"
-              className="btn btn-xs btn-ghost btn-square"
-            >
-              <DotsThreeVerticalIcon className="size-4" weight="bold" />
+      <DataTable
+        columns={columns}
+        data={tables}
+        loading={loading}
+        hasMore={hasMore}
+        onLoadMore={handleLoadMore}
+        sorting={sorting}
+        onSortingChange={setSorting}
+        sortableColumns={["name", "type", "status", "capacity", "createdAt"]}
+        filterableColumns={["name", "type", "status", "store", "created_at"]}
+        onColumnFilter={handleColumnFilter}
+        enableRowSelection
+        selectedRows={selectedIds}
+        onSelectedRowsChange={setSelectedIds}
+        getRowId={(row) => row.id}
+        emptyMessage={t("dashTables.noMatchedTables")}
+        renderActions={(row) =>
+          isMobile ? (
+            <div className="dropdown dropdown-end">
+              <div
+                tabIndex={0}
+                role="button"
+                className="btn btn-xs btn-ghost btn-square"
+              >
+                <DotsThreeVerticalIcon className="size-4" weight="bold" />
+              </div>
+              <ul
+                tabIndex={0}
+                className="dropdown-content menu bg-base-200 rounded-box z-50 w-36 p-2 shadow-lg"
+              >
+                <li>
+                  <Link
+                    to="/dash/tables/$id"
+                    params={{ id: row.id }}
+                    search={{ tab: "basic" }}
+                  >
+                    <PencilSimpleIcon className="size-4" />
+                    {t("dashTables.details")}
+                  </Link>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => void handleToggleStatus(row)}
+                  >
+                    <PowerIcon className="size-3.5" />
+                    {row.status === TableStatus.Active
+                      ? t("dashTables.inactive")
+                      : t("dashTables.active")}
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    className="text-error"
+                    onClick={() => openDeleteDialog(row)}
+                  >
+                    <TrashIcon className="size-3.5" />
+                    {t("dashTables.delete")}
+                  </button>
+                </li>
+              </ul>
             </div>
-            <ul
-              tabIndex={0}
-              className="dropdown-content menu bg-base-200 rounded-box z-50 w-36 p-2 shadow-lg"
-            >
-              <li>
-                <Link to="/dash/tables/$id" params={{ id: row.id }} search={{ tab: "basic" }}>
-                  <PencilSimpleIcon className="size-4" />
-                  {t("dashTables.details")}
-                </Link>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => void handleToggleStatus(row)}
-                >
-                  <PowerIcon className="size-3.5" />
-                  {row.status === TableStatus.Active
-                    ? t("dashTables.inactive")
-                    : t("dashTables.active")}
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  className="text-error"
-                  onClick={() => openDeleteDialog(row)}
-                >
-                  <TrashIcon className="size-3.5" />
-                  {t("dashTables.delete")}
-                </button>
-              </li>
-            </ul>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1">
-            <Link
-              to="/dash/tables/$id"
-              params={{ id: row.id }}
-              search={{ tab: "basic" }}
-              className="btn btn-xs btn-ghost"
-            >
-              <PencilSimpleIcon className="size-4" />
-              {t("dashTables.details")}
-            </Link>
-            <button
-              type="button"
-              className={`btn btn-xs btn-ghost ${row.status === TableStatus.Active ? "btn-neutral" : "btn-success"}`}
-              onClick={() => void handleToggleStatus(row)}
-            >
-              <PowerIcon className="size-3.5" />
-              {row.status === TableStatus.Active
-                ? t("dashTables.inactive")
-                : t("dashTables.active")}
-            </button>
-            <button
-              type="button"
-              className="btn btn-xs btn-ghost btn-error"
-              onClick={() => openDeleteDialog(row)}
-            >
-              <TrashIcon className="size-3.5" />
-              {t("dashTables.delete")}
-            </button>
-          </div>
-        )
-      } />
+          ) : (
+            <div className="flex items-center gap-1">
+              <Link
+                to="/dash/tables/$id"
+                params={{ id: row.id }}
+                search={{ tab: "basic" }}
+                className="btn btn-xs btn-ghost"
+              >
+                <PencilSimpleIcon className="size-4" />
+                {t("dashTables.details")}
+              </Link>
+              <button
+                type="button"
+                className={`btn btn-xs btn-ghost ${row.status === TableStatus.Active ? "btn-neutral" : "btn-success"}`}
+                onClick={() => void handleToggleStatus(row)}
+              >
+                <PowerIcon className="size-3.5" />
+                {row.status === TableStatus.Active
+                  ? t("dashTables.inactive")
+                  : t("dashTables.active")}
+              </button>
+              <button
+                type="button"
+                className="btn btn-xs btn-ghost btn-error"
+                onClick={() => openDeleteDialog(row)}
+              >
+                <TrashIcon className="size-3.5" />
+                {t("dashTables.delete")}
+              </button>
+            </div>
+          )
+        }
+      />
 
       <BatchActionBar
         count={selectedIds.size}
@@ -504,7 +576,9 @@ function RouteComponent() {
                 className="input input-bordered w-full"
                 value={createForm.name}
                 onChange={(e) =>
-                  updateCreateForm((d) => { d.name = e.target.value; })
+                  updateCreateForm((d) => {
+                    d.name = e.target.value;
+                  })
                 }
                 placeholder={t("dashTables.namePlaceholder")}
                 maxLength={50}

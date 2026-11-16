@@ -1,5 +1,5 @@
 import { atom, useAtom } from "jotai";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   type SeatUpdatedSubscription,
   useSeatUpdatedSubscription,

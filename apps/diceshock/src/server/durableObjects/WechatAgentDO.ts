@@ -10,6 +10,7 @@
  */
 import { DurableObject } from "cloudflare:workers";
 import db, { wechatConversationsTable } from "@lib/db";
+import { createReference } from "../apis/referenceCreate";
 import {
   type AgentEnv,
   type AgentLoopParams,
@@ -17,18 +18,14 @@ import {
   searchKnowledgeBase,
 } from "../apis/wechat/agentLoop";
 import { getRecentHistoryRaw } from "../apis/wechat/conversationContext";
-import { createReference } from "../apis/referenceCreate";
 import { addMemory, searchMemory } from "../apis/wechat/memory";
-import { dispatchMessages, parseAgentOutput } from "../apis/wechat/messagePipeline";
+import {
+  dispatchMessages,
+  parseAgentOutput,
+} from "../apis/wechat/messagePipeline";
 import { sendCustomerTextMessage } from "../apis/wechat/wechatApi";
 
 const ACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
-
-interface TaskState {
-  openId: string;
-  userMessage: string;
-  generation: number; // increments on each new message, used to detect stale completions
-}
 
 export class WechatAgentDO extends DurableObject<Cloudflare.Env> {
   private currentGeneration = 0;
@@ -41,7 +38,9 @@ export class WechatAgentDO extends DurableObject<Cloudflare.Env> {
    * RPC-style: pass openId + message content.
    */
   async submitMessage(openId: string, userMessage: string): Promise<void> {
-    console.log(`[WechatAgentDO:${openId.slice(-6)}] submitMessage gen=${this.currentGeneration + 1}`);
+    console.log(
+      `[WechatAgentDO:${openId.slice(-6)}] submitMessage gen=${this.currentGeneration + 1}`,
+    );
     this.lastActivityAt = Date.now();
     this.currentGeneration++;
     const gen = this.currentGeneration;
@@ -58,7 +57,10 @@ export class WechatAgentDO extends DurableObject<Cloudflare.Env> {
     // Start processing in background — catch to surface errors in logs
     this.ctx.waitUntil(
       this.processTask(openId, userMessage, gen).catch((e) => {
-        console.error(`[WechatAgentDO:${openId.slice(-6)}] uncaught in processTask`, e);
+        console.error(
+          `[WechatAgentDO:${openId.slice(-6)}] uncaught in processTask`,
+          e,
+        );
       }),
     );
   }
@@ -83,10 +85,14 @@ export class WechatAgentDO extends DurableObject<Cloudflare.Env> {
     userMessage: string,
     generation: number,
   ): Promise<void> {
-    console.log(`[WechatAgentDO:${openId.slice(-6)}] processTask gen=${generation}`);
+    console.log(
+      `[WechatAgentDO:${openId.slice(-6)}] processTask gen=${generation}`,
+    );
     if (this.processing) {
       // Previous task should have been aborted above; guard against races
-      console.log("[WechatAgentDO] overlapping task detected, waiting for abort...");
+      console.log(
+        "[WechatAgentDO] overlapping task detected, waiting for abort...",
+      );
       // Small yield to let the abort propagate
       await scheduler.wait(50);
     }
@@ -116,17 +122,12 @@ export class WechatAgentDO extends DurableObject<Cloudflare.Env> {
       };
 
       // Run agent loop with progress pushes
-      const result = await runAgentLoop(
-        env,
-        params,
-        abort.signal,
-        (status) => {
-          // Fire-and-forget progress push
-          if (!this.isStale(generation)) {
-            sendCustomerTextMessage(env, openId, status).catch(() => {});
-          }
-        },
-      );
+      const result = await runAgentLoop(env, params, abort.signal, (status) => {
+        // Fire-and-forget progress push
+        if (!this.isStale(generation)) {
+          sendCustomerTextMessage(env, openId, status).catch(() => {});
+        }
+      });
 
       if (this.isStale(generation)) return;
 
@@ -152,7 +153,9 @@ export class WechatAgentDO extends DurableObject<Cloudflare.Env> {
             references: result.collectedReferences,
           });
           messages.push({ type: "text", content: `📖 查看引用原文: ${url}` });
-        } catch (e) { console.error("[WechatAgentDO] createReference error", e); }
+        } catch (e) {
+          console.error("[WechatAgentDO] createReference error", e);
+        }
       }
 
       if (this.isStale(generation)) return;
@@ -161,7 +164,12 @@ export class WechatAgentDO extends DurableObject<Cloudflare.Env> {
       await dispatchMessages(env, openId, messages);
 
       // Only persist after successful dispatch
-      await this.persistConversation(env.DB, openId, userMessage, result.rawOutput);
+      await this.persistConversation(
+        env.DB,
+        openId,
+        userMessage,
+        result.rawOutput,
+      );
 
       // Memory (fire-and-forget)
       addMemory(env, openId, [
@@ -178,7 +186,9 @@ export class WechatAgentDO extends DurableObject<Cloudflare.Env> {
       console.error(`[WechatAgentDO:${openId.slice(-6)}] error`, e);
       try {
         await sendCustomerTextMessage(env, openId, "处理失败，请稍后重试。");
-      } catch (e) { console.error("[WechatAgentDO] sendCustomerTextMessage error", e); }
+      } catch (e) {
+        console.error("[WechatAgentDO] sendCustomerTextMessage error", e);
+      }
     } finally {
       if (this.currentGeneration === generation) {
         this.processing = false;
@@ -200,8 +210,20 @@ export class WechatAgentDO extends DurableObject<Cloudflare.Env> {
     const d = db(d1);
     const now = Date.now();
     await d.insert(wechatConversationsTable).values([
-      { open_id: openId, role: "user", content: userMessage, metadata: null, created_at: now },
-      { open_id: openId, role: "assistant", content: assistantOutput, metadata: null, created_at: now + 1 },
+      {
+        open_id: openId,
+        role: "user",
+        content: userMessage,
+        metadata: null,
+        created_at: now,
+      },
+      {
+        open_id: openId,
+        role: "assistant",
+        content: assistantOutput,
+        metadata: null,
+        created_at: now + 1,
+      },
     ]);
   }
 }

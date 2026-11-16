@@ -140,7 +140,7 @@ export default function ToolResultRenderer({
   }
 
   const { toolName, result } = toolInvocation;
-  const args = (toolInvocation as { args?: unknown }).args;
+  const _args = (toolInvocation as { args?: unknown }).args;
 
   switch (toolName) {
     case "format_search_query":

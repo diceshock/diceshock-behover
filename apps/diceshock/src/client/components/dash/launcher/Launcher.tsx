@@ -5,17 +5,10 @@ import {
   TrashIcon,
   XIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import { useNavigate, useLocation } from "@tanstack/react-router";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import clsx from "clsx";
 import Fuse from "fuse.js";
 import { useAtomValue, useSetAtom } from "jotai";
-import {
-  useDashSearchHistoryQuery,
-  useSaveDashSearchHistoryMutation,
-  useClearDashSearchHistoryMutation,
-  useDashGlobalSearchLazyQuery,
-  DashSearchHistoryDocument,
-} from "@/client/graphql/__generated__/operations";
 import {
   type KeyboardEvent,
   useCallback,
@@ -24,6 +17,13 @@ import {
   useRef,
   useState,
 } from "react";
+import {
+  DashSearchHistoryDocument,
+  useClearDashSearchHistoryMutation,
+  useDashGlobalSearchLazyQuery,
+  useDashSearchHistoryQuery,
+  useSaveDashSearchHistoryMutation,
+} from "@/client/graphql/__generated__/operations";
 import {
   launcherAddFilterAtom,
   launcherAtom,
@@ -39,13 +39,13 @@ import {
   type FieldDef,
   type FilterOperator,
   type FilterValue,
-  type SearchHistoryEntry,
-  type SearchResultItem,
-  OPERATOR_LABELS,
   filtersEqual,
   filtersToSearchParams,
   formatFilterChipLabel,
   getFieldOperators,
+  OPERATOR_LABELS,
+  type SearchHistoryEntry,
+  type SearchResultItem,
   searchParamsToFilters,
 } from "./types";
 
@@ -53,7 +53,16 @@ import {
 
 export function Launcher() {
   const state = useAtomValue(launcherAtom);
-  const { open, mode, query, categoryId, filters, focusIndex, results, origin } = state;
+  const {
+    open,
+    mode,
+    query,
+    categoryId,
+    filters,
+    focusIndex,
+    results,
+    origin,
+  } = state;
   const update = useSetAtom(launcherUpdateAtom);
   const addFilter = useSetAtom(launcherAddFilterAtom);
   const removeFilter = useSetAtom(launcherRemoveFilterAtom);
@@ -61,16 +70,28 @@ export function Launcher() {
   const exitToSearch = useSetAtom(launcherExitToSearchAtom);
   const reset = useSetAtom(launcherResetAtom);
   // ── Remote search history ──
-  const { data: historyData } = useDashSearchHistoryQuery({ fetchPolicy: "cache-and-network" });
-  const searchHistory: SearchHistoryEntry[] = useMemo(() =>
-    (historyData?.dashSearchHistory ?? []).map((h: { id: string; label: string; categoryId: string; route: string; params: string; createdAt: string }) => ({
-      id: h.id,
-      label: h.label,
-      categoryId: h.categoryId,
-      route: h.route,
-      params: JSON.parse(h.params) as Record<string, string>,
-      timestamp: h.createdAt,
-    })),
+  const { data: historyData } = useDashSearchHistoryQuery({
+    fetchPolicy: "cache-and-network",
+  });
+  const searchHistory: SearchHistoryEntry[] = useMemo(
+    () =>
+      (historyData?.dashSearchHistory ?? []).map(
+        (h: {
+          id: string;
+          label: string;
+          categoryId: string;
+          route: string;
+          params: string;
+          createdAt: string;
+        }) => ({
+          id: h.id,
+          label: h.label,
+          categoryId: h.categoryId,
+          route: h.route,
+          params: JSON.parse(h.params) as Record<string, string>,
+          timestamp: h.createdAt,
+        }),
+      ),
     [historyData],
   );
   const [saveHistory] = useSaveDashSearchHistoryMutation({
@@ -79,12 +100,38 @@ export function Launcher() {
   const [clearHistoryMutation] = useClearDashSearchHistoryMutation({
     refetchQueries: [{ query: DashSearchHistoryDocument }],
   });
-  const clearHistory = useCallback(() => { clearHistoryMutation(); }, [clearHistoryMutation]);
+  const clearHistory = useCallback(() => {
+    clearHistoryMutation();
+  }, [clearHistoryMutation]);
 
-  const setQuery = useCallback((q: string) => update((d) => { d.query = q; }), [update]);
-  const setCategoryId = useCallback((id: string | null) => update((d) => { d.categoryId = id; }), [update]);
-  const setFocusIndex = useCallback((i: number) => update((d) => { d.focusIndex = i; }), [update]);
-  const setMode = useCallback((m: typeof mode) => update((d) => { d.mode = m; }), [update]);
+  const setQuery = useCallback(
+    (q: string) =>
+      update((d) => {
+        d.query = q;
+      }),
+    [update],
+  );
+  const setCategoryId = useCallback(
+    (id: string | null) =>
+      update((d) => {
+        d.categoryId = id;
+      }),
+    [update],
+  );
+  const setFocusIndex = useCallback(
+    (i: number) =>
+      update((d) => {
+        d.focusIndex = i;
+      }),
+    [update],
+  );
+  const setMode = useCallback(
+    (m: typeof mode) =>
+      update((d) => {
+        d.mode = m;
+      }),
+    [update],
+  );
 
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -104,8 +151,10 @@ export function Launcher() {
   }, [open]);
 
   // ── Global live search (debounced) ──
-  const [execGlobalSearch, { data: globalSearchData, loading: globalSearchLoading }] =
-    useDashGlobalSearchLazyQuery({ fetchPolicy: "cache-and-network" });
+  const [
+    execGlobalSearch,
+    { data: globalSearchData, loading: globalSearchLoading },
+  ] = useDashGlobalSearchLazyQuery({ fetchPolicy: "cache-and-network" });
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -114,7 +163,9 @@ export function Launcher() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       const categories = categoryId ? [categoryId] : undefined;
-      execGlobalSearch({ variables: { query: query.trim(), categories, limit: 15 } });
+      execGlobalSearch({
+        variables: { query: query.trim(), categories, limit: 15 },
+      });
     }, 200);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -124,7 +175,9 @@ export function Launcher() {
   // Flatten server results for Fuse.js re-ranking
   const globalResults = useMemo(() => {
     if (!globalSearchData?.dashGlobalSearch) return [];
-    return globalSearchData.dashGlobalSearch.flatMap((g: { items: SearchResultItem[] }) => g.items);
+    return globalSearchData.dashGlobalSearch.flatMap(
+      (g: { items: SearchResultItem[] }) => g.items,
+    );
   }, [globalSearchData]);
 
   // Re-focus input on mode change
@@ -144,11 +197,17 @@ export function Launcher() {
         if (origin === "header") {
           // Opened from table header: always close entirely
           reset();
-        } else if (mode.type === "sort-field-select" || mode.type === "group-field-select") {
+        } else if (
+          mode.type === "sort-field-select" ||
+          mode.type === "group-field-select"
+        ) {
           setMode({ type: "field-select" });
           setQuery("");
           setFocusIndex(0);
-        } else if (mode.type === "operator-select" || mode.type === "value-input") {
+        } else if (
+          mode.type === "operator-select" ||
+          mode.type === "value-input"
+        ) {
           exitToSearch();
         } else if (mode.type === "field-select") {
           exitToSearch();
@@ -156,7 +215,9 @@ export function Launcher() {
           // search mode: clear query/filters first, then close
           if (query || filters.length > 0) {
             setQuery("");
-            update((d) => { d.filters = []; });
+            update((d) => {
+              d.filters = [];
+            });
             setFocusIndex(0);
           } else {
             reset();
@@ -166,7 +227,19 @@ export function Launcher() {
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [open, mode, origin, query, filters, reset, exitToSearch, setQuery, setMode, setFocusIndex, update]);
+  }, [
+    open,
+    mode,
+    origin,
+    query,
+    filters,
+    reset,
+    exitToSearch,
+    setQuery,
+    setMode,
+    setFocusIndex,
+    update,
+  ]);
 
   // Build menu items based on current mode
   const menuItems = useMemo((): MenuItemData[] => {
@@ -324,7 +397,12 @@ export function Launcher() {
         c.label.toLowerCase().includes(query.toLowerCase()),
       );
       for (const c of matchedCats) {
-        items.push({ id: `cat:${c.id}`, label: c.label, icon: c.icon, category: c });
+        items.push({
+          id: `cat:${c.id}`,
+          label: c.label,
+          icon: c.icon,
+          category: c,
+        });
       }
     }
 
@@ -349,7 +427,9 @@ export function Launcher() {
           id: `result:${r.id}`,
           label: r.title,
           subtitle: r.subtitle ?? undefined,
-          detail: r.detail ? (JSON.parse(r.detail) as Record<string, string | number | null>) : undefined,
+          detail: r.detail
+            ? (JSON.parse(r.detail) as Record<string, string | number | null>)
+            : undefined,
           href: r.href,
           avatar: r.avatar ?? undefined,
           resultType: r.category,
@@ -358,7 +438,16 @@ export function Launcher() {
     }
 
     return items;
-  }, [mode, activeCategory, categoryId, query, results, filters, searchHistory, globalResults]);
+  }, [
+    mode,
+    activeCategory,
+    categoryId,
+    query,
+    results,
+    filters,
+    searchHistory,
+    globalResults,
+  ]);
 
   // Clamp focus
   useEffect(() => {
@@ -368,166 +457,188 @@ export function Launcher() {
   }, [menuItems.length, focusIndex, setFocusIndex]);
 
   // Handle Enter / item selection
-  const handleSubmit = useCallback((indexOverride?: number) => {
-    const idx = indexOverride ?? focusIndex;
-    const item = menuItems[idx];
+  const handleSubmit = useCallback(
+    (indexOverride?: number) => {
+      const idx = indexOverride ?? focusIndex;
+      const item = menuItems[idx];
 
-    // ── Value-input mode
-    if (mode.type === "value-input") {
-      if (item && "enumValue" in item && item.enumValue) {
-        addFilter({ key: mode.field.key, operator: mode.operator, value: item.enumValue });
-      } else if (query) {
-        addFilter({ key: mode.field.key, operator: mode.operator, value: query });
+      // ── Value-input mode
+      if (mode.type === "value-input") {
+        if (item && "enumValue" in item && item.enumValue) {
+          addFilter({
+            key: mode.field.key,
+            operator: mode.operator,
+            value: item.enumValue,
+          });
+        } else if (query) {
+          addFilter({
+            key: mode.field.key,
+            operator: mode.operator,
+            value: query,
+          });
+        }
+        return;
       }
-      return;
-    }
 
-    if (!item) return;
+      if (!item) return;
 
-    // ── Field selection
-    if ("fieldDef" in item && item.fieldDef) {
-      const def = item.fieldDef;
-      // Boolean fields: skip operator, go directly
-      if (def.type === "boolean") {
-        setMode({ type: "value-input", field: def, operator: "eq" });
+      // ── Field selection
+      if ("fieldDef" in item && item.fieldDef) {
+        const def = item.fieldDef;
+        // Boolean fields: skip operator, go directly
+        if (def.type === "boolean") {
+          setMode({ type: "value-input", field: def, operator: "eq" });
+          setQuery("");
+          setFocusIndex(0);
+          return;
+        }
+        setMode({ type: "operator-select", field: def });
         setQuery("");
         setFocusIndex(0);
         return;
       }
-      setMode({ type: "operator-select", field: def });
-      setQuery("");
-      setFocusIndex(0);
-      return;
-    }
 
-    // ── Sort meta-item: switch to sort-field-select
-    if ("isSortMeta" in item && item.isSortMeta) {
-      setMode({ type: "sort-field-select" });
-      setQuery("");
-      setFocusIndex(0);
-      return;
-    }
-
-    // ── Group meta-item: switch to group-field-select
-    if ("isGroupMeta" in item && item.isGroupMeta) {
-      setMode({ type: "group-field-select" });
-      setQuery("");
-      setFocusIndex(0);
-      return;
-    }
-
-    // ── Sort field selection: apply sort_asc immediately
-    if ("sortFieldKey" in item && item.sortFieldKey) {
-      addFilter({ key: item.sortFieldKey, operator: "sort_asc", value: "" });
-      return;
-    }
-
-    // ── Group field selection: apply group filter
-    if ("groupFieldKey" in item && item.groupFieldKey) {
-      addFilter({ key: "__group", operator: "eq", value: item.groupFieldKey });
-      return;
-    }
-
-    // ── Operator selection
-    if ("operator" in item && item.operator) {
-      const field = mode.type === "operator-select" ? mode.field : null;
-      if (!field) return;
-      const op = item.operator;
-      // Sort operators apply immediately
-      if (op === "sort_asc" || op === "sort_desc") {
-        addFilter({ key: field.key, operator: op, value: "" });
+      // ── Sort meta-item: switch to sort-field-select
+      if ("isSortMeta" in item && item.isSortMeta) {
+        setMode({ type: "sort-field-select" });
+        setQuery("");
+        setFocusIndex(0);
         return;
       }
-      // Enum eq: go to value with options
-      setMode({ type: "value-input", field, operator: op });
-      setQuery("");
-      setFocusIndex(0);
-      return;
-    }
 
-    // ── Category selection
-    if ("category" in item && item.category) {
-      setCategoryId(item.category.id);
-      setQuery("");
-      setFocusIndex(0);
-      return;
-    }
-
-    // ── History entry
-    if ("historyEntry" in item && item.historyEntry) {
-      const h = item.historyEntry;
-      navigate({ to: h.route, search: h.params });
-      reset();
-      return;
-    }
-
-    // ── Navigate item (apply filters)
-    if ("isNavigate" in item && item.isNavigate && activeCategory) {
-      const searchParams = filtersToSearchParams(filters, query);
-      const currentParams: Record<string, string> = {};
-      const searchObj = location.search;
-      if (searchObj && typeof searchObj === "object") {
-        for (const [k, v] of Object.entries(searchObj)) {
-          if (v != null) currentParams[k] = String(v);
-        }
+      // ── Group meta-item: switch to group-field-select
+      if ("isGroupMeta" in item && item.isGroupMeta) {
+        setMode({ type: "group-field-select" });
+        setQuery("");
+        setFocusIndex(0);
+        return;
       }
 
-      const currentState = searchParamsToFilters(currentParams, activeCategory);
-      const nextState = { filters, query };
+      // ── Sort field selection: apply sort_asc immediately
+      if ("sortFieldKey" in item && item.sortFieldKey) {
+        addFilter({ key: item.sortFieldKey, operator: "sort_asc", value: "" });
+        return;
+      }
 
-      if (!filtersEqual(currentState, nextState)) {
-        navigate({ to: activeCategory.route, search: searchParams as never });
-        // Save to history (remote)
+      // ── Group field selection: apply group filter
+      if ("groupFieldKey" in item && item.groupFieldKey) {
+        addFilter({
+          key: "__group",
+          operator: "eq",
+          value: item.groupFieldKey,
+        });
+        return;
+      }
+
+      // ── Operator selection
+      if ("operator" in item && item.operator) {
+        const field = mode.type === "operator-select" ? mode.field : null;
+        if (!field) return;
+        const op = item.operator;
+        // Sort operators apply immediately
+        if (op === "sort_asc" || op === "sort_desc") {
+          addFilter({ key: field.key, operator: op, value: "" });
+          return;
+        }
+        // Enum eq: go to value with options
+        setMode({ type: "value-input", field, operator: op });
+        setQuery("");
+        setFocusIndex(0);
+        return;
+      }
+
+      // ── Category selection
+      if ("category" in item && item.category) {
+        setCategoryId(item.category.id);
+        setQuery("");
+        setFocusIndex(0);
+        return;
+      }
+
+      // ── History entry
+      if ("historyEntry" in item && item.historyEntry) {
+        const h = item.historyEntry;
+        navigate({ to: h.route, search: h.params });
+        reset();
+        return;
+      }
+
+      // ── Navigate item (apply filters)
+      if ("isNavigate" in item && item.isNavigate && activeCategory) {
+        const searchParams = filtersToSearchParams(filters, query);
+        const currentParams: Record<string, string> = {};
+        const searchObj = location.search;
+        if (searchObj && typeof searchObj === "object") {
+          for (const [k, v] of Object.entries(searchObj)) {
+            if (v != null) currentParams[k] = String(v);
+          }
+        }
+
+        const currentState = searchParamsToFilters(
+          currentParams,
+          activeCategory,
+        );
+        const nextState = { filters, query };
+
+        if (!filtersEqual(currentState, nextState)) {
+          navigate({ to: activeCategory.route, search: searchParams as never });
+          // Save to history (remote)
+          saveHistory({
+            variables: {
+              input: {
+                label:
+                  buildFilterDescription(filters, query) ||
+                  activeCategory.label,
+                categoryId: activeCategory.id,
+                route: activeCategory.route,
+                params: JSON.stringify(searchParams),
+              },
+            },
+          });
+        }
+        reset();
+        return;
+      }
+
+      // ── Result item
+      if ("href" in item && item.href) {
+        // Save to search history when navigating to a concrete result
+        const resultCategory =
+          ("resultType" in item ? item.resultType : categoryId) || "";
         saveHistory({
           variables: {
             input: {
-              label: buildFilterDescription(filters, query) || activeCategory.label,
-              categoryId: activeCategory.id,
-              route: activeCategory.route,
-              params: JSON.stringify(searchParams),
+              label: item.label,
+              categoryId: resultCategory,
+              route: item.href,
+              params: "{}",
             },
           },
         });
+        navigate({ to: item.href });
+        reset();
+        return;
       }
-      reset();
-      return;
-    }
-
-    // ── Result item
-    if ("href" in item && item.href) {
-      // Save to search history when navigating to a concrete result
-      const resultCategory = ("resultType" in item ? item.resultType : categoryId) || "";
-      saveHistory({
-        variables: {
-          input: {
-            label: item.label,
-            categoryId: resultCategory,
-            route: item.href,
-            params: "{}",
-          },
-        },
-      });
-      navigate({ to: item.href });
-      reset();
-      return;
-    }
-  }, [
-    menuItems,
-    focusIndex,
-    setCategoryId,
-    setQuery,
-    setFocusIndex,
-    addFilter,
-    setMode,
-    mode,
-    query,
-    activeCategory,
-    filters,
-    navigate,
-    reset,
-    location.search,
-    saveHistory,
-  ]);
+    },
+    [
+      menuItems,
+      focusIndex,
+      setCategoryId,
+      setQuery,
+      setFocusIndex,
+      addFilter,
+      setMode,
+      mode,
+      query,
+      activeCategory,
+      filters,
+      navigate,
+      reset,
+      location.search,
+      saveHistory,
+      categoryId,
+    ],
+  );
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "ArrowDown") {
@@ -544,7 +655,10 @@ export function Launcher() {
 
   if (!open) return null;
 
-  const isFieldSelect = mode.type === "field-select" || mode.type === "sort-field-select" || mode.type === "group-field-select";
+  const isFieldSelect =
+    mode.type === "field-select" ||
+    mode.type === "sort-field-select" ||
+    mode.type === "group-field-select";
   const isSubMode =
     mode.type === "operator-select" || mode.type === "value-input";
 
@@ -563,8 +677,10 @@ export function Launcher() {
     if (mode.type === "operator-select") return "选择操作…";
     if (mode.type === "value-input") {
       const f = mode.field;
-      if (f.type === "text" && "placeholder" in f && f.placeholder) return f.placeholder;
-      if (f.type === "number") return `输入数值${f.unit ? ` (${f.unit})` : ""}…`;
+      if (f.type === "text" && "placeholder" in f && f.placeholder)
+        return f.placeholder;
+      if (f.type === "number")
+        return `输入数值${f.unit ? ` (${f.unit})` : ""}…`;
       if (f.type === "date") {
         if (mode.operator === "range") return "选择日期区间…";
         return "输入日期 (YYYY-MM-DD)…";
@@ -576,8 +692,7 @@ export function Launcher() {
 
   // Whether to show the date picker
   const showDatePicker =
-    mode.type === "value-input" &&
-    mode.field.type === "date";
+    mode.type === "value-input" && mode.field.type === "date";
 
   return (
     <div
@@ -588,7 +703,10 @@ export function Launcher() {
       }}
     >
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onMouseDown={reset} />
+      <div
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+        onMouseDown={reset}
+      />
 
       {/* Dialog */}
       <div
@@ -605,7 +723,9 @@ export function Launcher() {
           <div className="flex flex-wrap gap-1.5 px-3 pt-3 pb-1">
             {activeCategory && (
               <span className="inline-flex items-center gap-1 h-5 pl-2 pr-1 rounded bg-accent/15 text-accent text-[11px] font-semibold">
-                <span className="truncate max-w-24">{activeCategory.label}</span>
+                <span className="truncate max-w-24">
+                  {activeCategory.label}
+                </span>
                 <button
                   type="button"
                   onClick={(e) => {
@@ -631,7 +751,9 @@ export function Launcher() {
                 onRemove={() => removeFilter(f.key)}
                 onEdit={() => {
                   if (!activeCategory) return;
-                  const def = activeCategory.fields.find((d) => d.key === f.key);
+                  const def = activeCategory.fields.find(
+                    (d) => d.key === f.key,
+                  );
                   if (!def) return;
                   setMode({ type: "operator-select", field: def });
                   setQuery("");
@@ -659,7 +781,11 @@ export function Launcher() {
               mode.type === "operator-select" && "pointer-events-none",
             )}
             placeholder={placeholder}
-            value={mode.type === "operator-select" ? menuItems[focusIndex]?.label ?? "" : query}
+            value={
+              mode.type === "operator-select"
+                ? (menuItems[focusIndex]?.label ?? "")
+                : query
+            }
             onChange={(e) => {
               if (mode.type !== "operator-select") {
                 setQuery(e.target.value);
@@ -679,7 +805,9 @@ export function Launcher() {
                 } else if (query || filters.length > 0) {
                   // Clear query and filters → return to history view
                   setQuery("");
-                  update((d) => { d.filters = []; });
+                  update((d) => {
+                    d.filters = [];
+                  });
                   setFocusIndex(0);
                 } else {
                   // Clean state: enter field-select
@@ -688,14 +816,16 @@ export function Launcher() {
               }}
               className="btn btn-ghost btn-xs btn-square"
               title={
-                isFieldSelect ? "返回搜索 (Esc)"
-                : (query || filters.length > 0) ? "清除 (Esc)"
-                : "筛选器"
+                isFieldSelect
+                  ? "返回搜索 (Esc)"
+                  : query || filters.length > 0
+                    ? "清除 (Esc)"
+                    : "筛选器"
               }
             >
               {isFieldSelect ? (
                 <XIcon className="size-3.5" />
-              ) : (query || filters.length > 0) ? (
+              ) : query || filters.length > 0 ? (
                 <XIcon className="size-3.5" />
               ) : (
                 <FunnelIcon className="size-3.5" />
@@ -727,7 +857,11 @@ export function Launcher() {
               field={mode.field}
               operator={mode.operator}
               onConfirm={(value) => {
-                addFilter({ key: mode.field.key, operator: mode.operator, value });
+                addFilter({
+                  key: mode.field.key,
+                  operator: mode.operator,
+                  value,
+                });
               }}
             />
           ) : (
@@ -745,15 +879,21 @@ export function Launcher() {
                 />
               ))}
               {/* Empty states */}
-              {menuItems.length === 0 && mode.type === "search" && !query && filters.length === 0 && (
-                <div className="px-4 py-8 text-center">
-                  <ClockCounterClockwiseIcon className="size-8 mx-auto text-base-content/20 mb-2" />
-                  <p className="text-xs text-base-content/40">暂无搜索历史</p>
-                  <p className="text-[10px] text-base-content/30 mt-1">
-                    按 <kbd className="kbd kbd-xs">⌘/Ctrl</kbd><span className="mx-0.5">+</span><kbd className="kbd kbd-xs">K</kbd> 然后输入搜索, 或点击漏斗图标筛选
-                  </p>
-                </div>
-              )}
+              {menuItems.length === 0 &&
+                mode.type === "search" &&
+                !query &&
+                filters.length === 0 && (
+                  <div className="px-4 py-8 text-center">
+                    <ClockCounterClockwiseIcon className="size-8 mx-auto text-base-content/20 mb-2" />
+                    <p className="text-xs text-base-content/40">暂无搜索历史</p>
+                    <p className="text-[10px] text-base-content/30 mt-1">
+                      按 <kbd className="kbd kbd-xs">⌘/Ctrl</kbd>
+                      <span className="mx-0.5">+</span>
+                      <kbd className="kbd kbd-xs">K</kbd> 然后输入搜索,
+                      或点击漏斗图标筛选
+                    </p>
+                  </div>
+                )}
               {menuItems.length === 0 && query && !globalSearchLoading && (
                 <div className="px-4 py-6 text-center text-xs text-base-content/40">
                   无结果
@@ -767,18 +907,21 @@ export function Launcher() {
             </>
           )}
           {/* Clear history button — shown whenever history entries are displayed */}
-          {mode.type === "search" && !query && filters.length === 0 && searchHistory.length > 0 && (
-            <div className="border-t border-base-300/30 px-3 py-2">
-              <button
-                type="button"
-                onClick={clearHistory}
-                className="flex items-center gap-1.5 text-[11px] text-base-content/40 hover:text-error transition-colors"
-              >
-                <TrashIcon className="size-3" />
-                清除搜索历史
-              </button>
-            </div>
-          )}
+          {mode.type === "search" &&
+            !query &&
+            filters.length === 0 &&
+            searchHistory.length > 0 && (
+              <div className="border-t border-base-300/30 px-3 py-2">
+                <button
+                  type="button"
+                  onClick={clearHistory}
+                  className="flex items-center gap-1.5 text-[11px] text-base-content/40 hover:text-error transition-colors"
+                >
+                  <TrashIcon className="size-3" />
+                  清除搜索历史
+                </button>
+              </div>
+            )}
         </div>
       </div>
     </div>
@@ -946,7 +1089,11 @@ function DatePickPanel({
       ) : (
         <label className="flex flex-col gap-1">
           <span className="text-[11px] text-base-content/50">
-            {operator === "gte" ? "起始日期" : operator === "lte" ? "截止日期" : "日期"}
+            {operator === "gte"
+              ? "起始日期"
+              : operator === "lte"
+                ? "截止日期"
+                : "日期"}
           </span>
           <input
             type={inputType}

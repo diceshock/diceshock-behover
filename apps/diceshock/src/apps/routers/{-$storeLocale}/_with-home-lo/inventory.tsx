@@ -1,4 +1,3 @@
-import { useQuery } from "@apollo/client";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import GameCountAnimation from "@/client/components/diceshock/GameCountAnimation";

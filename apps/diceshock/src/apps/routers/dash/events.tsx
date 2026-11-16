@@ -7,9 +7,9 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
-import { useCallback, useMemo, useRef, useState } from "react";
 import { useSetAtom } from "jotai";
-import { DataTable } from "@/client/components/dash/DataTable"
+import { useCallback, useMemo, useRef, useState } from "react";
+import { DataTable } from "@/client/components/dash/DataTable";
 import { IdCell } from "@/client/components/dash/IdCell";
 import { launcherOpenForFieldAtom } from "@/client/components/dash/launcher/atoms";
 import { getCategoryById } from "@/client/components/dash/launcher/categories";
@@ -33,9 +33,69 @@ import {
   useRouteFilters,
 } from "@/client/hooks/useRouteFilters";
 import { useTranslation } from "@/client/hooks/useTranslation";
+import type { ParsedSearch } from "@/client/lib/searchParser";
 import dayjs from "@/shared/utils/dayjs-config";
 
-const BATCH_SIZE = 100
+const BATCH_SIZE = 100;
+
+const FILTER_PAGE_SIZE = 20;
+
+/** Build a GQL EventFilterInput from parsed search bar input. Exported for unit tests. */
+export function buildFilter(
+  parsed: ParsedSearch,
+  page: number,
+  sorting: SortingState,
+): EventFilterInput {
+  const toArray = (v: unknown): string[] | undefined => {
+    if (typeof v === "string") return [v.toUpperCase()];
+    if (Array.isArray(v)) return (v as string[]).map((s) => s.toUpperCase());
+    return undefined;
+  };
+
+  const input: EventFilterInput = {};
+
+  // Combine freeText + type into search
+  const searchParts: string[] = [];
+  if (parsed.freeText) searchParts.push(parsed.freeText);
+  if (parsed.filters.type && typeof parsed.filters.type.value === "string")
+    searchParts.push(parsed.filters.type.value);
+  if (searchParts.length > 0) input.search = searchParts.join(" ");
+
+  if (parsed.filters.status)
+    input.status = toArray(parsed.filters.status.value);
+  if (parsed.filters.store)
+    input.store =
+      typeof parsed.filters.store.value === "string"
+        ? parsed.filters.store.value
+        : undefined;
+
+  // Date filters
+  const dateVal = parsed.filters.date;
+  if (dateVal) {
+    if (dateVal.operator === "eq" && typeof dateVal.value === "string") {
+      input.dateFrom = dateVal.value;
+      input.dateTo = dateVal.value;
+    } else if (dateVal.operator === "range" && Array.isArray(dateVal.value)) {
+      input.dateFrom = dateVal.value[0];
+      input.dateTo = dateVal.value[1];
+    } else if (dateVal.operator === "gt" && typeof dateVal.value === "string") {
+      input.dateFrom = dateVal.value;
+    } else if (dateVal.operator === "lt" && typeof dateVal.value === "string") {
+      input.dateTo = dateVal.value;
+    }
+  }
+
+  if (sorting.length > 0) {
+    input.sortBy = sorting[0].id;
+    input.sortOrder = sorting[0].desc ? SortOrder.Desc : SortOrder.Asc;
+  }
+
+  input.pagination = {
+    offset: (page - 1) * FILTER_PAGE_SIZE,
+    limit: FILTER_PAGE_SIZE,
+  };
+  return input;
+}
 
 /** Extracted from generated query (codegen owns the shape). */
 type EventsList = NonNullable<
@@ -59,12 +119,15 @@ function RouteComponent() {
   const openForField = useSetAtom(launcherOpenForFieldAtom);
   const eventsCategory = getCategoryById("events");
 
-  const handleColumnFilter = useCallback((columnId: string) => {
-    if (!eventsCategory) return;
-    const field = eventsCategory.fields.find((f) => f.key === columnId);
-    if (!field) return;
-    openForField({ field, filters, query, categoryId: "events" });
-  }, [eventsCategory, openForField, filters, query]);
+  const handleColumnFilter = useCallback(
+    (columnId: string) => {
+      if (!eventsCategory) return;
+      const field = eventsCategory.fields.find((f) => f.key === columnId);
+      if (!field) return;
+      openForField({ field, filters, query, categoryId: "events" });
+    },
+    [eventsCategory, openForField, filters, query],
+  );
 
   const gqlVars = useMemo(
     () => filtersToGqlVariables(filters, query),
@@ -213,7 +276,9 @@ function RouteComponent() {
       }
     }
     if (failCount === 0) {
-      msg.success(`${successCount} 条活动已${autoPublish ? "发布" : "创建草稿"}`);
+      msg.success(
+        `${successCount} 条活动已${autoPublish ? "发布" : "创建草稿"}`,
+      );
     } else {
       msg.error(`成功 ${successCount} 条，失败 ${failCount} 条`);
     }
@@ -221,7 +286,7 @@ function RouteComponent() {
     batchPublishDialogRef.current?.close();
   };
 
-  const handleCreate = async () => {
+  const _handleCreate = async () => {
     try {
       await createEventMutation({
         variables: {
@@ -390,110 +455,109 @@ function RouteComponent() {
 
   return (
     <main className="flex-1 min-h-0 flex flex-col">
-      <DataTable columns={columns}
-      data={events}
-      loading={loading}
-      emptyMessage={t("dashEvents.noData")}
-      hasMore={hasMore}
-      onLoadMore={loadMore}
-      sorting={sorting}
-      onSortingChange={setSorting}
-      sortableColumns={["title", "isPublished", "createdAt"]}
-      filterableColumns={["title", "status", "store", "date", "start_date"]}
-      onColumnFilter={handleColumnFilter}
-      enableRowSelection
-      selectedRows={selectedIds}
-      onSelectedRowsChange={setSelectedIds}
-      getRowId={(row) => row.id}
-      renderActions={(row) =>
-        isMobile ? (
-          <div className="dropdown dropdown-end">
-            <div
-              tabIndex={0}
-              role="button"
-              className="btn btn-xs btn-ghost btn-square"
-            >
-              <DotsThreeVerticalIcon className="size-4" weight="bold" />
+      <DataTable
+        columns={columns}
+        data={events}
+        loading={loading}
+        emptyMessage={t("dashEvents.noData")}
+        hasMore={hasMore}
+        onLoadMore={loadMore}
+        sorting={sorting}
+        onSortingChange={setSorting}
+        sortableColumns={["title", "isPublished", "createdAt"]}
+        filterableColumns={["title", "status", "store", "date", "start_date"]}
+        onColumnFilter={handleColumnFilter}
+        enableRowSelection
+        selectedRows={selectedIds}
+        onSelectedRowsChange={setSelectedIds}
+        getRowId={(row) => row.id}
+        renderActions={(row) =>
+          isMobile ? (
+            <div className="dropdown dropdown-end">
+              <div
+                tabIndex={0}
+                role="button"
+                className="btn btn-xs btn-ghost btn-square"
+              >
+                <DotsThreeVerticalIcon className="size-4" weight="bold" />
+              </div>
+              <ul
+                tabIndex={0}
+                className="dropdown-content menu bg-base-200 rounded-box z-50 w-36 p-2 shadow-lg"
+              >
+                <li>
+                  <Link to="/dash/events/$id" params={{ id: row.id }}>
+                    <EyeIcon className="size-4" />
+                    {t("dashEvents.details")}
+                  </Link>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => handleTogglePublish(row)}
+                  >
+                    {row.isPublished
+                      ? t("dashEvents.unpublish")
+                      : t("dashEvents.publish")}
+                  </button>
+                </li>
+                <li>
+                  <button type="button" onClick={() => openPublishDialog(row)}>
+                    <PaperPlaneTiltIcon className="size-4" />
+                    发布微信
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    className="text-error"
+                    onClick={() => openDeleteDialog(row)}
+                  >
+                    <TrashIcon className="size-4" />
+                    {t("dashEvents.delete")}
+                  </button>
+                </li>
+              </ul>
             </div>
-            <ul
-              tabIndex={0}
-              className="dropdown-content menu bg-base-200 rounded-box z-50 w-36 p-2 shadow-lg"
-            >
-              <li>
-                <Link to="/dash/events/$id" params={{ id: row.id }}>
-                  <EyeIcon className="size-4" />
-                  {t("dashEvents.details")}
-                </Link>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => handleTogglePublish(row)}
-                >
-                  {row.isPublished
-                    ? t("dashEvents.unpublish")
-                    : t("dashEvents.publish")}
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => openPublishDialog(row)}
-                >
-                  <PaperPlaneTiltIcon className="size-4" />
-                  发布微信
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  className="text-error"
-                  onClick={() => openDeleteDialog(row)}
-                >
-                  <TrashIcon className="size-4" />
-                  {t("dashEvents.delete")}
-                </button>
-              </li>
-            </ul>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1">
-            <Link
-              to="/dash/events/$id"
-              params={{ id: row.id }}
-              className="btn btn-xs btn-ghost"
-            >
-              <EyeIcon className="size-4" />
-              {t("dashEvents.details")}
-            </Link>
-            <button
-              type="button"
-              className="btn btn-xs btn-ghost"
-              onClick={() => handleTogglePublish(row)}
-            >
-              {row.isPublished
-                ? t("dashEvents.unpublish")
-                : t("dashEvents.publish")}
-            </button>
-            <button
-              type="button"
-              className="btn btn-xs btn-ghost"
-              onClick={() => openPublishDialog(row)}
-              title="发布到微信"
-            >
-              <PaperPlaneTiltIcon className="size-4" />
-            </button>
-            <button
-              type="button"
-              className="btn btn-xs btn-ghost btn-error"
-              onClick={() => openDeleteDialog(row)}
-            >
-              {t("dashEvents.delete")}
-              <TrashIcon />
-            </button>
-          </div>
-        )
-      } />
+          ) : (
+            <div className="flex items-center gap-1">
+              <Link
+                to="/dash/events/$id"
+                params={{ id: row.id }}
+                className="btn btn-xs btn-ghost"
+              >
+                <EyeIcon className="size-4" />
+                {t("dashEvents.details")}
+              </Link>
+              <button
+                type="button"
+                className="btn btn-xs btn-ghost"
+                onClick={() => handleTogglePublish(row)}
+              >
+                {row.isPublished
+                  ? t("dashEvents.unpublish")
+                  : t("dashEvents.publish")}
+              </button>
+              <button
+                type="button"
+                className="btn btn-xs btn-ghost"
+                onClick={() => openPublishDialog(row)}
+                title="发布到微信"
+              >
+                <PaperPlaneTiltIcon className="size-4" />
+              </button>
+              <button
+                type="button"
+                className="btn btn-xs btn-ghost btn-error"
+                onClick={() => openDeleteDialog(row)}
+              >
+                {t("dashEvents.delete")}
+                <TrashIcon />
+              </button>
+            </div>
+          )
+        }
+      />
 
       <BatchActionBar
         count={selectedIds.size}
@@ -594,7 +658,8 @@ function RouteComponent() {
         <div className="modal-box">
           <h3 className="font-bold text-lg mb-4">批量发布到微信</h3>
           <p className="text-sm text-base-content/70">
-            将选中的 <strong>{selectedIds.size}</strong> 条活动逐一渲染并同步到微信服务号。
+            将选中的 <strong>{selectedIds.size}</strong>{" "}
+            条活动逐一渲染并同步到微信服务号。
           </p>
           <div className="modal-action mt-6">
             <button
