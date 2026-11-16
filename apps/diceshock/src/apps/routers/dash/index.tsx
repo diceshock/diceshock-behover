@@ -20,7 +20,6 @@ import {
 import { useTranslation } from "@/client/hooks/useTranslation";
 import { formatMessage } from "@/shared/i18n";
 
-
 export const Route = createFileRoute("/dash/")({
   component: RouteComponent,
 });
@@ -97,7 +96,6 @@ function RouteComponent() {
           </Link>
 
           <Link
-
             to="/dash/gsz"
             search={{ q: "", page: 1 }}
             className="card bg-base-100 shadow-sm hover:bg-base-200/50 transition-colors"

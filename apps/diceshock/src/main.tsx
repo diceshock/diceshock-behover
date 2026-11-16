@@ -42,6 +42,7 @@ import type { NotificationMessage } from "@/server/queue/notificationConsumer";
 import type { HonoCtxEnv } from "@/shared/types";
 import seatRedirect from "./server/middlewares/seatRedirect";
 import "@/shared/utils/dayjs-config";
+import { miniappRoutes } from "./server/apis/miniapp";
 import aliyunInj from "./server/middlewares/aliyunInj";
 import {
   authGuard,
@@ -53,7 +54,6 @@ import requestEndpoint from "./server/middlewares/requestEndpoint";
 import serverMetaInj from "./server/middlewares/serverMetaInj";
 import storeLocaleMiddleware from "./server/middlewares/storeLocale";
 import { wechatSilentAuth } from "./server/middlewares/wechatSilentAuth";
-import { miniappRoutes } from "./server/apis/miniapp";
 
 export { DsSubscriptionDO } from "./server/durableObjects/DsSubscriptionDO";
 export { PubSubDO } from "./server/durableObjects/PubSubDO";

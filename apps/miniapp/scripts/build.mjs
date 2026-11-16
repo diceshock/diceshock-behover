@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import {
   cpSync,
   existsSync,
@@ -7,7 +8,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawnSync } from "node:child_process";
+
 const root = fileURLToPath(new URL("../", import.meta.url));
 const local = process.argv.includes("--local");
 const configPath = path.join(root, "config.local.json");
@@ -71,7 +72,7 @@ for (const name of [
 const runtime = { apiOrigin: origin.origin, storeMedia: media };
 writeFileSync(
   path.join(output, "config.js"),
-  "module.exports = " + JSON.stringify(runtime, null, 2) + ";\n",
+  `module.exports = ${JSON.stringify(runtime, null, 2)};\n`,
 );
 const project = JSON.parse(
   readFileSync(path.join(root, "project.config.json"), "utf8"),

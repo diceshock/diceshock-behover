@@ -23,9 +23,13 @@ function request(path, data) {
                   : "请求失败，请稍后重试"),
             ),
           );
-        if (result.data?.errors?.some(e => e.extensions?.code === 'UNAUTHORIZED')) {
+        if (
+          result.data?.errors?.some(
+            (e) => e.extensions?.code === "UNAUTHORIZED",
+          )
+        ) {
           wx.removeStorageSync(tokenKey);
-          return reject(new Error('登录已过期，请重新登录'));
+          return reject(new Error("登录已过期，请重新登录"));
         }
         if (result.data?.errors?.length)
           return reject(

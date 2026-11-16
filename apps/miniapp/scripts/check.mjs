@@ -23,7 +23,10 @@ function walk(dir) {
       walk(file);
       continue;
     }
-    if (/\.(png|jpe?g|gif|webp|avif)$/i.test(name) && path.relative(root,file).replaceAll('\\','/') !== 'brand/jiedaokou.png')
+    if (
+      /\.(png|jpe?g|gif|webp|avif)$/i.test(name) &&
+      path.relative(root, file).replaceAll("\\", "/") !== "brand/jiedaokou.png"
+    )
       throw new Error(`Raster media must be hosted externally: ${file}`);
     if (name.endsWith(".js")) {
       const result = spawnSync(process.execPath, ["--check", file], {

@@ -30,7 +30,7 @@ function getCfApiToken() {
   if (token) return token;
   try {
     const toml = readFileSync(
-      homedir() + "/.wrangler/config/default.toml",
+      `${homedir()}/.wrangler/config/default.toml`,
       "utf8",
     );
     const match = toml.match(/oauth_token\s*=\s*"([^"]+)"/);
@@ -187,7 +187,7 @@ async function main() {
     }
   }
 
-  console.log("\n\n" + "═".repeat(60));
+  console.log(`\n\n${"═".repeat(60)}`);
   console.log(`✅ Ingestion complete`);
   console.log(`   Uploaded: ${success}`);
   console.log(`   Failed: ${failed}`);

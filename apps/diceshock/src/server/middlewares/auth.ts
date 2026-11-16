@@ -1,4 +1,3 @@
-import { operator, canEnterDashboard } from "../services/trpg/access";
 import Credentials from "@auth/core/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { type AuthConfig, getAuthUser, initAuthConfig } from "@hono/auth-js";

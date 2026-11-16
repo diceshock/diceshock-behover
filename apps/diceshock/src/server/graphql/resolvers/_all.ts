@@ -1,5 +1,3 @@
-import { trpgResolvers } from "./trpg";
-import { trpgMemberResolvers } from "./trpg-member-services";
 import baseSchema from "../../../../schema.graphql?raw";
 import type { ResolverMap } from "../schema";
 import { activesResolvers } from "./actives";
@@ -15,6 +13,8 @@ import { preferencesResolvers } from "./preferences";
 import { searchHistoryResolvers } from "./searchHistory";
 import { subscriptionResolvers } from "./subscriptions";
 import { tablesResolvers } from "./tables";
+import { trpgResolvers } from "./trpg";
+import { trpgMemberResolvers } from "./trpg-member-services";
 import { usersResolvers } from "./users";
 import { wechatMenuResolvers } from "./wechatMenu";
 

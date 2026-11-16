@@ -56,7 +56,6 @@ export const CATEGORIES: CategoryDef[] = [
     ],
   },
   {
-
     id: "gsz",
     label: "雀庄",
     icon: "Sword",

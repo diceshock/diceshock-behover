@@ -1,10 +1,11 @@
 import { z } from "zod/v4";
-import * as service from "../../services/trpg/member-services";
 import { operator, requireDirectoryReviewer } from "../../services/trpg/access";
-import { requireAuth } from "../guards";
-import { zodToGraphQLError as parse } from "../validate";
+import * as service from "../../services/trpg/member-services";
 import type { GQLContext } from "../context";
+import { requireAuth } from "../guards";
 import type { ResolverMap } from "../schema";
+import { zodToGraphQLError as parse } from "../validate";
+
 const id = z.string().min(1).max(100);
 const offset = z.number().int().min(0).max(100000).default(0);
 const https = z

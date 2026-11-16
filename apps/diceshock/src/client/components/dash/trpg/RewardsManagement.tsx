@@ -1,12 +1,13 @@
 import { useState } from "react";
 import {
-  useTrpgRewardsAdminQuery,
-  useSaveTrpgRewardMutation,
-  useConsumeTrpgVoucherMutation,
   type TrpgRewardsAdminQuery,
+  useConsumeTrpgVoucherMutation,
+  useSaveTrpgRewardMutation,
+  useTrpgRewardsAdminQuery,
 } from "@/client/graphql/__generated__/trpg";
-import { ManagementNav } from "./ManagementNav";
 import { ErrorMessage, Field } from "./common";
+import { ManagementNav } from "./ManagementNav";
+
 type Reward = TrpgRewardsAdminQuery["trpgRewards"][number];
 export function RewardsManagement() {
   const [error, setError] = useState(""),
@@ -217,7 +218,6 @@ export function RewardsManagement() {
                 确认核销
               </button>
             </form>
-
           </>
         )}
       </div>

@@ -2,9 +2,9 @@ import { getAuthUser } from "@hono/auth-js";
 import db from "@lib/db";
 import type { Context } from "hono";
 import type { HonoCtxEnv } from "@/shared/types";
+import { miniappAccount } from "../services/miniappAuth";
 import { executeGraphQL, type GraphQLContext } from "./wechat/graphql/index";
 import { hasRole, type Role } from "./wechat/graphql/permissions";
-import { miniappAccount } from "../services/miniappAuth";
 
 const GRAPHIQL_HTML = `<!DOCTYPE html>
 <html lang="en">
@@ -89,12 +89,23 @@ export async function graphqlHandler(
           role = "authenticated";
           preferredStoreId = null;
         } catch {
-          return c.json({ errors: [{ message: "请重新登录", extensions: { code: "UNAUTHORIZED" } }] }, 401);
+          return c.json(
+            {
+              errors: [
+                { message: "请重新登录", extensions: { code: "UNAUTHORIZED" } },
+              ],
+            },
+            401,
+          );
         }
       }
       const origin = c.req.header("Origin");
       const expectedOrigin = new URL(c.env.AUTH_URL || c.req.url).origin;
-      if (origin && origin !== expectedOrigin && origin !== new URL(c.req.url).origin) {
+      if (
+        origin &&
+        origin !== expectedOrigin &&
+        origin !== new URL(c.req.url).origin
+      ) {
         return c.json({ errors: [{ message: "请求来源无效" }] }, 403);
       }
       c.header("Cache-Control", "no-store");
@@ -121,7 +132,10 @@ export async function graphqlHandler(
       }
 
       if (!body.query || typeof body.query !== "string") {
-        return c.json({ errors: [{ message: "Missing or invalid 'query' field" }] }, 400);
+        return c.json(
+          { errors: [{ message: "Missing or invalid 'query' field" }] },
+          400,
+        );
       }
 
       const operationName =
