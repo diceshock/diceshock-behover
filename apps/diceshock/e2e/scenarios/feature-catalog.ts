@@ -375,7 +375,7 @@ export const featureCatalog: FeatureItem[] = [
     id: "scripts-tooling",
     name: "Scripts and maintenance tooling",
     priority: "P3",
-    sourceFiles: ["../../scripts/backfill-store-id.ts", "../../scripts/clean-and-recrawl.ts", "../../scripts/wechat-menu.ts", "scripts/test-agent.ts"],
+    sourceFiles: ["../../scripts/backfill-store-id.ts", "../../scripts/wechat-menu.ts", "scripts/test-agent.ts"],
     journeys: [
       {
         id: "script-dry-run-live-run",
