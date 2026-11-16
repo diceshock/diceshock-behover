@@ -21,6 +21,12 @@
 - 代码中通过 R2 URL 引用，不要 import 本地文件。
 - 唯一例外：SVG 图标组件（`src/client/assets/svg/`）可以留在项目中。
 
+
+## 运行时
+
+- 项目要求 Node.js 24+，原生运行 TypeScript（strip types）。
+- 禁止引入 `tsx`、`ts-node` 等 TS 运行时，脚本直接 `node script.ts` 执行。
+
 ## 编码规范
 
 - Biome 为唯一 lint/format 工具，提交前跑 `pnpm lint`。
