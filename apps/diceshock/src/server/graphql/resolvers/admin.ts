@@ -1,8 +1,6 @@
 import dbFactory, {
   drizzle as drizzleOp,
   eventsTable,
-  gstoneDb,
-  gstoneGamesTable,
   pricingSnapshotsTable,
 } from "@lib/db";
 import {
@@ -31,7 +29,6 @@ import {
   resolveUserOpenId,
 } from "@/server/apis/wechat/templateMessage";
 import { getWechatAccessToken } from "@/server/apis/wechat/wechatApi";
-import { GSTONE_MAX_GAME_ID } from "@/server/cron/gstoneCrawl";
 import type { GQLContext } from "../context";
 import { forbidden, internalError, notFound, validationError } from "../errors";
 import { requireAuth, requireStaff } from "../guards";
@@ -528,81 +525,6 @@ export const adminResolvers = {
       return { appId };
     },
 
-    // ── Crawler (staff) ──────────────────────────────────────────────────
-    async crawlerStats(
-      _source: unknown,
-      _args: Record<string, never>,
-      ctx: GQLContext,
-    ) {
-      requireStaff(ctx);
-      const gdb = gstoneDb(ctx.env.GSTONE_DB);
-
-      const [totalRow, crawledRow, errorsRow, imagedRow, maxIdRow] =
-        await Promise.all([
-          gdb.select({ c: sql<number>`count(*)` }).from(gstoneGamesTable),
-          gdb
-            .select({ c: sql<number>`count(*)` })
-            .from(gstoneGamesTable)
-            .where(isNotNull(gstoneGamesTable.crawled_at)),
-          gdb
-            .select({ c: sql<number>`count(*)` })
-            .from(gstoneGamesTable)
-            .where(
-              and(
-                isNotNull(gstoneGamesTable.error),
-                isNull(gstoneGamesTable.crawled_at),
-              ),
-            ),
-          gdb
-            .select({ c: sql<number>`count(*)` })
-            .from(gstoneGamesTable)
-            .where(isNotNull(gstoneGamesTable.r2_cover_url)),
-          gdb
-            .select({ m: sql<number>`max(${gstoneGamesTable.gstone_id})` })
-            .from(gstoneGamesTable),
-        ]);
-
-      return {
-        total: totalRow[0]?.c ?? 0,
-        crawled: crawledRow[0]?.c ?? 0,
-        errors: errorsRow[0]?.c ?? 0,
-        imagesCached: imagedRow[0]?.c ?? 0,
-        maxId: maxIdRow[0]?.m ?? 0,
-        estimatedMax: GSTONE_MAX_GAME_ID,
-      };
-    },
-
-    async crawlerErrors(
-      _source: unknown,
-      args: { limit?: number },
-      ctx: GQLContext,
-    ) {
-      requireStaff(ctx);
-      const gdb = gstoneDb(ctx.env.GSTONE_DB);
-      const rows = await gdb
-        .select({
-          gstone_id: gstoneGamesTable.gstone_id,
-          error: gstoneGamesTable.error,
-          retry_count: gstoneGamesTable.retry_count,
-          updated_at: gstoneGamesTable.updated_at,
-        })
-        .from(gstoneGamesTable)
-        .where(
-          and(
-            isNotNull(gstoneGamesTable.error),
-            isNull(gstoneGamesTable.crawled_at),
-          ),
-        )
-        .orderBy(desc(gstoneGamesTable.updated_at))
-        .limit(args.limit ?? 20);
-
-      return rows.map((r) => ({
-        gstoneId: r.gstone_id,
-        error: r.error,
-        retryCount: r.retry_count,
-        updatedAt: r.updated_at,
-      }));
-    },
 
     // ── Wechat Templates (staff) ─────────────────────────────────────────
     async wechatTemplates(
@@ -1124,63 +1046,6 @@ export const adminResolvers = {
       };
     },
 
-    // ── Crawler (staff) ──────────────────────────────────────────────────
-    async resetCrawlerErrors(
-      _source: unknown,
-      _args: Record<string, never>,
-      ctx: GQLContext,
-    ) {
-      requireStaff(ctx);
-      const gdb = gstoneDb(ctx.env.GSTONE_DB);
-      await gdb
-        .update(gstoneGamesTable)
-        .set({
-          error: null,
-          retry_count: 0,
-          updated_at: new Date().toISOString(),
-        })
-        .where(
-          and(
-            isNotNull(gstoneGamesTable.error),
-            isNull(gstoneGamesTable.crawled_at),
-          ),
-        );
-
-      // Return updated stats
-      const [totalRow, crawledRow, errorsRow, imagedRow, maxIdRow] =
-        await Promise.all([
-          gdb.select({ c: sql<number>`count(*)` }).from(gstoneGamesTable),
-          gdb
-            .select({ c: sql<number>`count(*)` })
-            .from(gstoneGamesTable)
-            .where(isNotNull(gstoneGamesTable.crawled_at)),
-          gdb
-            .select({ c: sql<number>`count(*)` })
-            .from(gstoneGamesTable)
-            .where(
-              and(
-                isNotNull(gstoneGamesTable.error),
-                isNull(gstoneGamesTable.crawled_at),
-              ),
-            ),
-          gdb
-            .select({ c: sql<number>`count(*)` })
-            .from(gstoneGamesTable)
-            .where(isNotNull(gstoneGamesTable.r2_cover_url)),
-          gdb
-            .select({ m: sql<number>`max(${gstoneGamesTable.gstone_id})` })
-            .from(gstoneGamesTable),
-        ]);
-
-      return {
-        total: totalRow[0]?.c ?? 0,
-        crawled: crawledRow[0]?.c ?? 0,
-        errors: errorsRow[0]?.c ?? 0,
-        imagesCached: imagedRow[0]?.c ?? 0,
-        maxId: maxIdRow[0]?.m ?? 0,
-        estimatedMax: GSTONE_MAX_GAME_ID,
-      };
-    },
 
     // ── Wechat Templates (staff) ─────────────────────────────────────────
     async addWechatTemplateFromLibrary(
