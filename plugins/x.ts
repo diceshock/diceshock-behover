@@ -1,6 +1,6 @@
-import { type ChildProcess, spawn } from "node:child_process";
+import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import { resolve } from "node:path";
-import { agentsDir, RotatingLog } from "./log.js";
+import { RotatingLog } from "./log.js";
 
 const root = process.env.NX_WORKSPACE_ROOT ?? process.cwd();
 const args = process.argv.slice(2);
@@ -91,33 +91,27 @@ function nxMode() {
     console.error("usage: pnpm x <project:target> [args...]");
     process.exit(1);
   }
-  const name = target.replace(/:/g, "-");
   const extra = args.slice(1);
-
-  const child = run({
-    name,
-    cmd: [resolve(root, "node_modules/.bin/nx"), "run", target, ...extra],
-    cwd: root,
-  });
-
-  child.on("close", (code) => process.exit(code ?? 0));
-  process.on("SIGINT", () => child.kill("SIGINT"));
-  process.on("SIGTERM", () => child.kill("SIGTERM"));
+  const result = spawnSync(
+    resolve(root, "node_modules/.bin/nx"),
+    ["run", target, ...extra],
+    { cwd: root, stdio: "inherit", env: cleanNpmEnv() },
+  );
+  process.exit(result.status ?? 1);
 }
 
 function cmdMode() {
-  const name = args[1];
   const cmd = args.slice(2);
-  if (!name || cmd.length === 0) {
+  if (args.length < 3 || cmd.length === 0) {
     console.error("usage: pnpm x --run <name> <command...>");
     process.exit(1);
   }
-
-  const child = run({ name, cmd, cwd: root });
-
-  child.on("close", (code) => process.exit(code ?? 0));
-  process.on("SIGINT", () => child.kill("SIGINT"));
-  process.on("SIGTERM", () => child.kill("SIGTERM"));
+  const result = spawnSync(cmd[0], cmd.slice(1), {
+    cwd: root,
+    stdio: "inherit",
+    env: cleanNpmEnv(),
+  });
+  process.exit(result.status ?? 1);
 }
 
 if (args[0] === "--dev") {
