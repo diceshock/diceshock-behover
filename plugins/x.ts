@@ -92,7 +92,7 @@ const appDirs: Record<string, string> = {
 };
 
 /** Targets that should run wrangler directly instead of nx */
-const wranglerTargets = new Set(["deploy-preview", "deploy", "deploy:update"]);
+const wranglerTargets = new Set(["preview", "deploy-preview", "deploy", "deploy:update"]);
 
 function nxMode() {
   const target = args[0];
@@ -115,7 +115,7 @@ function nxMode() {
     }
     const configPath = resolve(root, appDir, "wrangler.toml");
     const wranglerArgs: string[] = [];
-    if (task === "deploy-preview") {
+    if (task === "preview" || task === "deploy-preview") {
       wranglerArgs.push("preview", "--config", configPath);
     } else if (task === "deploy") {
       wranglerArgs.push("deploy", "--config", configPath);
