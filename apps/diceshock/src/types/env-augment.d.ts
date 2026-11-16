@@ -8,7 +8,6 @@ interface __BaseEnv_CloudflareBindings {
   RAW_FEED: R2Bucket;
   LIBRARY: R2Bucket;
   DB: D1Database;
-  GSTONE_DB: D1Database;
   AI_SEARCH: AiSearchInstance;
   WECHAT_AGENT: DurableObjectNamespace<import("../server/durableObjects/WechatAgentDO").WechatAgentDO>;
   WECHAT_MP_TOKEN: string;

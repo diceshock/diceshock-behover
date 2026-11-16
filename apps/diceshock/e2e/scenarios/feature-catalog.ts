@@ -300,24 +300,6 @@ export const featureCatalog: FeatureItem[] = [
     ],
   },
   {
-    id: "gstone-crawler",
-    name: "GStone crawler, document crawl, OCR",
-    priority: "P3",
-    sourceFiles: ["src/server/cron/gstoneCrawl.ts", "src/server/queue/gstoneCrawlConsumer.ts", "src/server/queue/gstoneDocCrawlConsumer.ts", "src/server/queue/gstoneOcrConsumer.ts"],
-    journeys: [
-      {
-        id: "gstone-cron-to-ocr",
-        name: "Cron dispatches crawl, image, document, OCR queues",
-        actor: "system",
-        goal: "Scheduled crawl pipeline ingests game and rules data.",
-        entrypoints: ["scheduled */5 * * * *", "GSTONE_*_QUEUE", "GSTONE_DB", "AI_SEARCH"],
-        coverage: ["cron", "queue", "api"],
-        realisticPrompt: "系统定时更新桌游资料、图片和规则 OCR，并入库供 AI 查询。",
-        acceptance: ["crawl tasks are queued", "consumer writes game data", "OCR result is stored", "AI Search ingest is called"],
-      },
-    ],
-  },
-  {
     id: "media-file-serving",
     name: "Media, file serving, fonts, sitemap",
     priority: "P3",

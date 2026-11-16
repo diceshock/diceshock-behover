@@ -242,24 +242,6 @@ export type CleanupOrphanedDataResult = {
   totalOccupancies: Scalars['Int']['output'];
 };
 
-export type CrawlerError = {
-  __typename?: 'CrawlerError';
-  error?: Maybe<Scalars['String']['output']>;
-  gstoneId: Scalars['Int']['output'];
-  retryCount: Scalars['Int']['output'];
-  updatedAt?: Maybe<Scalars['String']['output']>;
-};
-
-export type CrawlerStats = {
-  __typename?: 'CrawlerStats';
-  crawled: Scalars['Int']['output'];
-  errors: Scalars['Int']['output'];
-  estimatedMax: Scalars['Int']['output'];
-  imagesCached: Scalars['Int']['output'];
-  maxId: Scalars['Int']['output'];
-  total: Scalars['Int']['output'];
-};
-
 export type CreateActiveInput = {
   boardGameId?: InputMaybe<Scalars['ID']['input']>;
   content?: InputMaybe<Scalars['String']['input']>;
@@ -770,7 +752,6 @@ export type Mutation = {
   removeWechatTemplate: WechatTemplateAssignment;
   renameMediaObject: MediaObject;
   requestSmsCode: SmsCodeResult;
-  resetCrawlerErrors: CrawlerStats;
   restorePricingSnapshot: PricingSnapshot;
   restoreWechatMenuSnapshot: WechatMenuSnapshot;
   resumeOrder: TableOccupancy;
@@ -1532,6 +1513,7 @@ export type PricingSnapshotDataInput = {
 };
 
 export enum PricingSnapshotStatus {
+  Archived = 'ARCHIVED',
   Draft = 'DRAFT',
   Published = 'PUBLISHED'
 }
@@ -1552,8 +1534,6 @@ export type Query = {
   adminPhones: Array<Scalars['String']['output']>;
   businessCard?: Maybe<BusinessCard>;
   captchaSettings: CaptchaSettings;
-  crawlerErrors: Array<CrawlerError>;
-  crawlerStats: CrawlerStats;
   dashGlobalSearch: Array<DashGlobalSearchResult>;
   dashSearchHistory: Array<DashSearchHistoryEntry>;
   event: Event;
@@ -1638,11 +1618,6 @@ export type QueryActivesArgs = {
 export type QueryBusinessCardArgs = {
   activeId: Scalars['ID']['input'];
   userId: Scalars['ID']['input'];
-};
-
-
-export type QueryCrawlerErrorsArgs = {
-  limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
 

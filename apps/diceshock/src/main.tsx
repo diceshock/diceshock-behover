@@ -39,14 +39,6 @@ import {
   wechatVerify,
 } from "@/server/apis/wechat";
 import { articlePreview } from "@/server/apis/wechat/articlePreview";
-import type {
-  GstoneCrawlMessage,
-  GstoneImageMessage,
-} from "@/server/queue/gstoneCrawlConsumer";
-import type {
-  GstoneDocCrawlMessage,
-  GstoneOcrMessage,
-} from "@/server/queue/gstoneDocCrawlConsumer";
 import type { NotificationMessage } from "@/server/queue/notificationConsumer";
 import type { HonoCtxEnv } from "@/shared/types";
 import seatRedirect from "./server/middlewares/seatRedirect";
@@ -184,28 +176,6 @@ export default {
     env: HonoCtxEnv["Bindings"],
     _ctx: ExecutionContext,
   ) => {
-    const {
-      dispatchGstoneCrawl,
-      dispatchGstoneDocCrawl,
-      dispatchGstoneOcr,
-      dispatchGstoneDocImages,
-    } = await import("./server/cron/gstoneCrawl");
-    await dispatchGstoneCrawl({
-      GSTONE_DB: env.GSTONE_DB,
-      GSTONE_CRAWL_QUEUE: env.GSTONE_CRAWL_QUEUE,
-    });
-    await dispatchGstoneDocCrawl({
-      GSTONE_DB: env.GSTONE_DB,
-      GSTONE_DOC_CRAWL_QUEUE: env.GSTONE_DOC_CRAWL_QUEUE,
-    });
-    await dispatchGstoneOcr({
-      GSTONE_DB: env.GSTONE_DB,
-      GSTONE_OCR_QUEUE: env.GSTONE_OCR_QUEUE,
-    });
-    await dispatchGstoneDocImages({
-      GSTONE_DB: env.GSTONE_DB,
-      GSTONE_DOC_IMAGE_QUEUE: env.GSTONE_DOC_IMAGE_QUEUE,
-    });
 
     if (event.cron === "0 4-22 * * *") {
       const { computeLeaderboards } = await import("./server/cron/leaderboard");
@@ -279,53 +249,6 @@ export default {
       );
       await handleNotificationQueue(
         batch as MessageBatch<NotificationMessage>,
-        env,
-      );
-      return;
-    }
-    if (queueName === "diceshock-gstone-crawl") {
-      const { handleGstoneCrawlQueue } = await import(
-        "./server/queue/gstoneCrawlConsumer"
-      );
-      await handleGstoneCrawlQueue(
-        batch as MessageBatch<GstoneCrawlMessage>,
-        env,
-      );
-      return;
-    }
-    if (queueName === "diceshock-gstone-images") {
-      const { handleGstoneImageQueue } = await import(
-        "./server/queue/gstoneCrawlConsumer"
-      );
-      await handleGstoneImageQueue(
-        batch as MessageBatch<GstoneImageMessage>,
-        env,
-      );
-      return;
-    }
-    if (queueName === "diceshock-gstone-doc-crawl") {
-      const { handleGstoneDocCrawlQueue } = await import(
-        "./server/queue/gstoneDocCrawlConsumer"
-      );
-      await handleGstoneDocCrawlQueue(
-        batch as MessageBatch<GstoneDocCrawlMessage>,
-        env,
-      );
-      return;
-    }
-    if (queueName === "diceshock-gstone-ocr") {
-      const { handleGstoneOcrQueue } = await import(
-        "./server/queue/gstoneOcrConsumer"
-      );
-      await handleGstoneOcrQueue(batch as MessageBatch<GstoneOcrMessage>, env);
-      return;
-    }
-    if (queueName === "diceshock-gstone-doc-images") {
-      const { handleGstoneDocImageQueue } = await import(
-        "./server/queue/gstoneDocImageConsumer"
-      );
-      await handleGstoneDocImageQueue(
-        batch as MessageBatch<{ document_id: number }>,
         env,
       );
       return;

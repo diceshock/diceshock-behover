@@ -35,10 +35,6 @@ database_name = "diceshock"
 database_id = "24c01d5e-c4d7-4b13-bb59-5ad3373971e9"
 migrations_dir = "../../drizzle"
 
-[[d1_databases]]
-binding = "GSTONE_DB"
-database_name = "gstone-games"
-database_id = "fbe99ba3-8b12-4bf6-ab4b-93031a0f95a2"
 
 [[r2_buckets]]
 binding = "R2"
@@ -97,25 +93,6 @@ queue = "diceshock-image-processing"
 binding = "NOTIFICATION_QUEUE"
 queue = "diceshock-notifications"
 
-[[queues.producers]]
-binding = "GSTONE_CRAWL_QUEUE"
-queue = "diceshock-gstone-crawl"
-
-[[queues.producers]]
-binding = "GSTONE_IMAGE_QUEUE"
-queue = "diceshock-gstone-images"
-
-[[queues.producers]]
-binding = "GSTONE_DOC_CRAWL_QUEUE"
-queue = "diceshock-gstone-doc-crawl"
-
-[[queues.producers]]
-binding = "GSTONE_OCR_QUEUE"
-queue = "diceshock-gstone-ocr"
-
-[[queues.producers]]
-binding = "GSTONE_DOC_IMAGE_QUEUE"
-queue = "diceshock-gstone-doc-images"
 
 [[queues.consumers]]
 queue = "diceshock-image-processing"
@@ -129,44 +106,10 @@ max_batch_size = 10
 max_batch_timeout = 5
 max_retries = 3
 
-[[queues.consumers]]
-queue = "diceshock-gstone-crawl"
-max_batch_size = 1
-max_batch_timeout = 3
-max_retries = 3
-max_concurrency = 1
-
-[[queues.consumers]]
-queue = "diceshock-gstone-images"
-max_batch_size = 1
-max_batch_timeout = 3
-max_retries = 3
-max_concurrency = 1
-
-[[queues.consumers]]
-queue = "diceshock-gstone-doc-crawl"
-max_batch_size = 1
-max_batch_timeout = 5
-max_retries = 3
-max_concurrency = 1
-
-[[queues.consumers]]
-queue = "diceshock-gstone-ocr"
-max_batch_size = 1
-max_batch_timeout = 5
-max_retries = 2
-max_concurrency = 10
-
-[[queues.consumers]]
-queue = "diceshock-gstone-doc-images"
-max_batch_size = 1
-max_batch_timeout = 5
-max_retries = 3
-max_concurrency = 1
 
 
 [triggers]
-crons = ["*/5 * * * *", "0 4-22 * * *", "0 16 * * *"]
+crons = ["0 4-22 * * *", "0 16 * * *"]
 
 [vars]
 AUTH_URL = "https://diceshock.com"
@@ -214,10 +157,6 @@ database_name = "diceshock-preview"
 database_id = "8a1e57fc-e2a7-4c99-b35e-d9c6baff838e"
 migrations_dir = "../../drizzle"
 
-[[env.preview.d1_databases]]
-binding = "GSTONE_DB"
-database_name = "gstone-games-preview"
-database_id = "884833d1-3ee5-451b-853e-017dace0b7cb"
 
 # KV: isolated preview namespace
 [[env.preview.kv_namespaces]]
@@ -259,25 +198,6 @@ queue = "diceshock-image-processing"
 binding = "NOTIFICATION_QUEUE"
 queue = "diceshock-notifications"
 
-[[env.preview.queues.producers]]
-binding = "GSTONE_CRAWL_QUEUE"
-queue = "diceshock-gstone-crawl"
-
-[[env.preview.queues.producers]]
-binding = "GSTONE_IMAGE_QUEUE"
-queue = "diceshock-gstone-images"
-
-[[env.preview.queues.producers]]
-binding = "GSTONE_DOC_CRAWL_QUEUE"
-queue = "diceshock-gstone-doc-crawl"
-
-[[env.preview.queues.producers]]
-binding = "GSTONE_OCR_QUEUE"
-queue = "diceshock-gstone-ocr"
-
-[[env.preview.queues.producers]]
-binding = "GSTONE_DOC_IMAGE_QUEUE"
-queue = "diceshock-gstone-doc-images"
 
 # No queue consumers in preview — production worker handles all consumers
 # No cron triggers in preview — avoid duplicate scheduled jobs
