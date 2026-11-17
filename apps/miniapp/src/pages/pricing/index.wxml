@@ -1,0 +1,23 @@
+<view class="page pricing-page">
+  <view class="hero"><view class="kicker">DICESHOCK · 骰子奇兵</view><view class="title">无限计划</view><view>跑团 · 桌游 · 日麻</view></view>
+  <view class="card pricing-guide">
+    <view class="card-title">日常价</view>
+    <view class="pricing-row"><text class="pricing-name">工作日</text><view><text class="fee">10 元 / 小时</text><view class="muted">40 元全天畅玩</view></view></view>
+    <view class="pricing-row"><text class="pricing-name">节假日</text><view><text class="fee">15 元 / 小时</text><view class="muted">60 元全天畅玩</view></view></view>
+  </view>
+  <view class="card pricing-guide">
+    <view class="card-title">跑团专属套餐</view>
+    <view class="pricing-row"><text class="pricing-name">TRPG 跑团</text><text class="fee">118 元 / 5 小时</text></view>
+    <view class="pricing-row"><text class="pricing-name">超时费用</text><text class="fee">20 元 / 小时</text></view>
+  </view>
+  <view class="card pricing-guide">
+    <view class="card-title">会员储值福利</view>
+    <view class="section">会员储值</view>
+    <view class="pricing-row"><text class="pricing-name">200 元</text><text>送 40 积分（学生优惠）</text></view>
+    <view class="pricing-row"><text class="pricing-name">500 元</text><text>送 100 积分</text></view>
+    <view class="section">积分兑换</view>
+    <view class="pricing-row"><text class="pricing-name">30 积分</text><text>兑换全天不限时畅玩 1 次</text></view>
+    <view class="pricing-row"><text class="pricing-name">200 积分</text><text>兑换 TRPG 跑团 5 小时 1 次</text></view>
+  </view>
+  <view class="card"><view class="card-title">营业时间</view><view class="pricing-row">13:00–23:00</view><view class="muted">了解更多：diceshock.com</view></view>
+</view>

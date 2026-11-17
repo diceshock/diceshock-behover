@@ -29,3 +29,9 @@ interface __BaseEnv_CloudflareBindings {
   DEV_SMS_CODE: string;
   MEM0_API_KEY: string;
 }
+
+declare namespace Cloudflare {
+  interface Env {
+    DS_WECHAT_MINI_APP_SECRET?: string;
+  }
+}

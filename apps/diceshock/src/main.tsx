@@ -42,6 +42,7 @@ import type { NotificationMessage } from "@/server/queue/notificationConsumer";
 import type { HonoCtxEnv } from "@/shared/types";
 import seatRedirect from "./server/middlewares/seatRedirect";
 import "@/shared/utils/dayjs-config";
+import { miniappRoutes } from "./server/apis/miniapp";
 import aliyunInj from "./server/middlewares/aliyunInj";
 import {
   authGuard,
@@ -92,6 +93,7 @@ if (import.meta.env.DEV) {
 }
 
 app.use(authInit);
+app.route("/api/miniapp", miniappRoutes);
 
 app.route("/api/chat/stream", chatStream);
 app.route("/api/chat/confirm", confirmMutation);

@@ -710,6 +710,7 @@ export type Mutation = {
   cleanupOrphanedOrders: CleanupOrphanedDataResult;
   clearDashSearchHistory: Scalars['Boolean']['output'];
   closeShortlink: Shortlink;
+  consumeTrpgVoucher: OperationResult;
   createActive: Active;
   createEvent: Event;
   createMembershipPlan: MembershipPlan;
@@ -717,6 +718,7 @@ export type Mutation = {
   createShortlink: Shortlink;
   createTable: Table;
   createTempIdentity: TempIdentity;
+  createTrpgSession: TrpgSession;
   deductPoints: MembershipPlan;
   deductStoredValue: MembershipDeductionResult;
   deletePreference: DeletePreferenceResult;
@@ -727,6 +729,7 @@ export type Mutation = {
   gszScoreAdd: MahjongMatch;
   gszScoreUpdate: MahjongMatch;
   joinActive: ActiveRegistration;
+  joinTrpgSession: OperationResult;
   leaveActive?: Maybe<Active>;
   leaveTable: TableOccupancy;
   leaveTableWithTempIdentity: SettlementResult;
@@ -738,6 +741,7 @@ export type Mutation = {
   publishArticleToWechat: ArticlePublishResult;
   publishPricingSnapshot: PricingSnapshot;
   publishWechatMenuSnapshot: WechatMenuPublishResult;
+  redeemTrpgReward: Scalars['ID']['output'];
   regenerateTableCode: Table;
   registerMahjong: MahjongRegistrationStatus;
   removeActive: Active;
@@ -751,17 +755,26 @@ export type Mutation = {
   removeTableOccupancy: TableOccupancy;
   removeWechatTemplate: WechatTemplateAssignment;
   renameMediaObject: MediaObject;
+  replyTrpgMail: OperationResult;
   requestSmsCode: SmsCodeResult;
   restorePricingSnapshot: PricingSnapshot;
   restoreWechatMenuSnapshot: WechatMenuSnapshot;
+  resubmitTrpgSession: OperationResult;
   resumeOrder: TableOccupancy;
+  reviewTrpgRegistration: OperationResult;
   saveDashSearchHistory: DashSearchHistoryEntry;
   saveMahjongMatch: MahjongMatch;
   savePricingSnapshot: PricingSnapshot;
+  saveTrpgReward: OperationResult;
   saveWechatMenuSnapshot: WechatMenuSnapshot;
+  scheduleTrpgSession: OperationResult;
   sendSmsCode: SmsCodeResult;
+  sendTrpgMail: OperationResult;
   sendWechatTemplateTest: WechatTemplateAssignment;
   setCaptchaEnabled: CaptchaSettings;
+  setTrpgAccess: OperationResult;
+  setTrpgHost: OperationResult;
+  setTrpgMember: OperationResult;
   settleOrder: SettlementResult;
   startOrder: TableOccupancy;
   syncMahjongMatchToGsz: GszSyncResult;
@@ -771,6 +784,7 @@ export type Mutation = {
   togglePreference: UserPreference;
   toggleTableStatus: Table;
   transferTempIdentity: TempIdentityTransferResult;
+  transitionTrpgSession: OperationResult;
   translateWechatMenuText: WechatMenuTranslateResult;
   updateActive: Active;
   updateEvent: Event;
@@ -788,6 +802,7 @@ export type Mutation = {
   verifyPhone: UserInfoUpdateResult;
   verifyTotp: TotpVerificationResult;
   wakeOwnedBoardGames: BoardGameSyncResult;
+  withdrawTrpgRegistration: OperationResult;
 };
 
 
@@ -877,6 +892,12 @@ export type MutationCloseShortlinkArgs = {
 };
 
 
+export type MutationConsumeTrpgVoucherArgs = {
+  id: Scalars['ID']['input'];
+  storeId: Scalars['ID']['input'];
+};
+
+
 export type MutationCreateActiveArgs = {
   input: CreateActiveInput;
 };
@@ -904,6 +925,11 @@ export type MutationCreateShortlinkArgs = {
 
 export type MutationCreateTableArgs = {
   input: CreateTableInput;
+};
+
+
+export type MutationCreateTrpgSessionArgs = {
+  input: TrpgSessionInput;
 };
 
 
@@ -954,6 +980,11 @@ export type MutationGszScoreUpdateArgs = {
 
 export type MutationJoinActiveArgs = {
   input: JoinActiveInput;
+};
+
+
+export type MutationJoinTrpgSessionArgs = {
+  id: Scalars['ID']['input'];
 };
 
 
@@ -1009,6 +1040,12 @@ export type MutationPublishPricingSnapshotArgs = {
 
 export type MutationPublishWechatMenuSnapshotArgs = {
   storeId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+
+export type MutationRedeemTrpgRewardArgs = {
+  id: Scalars['ID']['input'];
+  requestId: Scalars['String']['input'];
 };
 
 
@@ -1078,6 +1115,12 @@ export type MutationRenameMediaObjectArgs = {
 };
 
 
+export type MutationReplyTrpgMailArgs = {
+  id: Scalars['ID']['input'];
+  reply: Scalars['String']['input'];
+};
+
+
 export type MutationRequestSmsCodeArgs = {
   input: RequestSmsCodeInput;
 };
@@ -1093,8 +1136,24 @@ export type MutationRestoreWechatMenuSnapshotArgs = {
 };
 
 
+export type MutationResubmitTrpgSessionArgs = {
+  id: Scalars['ID']['input'];
+  input: TrpgSessionInput;
+  revision: Scalars['Int']['input'];
+};
+
+
 export type MutationResumeOrderArgs = {
   id: Scalars['ID']['input'];
+};
+
+
+export type MutationReviewTrpgRegistrationArgs = {
+  decision: Scalars['String']['input'];
+  depositConfirmed?: InputMaybe<Scalars['Boolean']['input']>;
+  id: Scalars['ID']['input'];
+  reason?: InputMaybe<Scalars['String']['input']>;
+  registrationId: Scalars['ID']['input'];
 };
 
 
@@ -1113,13 +1172,35 @@ export type MutationSavePricingSnapshotArgs = {
 };
 
 
+export type MutationSaveTrpgRewardArgs = {
+  input: TrpgRewardInput;
+};
+
+
 export type MutationSaveWechatMenuSnapshotArgs = {
   input: SaveWechatMenuSnapshotInput;
 };
 
 
+export type MutationScheduleTrpgSessionArgs = {
+  deadline: Scalars['String']['input'];
+  id: Scalars['ID']['input'];
+  revision: Scalars['Int']['input'];
+  startsAt: Scalars['String']['input'];
+  storeId?: InputMaybe<Scalars['ID']['input']>;
+  tableId: Scalars['ID']['input'];
+};
+
+
 export type MutationSendSmsCodeArgs = {
   input: SendSmsCodeInput;
+};
+
+
+export type MutationSendTrpgMailArgs = {
+  kind: Scalars['String']['input'];
+  message: Scalars['String']['input'];
+  requestId: Scalars['String']['input'];
 };
 
 
@@ -1131,6 +1212,26 @@ export type MutationSendWechatTemplateTestArgs = {
 
 export type MutationSetCaptchaEnabledArgs = {
   enabled: Scalars['Boolean']['input'];
+};
+
+
+export type MutationSetTrpgAccessArgs = {
+  host: Scalars['Boolean']['input'];
+  id: Scalars['ID']['input'];
+  staff: Scalars['Boolean']['input'];
+  storeId: Scalars['ID']['input'];
+};
+
+
+export type MutationSetTrpgHostArgs = {
+  host: Scalars['Boolean']['input'];
+  id: Scalars['ID']['input'];
+};
+
+
+export type MutationSetTrpgMemberArgs = {
+  id: Scalars['ID']['input'];
+  member: Scalars['Boolean']['input'];
 };
 
 
@@ -1180,6 +1281,14 @@ export type MutationToggleTableStatusArgs = {
 export type MutationTransferTempIdentityArgs = {
   tempId: Scalars['ID']['input'];
   userId: Scalars['ID']['input'];
+};
+
+
+export type MutationTransitionTrpgSessionArgs = {
+  action: Scalars['String']['input'];
+  id: Scalars['ID']['input'];
+  reason?: InputMaybe<Scalars['String']['input']>;
+  revision: Scalars['Int']['input'];
 };
 
 
@@ -1268,6 +1377,11 @@ export type MutationVerifyTotpArgs = {
 
 export type MutationWakeOwnedBoardGamesArgs = {
   date: Scalars['String']['input'];
+};
+
+
+export type MutationWithdrawTrpgRegistrationArgs = {
+  id: Scalars['ID']['input'];
 };
 
 export type NotificationPayload = {
@@ -1587,6 +1701,21 @@ export type Query = {
   tableByCode: Table;
   tempIdentityActiveOccupancies: Array<ActiveOccupancySummary>;
   totpSecret: TotpSecretResult;
+  trpgDirectory: TrpgDirectoryPage;
+  trpgHosts: Array<TrpgMember>;
+  trpgMail: Array<TrpgMail>;
+  trpgManagedSession: TrpgSession;
+  trpgMemberHistory: TrpgSessionPage;
+  trpgMembers: Array<TrpgMember>;
+  trpgMyRecords: TrpgSessionPage;
+  trpgProfile: TrpgProfile;
+  trpgRewards: Array<TrpgReward>;
+  trpgRoster: TrpgRosterPage;
+  trpgSession: TrpgSession;
+  trpgSessions: TrpgSessionPage;
+  trpgStores: Array<TrpgStore>;
+  trpgTables: Array<TrpgTable>;
+  trpgVouchers: Array<TrpgVoucher>;
   user?: Maybe<UserProfile>;
   userBadges: Array<UserBadge>;
   validateTempIdentity: TempIdentity;
@@ -1843,6 +1972,87 @@ export type QueryTableByCodeArgs = {
 
 export type QueryTempIdentityActiveOccupanciesArgs = {
   tempId: Scalars['ID']['input'];
+};
+
+
+export type QueryTrpgDirectoryArgs = {
+  hostsOnly?: InputMaybe<Scalars['Boolean']['input']>;
+  membersOnly?: InputMaybe<Scalars['Boolean']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
+  storeId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+
+export type QueryTrpgHostsArgs = {
+  storeId: Scalars['ID']['input'];
+};
+
+
+export type QueryTrpgMailArgs = {
+  managed?: InputMaybe<Scalars['Boolean']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryTrpgManagedSessionArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type QueryTrpgMemberHistoryArgs = {
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  storeId?: InputMaybe<Scalars['ID']['input']>;
+  userId: Scalars['ID']['input'];
+};
+
+
+export type QueryTrpgMembersArgs = {
+  search: Scalars['String']['input'];
+  storeId: Scalars['ID']['input'];
+};
+
+
+export type QueryTrpgMyRecordsArgs = {
+  archive?: InputMaybe<Scalars['Boolean']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryTrpgRewardsArgs = {
+  managed?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+
+export type QueryTrpgRosterArgs = {
+  id: Scalars['ID']['input'];
+  offset?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryTrpgSessionArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type QueryTrpgSessionsArgs = {
+  filters?: InputMaybe<TrpgFilters>;
+  managed?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+
+export type QueryTrpgStoresArgs = {
+  managed?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+
+export type QueryTrpgTablesArgs = {
+  storeId: Scalars['ID']['input'];
+};
+
+
+export type QueryTrpgVouchersArgs = {
+  offset?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -2219,6 +2429,212 @@ export type TotpVerificationResult = {
   userId?: Maybe<Scalars['ID']['output']>;
 };
 
+export type TrpgAttendee = {
+  __typename?: 'TrpgAttendee';
+  id: Scalars['ID']['output'];
+  nickname: Scalars['String']['output'];
+  phone?: Maybe<Scalars['String']['output']>;
+  reason?: Maybe<Scalars['String']['output']>;
+  status: Scalars['String']['output'];
+};
+
+export type TrpgBooking = {
+  __typename?: 'TrpgBooking';
+  id: Scalars['ID']['output'];
+  reason?: Maybe<Scalars['String']['output']>;
+  status: Scalars['String']['output'];
+};
+
+export type TrpgDirectoryMember = {
+  __typename?: 'TrpgDirectoryMember';
+  balanceCents: Scalars['Int']['output'];
+  disabled: Scalars['Boolean']['output'];
+  host: Scalars['Boolean']['output'];
+  id: Scalars['ID']['output'];
+  nickname: Scalars['String']['output'];
+  phone?: Maybe<Scalars['String']['output']>;
+  points: Scalars['Int']['output'];
+  role: Scalars['String']['output'];
+  staff: Scalars['Boolean']['output'];
+  storedValueMember: Scalars['Boolean']['output'];
+  timePlans: Array<TrpgTimePlan>;
+  uid: Scalars['String']['output'];
+};
+
+export type TrpgDirectoryPage = {
+  __typename?: 'TrpgDirectoryPage';
+  hasMore: Scalars['Boolean']['output'];
+  items: Array<TrpgDirectoryMember>;
+};
+
+export type TrpgFilters = {
+  available?: InputMaybe<Scalars['Boolean']['input']>;
+  date?: InputMaybe<Scalars['String']['input']>;
+  dateFrom?: InputMaybe<Scalars['String']['input']>;
+  dateTo?: InputMaybe<Scalars['String']['input']>;
+  hostId?: InputMaybe<Scalars['ID']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  rule?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<Scalars['String']['input']>;
+  storeId?: InputMaybe<Scalars['ID']['input']>;
+  tag?: InputMaybe<Scalars['String']['input']>;
+  unscheduled?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+export type TrpgMail = {
+  __typename?: 'TrpgMail';
+  createdAt: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  kind: Scalars['String']['output'];
+  message: Scalars['String']['output'];
+  nickname: Scalars['String']['output'];
+  reply?: Maybe<Scalars['String']['output']>;
+};
+
+export type TrpgMember = {
+  __typename?: 'TrpgMember';
+  id: Scalars['ID']['output'];
+  nickname: Scalars['String']['output'];
+  uid: Scalars['String']['output'];
+};
+
+export type TrpgProfile = {
+  __typename?: 'TrpgProfile';
+  admin: Scalars['Boolean']['output'];
+  balanceCents: Scalars['Int']['output'];
+  canHost: Scalars['Boolean']['output'];
+  canManage: Scalars['Boolean']['output'];
+  id: Scalars['ID']['output'];
+  nickname: Scalars['String']['output'];
+  points: Scalars['Int']['output'];
+};
+
+export type TrpgReward = {
+  __typename?: 'TrpgReward';
+  active: Scalars['Boolean']['output'];
+  cover: Scalars['String']['output'];
+  description: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  points: Scalars['Int']['output'];
+  revision: Scalars['Int']['output'];
+  stock: Scalars['Int']['output'];
+  title: Scalars['String']['output'];
+};
+
+export type TrpgRewardInput = {
+  active: Scalars['Boolean']['input'];
+  cover: Scalars['String']['input'];
+  description: Scalars['String']['input'];
+  id: Scalars['ID']['input'];
+  points: Scalars['Int']['input'];
+  revision: Scalars['Int']['input'];
+  stock: Scalars['Int']['input'];
+  title: Scalars['String']['input'];
+};
+
+export type TrpgRosterPage = {
+  __typename?: 'TrpgRosterPage';
+  hasMore: Scalars['Boolean']['output'];
+  items: Array<TrpgAttendee>;
+};
+
+export type TrpgSession = {
+  __typename?: 'TrpgSession';
+  address?: Maybe<Scalars['String']['output']>;
+  booking?: Maybe<TrpgBooking>;
+  canEdit: Scalars['Boolean']['output'];
+  canReview: Scalars['Boolean']['output'];
+  capacity: Scalars['Int']['output'];
+  confirmedCount: Scalars['Int']['output'];
+  deadline?: Maybe<Scalars['String']['output']>;
+  description: Scalars['String']['output'];
+  durationMinutes: Scalars['Int']['output'];
+  feeCents: Scalars['Int']['output'];
+  gameSystem: Scalars['String']['output'];
+  hostName: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  interestedCount: Scalars['Int']['output'];
+  minimum: Scalars['Int']['output'];
+  moduleName: Scalars['String']['output'];
+  pendingCount: Scalars['Int']['output'];
+  priorityUntil?: Maybe<Scalars['String']['output']>;
+  reason?: Maybe<Scalars['String']['output']>;
+  registrationOpen: Scalars['Boolean']['output'];
+  remaining: Scalars['Int']['output'];
+  revision?: Maybe<Scalars['Int']['output']>;
+  sessionType: Scalars['String']['output'];
+  startsAt?: Maybe<Scalars['String']['output']>;
+  status: Scalars['String']['output'];
+  storeId?: Maybe<Scalars['ID']['output']>;
+  storeName: Scalars['String']['output'];
+  tableId?: Maybe<Scalars['ID']['output']>;
+  tableName?: Maybe<Scalars['String']['output']>;
+  tags: Array<Scalars['String']['output']>;
+  timeHint: Scalars['String']['output'];
+  title: Scalars['String']['output'];
+};
+
+export type TrpgSessionInput = {
+  capacity: Scalars['Int']['input'];
+  deadline?: InputMaybe<Scalars['String']['input']>;
+  description: Scalars['String']['input'];
+  durationMinutes: Scalars['Int']['input'];
+  feeCents?: InputMaybe<Scalars['Int']['input']>;
+  gameSystem: Scalars['String']['input'];
+  hostId?: InputMaybe<Scalars['ID']['input']>;
+  minimum: Scalars['Int']['input'];
+  moduleName: Scalars['String']['input'];
+  requestId: Scalars['ID']['input'];
+  sessionType?: InputMaybe<Scalars['String']['input']>;
+  startsAt?: InputMaybe<Scalars['String']['input']>;
+  storeId?: InputMaybe<Scalars['ID']['input']>;
+  tableId?: InputMaybe<Scalars['ID']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  timeHint?: InputMaybe<Scalars['String']['input']>;
+  title: Scalars['String']['input'];
+};
+
+export type TrpgSessionPage = {
+  __typename?: 'TrpgSessionPage';
+  hasMore: Scalars['Boolean']['output'];
+  items: Array<TrpgSession>;
+};
+
+export type TrpgStore = {
+  __typename?: 'TrpgStore';
+  address?: Maybe<Scalars['String']['output']>;
+  canReview: Scalars['Boolean']['output'];
+  code?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+  upcoming: Scalars['Int']['output'];
+};
+
+export type TrpgTable = {
+  __typename?: 'TrpgTable';
+  capacity: Scalars['Int']['output'];
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+};
+
+export type TrpgTimePlan = {
+  __typename?: 'TrpgTimePlan';
+  expiresAt?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  startsAt: Scalars['String']['output'];
+  type: Scalars['String']['output'];
+};
+
+export type TrpgVoucher = {
+  __typename?: 'TrpgVoucher';
+  createdAt: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  points: Scalars['Int']['output'];
+  title: Scalars['String']['output'];
+  usedAt?: Maybe<Scalars['String']['output']>;
+  usedStore?: Maybe<Scalars['String']['output']>;
+};
+
 export type UnsyncableReason = {
   __typename?: 'UnsyncableReason';
   nickname: Scalars['String']['output'];
@@ -2377,6 +2793,8 @@ export type UserProfile = {
 export enum UserRole {
   Admin = 'ADMIN',
   Customer = 'CUSTOMER',
+  Host = 'HOST',
+  Member = 'MEMBER',
   Staff = 'STAFF'
 }
 

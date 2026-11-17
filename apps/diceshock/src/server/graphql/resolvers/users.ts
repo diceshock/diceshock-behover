@@ -113,7 +113,7 @@ const disableUserSchema = z.object({
 
 const updateRoleSchema = z.object({
   id: z.string().min(1),
-  role: z.enum(["CUSTOMER", "STAFF", "ADMIN"]),
+  role: z.enum(["CUSTOMER", "MEMBER", "HOST", "STAFF", "ADMIN"]),
 });
 
 const ownedGameFilterSchema = z.object({
@@ -891,7 +891,12 @@ export const usersResolvers = {
       await tdb
         .update(users)
         .set({
-          role: input.role.toLowerCase() as "customer" | "staff" | "admin",
+          role: input.role.toLowerCase() as
+            | "customer"
+            | "member"
+            | "host"
+            | "staff"
+            | "admin",
         })
         .where(drizzle.eq(users.id, input.id));
 

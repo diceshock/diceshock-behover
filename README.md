@@ -44,6 +44,7 @@ diceshock-behover/
 │   │   │   └── apps/routers/  # TanStack Router 页面
 │   │   ├── e2e/            # Playwright E2E 测试
 │   │   └── tests/          # Vitest 单元测试
+│   ├── miniapp/            # 微信玩家端（GraphQL，共用会员与门店）
 │   └── rolesandbox/        # 体素编辑器测试站点
 ├── libs/
 │   ├── db/                 # Drizzle schema + 共享数据库逻辑
@@ -160,3 +161,7 @@ pnpm --filter rolesandbox deploy
 | `tsconfig.base.json` | 全局 TypeScript 配置 |
 | `biome.json` | 代码风格规则 |
 | `nx.json` | Nx workspace 配置 |
+
+## 微信跑团
+
+小程序配置见 [小程序 README](apps/miniapp/README.md)，数据模型、权限和迁移边界见 [TRPG 工程说明](docs/trpg-workflow.md)。后台入口为 `/dash/trpg`，主持人入口为 `/trpg-host`。

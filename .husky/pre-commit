@@ -1,0 +1,27 @@
+#!/bin/sh
+
+echo "🔍 pre-commit: biome check"
+pnpm exec biome check --error-on-warnings . || {
+  echo "❌ Biome check failed. Fix all errors and warnings before committing."
+  exit 1
+}
+
+echo "🔍 pre-commit: tsc (diceshock)"
+pnpm exec tsc --noEmit -p apps/diceshock/tsconfig.json || {
+  echo "❌ TypeScript check failed (diceshock). Fix all errors before committing."
+  exit 1
+}
+
+echo "🔍 pre-commit: tsc (rolesandbox)"
+pnpm exec tsc --noEmit -p apps/rolesandbox/tsconfig.json || {
+  echo "❌ TypeScript check failed (rolesandbox). Fix all errors before committing."
+  exit 1
+}
+
+echo " pre-commit: tsc (miniapp)"
+pnpm --filter diceshock-miniapp run typecheck || {
+  echo "[FAIL] TypeScript check failed (miniapp). Fix all errors before committing."
+  exit 1
+}
+
+echo "✅ pre-commit checks passed."

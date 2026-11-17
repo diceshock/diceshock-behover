@@ -44,6 +44,8 @@ enum SortOrder {
 
 enum UserRole {
   CUSTOMER
+  MEMBER
+  HOST
   STAFF
   ADMIN
 }
@@ -1760,4 +1762,200 @@ type DashGlobalSearchResult {
 
 extend type Query {
   dashGlobalSearch(query: String!, categories: [String!], limit: Int = 10): [DashGlobalSearchResult!]! # @auth(role: STAFF)
+}
+# TRPG uses domain resolvers; its tables are not exposed through generated CRUD.
+type TrpgStore {
+  upcoming: Int!
+  id: ID!
+  name: String!
+  address: String
+  code: String
+  canReview: Boolean!
+}
+
+type TrpgTable {
+  id: ID!
+  name: String!
+  capacity: Int!
+}
+
+type TrpgBooking {
+  id: ID!
+  status: String!
+  reason: String
+}
+
+type TrpgAttendee {
+  id: ID!
+  status: String!
+  reason: String
+  nickname: String!
+  phone: String
+}
+
+type TrpgRosterPage {
+  items: [TrpgAttendee!]!
+  hasMore: Boolean!
+}
+
+type TrpgMember {
+  id: ID!
+  uid: String!
+  nickname: String!
+}
+
+type TrpgTimePlan {
+  id: ID!
+  type: String!
+  startsAt: String!
+  expiresAt: String
+}
+
+type TrpgDirectoryMember {
+  id: ID!
+  uid: String!
+  nickname: String!
+  role: String!
+  phone: String
+  points: Int!
+  balanceCents: Int!
+  storedValueMember: Boolean!
+  timePlans: [TrpgTimePlan!]!
+  host: Boolean!
+  staff: Boolean!
+  disabled: Boolean!
+}
+
+type TrpgDirectoryPage {
+  items: [TrpgDirectoryMember!]!
+  hasMore: Boolean!
+}
+
+type TrpgProfile {
+  canManage: Boolean!
+  canHost: Boolean!
+  id: ID!
+  nickname: String!
+  points: Int!
+  balanceCents: Int!
+  admin: Boolean!
+}
+
+type TrpgReward { id: ID! title: String! description: String! cover: String! points: Int! stock: Int! active: Boolean! revision: Int! }
+type TrpgVoucher { id: ID! title: String! points: Int! createdAt: String! usedAt: String usedStore: String }
+type TrpgMail { id: ID! kind: String! message: String! reply: String createdAt: String! nickname: String! }
+input TrpgRewardInput { id: ID! title: String! description: String! cover: String! points: Int! stock: Int! active: Boolean! revision: Int! }
+extend type Query {
+  trpgRewards(managed: Boolean = false): [TrpgReward!]!
+  trpgVouchers(offset: Int = 0): [TrpgVoucher!]!
+  trpgMail(managed: Boolean = false, offset: Int = 0): [TrpgMail!]!
+}
+extend type Mutation {
+  saveTrpgReward(input: TrpgRewardInput!): OperationResult!
+  redeemTrpgReward(id: ID!, requestId: String!): ID!
+  consumeTrpgVoucher(id: ID!, storeId: ID!): OperationResult!
+  sendTrpgMail(kind: String!, message: String!, requestId: String!): OperationResult!
+  replyTrpgMail(id: ID!, reply: String!): OperationResult!
+}
+
+type TrpgSession {
+  id: ID!
+  storeId: ID
+  storeName: String!
+  address: String
+  tableId: ID
+  tableName: String
+  hostName: String!
+  title: String!
+  description: String!
+  moduleName: String!
+  gameSystem: String!
+  status: String!
+  startsAt: String
+  deadline: String
+  priorityUntil: String
+  durationMinutes: Int!
+  sessionType: String!
+  feeCents: Int!
+  capacity: Int!
+  minimum: Int!
+  timeHint: String!
+  tags: [String!]!
+  revision: Int
+  reason: String
+  confirmedCount: Int!
+  interestedCount: Int!
+  pendingCount: Int!
+  remaining: Int!
+  canReview: Boolean!
+  canEdit: Boolean!
+  registrationOpen: Boolean!
+  booking: TrpgBooking
+}
+
+type TrpgSessionPage {
+  items: [TrpgSession!]!
+  hasMore: Boolean!
+}
+
+input TrpgFilters {
+  storeId: ID
+  offset: Int = 0
+  date: String
+  rule: String
+  tag: String
+  available: Boolean
+  dateFrom: String
+  dateTo: String
+  status: String
+  unscheduled: Boolean
+  hostId: ID
+}
+
+input TrpgSessionInput {
+  requestId: ID!
+  storeId: ID
+  tableId: ID
+  hostId: ID
+  title: String!
+  description: String!
+  moduleName: String!
+  gameSystem: String!
+  startsAt: String
+  deadline: String
+  timeHint: String = ""
+  tags: [String!] = []
+  capacity: Int!
+  minimum: Int!
+  durationMinutes: Int!
+  sessionType: String
+  feeCents: Int
+}
+
+extend type Query {
+  trpgStores(managed: Boolean = false): [TrpgStore!]!
+  trpgSessions(filters: TrpgFilters, managed: Boolean = false): TrpgSessionPage!
+  trpgSession(id: ID!): TrpgSession!
+  trpgManagedSession(id: ID!): TrpgSession!
+  trpgTables(storeId: ID!): [TrpgTable!]!
+  trpgHosts(storeId: ID!): [TrpgMember!]!
+  trpgRoster(id: ID!, offset: Int = 0): TrpgRosterPage!
+  trpgProfile: TrpgProfile!
+  trpgMyRecords(archive: Boolean = false, offset: Int = 0): TrpgSessionPage!
+  trpgMembers(storeId: ID!, search: String!): [TrpgMember!]!
+  trpgDirectory(storeId: ID, search: String = "", hostsOnly: Boolean = false, membersOnly: Boolean = false, offset: Int = 0): TrpgDirectoryPage!
+  trpgMemberHistory(storeId: ID, userId: ID!, offset: Int = 0): TrpgSessionPage!
+}
+
+extend type Mutation {
+  createTrpgSession(input: TrpgSessionInput!): TrpgSession!
+  resubmitTrpgSession(id: ID!, revision: Int!, input: TrpgSessionInput!): OperationResult!
+  transitionTrpgSession(id: ID!, revision: Int!, action: String!, reason: String = ""): OperationResult!
+  scheduleTrpgSession(id: ID!, revision: Int!, tableId: ID!, startsAt: String!, deadline: String!, storeId: ID): OperationResult!
+  joinTrpgSession(id: ID!): OperationResult!
+  withdrawTrpgRegistration(id: ID!): OperationResult!
+  reviewTrpgRegistration(id: ID!, registrationId: ID!, decision: String!, depositConfirmed: Boolean = false, reason: String = ""): OperationResult!
+  setTrpgHost(id: ID!, host: Boolean!): OperationResult!
+  setTrpgMember(id: ID!, member: Boolean!): OperationResult!
+  setTrpgAccess(id: ID!, storeId: ID!, staff: Boolean!, host: Boolean!): OperationResult!
 }

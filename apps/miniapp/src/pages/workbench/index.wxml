@@ -1,0 +1,8 @@
+<view class="page">
+ <view class="hero"><view class="title">{{profile.canManage ? '门店管理' : '主持工作台'}}</view><view>管理自己的场次与报名进度</view></view>
+ <view wx:if="{{error}}" class="error">{{error}}<button bindtap="reload">重试</button></view>
+ <block wx:if="{{profile}}"><button class="primary" bindtap="create">发起新团</button>
+ <view class="split card"><picker range="{{stores}}" range-key="name" value="{{storeIndex}}" data-key="storeIndex" bindchange="filter"><view class="picker">{{stores[storeIndex].name}} ▾</view></picker><picker range="{{statuses}}" value="{{statusIndex}}" data-key="statusIndex" bindchange="filter"><view class="picker">{{statuses[statusIndex]}} ▾</view></picker></view>
+ <button wx:for="{{items}}" wx:key="id" class="card" data-id="{{item.id}}" bindtap="open"><view class="row"><text class="card-title">{{item.title}}</text><text class="tag">{{item.statusText}}</text></view><view class="muted">{{item.storeName}} · {{item.timeText}}</view><view class="muted">{{item.hostName}} · 已确认 {{item.confirmedCount}} / {{item.capacity}} · 待审 {{item.pendingCount}}</view></button>
+ <view wx:if="{{!busy && !items.length}}" class="empty">暂无场次</view><button wx:if="{{hasMore}}" bindtap="more" disabled="{{busy}}">加载更多</button></block><view wx:if="{{busy}}" class="muted">正在加载…</view>
+</view>

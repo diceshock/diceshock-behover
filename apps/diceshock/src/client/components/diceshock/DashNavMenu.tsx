@@ -2,22 +2,17 @@ import { ChatCircleIcon } from "@phosphor-icons/react";
 import {
   CalendarDotsIcon,
   CheckIcon,
-  ClipboardTextIcon,
-  CurrencyDollarIcon,
   GaugeIcon,
   ImageSquareIcon,
   ListIcon,
-  MegaphoneIcon,
   MoonIcon,
   ScanIcon,
   SignOutIcon,
   StorefrontIcon,
   SunIcon,
   SwordIcon,
-  TableIcon,
   TranslateIcon,
   UsersIcon,
-  WechatLogoIcon,
   XIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { Link, useMatches } from "@tanstack/react-router";
@@ -52,23 +47,14 @@ const NAV_ITEMS: ReadonlyArray<{
   exact?: boolean;
 }> = [
   { to: "/dash", icon: GaugeIcon, labelKey: "dashNav.dashboard", exact: true },
-  { to: "/dash/users", icon: UsersIcon, labelKey: "dashNav.users" },
-  { to: "/dash/actives", icon: CalendarDotsIcon, labelKey: "dashNav.actives" },
-  { to: "/dash/events", icon: MegaphoneIcon, labelKey: "dashNav.events" },
-  { to: "/dash/tables", icon: TableIcon, labelKey: "dashNav.tables" },
-  { to: "/dash/orders", icon: ClipboardTextIcon, labelKey: "dashNav.orders" },
+  { to: "/dash/trpg", icon: CalendarDotsIcon, labelKey: "dashNav.trpg" },
+  { to: "/dash/trpg-hosts", icon: UsersIcon, labelKey: "trpgOps.hosts" },
+  { to: "/dash/trpg-members", icon: UsersIcon, labelKey: "trpgOps.members" },
+  { to: "/dash/trpg-rewards", icon: UsersIcon, labelKey: "trpgOps.rewards" },
+  { to: "/dash/trpg-mailbox", icon: UsersIcon, labelKey: "trpgOps.mailbox" },
+  { to: "/dash/users", icon: UsersIcon, labelKey: "trpgOps.accounts" },
   { to: "/dash/gsz", icon: SwordIcon, labelKey: "dashNav.mahjong" },
-  {
-    to: "/dash/pricing",
-    icon: CurrencyDollarIcon,
-    labelKey: "dashNav.pricing",
-  },
   { to: "/dash/media", icon: ImageSquareIcon, labelKey: "dashNav.media" },
-  {
-    to: "/dash/wechat-menu",
-    icon: WechatLogoIcon,
-    labelKey: "dashNav.wechatMenu",
-  },
 ];
 
 export function DashNavMenuButton() {
@@ -97,7 +83,7 @@ function AccountButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="gap-12 flex-nowrap items-center w-full h-12"
+      className="gap-3 flex-nowrap items-center w-full h-12"
     >
       <div className="avatar shrink-0">
         <div className="size-6 rounded-full overflow-hidden">
@@ -436,7 +422,7 @@ function ChatTriggerButton() {
   return (
     <button
       type="button"
-      className={clsx("gap-12 flex-nowrap", isOpen && "active")}
+      className={clsx("gap-3 flex-nowrap", isOpen && "active")}
       onClick={() => setIsOpen(!isOpen)}
     >
       <ChatCircleIcon className="size-6 shrink-0" />
@@ -463,20 +449,22 @@ function SidebarContent({
   const { t } = useTranslation();
   const isActive = (to: string, exact?: boolean) => {
     if (exact) return currentPath === to || currentPath === `${to}/`;
-    return currentPath.startsWith(to);
+    return currentPath === to || currentPath.startsWith(`${to}/`);
   };
 
   return (
-    <ul className={clsx("menu menu-xl flex-1 rounded-none", className)}>
+    <ul className={clsx("menu menu-md flex-1 rounded-none gap-1", className)}>
       {NAV_ITEMS.map((item) => (
         <li key={item.to}>
           <Link
             to={item.to}
             className={clsx(
-              "gap-12 flex-nowrap",
-              isActive(item.to, item.exact) && "active",
+              "gap-3 flex-nowrap",
+              isActive(item.to, item.exact) && "menu-active font-semibold",
             )}
             onClick={close}
+            activeOptions={{ exact: item.exact ?? false }}
+            aria-current={isActive(item.to, item.exact) ? "page" : undefined}
           >
             <item.icon className="size-6 shrink-0" />
             <span className="whitespace-nowrap">{t(item.labelKey)}</span>
@@ -487,7 +475,7 @@ function SidebarContent({
       <li className="mt-auto">
         <button
           type="button"
-          className="gap-12 flex-nowrap"
+          className="gap-3 flex-nowrap"
           onClick={() => {
             close();
             onScanClick();
@@ -537,7 +525,7 @@ export default function DashNavDrawer({
       <div
         className={clsx(
           "hidden lg:flex fixed top-0 left-0 h-full z-40",
-          "w-16 hover:w-56 transition-[width] duration-200 overflow-hidden",
+          "w-52 overflow-y-auto border-r border-base-300",
           "bg-base-200 flex-col",
         )}
       >
@@ -589,7 +577,7 @@ export default function DashNavDrawer({
       </div>
 
       <div
-        className="lg:pl-16 h-screen overflow-hidden flex flex-col transition-[padding-right] duration-200 max-lg:!pr-0"
+        className="lg:pl-52 h-screen overflow-hidden flex flex-col transition-[padding-right] duration-200 max-lg:!pr-0"
         style={{ paddingRight: isChatOpen ? chatPanelWidth : 0 }}
       >
         {children}

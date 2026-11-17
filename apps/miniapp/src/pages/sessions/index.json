@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "骰子奇兵",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "session-card": "/components/session-card/index"
+  }
+}

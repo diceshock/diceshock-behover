@@ -1,0 +1,2 @@
+.pricing-page .fee { color: #17442a; font-weight: 700; }
+.pricing-page .pricing-name { flex-basis: 150rpx; }

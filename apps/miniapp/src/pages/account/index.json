@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "我的账户",
+  "usingComponents": {
+    "session-card": "/components/session-card/index"
+  }
+}

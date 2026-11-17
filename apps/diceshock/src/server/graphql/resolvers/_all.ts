@@ -13,6 +13,8 @@ import { preferencesResolvers } from "./preferences";
 import { searchHistoryResolvers } from "./searchHistory";
 import { subscriptionResolvers } from "./subscriptions";
 import { tablesResolvers } from "./tables";
+import { trpgResolvers } from "./trpg";
+import { trpgMemberResolvers } from "./trpg-member-services";
 import { usersResolvers } from "./users";
 import { wechatMenuResolvers } from "./wechatMenu";
 
@@ -30,6 +32,8 @@ function mergeResolverMaps(
 }
 
 export const ALL_RESOLVERS: ResolverMap = mergeResolverMaps(
+  trpgMemberResolvers,
+  trpgResolvers,
   activesResolvers as Record<string, Record<string, unknown>>,
   articleResolvers as Record<string, Record<string, unknown>>,
   adminResolvers as Record<string, Record<string, unknown>>,

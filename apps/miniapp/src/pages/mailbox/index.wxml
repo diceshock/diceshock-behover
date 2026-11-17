@@ -1,0 +1,14 @@
+<view class="page">
+  <view class="section">骰子奇兵冒险者公会信箱</view>
+  <view wx:if="{{sent}}" class="card"><view class="card-title">投递成功</view><view class="muted">你的来信已送达门店。</view><button bindtap="again">再写一封</button></view>
+  <view wx:else class="card">
+    <view class="muted">想给门店提建议，或想玩某个模组？来信仅你和门店工作人员可见。</view>
+    <view class="label">来信类型</view><view class="chips"><button class="chip {{kind === 'suggestion' ? 'primary' : ''}}" data-kind="suggestion" bindtap="choose">提建议</button><button class="chip {{kind === 'wish' ? 'primary' : ''}}" data-kind="wish" bindtap="choose">许个愿</button></view>
+    <view class="label">来信内容</view><textarea class="mailbox-message" value="{{message}}" maxlength="2000" bindinput="input" disabled="{{busy}}" placeholder="{{kind === 'suggestion' ? '你希望门店改进什么？' : '你想玩什么模组，或希望门店办什么活动？'}}"/>
+    <button class="primary" bindtap="send" disabled="{{busy}}" loading="{{busy}}">投递来信</button>
+  </view>
+  <view wx:if="{{error}}" class="error">{{error}}<button bindtap="refresh">重试</button><button bindtap="login">重新登录</button></view>
+  <view wx:if="{{letters.length}}" class="section">我的来信</view>
+  <view wx:for="{{letters}}" wx:key="id" class="card"><text class="tag">{{item.kind === 'wish' ? '许愿' : '建议'}}</text><view class="body">{{item.message}}</view><view wx:if="{{item.reply}}" class="notice">门店回复：{{item.reply}}</view><view wx:else class="muted">等待门店回复</view></view>
+  <button wx:if="{{hasMore}}" bindtap="more" disabled="{{busy}}">更多来信</button>
+</view>

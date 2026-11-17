@@ -465,6 +465,8 @@ export type UserFilterInput = {
 export type UserRole =
   | 'ADMIN'
   | 'CUSTOMER'
+  | 'HOST'
+  | 'MEMBER'
   | 'STAFF';
 
 export type VerifyTotpInput = {

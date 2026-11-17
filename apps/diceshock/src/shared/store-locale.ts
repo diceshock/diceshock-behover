@@ -29,14 +29,14 @@ interface StoreEntry {
 export const STORES: Record<StoreCode, StoreEntry> = {
   gg: {
     code: "gg",
-    name: "光谷店",
-    shortName: "光谷",
+    name: "光谷天地店",
+    shortName: "光谷天地店",
     address: "武汉市洪山区鲁磨路光谷广场",
   },
   jdk: {
     code: "jdk",
     name: "街道口店",
-    shortName: "街道口",
+    shortName: "街道口店",
     address: "武汉市洪山区珞喻路街道口",
   },
 };

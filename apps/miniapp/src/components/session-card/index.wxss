@@ -1,0 +1,51 @@
+.card {
+  padding: 28rpx;
+  margin-bottom: 20rpx;
+  background: #fff;
+  border: 1rpx solid #e5e7eb;
+  border-radius: 20rpx;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16rpx;
+  align-items: center;
+}
+
+.heading {
+  font-size: 34rpx;
+  font-weight: 600;
+  margin: 14rpx 0;
+}
+
+.muted {
+  color: #52525b;
+  font-size: 26rpx;
+  line-height: 1.8;
+}
+
+.eyebrow, .price {
+  color: #117747;
+  font-size: 26rpx;
+}
+
+.tags {
+  margin: 16rpx 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+}
+
+.tag {
+  border-radius: 6rpx;
+  padding: 4rpx 12rpx;
+  color: #52525b;
+  background: #f4f4f5;
+  font-size: 24rpx;
+}
+
+.booking {
+  color: #117747;
+  margin-top: 12rpx;
+}

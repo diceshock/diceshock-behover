@@ -1,0 +1,271 @@
+fragment SessionFields on TrpgSession {
+  id
+  title
+  description
+  storeId
+  storeName
+  address
+  tableName
+  hostName
+  moduleName
+  gameSystem
+  status
+  startsAt
+  deadline
+  priorityUntil
+  durationMinutes
+  sessionType
+  feeCents
+  minimum
+  capacity
+  remaining
+  confirmedCount
+  pendingCount
+  timeHint
+  tags
+  registrationOpen
+}
+
+fragment ManagedSessionFields on TrpgSession {
+  ...SessionFields
+  tableId
+  revision
+  reason
+  canReview
+  canEdit
+}
+
+fragment BookingFields on TrpgSession {
+  booking {
+    id
+    status
+    reason
+  }
+}
+
+query Sessions($filters: TrpgFilters) {
+  trpgStores {
+    id
+    name
+    address
+    upcoming
+  }
+  trpgSessions(filters: $filters) {
+    items {
+      ...SessionFields
+    }
+    hasMore
+  }
+}
+
+query Stores {
+  trpgStores {
+    id
+    name
+    address
+    upcoming
+  }
+}
+
+query Session($id: ID!) {
+  trpgSession(id: $id) {
+    ...SessionFields
+    ...BookingFields
+  }
+}
+
+query Profile {
+  trpgProfile {
+    id
+    nickname
+    points
+    balanceCents
+    admin
+    canManage
+    canHost
+  }
+}
+
+query Records($archive: Boolean, $offset: Int) {
+  trpgMyRecords(archive: $archive, offset: $offset) {
+    items {
+      ...SessionFields
+      ...BookingFields
+    }
+    hasMore
+  }
+}
+
+mutation Join($id: ID!) {
+  joinTrpgSession(id: $id) {
+    success
+  }
+}
+
+mutation Withdraw($id: ID!) {
+  withdrawTrpgRegistration(id: $id) {
+    success
+  }
+}
+
+query Rewards {
+  trpgRewards {
+    id
+    title
+    description
+    cover
+    points
+    stock
+  }
+}
+
+query Vouchers($offset: Int) {
+  trpgVouchers(offset: $offset) {
+    id
+    title
+    points
+    createdAt
+    usedAt
+    usedStore
+  }
+}
+
+mutation Redeem($id: ID!, $requestId: String!) {
+  redeemTrpgReward(id: $id, requestId: $requestId)
+}
+
+query Mail($offset: Int) {
+  trpgMail(offset: $offset) {
+    id
+    kind
+    message
+    reply
+    createdAt
+  }
+}
+
+mutation SendMail($kind: String!, $message: String!, $requestId: String!) {
+  sendTrpgMail(kind: $kind, message: $message, requestId: $requestId) {
+    success
+  }
+}
+
+query Workbench($filters: TrpgFilters) {
+  trpgProfile {
+    canManage
+    canHost
+  }
+  trpgStores(managed: true) {
+    id
+    name
+    canReview
+  }
+  trpgSessions(managed: true, filters: $filters) {
+    items {
+      ...ManagedSessionFields
+    }
+    hasMore
+  }
+}
+
+query ManagedSession($id: ID!) {
+  trpgManagedSession(id: $id) {
+    ...ManagedSessionFields
+  }
+}
+
+query HostStores {
+  trpgStores(managed: true) {
+    id
+    name
+    canReview
+  }
+}
+
+query Tables($storeId: ID!) {
+  trpgTables(storeId: $storeId) {
+    id
+    name
+    capacity
+  }
+}
+
+mutation CreateSession($input: TrpgSessionInput!) {
+  createTrpgSession(input: $input) {
+    id
+    status
+  }
+}
+
+mutation ResubmitSession($id: ID!, $revision: Int!, $input: TrpgSessionInput!) {
+  resubmitTrpgSession(id: $id, revision: $revision, input: $input) {
+    success
+  }
+}
+
+mutation Transition(
+  $id: ID!
+  $revision: Int!
+  $action: String!
+  $reason: String
+) {
+  transitionTrpgSession(
+    id: $id
+    revision: $revision
+    action: $action
+    reason: $reason
+  ) {
+    success
+  }
+}
+
+mutation Schedule(
+  $id: ID!
+  $revision: Int!
+  $tableId: ID!
+  $startsAt: String!
+  $deadline: String!
+  $storeId: ID
+) {
+  scheduleTrpgSession(
+    id: $id
+    revision: $revision
+    tableId: $tableId
+    startsAt: $startsAt
+    deadline: $deadline
+    storeId: $storeId
+  ) {
+    success
+  }
+}
+
+query Roster($id: ID!, $offset: Int) {
+  trpgRoster(id: $id, offset: $offset) {
+    items {
+      id
+      nickname
+      status
+      reason
+      phone
+    }
+    hasMore
+  }
+}
+
+mutation Review(
+  $id: ID!
+  $registrationId: ID!
+  $decision: String!
+  $depositConfirmed: Boolean
+  $reason: String
+) {
+  reviewTrpgRegistration(
+    id: $id
+    registrationId: $registrationId
+    decision: $decision
+    depositConfirmed: $depositConfirmed
+    reason: $reason
+  ) {
+    success
+  }
+}

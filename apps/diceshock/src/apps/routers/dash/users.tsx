@@ -335,6 +335,18 @@ function RouteComponent() {
                   {t("dashUsers.staff")}
                 </span>
               );
+            case "HOST":
+              return (
+                <span className="badge badge-sm badge-warning">
+                  {t("dashUsers.host")}
+                </span>
+              );
+            case "MEMBER":
+              return (
+                <span className="badge badge-sm badge-success">
+                  {t("dashUsers.member")}
+                </span>
+              );
             default:
               return (
                 <span className="badge badge-sm badge-ghost">

@@ -29,7 +29,7 @@
 
 ## 编码规范
 
-- Biome 为唯一 lint/format 工具，提交前跑 `pnpm lint`。
+- Biome 为唯一 lint/format 工具。pre-commit hook 自动执行 biome check + tsc，不通过则无法提交。
 - 严禁 `any`（`noExplicitAny: error`），泛型约束（`<T extends any>`）和 `extends` 类型收窄中允许使用，生成文件除外。
 - 严禁 `@ts-ignore`，用 `@ts-expect-error` + 注释说明替代。
 - GraphQL schema 用 Pothos schema-builder，不手写 SDL。

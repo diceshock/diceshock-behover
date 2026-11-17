@@ -2,6 +2,7 @@ export { BoardGame } from "@lib/utils";
 export * as drizzle from "drizzle-orm";
 export * from "./schema";
 export * as schema from "./schema";
+export * from "./trpgSchema";
 export * from "./types";
 
 import type { D1Database } from "@cloudflare/workers-types";
