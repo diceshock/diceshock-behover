@@ -1,12 +1,24 @@
-import { readFileSync } from 'node:fs';
-import { runInNewContext } from 'node:vm';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { executeGraphQL, type GraphQLContext } from '@/server/apis/wechat/graphql';
 import { canEnterDashboard, operator } from '@/server/services/trpg/access';
+import * as documents from '../../../../miniapp/src/graphql/__generated__/operations';
 import { createDatabase } from './database';
-const sandbox = { module: { exports: {} as Record<string,string> } };
-runInNewContext(readFileSync(new URL('../../../../miniapp/services/operations.js', import.meta.url),'utf8'),sandbox);
-const op = sandbox.module.exports;
+// The exact operation strings the miniapp sends, keyed by the call names below.
+const op: Record<string, string> = {
+ createSession: documents.CreateSessionDocument.toString(),
+ join: documents.JoinDocument.toString(),
+ managedSession: documents.ManagedSessionDocument.toString(),
+ profile: documents.ProfileDocument.toString(),
+ resubmitSession: documents.ResubmitSessionDocument.toString(),
+ review: documents.ReviewDocument.toString(),
+ roster: documents.RosterDocument.toString(),
+ schedule: documents.ScheduleDocument.toString(),
+ sessions: documents.SessionsDocument.toString(),
+ transition: documents.TransitionDocument.toString(),
+ workbench: documents.WorkbenchDocument.toString(),
+ hostStores: documents.HostStoresDocument.toString(),
+ tables: documents.TablesDocument.toString(),
+};
 let f: ReturnType<typeof createDatabase>;
 beforeEach(()=>{f=createDatabase();});afterEach(()=>f.sqlite.close());
 async function call(name:string,variables:Record<string,unknown>,id:string|null) {

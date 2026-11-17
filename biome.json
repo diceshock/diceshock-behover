@@ -57,6 +57,16 @@
       "assist": {
         "enabled": false
       }
+    },
+    {
+      "includes": ["apps/miniapp/src/**/*.css"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnknownTypeSelector": "off"
+          }
+        }
+      }
     }
   ]
 }

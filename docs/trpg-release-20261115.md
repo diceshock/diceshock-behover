@@ -16,13 +16,13 @@
 
 - 网页：`http://127.0.0.1:5173/dash/trpg`。
 - 本地身份入口 `/__preview` 仅存在于被忽略的本机 Vite 配置，生产构建不引用它。
-- `pnpm --filter diceshock-miniapp build:local` 从正式业务源码生成本地接口包，输出路径包含 `miniapp-local`，不可上传。此命令不自动注入登录令牌。
+- `pnpm --filter diceshock-miniapp build:local` 从正式业务源码生成本地接口包，输出到 `apps/diceshock/.wrangler/miniapp-local`，不可上传。此命令不自动注入登录令牌。
 - 当前模拟器已导入的 `.wrangler/wechat-graphql-local-preview` 是单独的本地测试玩家副本，连接同一 D1。它与正式包完全分开，不可上传。
 - 用场次报名 → 后台审核 → 客户端状态刷新测试主流程。公会信箱可测试投递 → 后台回复 → 客户端查看；商品上架后可在有足够测试积分的会员上验证兑换和核销。
 
 ## 正式包
 
-`pnpm --filter diceshock-miniapp build:release` 读取忽略的 `apps/miniapp/config.local.json`。当前配置沿用原项目小程序 AppID 和 Worker 的 `AUTH_URL`（`https://diceshock.com`），生成独立时间戳目录 `dist/miniapp-release/*`。
+`pnpm --filter diceshock-miniapp build:release` 读取忽略的 `apps/miniapp/config.local.json`。当前配置沿用原项目小程序 AppID 和 Worker 的 `AUTH_URL`（`https://diceshock.com`），输出到 `dist/miniapp-release`（每次构建先清空）。
 
 正式包开启域名检查，不包含测试玩家令牌、角色选择和本地认证入口；只打包应用目录白名单，不带配置源文件、脚本或私有工程设置。品牌标记作为固定小文件随包提供，动态商品/门店媒体仍使用 HTTPS URL。
 

@@ -59,8 +59,7 @@ vitest.config.*.timestamp*
 # e2e artifacts
 apps/*/e2e/artifacts/
 
-# Local WeChat configuration and generated runtime config
+# Local WeChat configuration and weapp-vite generated support files
 apps/miniapp/config.local.json
-apps/miniapp/config.js
 apps/miniapp/project.private.config.json
-apps/miniapp/assets/
+apps/miniapp/.weapp-vite/

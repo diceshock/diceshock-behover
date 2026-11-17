@@ -18,4 +18,10 @@ pnpm exec tsc --noEmit -p apps/rolesandbox/tsconfig.json || {
   exit 1
 }
 
+echo " pre-commit: tsc (miniapp)"
+pnpm --filter diceshock-miniapp run typecheck || {
+  echo "[FAIL] TypeScript check failed (miniapp). Fix all errors before committing."
+  exit 1
+}
+
 echo "✅ pre-commit checks passed."
