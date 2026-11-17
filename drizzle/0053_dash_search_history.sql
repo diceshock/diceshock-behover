@@ -1,4 +1,4 @@
-CREATE TABLE `dash_search_history` (
+CREATE TABLE IF NOT EXISTS `dash_search_history` (
   `id` text PRIMARY KEY NOT NULL,
   `user_id` text NOT NULL,
   `label` text NOT NULL,
@@ -7,4 +7,4 @@ CREATE TABLE `dash_search_history` (
   `params` text NOT NULL DEFAULT '{}',
   `created_at` integer NOT NULL
 );
-CREATE INDEX `idx_dash_search_history_user_id` ON `dash_search_history`(`user_id`);
+CREATE INDEX IF NOT EXISTS `idx_dash_search_history_user_id` ON `dash_search_history`(`user_id`);
