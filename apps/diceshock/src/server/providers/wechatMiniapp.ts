@@ -1,17 +1,17 @@
 import { HTTPException } from "hono/http-exception";
 export type MiniappEnv = Pick<
   Cloudflare.Env,
-  "DB" | "KV" | "WECHAT_MINIAPP_APP_ID" | "WECHAT_MINIAPP_APP_SECRET"
+  "DB" | "KV" | "DS_WECHAT_MINI_APP_ID" | "DS_WECHAT_MINI_APP_SECRET"
 >;
 type Env = MiniappEnv;
 type WechatResult = { errcode?: number };
 function credentials(env: Env) {
-  if (!env.WECHAT_MINIAPP_APP_ID || !env.WECHAT_MINIAPP_APP_SECRET) {
+  if (!env.DS_WECHAT_MINI_APP_SECRET) {
     throw new HTTPException(503, { message: "小程序微信登录尚未配置" });
   }
   return {
-    appid: env.WECHAT_MINIAPP_APP_ID,
-    secret: env.WECHAT_MINIAPP_APP_SECRET,
+    appid: env.DS_WECHAT_MINI_APP_ID,
+    secret: env.DS_WECHAT_MINI_APP_SECRET,
   };
 }
 

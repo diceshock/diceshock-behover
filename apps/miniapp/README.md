@@ -25,7 +25,7 @@
 4. 微信开发者工具导入构建输出目录（见下文“发布”），不要导入源码目录。在本机设置真实 AppID，保存在忽略的私有配置中。
 5. 微信后台配置 request、downloadFile 合法域名和隐私保护指引，声明微信身份、昵称及手机号的用途。使用基础库 3.x。
 
-注入的配置会进入小程序包，不能包含 AppSecret、数据库凭证或令牌。微信 AppID/AppSecret 在 Worker secret `WECHAT_MINIAPP_APP_ID` / `WECHAT_MINIAPP_APP_SECRET` 中配置。
+注入的配置会进入小程序包，不能包含 AppSecret、数据库凭证或令牌。Worker 侧小程序 AppID 是 `wrangler.toml` 中的 `DS_WECHAT_MINI_APP_ID`（正式与 preview 均已配置），AppSecret 通过 Worker secret `DS_WECHAT_MINI_APP_SECRET` 设置。
 
 ## 结构
 

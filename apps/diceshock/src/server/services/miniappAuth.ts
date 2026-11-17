@@ -6,7 +6,7 @@ import { subject, verifiedPhone } from "../providers/wechatMiniapp";
 
 type Env = Pick<
   Cloudflare.Env,
-  "DB" | "KV" | "WECHAT_MINIAPP_APP_ID" | "WECHAT_MINIAPP_APP_SECRET"
+  "DB" | "KV" | "DS_WECHAT_MINI_APP_ID" | "DS_WECHAT_MINI_APP_SECRET"
 >;
 type Account = { id: string; nickname: string; phone: string | null };
 

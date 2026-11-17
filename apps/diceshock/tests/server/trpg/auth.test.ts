@@ -20,8 +20,8 @@ beforeEach(() => {
       get: vi.fn().mockResolvedValue("wechat-token"),
       put: vi.fn(),
     } as unknown as KVNamespace,
-    WECHAT_MINIAPP_APP_ID: "test-app",
-    WECHAT_MINIAPP_APP_SECRET: "test-secret",
+    DS_WECHAT_MINI_APP_ID: "wx2dea4e74c1ecc1c5",
+    DS_WECHAT_MINI_APP_SECRET: "test-secret",
   };
   vi.stubGlobal(
     "fetch",
@@ -85,7 +85,7 @@ describe("miniapp identity", () => {
   });
   it("requires configuration and handles WeChat failure without issuing a session", async () => {
     await expect(
-      miniappLogin({ ...env, WECHAT_MINIAPP_APP_SECRET: "" }, "code"),
+      miniappLogin({ ...env, DS_WECHAT_MINI_APP_SECRET: "" }, "code"),
     ).rejects.toThrow("未配置");
     vi.mocked(fetch).mockResolvedValue(Response.json({ errcode: 40029 }));
     await expect(miniappLogin(env, "code")).rejects.toThrow("微信验证失败");

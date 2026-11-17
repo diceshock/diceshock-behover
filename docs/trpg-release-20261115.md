@@ -30,7 +30,7 @@
 
 ## 发布前尚需完成
 
-1. 核对官网域名和小程序 AppID 是否就是此次发布目标。Worker 配置 `AUTH_SECRET`、`WECHAT_MINIAPP_APP_ID`、`WECHAT_MINIAPP_APP_SECRET`；不要配置测试短信固定码。
+1. 核对官网域名和小程序 AppID 是否就是此次发布目标（`wrangler.toml` 的 `DS_WECHAT_MINI_APP_ID`）。Worker secret 配置 `AUTH_SECRET`、`DS_WECHAT_MINI_APP_SECRET`；不要配置测试短信固定码。
 2. 核对目标数据库迁移历史并备份，按顺序应用 `0056_trpg_workflow.sql`、`0057_trpg_session_type.sql`、`0058_trpg_member_services.sql`。曾执行旧版同名 0056 的库须单独核查结构，不能直接认定已升级。
 3. 配置微信 request 域名 `https://diceshock.com`，配置实际媒体域名、隐私保护指引和手机号授权能力；按真实门店 ID 填充 `storeMedia` 的图片和联系方式。
 4. 在隔离 HTTPS 环境验证微信登录、手机号授权、分享返回、实际图片与双账号报名审核；不能用模拟器测试身份代替此步骤。

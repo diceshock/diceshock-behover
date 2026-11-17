@@ -32,7 +32,6 @@ interface __BaseEnv_CloudflareBindings {
 
 declare namespace Cloudflare {
   interface Env {
-    WECHAT_MINIAPP_APP_ID?: string;
-    WECHAT_MINIAPP_APP_SECRET?: string;
+    DS_WECHAT_MINI_APP_SECRET?: string;
   }
 }
