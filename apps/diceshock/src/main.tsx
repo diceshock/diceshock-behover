@@ -43,6 +43,7 @@ import type { HonoCtxEnv } from "@/shared/types";
 import seatRedirect from "./server/middlewares/seatRedirect";
 import "@/shared/utils/dayjs-config";
 import { miniappRoutes } from "./server/apis/miniapp";
+import { qrLoginRoutes } from "./server/apis/qrLogin";
 import aliyunInj from "./server/middlewares/aliyunInj";
 import {
   authGuard,
@@ -94,6 +95,7 @@ if (import.meta.env.DEV) {
 
 app.use(authInit);
 app.route("/api/miniapp", miniappRoutes);
+app.route("/api/qr-login", qrLoginRoutes);
 
 app.route("/api/chat/stream", chatStream);
 app.route("/api/chat/confirm", confirmMutation);

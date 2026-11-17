@@ -337,8 +337,6 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
     );
   }
 
-  if (!aliyunClient) return config;
-
   const { KV } = c.env;
 
   config.providers.push(
@@ -347,9 +345,61 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
       credentials: {
         phone: { label: "Phone", type: "text" },
         code: { label: "Code", type: "text" },
+        account: { label: "Account", type: "text" },
+        password: { label: "Password", type: "password" },
       },
       authorize: async (credentials) => {
-        const { phone, code } = credentials as { phone: string; code: string };
+        const { phone, code, account, password } = credentials as {
+          phone?: string;
+          code?: string;
+          account?: string;
+          password?: string;
+        };
+
+        // ── 后台账号密码登录 ─────────────────────────────────
+        // 账号与密码哈希来自 Worker secret（ADMIN_LOGIN_USER /
+        // ADMIN_LOGIN_PASSWORD_HASH）；未配置时该方式自动禁用。
+        if (account && password) {
+          const adminEnv = c.env as typeof c.env & {
+            ADMIN_LOGIN_USER?: string;
+            ADMIN_LOGIN_PASSWORD_HASH?: string;
+          };
+          const expectedUser = adminEnv.ADMIN_LOGIN_USER;
+          const expectedHash = adminEnv.ADMIN_LOGIN_PASSWORD_HASH;
+          if (!expectedUser || !expectedHash) {
+            console.log("[登录流程] 未配置后台账号密码，拒绝密码登录");
+            return null;
+          }
+          const digest = await crypto.subtle.digest(
+            "SHA-256",
+            new TextEncoder().encode(password),
+          );
+          const hash = Array.from(new Uint8Array(digest), (b) =>
+            b.toString(16).padStart(2, "0"),
+          ).join("");
+          if (account !== expectedUser || hash !== expectedHash.toLowerCase()) {
+            console.log("[登录流程] 后台账号或密码错误");
+            return null;
+          }
+          const adminUser = await db(c.env.DB).query.users.findFirst({
+            where: (u, { eq }) => eq(u.role, "admin"),
+          });
+          if (!adminUser) {
+            console.log("[登录流程] 库中没有管理员账号");
+            return null;
+          }
+          console.log("[登录流程] 后台账号密码登录成功", {
+            userId: adminUser.id,
+          });
+          return { id: adminUser.id, name: adminUser.name ?? "admin" };
+        }
+
+        if (!phone || !code) return null;
+
+        if (!aliyunClient) {
+          console.log("[登录流程] 短信服务未配置，无法使用短信登录");
+          return null;
+        }
 
         console.log("[登录流程] 开始验证登录", {
           phone,

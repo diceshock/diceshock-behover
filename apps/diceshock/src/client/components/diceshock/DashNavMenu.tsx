@@ -1,3 +1,4 @@
+import { signOut } from "@hono/auth-js/react";
 import { ChatCircleIcon } from "@phosphor-icons/react";
 import {
   CalendarDotsIcon,
@@ -8,7 +9,6 @@ import {
   MoonIcon,
   ScanIcon,
   SignOutIcon,
-  StorefrontIcon,
   SunIcon,
   SwordIcon,
   TranslateIcon,
@@ -223,12 +223,6 @@ function AccountSettingsModal({
       label: t("me.preferredLang"),
       sublabel: LOCALES[preferredLocale as LocaleCode]?.name ?? "简体中文",
     },
-    {
-      key: "store",
-      icon: StorefrontIcon,
-      label: t("me.preferredStore"),
-      sublabel: STORES[preferredStore as StoreCode]?.shortName ?? "光谷店",
-    },
   ];
 
   return (
@@ -294,15 +288,19 @@ function AccountSettingsModal({
             })}
 
             <div className="border-t border-base-content/10 mt-auto pt-2">
-              <a
-                href="https://diceshock.cloudflareaccess.com/cdn-cgi/access/logout"
+              <button
+                type="button"
+                onClick={async () => {
+                  await signOut({ redirect: false });
+                  window.location.href = "/login";
+                }}
                 className="flex items-center gap-2.5 w-full px-4 py-2.5 text-left hover:bg-error/10 transition-colors"
               >
                 <SignOutIcon className="size-4 shrink-0 text-error" />
                 <p className="text-xs font-medium text-error">
                   {t("dashNav.logout")}
                 </p>
-              </a>
+              </button>
             </div>
           </div>
 

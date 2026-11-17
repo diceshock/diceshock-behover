@@ -18,13 +18,16 @@ class ForbiddenError extends Error {
   }
 }
 
+/** 允许进入后台的角色：管理员、店长（店员）、主持人。顾客与会员不可进入。 */
+const DASH_ROLES = new Set(["admin", "staff", "host"]);
+
 export const Route = createFileRoute("/dash")({
   beforeLoad: async () => {
     if (typeof window === "undefined") return;
     const res = await fetch("/api/auth/session");
     const session = (await res.json()) as { user?: { role?: string } };
     const role = session?.user?.role;
-    if (role !== "admin" && role !== "staff") {
+    if (!role || !DASH_ROLES.has(role)) {
       throw new ForbiddenError();
     }
   },
@@ -127,6 +130,12 @@ function DashError({ error }: { error: unknown }) {
           <a href="/" className="btn btn-primary">
             {t("dashLayout.backToHome")}
           </a>
+
+          {isForbidden && (
+            <a href="/login" className="btn btn-secondary">
+              管理员登录
+            </a>
+          )}
 
           {!isForbidden && (
             <button

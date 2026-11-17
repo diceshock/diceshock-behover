@@ -9,7 +9,7 @@ import { BoardGame } from "@lib/utils";
 import { z } from "zod/v4";
 import type { GQLContext } from "../context";
 import { forbidden, notFound, validationError } from "../errors";
-import { requireAdmin, requireAuth, requireStaff } from "../guards";
+import { requireAuth, requireStaff } from "../guards";
 import { zodToGraphQLError } from "../validate";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -879,7 +879,7 @@ export const usersResolvers = {
       args: { input: unknown },
       ctx: GQLContext,
     ) {
-      requireAdmin(ctx);
+      requireStaff(ctx);
       const input = zodToGraphQLError(updateRoleSchema, args.input);
 
       if (input.id === ctx.userId) {
@@ -887,17 +887,36 @@ export const usersResolvers = {
       }
 
       const tdb = dbFactory(ctx.env.DB);
+      const nextRole = input.role.toLowerCase() as
+        | "customer"
+        | "member"
+        | "host"
+        | "staff"
+        | "admin";
+
+      // 角色授予权限：
+      //  - 管理员：任意角色
+      //  - 店员：只能把「顾客 / 会员 / 主持人」调整为「顾客 / 会员 / 主持人」，
+      //    既不能授予店员或管理员，也不能改动这两种角色的账号
+      const actorRole = (ctx.role ?? "").toLowerCase();
+      if (actorRole !== "admin") {
+        const staffAssignable = new Set(["customer", "member", "host"]);
+        if (!staffAssignable.has(nextRole)) {
+          throw forbidden("店员只能设置顾客、会员或主持人");
+        }
+        const target = await tdb.query.users.findFirst({
+          where: (u, { eq }) => eq(u.id, input.id),
+          columns: { id: true, role: true },
+        });
+        if (!target) throw notFound("User not found");
+        if (!staffAssignable.has(target.role)) {
+          throw forbidden("不能修改管理员或店员的角色");
+        }
+      }
 
       await tdb
         .update(users)
-        .set({
-          role: input.role.toLowerCase() as
-            | "customer"
-            | "member"
-            | "host"
-            | "staff"
-            | "admin",
-        })
+        .set({ role: nextRole })
         .where(drizzle.eq(users.id, input.id));
 
       const userProfile = await getUserProfile(ctx, input.id);
