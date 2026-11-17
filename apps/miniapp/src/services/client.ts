@@ -83,6 +83,9 @@ export interface AuthResult {
   accessToken?: string;
 }
 
+export const qrConfirm = (qrId: string) =>
+  request<{ ok: boolean; role?: string }>("/api/qr-login/confirm", { qrId });
+
 export const auth = (
   action: "login" | "verify" | "logout",
   data: Record<string, unknown> = {},
