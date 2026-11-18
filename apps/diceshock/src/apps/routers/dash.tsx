@@ -10,6 +10,7 @@ import { Launcher } from "@/client/components/dash/launcher";
 import MobileChatSheet from "@/client/components/dash/MobileChatSheet";
 import DashNavDrawer from "@/client/components/diceshock/DashNavMenu";
 import { useTranslation } from "@/client/hooks/useTranslation";
+import { DASH_ROLES } from "@/shared/constants";
 
 class ForbiddenError extends Error {
   constructor() {
@@ -24,7 +25,7 @@ export const Route = createFileRoute("/dash")({
     const res = await fetch("/api/auth/session");
     const session = (await res.json()) as { user?: { role?: string } };
     const role = session?.user?.role;
-    if (role !== "admin" && role !== "staff") {
+    if (!role || !DASH_ROLES.has(role)) {
       throw new ForbiddenError();
     }
   },
@@ -127,6 +128,12 @@ function DashError({ error }: { error: unknown }) {
           <a href="/" className="btn btn-primary">
             {t("dashLayout.backToHome")}
           </a>
+
+          {isForbidden && (
+            <a href="/login" className="btn btn-primary btn-sm">
+              管理员登录
+            </a>
+          )}
 
           {!isForbidden && (
             <button

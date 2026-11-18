@@ -1,17 +1,17 @@
-import CaptchaClient, {
-  VerifyIntelligentCaptchaRequest,
-} from "@alicloud/captcha20230305";
 import type { AdapterAccountType } from "@auth/core/adapters";
 import dbFactory, {
   accounts,
   drizzle,
   storesTable,
+  userCredentialsTable,
   userInfoTable,
   users,
 } from "@lib/db";
 import { customAlphabet } from "nanoid";
 import { z } from "zod";
 import { getSmsTmpCodeKey } from "@/server/utils/auth";
+import { verifyCaptchaToken } from "@/server/utils/captcha";
+import { hashPassword, verifyPassword } from "@/server/utils/password";
 import { ADMIN_PHONES_KV_KEY, mergeByPhone } from "@/server/utils/phoneMerge";
 import { LOCALES } from "@/shared/store-locale";
 import { cfImageUrl } from "@/shared/utils/cfImage";
@@ -140,56 +140,6 @@ async function sendSms(phone: string, code: string, ctx: GQLContext) {
     throw validationError("phone", "Too many SMS requests, please try later");
   }
   throw internalError("Unable to send SMS code");
-}
-
-/**
- * 服务端校验阿里云验证码 2.0 token
- * 调用 VerifyIntelligentCaptcha API 验证前端传来的 captchaVerifyParam
- */
-async function verifyCaptchaToken(
-  ctx: GQLContext,
-  captchaVerifyParam: string,
-  sceneId: string,
-): Promise<boolean> {
-  try {
-    const env = ctx.env as unknown as Record<string, unknown>;
-    const accessKeyId = env.ALIBABA_CLOUD_ACCESS_KEY_ID as string | undefined;
-    const accessKeySecret = env.ALIBABA_CLOUD_ACCESS_KEY_SECRET as
-      | string
-      | undefined;
-
-    if (!accessKeyId || !accessKeySecret) {
-      // 如果没配置凭据则放行（避免阻塞 SMS）
-      return true;
-    }
-
-    const { Config } = await import("@alicloud/openapi-client");
-    const config = new Config({
-      accessKeyId,
-      accessKeySecret,
-    });
-    config.endpoint = "captcha.cn-shanghai.aliyuncs.com";
-
-    const CaptchaClientMod =
-      typeof CaptchaClient === "function"
-        ? CaptchaClient
-        : (CaptchaClient as unknown as { default: typeof CaptchaClient })
-            .default;
-
-    const client = new CaptchaClientMod(config);
-
-    const request = new VerifyIntelligentCaptchaRequest({
-      captchaVerifyParam,
-      sceneId,
-    });
-
-    const response = await client.verifyIntelligentCaptcha(request);
-    const result = response.body?.result;
-    return result?.verifyResult === true;
-  } catch (_err) {
-    // 验证服务异常时放行，避免阻塞用户
-    return true;
-  }
 }
 
 function totpOtpAuthUrl(userId: string, secret: string) {
@@ -332,7 +282,7 @@ export const authResolvers = {
         .CAPTCHA_SCENE_ID as string | undefined;
       if (input.botcheck && captchaSceneId) {
         const verified = await verifyCaptchaToken(
-          ctx,
+          ctx.env as unknown as Record<string, unknown>,
           input.botcheck,
           captchaSceneId,
         );
@@ -755,6 +705,100 @@ export const authResolvers = {
       }
 
       return { success: true, user: await getUserProfile(ctx, ctx.userId) };
+    },
+
+    // ─── Password Management ────────────────────────────────────
+    async setUserPassword(
+      _source: unknown,
+      args: { userId: string; password: string },
+      ctx: GQLContext,
+    ) {
+      requireAdmin(ctx);
+      const { userId, password } = args;
+
+      if (password.length < 8) {
+        throw validationError("password", "密码至少 8 位");
+      }
+
+      // Verify target user exists
+      const user = await ctx.db.query.users.findFirst({
+        where: (u, { eq }) => eq(u.id, userId),
+        columns: { id: true },
+      });
+      if (!user) throw notFound("用户不存在");
+
+      const { hash, salt, iterations } = await hashPassword(password);
+      const now = new Date(Date.now());
+
+      await ctx.db
+        .insert(userCredentialsTable)
+        .values({
+          user_id: userId,
+          password_hash: hash,
+          salt,
+          iterations,
+          created_at: now,
+          updated_at: now,
+        })
+        .onConflictDoUpdate({
+          target: userCredentialsTable.user_id,
+          set: {
+            password_hash: hash,
+            salt,
+            iterations,
+            updated_at: now,
+          },
+        });
+
+      return true;
+    },
+
+    async changeMyPassword(
+      _source: unknown,
+      args: { currentPassword: string; newPassword: string },
+      ctx: GQLContext,
+    ) {
+      requireAuth(ctx);
+      const { currentPassword, newPassword } = args;
+
+      if (newPassword.length < 8) {
+        throw validationError("newPassword", "密码至少 8 位");
+      }
+
+      // Read existing credentials
+      const cred = await ctx.db
+        .select()
+        .from(userCredentialsTable)
+        .where(drizzle.eq(userCredentialsTable.user_id, ctx.userId))
+        .get();
+      if (!cred) {
+        throw validationError("currentPassword", "当前账号未设置密码");
+      }
+
+      const valid = await verifyPassword(
+        currentPassword,
+        cred.password_hash,
+        cred.salt,
+        cred.iterations,
+      );
+      if (!valid) {
+        throw validationError("currentPassword", "当前密码错误");
+      }
+
+      const { hash, salt, iterations } = await hashPassword(newPassword);
+      const now = new Date(Date.now());
+
+      await ctx.db
+        .update(userCredentialsTable)
+        .set({
+          password_hash: hash,
+          salt,
+          iterations,
+          updated_at: now,
+        })
+        .where(drizzle.eq(userCredentialsTable.user_id, ctx.userId));
+
+      return true;
     },
   },
 };
