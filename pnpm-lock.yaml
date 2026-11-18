@@ -134,6 +134,12 @@ importers:
       '@ai-sdk/react':
         specifier: ^1.2.12
         version: 1.2.12(react@19.2.7)(zod@4.6.7)
+      '@alicloud/captcha20230305':
+        specifier: ^1.1.4
+        version: 1.1.4
+      '@alicloud/openapi-client':
+        specifier: ^0.4.15
+        version: 0.4.15
       '@apollo/client':
         specifier: ~3.13.9
         version: 3.13.9(@types/react@19.2.17)(graphql-ws@6.0.8(graphql@16.13.1)(ws@8.23.0))(graphql@16.13.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -16493,6 +16499,7 @@ snapshots:
       magic-string: 0.30.21
     optionalDependencies:
       vite: 8.3.5(@types/node@25.9.4)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.22.4)(yaml@2.9.1)
+    optional: true
 
   '@vitest/pretty-format@4.1.9':
     dependencies:
@@ -16521,7 +16528,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.17
       tinyrainbow: 3.1.0
-      vitest: 4.1.9(@opentelemetry/api@1.9.0)(@types/node@25.9.4)(@vitest/ui@4.1.9)(vite@8.3.5(@types/node@25.9.4)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.22.4)(yaml@2.9.1))
+      vitest: 4.1.9(@opentelemetry/api@1.9.0)(@types/node@25.9.4)(@vitest/ui@4.1.9)(vite@8.0.16(@types/node@25.9.4)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.22.4)(yaml@2.9.0))
 
   '@vitest/utils@4.1.9':
     dependencies:
@@ -21155,7 +21162,7 @@ snapshots:
 
   rfdc@1.4.1: {}
 
-  rolldown-plugin-dts@0.30.2(@volar/typescript@2.4.31(typescript@6.0.3))(@vue/language-core@3.3.14)(oxc-resolver@11.24.2)(rolldown@1.2.16)(typescript@6.0.3)(vue-tsc@3.3.14(typescript@5.9.3)):
+  rolldown-plugin-dts@0.30.2(@volar/typescript@2.4.31(typescript@6.0.3))(@vue/language-core@3.3.14)(oxc-resolver@11.24.2)(rolldown@1.2.16)(typescript@6.0.3)(vue-tsc@3.3.14(typescript@6.0.3)):
     dependencies:
       dts-resolver: 3.0.0(oxc-resolver@11.24.2)
       get-tsconfig: 5.0.0-beta.6
@@ -22061,6 +22068,7 @@ snapshots:
       '@vitest/ui': 4.1.9(vitest@4.1.9)
     transitivePeerDependencies:
       - msw
+    optional: true
 
   void-elements@3.1.0: {}
 
@@ -22247,7 +22255,7 @@ snapshots:
       postcss-value-parser: 4.2.0
       resolve.exports: 2.0.4
       rolldown: 1.2.16
-      rolldown-plugin-dts: 0.30.2(@volar/typescript@2.4.31(typescript@6.0.3))(@vue/language-core@3.3.14)(oxc-resolver@11.24.2)(rolldown@1.2.16)(typescript@6.0.3)(vue-tsc@3.3.14(typescript@5.9.3))
+      rolldown-plugin-dts: 0.30.2(@volar/typescript@2.4.31(typescript@6.0.3))(@vue/language-core@3.3.14)(oxc-resolver@11.24.2)(rolldown@1.2.16)(typescript@6.0.3)(vue-tsc@3.3.14(typescript@6.0.3))
       rolldown-require: 2.1.4(rolldown@1.2.16)(rollup@4.68.3)
       semver: 7.8.6
       tinyexec: 1.3.1
