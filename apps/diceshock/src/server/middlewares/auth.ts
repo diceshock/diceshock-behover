@@ -5,6 +5,7 @@ import db, {
   accounts,
   drizzle,
   type UserRole,
+  userCredentialsTable,
   userInfoTable,
   users,
 } from "@lib/db";
@@ -12,12 +13,15 @@ import { createSelectSchema } from "drizzle-zod";
 import type { Context } from "hono";
 import { nanoid } from "nanoid/non-secure";
 import type z from "zod/v4";
+import { DASH_ROLES } from "@/shared/constants";
 import type { HonoCtxEnv } from "@/shared/types";
 import type { WechatUserInfoResponse } from "@/types/wechat";
 import { FACTORY } from "../factory";
 import { WechatMP, WechatMPSilent, WechatOpen } from "../providers/wechat";
 import { injectCrossDataToCtx } from "../utils";
 import { genNickname, getSmsTmpCodeKey } from "../utils/auth";
+import { verifyCaptchaToken } from "../utils/captcha";
+import { verifyPassword } from "../utils/password";
 import { mergeByPhone, mergeByUnionid } from "../utils/phoneMerge";
 
 declare module "@auth/core/types" {
@@ -336,6 +340,75 @@ export const authInit = initAuthConfig(async (c: Context<HonoCtxEnv>) => {
       }),
     );
   }
+
+  // ─── Admin Password Login ─────────────────────────────────────
+  config.providers.push(
+    Credentials({
+      id: "admin-password",
+      name: "Admin Password",
+      credentials: {
+        account: { label: "Account", type: "text" },
+        password: { label: "Password", type: "password" },
+        botcheck: { label: "Botcheck", type: "text" },
+      },
+      authorize: async (credentials) => {
+        const { account, password, botcheck } = credentials as {
+          account: string;
+          password: string;
+          botcheck?: string;
+        };
+
+        if (!account || !password) return null;
+
+        // CAPTCHA verification (if configured)
+        const captchaSceneId = (c.env as unknown as Record<string, unknown>)
+          .CAPTCHA_SCENE_ID as string | undefined;
+        if (botcheck && captchaSceneId) {
+          const verified = await verifyCaptchaToken(
+            c.env as unknown as Record<string, unknown>,
+            botcheck,
+            captchaSceneId,
+          );
+          if (!verified) return null;
+        }
+
+        const tdb = db(c.env.DB);
+
+        // Look up user by phone or uid
+        const userInfo = await tdb.query.userInfoTable.findFirst({
+          where: (ui, { eq, or }) =>
+            or(eq(ui.phone, account), eq(ui.uid, account)),
+          columns: { id: true },
+        });
+        if (!userInfo) return null;
+
+        const user = await tdb.query.users.findFirst({
+          where: (u, { eq }) => eq(u.id, userInfo.id),
+          columns: { id: true, name: true, role: true, disabled: true },
+        });
+        if (!user || user.disabled) return null;
+        if (!DASH_ROLES.has(user.role)) return null;
+
+        // Verify password
+        const cred = await tdb
+          .select()
+          .from(userCredentialsTable)
+          .where(drizzle.eq(userCredentialsTable.user_id, user.id))
+          .get();
+        if (!cred) return null;
+
+        const valid = await verifyPassword(
+          password,
+          cred.password_hash,
+          cred.salt,
+          cred.iterations,
+        );
+        if (!valid) return null;
+
+        return { id: user.id, name: user.name ?? "admin" };
+      },
+    }),
+  );
 
   if (!aliyunClient) return config;
 
@@ -733,14 +806,14 @@ export const dashGuard = FACTORY.createMiddleware(async (c, next) => {
   });
   const role = (authUser?.token?.role as UserRole) ?? "customer";
 
-  if (role !== "admin" && role !== "staff") {
+  if (!DASH_ROLES.has(role)) {
     console.warn("[dashGuard] rejected:", {
       path: c.req.path,
       role,
       hasToken: !!authUser?.token,
       sub: authUser?.token?.sub ?? null,
     });
-    return c.redirect("/");
+    return c.redirect("/login");
   }
 
   return next();

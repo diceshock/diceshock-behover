@@ -1006,3 +1006,34 @@ export const dashSearchHistoryRelations = relations(
     }),
   }),
 );
+
+// ─── User Credentials (password auth for admin/staff) ───────────
+
+export const userCredentialsTable = sqlite.sqliteTable("user_credentials", {
+  user_id: sqlite
+    .text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  password_hash: sqlite.text("password_hash").notNull(),
+  algorithm: sqlite.text("algorithm").notNull().default("PBKDF2-SHA256"),
+  salt: sqlite.text("salt").notNull(),
+  iterations: sqlite.int("iterations").notNull().default(600000),
+  created_at: sqlite
+    .integer("created_at", { mode: "timestamp_ms" })
+    .notNull()
+    .$defaultFn(() => new Date(Date.now())),
+  updated_at: sqlite
+    .integer("updated_at", { mode: "timestamp_ms" })
+    .notNull()
+    .$defaultFn(() => new Date(Date.now())),
+});
+
+export const userCredentialsRelations = relations(
+  userCredentialsTable,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [userCredentialsTable.user_id],
+      references: [users.id],
+    }),
+  }),
+);
