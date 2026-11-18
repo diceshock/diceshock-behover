@@ -15,6 +15,7 @@ import { Route as DashRouteImport } from './routers/dash'
 import { Route as DashIndexRouteImport } from './routers/dash/index'
 import { Route as Char123StoreLocaleChar125ReadyRouteImport } from './routers/{-$storeLocale}/ready'
 import { Route as Char123StoreLocaleChar125MyRiichiRouteImport } from './routers/{-$storeLocale}/my-riichi'
+import { Route as Char123StoreLocaleChar125LoginRouteImport } from './routers/{-$storeLocale}/login'
 import { Route as Char123StoreLocaleChar125WithHomeLoRouteImport } from './routers/{-$storeLocale}/_with-home-lo'
 import { Route as XIdRouteImport } from './routers/x.$id'
 import { Route as DashWechatMenuRouteImport } from './routers/dash/wechat-menu'
@@ -88,6 +89,12 @@ const Char123StoreLocaleChar125MyRiichiRoute =
   Char123StoreLocaleChar125MyRiichiRouteImport.update({
     id: '/my-riichi',
     path: '/my-riichi',
+    getParentRoute: () => Char123StoreLocaleChar125Route,
+  } as any)
+const Char123StoreLocaleChar125LoginRoute =
+  Char123StoreLocaleChar125LoginRouteImport.update({
+    id: '/login',
+    path: '/login',
     getParentRoute: () => Char123StoreLocaleChar125Route,
   } as any)
 const Char123StoreLocaleChar125WithHomeLoRoute =
@@ -333,6 +340,7 @@ export interface FileRoutesByFullPath {
   '/dash/users': typeof DashUsersRoute
   '/dash/wechat-menu': typeof DashWechatMenuRoute
   '/x/$id': typeof XIdRoute
+  '/{-$storeLocale}/login': typeof Char123StoreLocaleChar125LoginRoute
   '/{-$storeLocale}/my-riichi': typeof Char123StoreLocaleChar125MyRiichiRouteWithChildren
   '/{-$storeLocale}/ready': typeof Char123StoreLocaleChar125ReadyRouteWithChildren
   '/dash/': typeof DashIndexRoute
@@ -380,6 +388,7 @@ export interface FileRoutesByTo {
   '/dash/users': typeof DashUsersRoute
   '/dash/wechat-menu': typeof DashWechatMenuRoute
   '/x/$id': typeof XIdRoute
+  '/{-$storeLocale}/login': typeof Char123StoreLocaleChar125LoginRoute
   '/{-$storeLocale}/my-riichi': typeof Char123StoreLocaleChar125MyRiichiRouteWithChildren
   '/{-$storeLocale}/ready': typeof Char123StoreLocaleChar125ReadyRouteWithChildren
   '/dash': typeof DashIndexRoute
@@ -429,6 +438,7 @@ export interface FileRoutesById {
   '/dash/wechat-menu': typeof DashWechatMenuRoute
   '/x/$id': typeof XIdRoute
   '/{-$storeLocale}/_with-home-lo': typeof Char123StoreLocaleChar125WithHomeLoRouteWithChildren
+  '/{-$storeLocale}/login': typeof Char123StoreLocaleChar125LoginRoute
   '/{-$storeLocale}/my-riichi': typeof Char123StoreLocaleChar125MyRiichiRouteWithChildren
   '/{-$storeLocale}/ready': typeof Char123StoreLocaleChar125ReadyRouteWithChildren
   '/dash/': typeof DashIndexRoute
@@ -479,6 +489,7 @@ export interface FileRouteTypes {
     | '/dash/users'
     | '/dash/wechat-menu'
     | '/x/$id'
+    | '/{-$storeLocale}/login'
     | '/{-$storeLocale}/my-riichi'
     | '/{-$storeLocale}/ready'
     | '/dash/'
@@ -526,6 +537,7 @@ export interface FileRouteTypes {
     | '/dash/users'
     | '/dash/wechat-menu'
     | '/x/$id'
+    | '/{-$storeLocale}/login'
     | '/{-$storeLocale}/my-riichi'
     | '/{-$storeLocale}/ready'
     | '/dash'
@@ -574,6 +586,7 @@ export interface FileRouteTypes {
     | '/dash/wechat-menu'
     | '/x/$id'
     | '/{-$storeLocale}/_with-home-lo'
+    | '/{-$storeLocale}/login'
     | '/{-$storeLocale}/my-riichi'
     | '/{-$storeLocale}/ready'
     | '/dash/'
@@ -651,6 +664,13 @@ declare module '@tanstack/react-router' {
       path: '/my-riichi'
       fullPath: '/{-$storeLocale}/my-riichi'
       preLoaderRoute: typeof Char123StoreLocaleChar125MyRiichiRouteImport
+      parentRoute: typeof Char123StoreLocaleChar125Route
+    }
+    '/{-$storeLocale}/login': {
+      id: '/{-$storeLocale}/login'
+      path: '/login'
+      fullPath: '/{-$storeLocale}/login'
+      preLoaderRoute: typeof Char123StoreLocaleChar125LoginRouteImport
       parentRoute: typeof Char123StoreLocaleChar125Route
     }
     '/{-$storeLocale}/_with-home-lo': {
@@ -1082,6 +1102,7 @@ const Char123StoreLocaleChar125ReadyRouteWithChildren =
 
 interface Char123StoreLocaleChar125RouteChildren {
   Char123StoreLocaleChar125WithHomeLoRoute: typeof Char123StoreLocaleChar125WithHomeLoRouteWithChildren
+  Char123StoreLocaleChar125LoginRoute: typeof Char123StoreLocaleChar125LoginRoute
   Char123StoreLocaleChar125MyRiichiRoute: typeof Char123StoreLocaleChar125MyRiichiRouteWithChildren
   Char123StoreLocaleChar125ReadyRoute: typeof Char123StoreLocaleChar125ReadyRouteWithChildren
   Char123StoreLocaleChar125TCodeRoute: typeof Char123StoreLocaleChar125TCodeRoute
@@ -1091,6 +1112,7 @@ const Char123StoreLocaleChar125RouteChildren: Char123StoreLocaleChar125RouteChil
   {
     Char123StoreLocaleChar125WithHomeLoRoute:
       Char123StoreLocaleChar125WithHomeLoRouteWithChildren,
+    Char123StoreLocaleChar125LoginRoute: Char123StoreLocaleChar125LoginRoute,
     Char123StoreLocaleChar125MyRiichiRoute:
       Char123StoreLocaleChar125MyRiichiRouteWithChildren,
     Char123StoreLocaleChar125ReadyRoute:

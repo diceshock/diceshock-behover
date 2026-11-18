@@ -1959,3 +1959,10 @@ extend type Mutation {
   setTrpgMember(id: ID!, member: Boolean!): OperationResult!
   setTrpgAccess(id: ID!, storeId: ID!, staff: Boolean!, host: Boolean!): OperationResult!
 }
+
+# ─── Password Management ─────────────────────────────────────────
+
+extend type Mutation {
+  setUserPassword(userId: ID!, password: String!): Boolean! # @auth(role: ADMIN)
+  changeMyPassword(currentPassword: String!, newPassword: String!): Boolean! # @auth(role: CUSTOMER)
+}

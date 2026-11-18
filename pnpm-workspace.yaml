@@ -3,7 +3,7 @@ packages:
   - "libs/*"
   - "packages/*"
 allowBuilds:
-  '@alicloud/openapi-core': true
+  '@alicloud/openapi-core': false
   '@clerk/shared': true
   '@google/genai': true
   '@swc/core': true

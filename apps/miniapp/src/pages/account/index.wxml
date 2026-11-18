@@ -11,6 +11,7 @@
     <view class="heading">{{profile.nickname}}</view>
     <view class="row"><text class="card-title">会员账户</text><text class="tag">两店通用</text></view><view class="split"><view><text class="muted">余额</text><view class="card-title">¥{{profile.balanceText}}</view></view><view><text class="muted">积分</text><view class="card-title">{{profile.points}}</view></view></view><navigator url="/pages/rewards/index" class="label">积分兑换商城 ›</navigator><navigator url="/pages/mailbox/index" class="label">我的公会来信 ›</navigator>
     <navigator wx:if="{{profile.canHost}}" url="/pages/workbench/index" class="card"><view class="card-title">{{profile.canManage ? "门店管理" : "主持工作台"}} ›</view><view class="muted">{{profile.canManage ? "发布场次 · 场次审核 · 报名管理" : "发起新团 · 查看进度 · 报名名单"}}</view></navigator>
+        <button wx:if="{{profile.canManage || profile.canHost}}" bindtap="scanLogin" disabled="{{busy}}">扫码登录电脑后台</button>
     <button bindtap="logout" disabled="{{busy}}">退出登录</button>
   </view>
   <block wx:if="{{loggedIn}}">

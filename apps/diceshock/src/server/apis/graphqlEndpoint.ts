@@ -39,7 +39,8 @@ const GRAPHIQL_HTML = `<!DOCTYPE html>
 function resolveRole(authUser: Awaited<ReturnType<typeof getAuthUser>>): Role {
   if (!authUser) return "public";
   const tokenRole = authUser.token?.role as string;
-  if (tokenRole === "admin" || tokenRole === "staff") return tokenRole;
+  if (tokenRole === "admin") return "admin";
+  if (tokenRole === "staff" || tokenRole === "host") return "staff";
   if (authUser.token?.sub) return "authenticated";
   return "public";
 }

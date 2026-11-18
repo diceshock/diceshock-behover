@@ -1,3 +1,4 @@
+import { signOut } from "@hono/auth-js/react";
 import { ChatCircleIcon } from "@phosphor-icons/react";
 import {
   CalendarDotsIcon,
@@ -8,7 +9,6 @@ import {
   MoonIcon,
   ScanIcon,
   SignOutIcon,
-  StorefrontIcon,
   SunIcon,
   SwordIcon,
   TranslateIcon,
@@ -32,8 +32,6 @@ import {
   DEFAULT_STORE,
   LOCALES,
   type LocaleCode,
-  STORES,
-  type StoreCode,
 } from "@/shared/store-locale";
 import { avatarCardUrl } from "@/shared/utils/cfImage";
 import Modal from "../modal";
@@ -114,7 +112,7 @@ function AccountButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-type SettingsTab = "theme" | "language" | "store" | null;
+type SettingsTab = "theme" | "language" | null;
 
 function AccountSettingsModal({
   isOpen,
@@ -184,26 +182,6 @@ function AccountSettingsModal({
     [preferredStore, preferredTheme, updateMyPreferences],
   );
 
-  const handleStoreSelect = useCallback(
-    async (store: string) => {
-      try {
-        await updateMyPreferences({
-          variables: {
-            input: {
-              preferredLocale: preferredLocale || null,
-              preferredStoreId: store || null,
-              preferredTheme: preferredTheme || null,
-            },
-          },
-        });
-        window.location.reload();
-      } catch (e) {
-        console.error("[DashNavMenu] updateStorePreference error", e);
-      }
-    },
-    [preferredLocale, preferredTheme, updateMyPreferences],
-  );
-
   const menuItems: Array<{
     key: SettingsTab;
     icon: React.ElementType;
@@ -222,12 +200,6 @@ function AccountSettingsModal({
       icon: TranslateIcon,
       label: t("me.preferredLang"),
       sublabel: LOCALES[preferredLocale as LocaleCode]?.name ?? "简体中文",
-    },
-    {
-      key: "store",
-      icon: StorefrontIcon,
-      label: t("me.preferredStore"),
-      sublabel: STORES[preferredStore as StoreCode]?.shortName ?? "光谷店",
     },
   ];
 
@@ -294,15 +266,16 @@ function AccountSettingsModal({
             })}
 
             <div className="border-t border-base-content/10 mt-auto pt-2">
-              <a
-                href="https://diceshock.cloudflareaccess.com/cdn-cgi/access/logout"
+              <button
+                type="button"
+                onClick={() => signOut({ callbackUrl: "/login" })}
                 className="flex items-center gap-2.5 w-full px-4 py-2.5 text-left hover:bg-error/10 transition-colors"
               >
                 <SignOutIcon className="size-4 shrink-0 text-error" />
                 <p className="text-xs font-medium text-error">
                   {t("dashNav.logout")}
                 </p>
-              </a>
+              </button>
             </div>
           </div>
 
@@ -375,36 +348,6 @@ function AccountSettingsModal({
                         )}
                       </span>
                       <span>{entry.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {activeTab === "store" && (
-              <div className="flex flex-col gap-0.5">
-                {(
-                  Object.values(STORES) as Array<(typeof STORES)[StoreCode]>
-                ).map((entry) => {
-                  const isActive = entry.code === preferredStore;
-                  return (
-                    <button
-                      key={entry.code}
-                      type="button"
-                      onClick={() => handleStoreSelect(entry.code)}
-                      className={clsx(
-                        "flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-sm transition-colors text-left",
-                        isActive
-                          ? "bg-primary/10 text-primary font-medium"
-                          : "hover:bg-base-200 text-base-content",
-                      )}
-                    >
-                      <span className="w-5 shrink-0 flex items-center justify-center">
-                        {isActive && (
-                          <CheckIcon className="size-3.5" weight="bold" />
-                        )}
-                      </span>
-                      <span>{entry.shortName}</span>
                     </button>
                   );
                 })}
