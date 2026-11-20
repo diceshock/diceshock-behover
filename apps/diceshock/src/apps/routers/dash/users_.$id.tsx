@@ -46,6 +46,7 @@ import {
   usePauseOrderMutation,
   useRemoveMembershipPlanMutation,
   useResumeOrderMutation,
+  useSetUserPasswordMutation,
   useUpdateMembershipPlanMutation,
   useUpdateUserMutation,
   useUpdateUserRoleMutation,
@@ -331,6 +332,9 @@ function UserDetailPage() {
 
   const [updateUser] = useUpdateUserMutation();
   const [updateUserRole] = useUpdateUserRoleMutation();
+  const [setUserPassword] = useSetUserPasswordMutation();
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordPending, setPasswordPending] = useState(false);
   const [createMembershipPlan] = useCreateMembershipPlanMutation({
     refetchQueries: ["MembershipPlansByUser"],
   });
@@ -453,6 +457,24 @@ function UserDetailPage() {
       msg.error(err instanceof Error ? err.message : "发送失败");
     } finally {
       setNotifyPending(false);
+    }
+  };
+
+  const handleSetPassword = async () => {
+    const password = newPassword.trim();
+    if (password.length < 8) {
+      msg.error("密码至少 8 位");
+      return;
+    }
+    setPasswordPending(true);
+    try {
+      await setUserPassword({ variables: { userId: id, password } });
+      msg.success("登录密码已设置");
+      setNewPassword("");
+    } catch (err) {
+      msg.error(err instanceof Error ? err.message : "设置密码失败");
+    } finally {
+      setPasswordPending(false);
     }
   };
 
@@ -1146,6 +1168,38 @@ function UserDetailPage() {
                     onClick={() => void handleSendTestNotify()}
                   >
                     {notifyPending ? "发送中..." : "发送"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="divider" />
+
+              <div className="flex flex-col gap-3">
+                <h3 className="text-lg font-semibold">登录密码</h3>
+                <p className="text-sm text-base-content/60">
+                  设置后，该账号可用「手机号/UID +
+                  密码」登录后台。仅管理员可操作，密码至少 8
+                  位；店员与主持人也可以在这里单独分配。
+                </p>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="password"
+                    className="input input-bordered flex-1"
+                    placeholder="输入新密码（至少 8 位）"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    className={clsx(
+                      "btn btn-secondary",
+                      passwordPending && "loading",
+                    )}
+                    disabled={passwordPending || newPassword.trim().length < 8}
+                    onClick={() => void handleSetPassword()}
+                  >
+                    {passwordPending ? "保存中..." : "设置密码"}
                   </button>
                 </div>
               </div>

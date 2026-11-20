@@ -54,7 +54,9 @@
       </view>
       <view>
         <text class="label">规则系统</text>
-        <input placeholder="如 CoC 或 D＆D" value="{{rule}}" bindinput="inputRule" maxlength="40" confirm-type="search" bindconfirm="search"/>
+        <picker mode="selector" range="{{ruleLabels}}" bindchange="selectRule">
+          <view class="picker">{{rule || '全部规则'}}</view>
+        </picker>
       </view>
     </view>
     <view class="split">

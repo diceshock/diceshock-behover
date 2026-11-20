@@ -706,6 +706,7 @@ export type Mutation = {
   batchSyncMahjongMatchesToGsz: GszSyncResult;
   cancelBatchSettlement: Array<BatchOrderResult>;
   cancelSettlement: BatchOrderResult;
+  changeMyPassword: Scalars['Boolean']['output'];
   cleanupOrphanedData: CleanupOrphanedDataResult;
   cleanupOrphanedOrders: CleanupOrphanedDataResult;
   clearDashSearchHistory: Scalars['Boolean']['output'];
@@ -775,6 +776,7 @@ export type Mutation = {
   setTrpgAccess: OperationResult;
   setTrpgHost: OperationResult;
   setTrpgMember: OperationResult;
+  setUserPassword: Scalars['Boolean']['output'];
   settleOrder: SettlementResult;
   startOrder: TableOccupancy;
   syncMahjongMatchToGsz: GszSyncResult;
@@ -874,6 +876,12 @@ export type MutationCancelBatchSettlementArgs = {
 
 export type MutationCancelSettlementArgs = {
   id: Scalars['ID']['input'];
+};
+
+
+export type MutationChangeMyPasswordArgs = {
+  currentPassword: Scalars['String']['input'];
+  newPassword: Scalars['String']['input'];
 };
 
 
@@ -1232,6 +1240,12 @@ export type MutationSetTrpgHostArgs = {
 export type MutationSetTrpgMemberArgs = {
   id: Scalars['ID']['input'];
   member: Scalars['Boolean']['input'];
+};
+
+
+export type MutationSetUserPasswordArgs = {
+  password: Scalars['String']['input'];
+  userId: Scalars['ID']['input'];
 };
 
 
