@@ -1107,6 +1107,14 @@ export type DeductPointsMutationVariables = Exact<{
 
 export type DeductPointsMutation = { deductPoints: { id: string, userId: string, planType: Types.MembershipPlanType, amount: number | null, points: number | null, note: string | null, startDate: string, createdAt: string | null } };
 
+export type SetUserPasswordMutationVariables = Exact<{
+  userId: string | number;
+  password: string;
+}>;
+
+
+export type SetUserPasswordMutation = { setUserPassword: boolean };
+
 export type VerifyTotpDashMutationVariables = Exact<{
   input: Types.VerifyTotpInput;
 }>;
@@ -5689,6 +5697,38 @@ export function useDeductPointsMutation(baseOptions?: Apollo.MutationHookOptions
 export type DeductPointsMutationHookResult = ReturnType<typeof useDeductPointsMutation>;
 export type DeductPointsMutationResult = Apollo.MutationResult<Types.DeductPointsMutation>;
 export type DeductPointsMutationOptions = Apollo.BaseMutationOptions<Types.DeductPointsMutation, Types.DeductPointsMutationVariables>;
+export const SetUserPasswordDocument = gql`
+    mutation SetUserPassword($userId: ID!, $password: String!) {
+  setUserPassword(userId: $userId, password: $password)
+}
+    `;
+export type SetUserPasswordMutationFn = Apollo.MutationFunction<Types.SetUserPasswordMutation, Types.SetUserPasswordMutationVariables>;
+
+/**
+ * __useSetUserPasswordMutation__
+ *
+ * To run a mutation, you first call `useSetUserPasswordMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSetUserPasswordMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [setUserPasswordMutation, { data, loading, error }] = useSetUserPasswordMutation({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *      password: // value for 'password'
+ *   },
+ * });
+ */
+export function useSetUserPasswordMutation(baseOptions?: Apollo.MutationHookOptions<Types.SetUserPasswordMutation, Types.SetUserPasswordMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<Types.SetUserPasswordMutation, Types.SetUserPasswordMutationVariables>(SetUserPasswordDocument, options);
+      }
+export type SetUserPasswordMutationHookResult = ReturnType<typeof useSetUserPasswordMutation>;
+export type SetUserPasswordMutationResult = Apollo.MutationResult<Types.SetUserPasswordMutation>;
+export type SetUserPasswordMutationOptions = Apollo.BaseMutationOptions<Types.SetUserPasswordMutation, Types.SetUserPasswordMutationVariables>;
 export const VerifyTotpDashDocument = gql`
     mutation VerifyTotpDash($input: VerifyTotpInput!) {
   verifyTotp(input: $input) {

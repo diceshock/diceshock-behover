@@ -235,3 +235,7 @@ mutation DeductPoints($input: DeductPointsInput!) {
     createdAt
   }
 }
+
+mutation SetUserPassword($userId: ID!, $password: String!) {
+  setUserPassword(userId: $userId, password: $password)
+}

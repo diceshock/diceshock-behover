@@ -19,6 +19,7 @@ definePage({
     branch: "",
     date: "",
     rule: "",
+    ruleLabels: ["全部规则"] as string[],
     tag: "",
     available: false,
     queryDate: "",
@@ -56,9 +57,21 @@ definePage({
         ...(append ? d.sessions : []),
         ...result.trpgSessions.items,
       ];
+      // 规则下拉：从已加载场次里去重，按名称排序（"全部规则" 固定第一项）
+      const ruleLabels = ["全部规则"];
+      for (const s of sessions) {
+        const value = s.gameSystem.trim();
+        if (value && !ruleLabels.includes(value)) ruleLabels.push(value);
+      }
+      ruleLabels.sort((a, b) => {
+        if (a === "全部规则") return -1;
+        if (b === "全部规则") return 1;
+        return a.localeCompare(b, "zh-Hans-CN");
+      });
       if (!this.disposed)
         this.setData({
           sessions,
+          ruleLabels,
           board: recruitmentBoard(sessions),
           hasMore: result.trpgSessions.hasMore,
           branches: result.trpgStores.map((s) => ({
@@ -87,8 +100,10 @@ definePage({
   selectDate(e: WechatMiniprogram.PickerChange) {
     this.setData({ date: String(e.detail.value) });
   },
-  inputRule(e: WechatMiniprogram.Input) {
-    this.setData({ rule: e.detail.value });
+  selectRule(e: WechatMiniprogram.PickerChange) {
+    const index = Number(e.detail.value);
+    const label = this.data.ruleLabels[index] ?? "全部规则";
+    this.setData({ rule: label === "全部规则" ? "" : label });
   },
   inputTag(e: WechatMiniprogram.Input) {
     this.setData({ tag: e.detail.value });
