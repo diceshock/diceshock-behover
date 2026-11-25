@@ -24,6 +24,21 @@ export function requireAdmin(ctx: GQLContext): void {
   }
 }
 
+export async function requireManageableUser(
+  ctx: GQLContext,
+  userId: string,
+): Promise<void> {
+  requireStaff(ctx);
+  if (ctx.role === "admin") return;
+  const target = await ctx.db.query.users.findFirst({
+    where: (u, { eq }) => eq(u.id, userId),
+    columns: { role: true },
+  });
+  if (target?.role === "admin" || target?.role === "staff") {
+    throw forbidden("Cannot manage a privileged account");
+  }
+}
+
 export function requireOwner<
   TRow extends Record<TOwnerField, unknown>,
   TOwnerField extends string,

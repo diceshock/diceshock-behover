@@ -1,3 +1,4 @@
+import { gql, useApolloClient } from "@apollo/client";
 import { useSession } from "@hono/auth-js/react";
 import {
   DotsThreeVerticalIcon,
@@ -72,6 +73,11 @@ interface UserItem {
 const BATCH_SIZE = 100;
 
 const FILTER_PAGE_SIZE = 30;
+const CREATE_MANAGED_USER = gql`
+  mutation CreateManagedUser($name: String!, $phone: String!, $role: String!, $password: String) {
+    createManagedUser(name: $name, phone: $phone, role: $role, password: $password)
+  }
+`;
 
 /** Build a GQL UserFilterInput from parsed search bar input. Exported for unit tests. */
 export function buildFilter(
@@ -180,6 +186,7 @@ function hasRole(user: unknown): user is { role: string } {
 
 function RouteComponent() {
   const msg = useMsg();
+  const client = useApolloClient();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -187,6 +194,32 @@ function RouteComponent() {
   const [offset, setOffset] = useState(0);
   const { data: session } = useSession();
   const isAdmin = hasRole(session?.user) && session.user.role === "admin";
+  const createDialogRef = useRef<HTMLDialogElement>(null);
+  const [createPending, setCreatePending] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    phone: "",
+    role: "CUSTOMER",
+    password: "",
+  });
+  const createAccount = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setCreatePending(true);
+    try {
+      await client.mutate({
+        mutation: CREATE_MANAGED_USER,
+        variables: { ...createForm, password: createForm.password || null },
+      });
+      createDialogRef.current?.close();
+      setCreateForm({ name: "", phone: "", role: "CUSTOMER", password: "" });
+      await refetch();
+      msg.success("账号已创建");
+    } catch (error) {
+      msg.error(error instanceof Error ? error.message : "创建失败");
+    } finally {
+      setCreatePending(false);
+    }
+  };
 
   const { filters, query } = useRouteFilters();
   const openForField = useSetAtom(launcherOpenForFieldAtom);
@@ -232,7 +265,7 @@ function RouteComponent() {
     [filters, query, sorting, offset],
   );
 
-  const { data, loading, fetchMore } = useUsersQuery({
+  const { data, loading, fetchMore, refetch } = useUsersQuery({
     variables: { filter },
     onError: (err) => {
       msg.error(err.message || t("dashUsers.fetchFailed"));
@@ -360,8 +393,6 @@ function RouteComponent() {
         accessorKey: "phone",
         header: t("dashUsers.phone"),
         cell: ({ row }) => {
-          if (!isAdmin)
-            return <span className="text-base-content/40">***</span>;
           return (
             <span className="whitespace-nowrap">
               {row.original.phone || "—"}
@@ -428,7 +459,7 @@ function RouteComponent() {
             : "—",
       },
     ],
-    [t, isAdmin, mapRawPlan],
+    [t, mapRawPlan],
   );
 
   const users = (data?.managedUsers?.items ?? []) as UserItem[];
@@ -497,6 +528,15 @@ function RouteComponent() {
 
   return (
     <main className="flex-1 min-h-0 flex flex-col">
+      <div className="flex justify-end p-3">
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => createDialogRef.current?.showModal()}
+        >
+          新建账号
+        </button>
+      </div>
       <DataTable
         columns={columns}
         data={users}
@@ -546,27 +586,30 @@ function RouteComponent() {
                     {t("dashUsers.details")}
                   </Link>
                 </li>
-                <li>
-                  {row.disabled ? (
-                    <button
-                      type="button"
-                      className="text-success"
-                      onClick={() => confirmEnable(row.id)}
-                    >
-                      <UserMinusIcon className="size-4" />
-                      {t("dashUsers.restore")}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="text-error"
-                      onClick={() => openDisableDialog(row)}
-                    >
-                      <UserMinusIcon className="size-4" />
-                      {t("dashUsers.disable")}
-                    </button>
+                {(isAdmin || !["ADMIN", "STAFF"].includes(row.role)) &&
+                  row.id !== session?.user?.id && (
+                    <li>
+                      {row.disabled ? (
+                        <button
+                          type="button"
+                          className="text-success"
+                          onClick={() => confirmEnable(row.id)}
+                        >
+                          <UserMinusIcon className="size-4" />
+                          {t("dashUsers.restore")}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="text-error"
+                          onClick={() => openDisableDialog(row)}
+                        >
+                          <UserMinusIcon className="size-4" />
+                          {t("dashUsers.disable")}
+                        </button>
+                      )}
+                    </li>
                   )}
-                </li>
               </ul>
             </div>
           ) : (
@@ -580,25 +623,27 @@ function RouteComponent() {
                 {t("dashUsers.details")}
                 <EyeIcon />
               </Link>
-              {row.disabled ? (
-                <button
-                  type="button"
-                  className="btn btn-xs btn-ghost btn-success"
-                  onClick={() => confirmEnable(row.id)}
-                >
-                  {t("dashUsers.restore")}
-                  <UserMinusIcon />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="btn btn-xs btn-ghost btn-error"
-                  onClick={() => openDisableDialog(row)}
-                >
-                  {t("dashUsers.disable")}
-                  <UserMinusIcon />
-                </button>
-              )}
+              {(isAdmin || !["ADMIN", "STAFF"].includes(row.role)) &&
+                row.id !== session?.user?.id &&
+                (row.disabled ? (
+                  <button
+                    type="button"
+                    className="btn btn-xs btn-ghost btn-success"
+                    onClick={() => confirmEnable(row.id)}
+                  >
+                    {t("dashUsers.restore")}
+                    <UserMinusIcon />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-xs btn-ghost btn-error"
+                    onClick={() => openDisableDialog(row)}
+                  >
+                    {t("dashUsers.disable")}
+                    <UserMinusIcon />
+                  </button>
+                ))}
             </div>
           )
         }
@@ -664,6 +709,96 @@ function RouteComponent() {
             </div>
           </div>
         )}
+      </dialog>
+      <dialog ref={createDialogRef} className="modal">
+        <form
+          onSubmit={(event) => void createAccount(event)}
+          className="modal-box space-y-4"
+        >
+          <h2 className="text-lg font-semibold">新建账号</h2>
+          <label className="form-control block">
+            姓名或昵称
+            <input
+              className="input input-bordered w-full"
+              required
+              maxLength={100}
+              value={createForm.name}
+              onChange={(event) =>
+                setCreateForm((form) => ({ ...form, name: event.target.value }))
+              }
+            />
+          </label>
+          <label className="form-control block">
+            手机号
+            <input
+              className="input input-bordered w-full"
+              required
+              type="tel"
+              pattern="1[3-9][0-9]{9}"
+              value={createForm.phone}
+              onChange={(event) =>
+                setCreateForm((form) => ({
+                  ...form,
+                  phone: event.target.value,
+                }))
+              }
+            />
+          </label>
+          <label className="form-control block">
+            角色
+            <select
+              className="select select-bordered w-full"
+              value={createForm.role}
+              onChange={(event) =>
+                setCreateForm((form) => ({
+                  ...form,
+                  role: event.target.value,
+                  password: "",
+                }))
+              }
+            >
+              <option value="CUSTOMER">顾客</option>
+              <option value="MEMBER">会员</option>
+              <option value="HOST">主持人</option>
+              {isAdmin && <option value="STAFF">店员</option>}
+            </select>
+          </label>
+          {["HOST", "STAFF", "ADMIN"].includes(createForm.role) && (
+            <label className="form-control block">
+              初始密码
+              <input
+                className="input input-bordered w-full"
+                required
+                type="password"
+                minLength={8}
+                autoComplete="new-password"
+                value={createForm.password}
+                onChange={(event) =>
+                  setCreateForm((form) => ({
+                    ...form,
+                    password: event.target.value,
+                  }))
+                }
+              />
+            </label>
+          )}
+          <div className="modal-action">
+            <button
+              type="button"
+              className="btn"
+              onClick={() => createDialogRef.current?.close()}
+            >
+              取消
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={createPending}
+            >
+              {createPending ? "创建中..." : "创建"}
+            </button>
+          </div>
+        </form>
       </dialog>
     </main>
   );

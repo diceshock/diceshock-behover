@@ -40,7 +40,7 @@ function resolveRole(authUser: Awaited<ReturnType<typeof getAuthUser>>): Role {
   if (!authUser) return "public";
   const tokenRole = authUser.token?.role as string;
   if (tokenRole === "admin") return "admin";
-  if (tokenRole === "staff" || tokenRole === "host") return "staff";
+  if (tokenRole === "staff") return "staff";
   if (authUser.token?.sub) return "authenticated";
   return "public";
 }
@@ -81,6 +81,23 @@ export async function graphqlHandler(
       let role = resolveRole(authUser);
       let userId = resolveUserId(authUser);
       let preferredStoreId = resolvePreferredStoreId(authUser);
+
+      if (userId) {
+        const currentUserId = userId;
+        const account = await db(c.env.DB).query.users.findFirst({
+          where: (u, { eq }) => eq(u.id, currentUserId),
+          columns: { role: true, disabled: true },
+        });
+        if (!account || account.disabled) {
+          return c.json({ errors: [{ message: "请重新登录" }] }, 401);
+        }
+        role =
+          account.role === "admin"
+            ? "admin"
+            : account.role === "staff"
+              ? "staff"
+              : "authenticated";
+      }
 
       const authorization = c.req.header("Authorization");
       if (authorization) {

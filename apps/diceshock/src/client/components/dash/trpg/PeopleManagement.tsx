@@ -45,7 +45,7 @@ export function PeopleManagement({ hostsOnly }: { hostsOnly: boolean }) {
             key={String(hostsOnly)}
             storeId=""
             hostsOnly={hostsOnly}
-            admin={!!context.data?.trpgProfile.admin}
+            admin={!!allowed}
           />
         )}
       </div>
@@ -250,7 +250,9 @@ function Directory({
                 disabled={
                   m.disabled ||
                   (hostsOnly
-                    ? m.host || saving.loading
+                    ? m.host ||
+                      ["admin", "staff"].includes(m.role) ||
+                      saving.loading
                     : m.host || m.role !== "customer" || savingMember.loading)
                 }
                 onClick={() =>

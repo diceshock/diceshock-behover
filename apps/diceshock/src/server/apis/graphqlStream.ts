@@ -1,4 +1,5 @@
 import { getAuthUser } from "@hono/auth-js";
+import db from "@lib/db";
 import {
   type ArgumentNode,
   type DocumentNode,
@@ -129,7 +130,14 @@ export async function graphqlStreamHandler(
 ): Promise<Response> {
   const authUser = await getAuthUser(c);
   const role = resolveRole(authUser);
-  if (!hasRole(role, "authenticated")) {
+  const userId = authUser?.token?.sub;
+  const account = userId
+    ? await db(c.env.DB).query.users.findFirst({
+        where: (u, { eq }) => eq(u.id, userId),
+        columns: { disabled: true },
+      })
+    : null;
+  if (!hasRole(role, "authenticated") || !account || account.disabled) {
     return c.text("Unauthorized", 401, {
       "Access-Control-Allow-Origin": "*",
     });

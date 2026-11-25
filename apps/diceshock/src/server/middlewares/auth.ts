@@ -805,8 +805,19 @@ export const dashGuard = FACTORY.createMiddleware(async (c, next) => {
     return null;
   });
   const role = (authUser?.token?.role as UserRole) ?? "customer";
+  const accountId = authUser?.token?.sub;
+  const account = accountId
+    ? await db(c.env.DB).query.users.findFirst({
+        where: (u, { eq }) => eq(u.id, accountId),
+        columns: { role: true, disabled: true },
+      })
+    : null;
 
-  if (!DASH_ROLES.has(role)) {
+  if (
+    !account ||
+    account.disabled ||
+    (account.role !== "admin" && account.role !== "staff")
+  ) {
     console.warn("[dashGuard] rejected:", {
       path: c.req.path,
       role,

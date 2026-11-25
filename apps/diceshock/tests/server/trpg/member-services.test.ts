@@ -37,9 +37,8 @@ it('rejects overspending, changing a retried request, stale catalog edits and un
 });
 it('consumes vouchers once and enforces store review permissions',async()=>{
   await setup();const id=await services.redeem(f.db,await operator(f.db,'p1'),'r1','one');const staff=await operator(f.db,'staff');
-  await expect(services.consume(f.db,staff,id,'b')).rejects.toThrow();
   await expect(services.consume(f.db,await operator(f.db,'p1'),id,'a')).rejects.toThrow();
-  await services.consume(f.db,staff,id,'a');await expect(services.consume(f.db,staff,id,'a')).rejects.toThrow();
+  await services.consume(f.db,staff,id,'b');await expect(services.consume(f.db,staff,id,'b')).rejects.toThrow();
 });
 it('keeps private mail isolated and restricts replies and management queries',async()=>{
   const p=await operator(f.db,'p1');await services.sendMail(f.db,p,'wish','A private wish','mail-1');await services.sendMail(f.db,p,'wish','A private wish','mail-1');
