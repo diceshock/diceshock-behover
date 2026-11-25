@@ -205,7 +205,7 @@ export async function listSessions(
 ) {
   const now = Date.now();
   const scope = actor
-    ? actor.role === "admin"
+    ? actor.role === "admin" || actor.role === "staff"
       ? undefined
       : or(
           inArray(
@@ -216,7 +216,9 @@ export async function listSessions(
           ),
           and(
             eq(sessions.hostId, actor.id),
-            actor.access.some((a) => a.host) ? sql`1=1` : sql`0=1`,
+            actor.role === "host" || actor.access.some((a) => a.host)
+              ? sql`1=1`
+              : sql`0=1`,
           ),
           canReviewAny(actor) ? isNull(sessions.storeId) : sql`0=1`,
         )

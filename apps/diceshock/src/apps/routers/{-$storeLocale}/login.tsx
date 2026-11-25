@@ -63,6 +63,14 @@ function isWechatBrowser(): boolean {
 // Page
 // ---------------------------------------------------------------------------
 
+async function redirectAfterSignIn() {
+  const response = await fetch("/api/auth/session");
+  const session = (await response.json()) as { user?: { role?: string } };
+  window.location.replace(
+    session.user?.role === "host" ? "/trpg-host" : "/dash",
+  );
+}
+
 function LoginPage() {
   const client = useApolloClient();
   const [activeTab, setActiveTab] = useState<TabKey>("password");
@@ -76,7 +84,7 @@ function LoginPage() {
       .then((session) => {
         const role = session?.user?.role;
         if (role && DASH_ROLES.has(role)) {
-          window.location.replace("/dash");
+          window.location.replace(role === "host" ? "/trpg-host" : "/dash");
           return;
         }
         setSessionChecked(true);
@@ -246,7 +254,7 @@ function PasswordTab() {
         onBizResultCallback: (bizResult) => {
           setSubmitting(false);
           if (bizResult) {
-            window.location.replace("/dash");
+            void redirectAfterSignIn();
           } else {
             setError((prev) => prev ?? "账号或密码错误");
           }
@@ -295,7 +303,7 @@ function PasswordTab() {
             ? Boolean(result.ok)
             : false;
         if (ok) {
-          window.location.replace("/dash");
+          void redirectAfterSignIn();
         } else {
           setError("账号或密码错误");
         }
@@ -516,7 +524,7 @@ function QRScanTab() {
         if (cancelled) return;
         if (result.ok) {
           setState({ phase: "done" });
-          window.location.replace("/dash");
+          void redirectAfterSignIn();
         } else {
           setState({ phase: "error", message: "登录确认失败，请重试" });
         }

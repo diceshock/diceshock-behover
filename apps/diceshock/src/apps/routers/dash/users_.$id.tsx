@@ -1,4 +1,5 @@
 import { useApolloClient } from "@apollo/client";
+import { useSession } from "@hono/auth-js/react";
 import {
   CurrencyDollarIcon,
   EyeIcon,
@@ -197,6 +198,8 @@ function detectAllConflicts(plans: MembershipPlan[]): Set<string> {
 }
 
 function UserDetailPage() {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "admin";
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const msg = useMsg();
@@ -208,6 +211,8 @@ function UserDetailPage() {
     skip: !id,
   });
   const rawUser = userQlData?.user ?? null;
+  const canManageUser =
+    isAdmin || !["admin", "staff"].includes(rawUser?.role?.toLowerCase() ?? "");
 
   const { tab: activeTab } = Route.useSearch();
   const setActiveTab = (tab: "basic" | "membership" | "occupancy") =>
@@ -1026,6 +1031,7 @@ function UserDetailPage() {
                     type="text"
                     className="input input-bordered w-full"
                     value={editForm.name}
+                    disabled={!canManageUser}
                     onChange={(e) =>
                       setEditForm((p) => ({ ...p, name: e.target.value }))
                     }
@@ -1039,6 +1045,7 @@ function UserDetailPage() {
                     type="text"
                     className="input input-bordered w-full"
                     value={editForm.nickname}
+                    disabled={!canManageUser}
                     onChange={(e) =>
                       setEditForm((p) => ({
                         ...p,
@@ -1055,6 +1062,7 @@ function UserDetailPage() {
                     type="tel"
                     className="input input-bordered w-full"
                     value={editForm.phone}
+                    disabled={!canManageUser}
                     onChange={(e) =>
                       setEditForm((p) => ({ ...p, phone: e.target.value }))
                     }
@@ -1068,13 +1076,13 @@ function UserDetailPage() {
                     className="select select-bordered w-full"
                     value={user.role?.toLowerCase() ?? "customer"}
                     onChange={(e) => handleRoleChange(e.target.value)}
-                    disabled={rolePending}
+                    disabled={rolePending || !canManageUser}
                   >
                     <option value="customer">顾客</option>
                     <option value="member">会员</option>
                     <option value="host">主持人</option>
-                    <option value="staff">店长</option>
-                    <option value="admin">管理员</option>
+                    {isAdmin && <option value="staff">店员</option>}
+                    {isAdmin && <option value="admin">管理员</option>}
                   </select>
                 </label>
 
@@ -1117,7 +1125,7 @@ function UserDetailPage() {
                       "btn btn-primary",
                       editPending && "loading",
                     )}
-                    disabled={editPending}
+                    disabled={editPending || !canManageUser}
                   >
                     {editPending ? "保存中..." : "保存"}
                   </button>
@@ -1174,35 +1182,39 @@ function UserDetailPage() {
 
               <div className="divider" />
 
-              <div className="flex flex-col gap-3">
-                <h3 className="text-lg font-semibold">登录密码</h3>
-                <p className="text-sm text-base-content/60">
-                  设置后，该账号可用「手机号/UID +
-                  密码」登录后台。仅管理员可操作，密码至少 8
-                  位；店员与主持人也可以在这里单独分配。
-                </p>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="password"
-                    className="input input-bordered flex-1"
-                    placeholder="输入新密码（至少 8 位）"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    autoComplete="new-password"
-                  />
-                  <button
-                    type="button"
-                    className={clsx(
-                      "btn btn-secondary",
-                      passwordPending && "loading",
-                    )}
-                    disabled={passwordPending || newPassword.trim().length < 8}
-                    onClick={() => void handleSetPassword()}
-                  >
-                    {passwordPending ? "保存中..." : "设置密码"}
-                  </button>
+              {(isAdmin || user.role?.toLowerCase() === "host") && (
+                <div className="flex flex-col gap-3">
+                  <h3 className="text-lg font-semibold">登录密码</h3>
+                  <p className="text-sm text-base-content/60">
+                    设置后，该账号可用「手机号/UID +
+                    密码」登录。管理员可设置店员和主持人密码；店员可重置主持人密码。密码至少
+                    8 位。
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="password"
+                      className="input input-bordered flex-1"
+                      placeholder="输入新密码（至少 8 位）"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      className={clsx(
+                        "btn btn-secondary",
+                        passwordPending && "loading",
+                      )}
+                      disabled={
+                        passwordPending || newPassword.trim().length < 8
+                      }
+                      onClick={() => void handleSetPassword()}
+                    >
+                      {passwordPending ? "保存中..." : "设置密码"}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           )}
 

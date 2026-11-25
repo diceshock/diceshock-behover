@@ -8,6 +8,7 @@ import {
   parse,
 } from "graphql";
 import type { GQLContext } from "./context";
+import { managedAccountsSchema } from "./managedAccounts";
 
 export type ResolverFn<
   TResult = unknown,
@@ -39,6 +40,12 @@ export function mergeSchemas(
     : autoSchema;
 
   attachResolvers(schema, resolvers);
+  const managedMutation = managedAccountsSchema
+    .getMutationType()
+    ?.getFields().createManagedUser;
+  const mutation = schema.getMutationType();
+  if (managedMutation && mutation)
+    mutation.getFields().createManagedUser = managedMutation;
   return schema;
 }
 

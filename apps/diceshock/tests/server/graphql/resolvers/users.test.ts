@@ -7,6 +7,7 @@ import type { D1Database, KVNamespace } from "@cloudflare/workers-types";
 import { describe, expect, it, vi } from "vitest";
 import type { GQLContext } from "@/server/graphql/context";
 import { usersResolvers } from "@/server/graphql/resolvers/users";
+import { createDatabase } from "../../trpg/database";
 
 // ── Mock D1Database ────────────────────────────────────────────
 
@@ -50,6 +51,21 @@ const resolver = usersResolvers.Query.managedUsers as unknown as (
 // ── Tests ─────────────────────────────────────────────────────
 
 describe("managedUsers resolver", () => {
+  it("keeps search results inside the selected store and returns an empty page for no matches", async () => {
+    const fixture = createDatabase();
+    try {
+      fixture.sqlite.exec("UPDATE user_info SET preferred_store_id='a' WHERE id='p1'; UPDATE user_info SET preferred_store_id='b' WHERE id='p2'");
+      const ctx = { ...staffContext(fixture.d1), db: fixture.db };
+      const result = await resolver(null, { filter: { store: "b", search: "P1" } }, ctx);
+      expect(result.items).toEqual([]);
+      expect(result.pageInfo.total).toBe(0);
+      const empty = await resolver(null, { filter: { store: "missing" } }, ctx);
+      expect(empty.items).toEqual([]);
+      expect(empty.pageInfo.total).toBe(0);
+    } finally {
+      fixture.sqlite.close();
+    }
+  });
   // ── Auth guard ──────────────────────────────────────────────
   it("1 | throws for unauthenticated user", async () => {
     const ctx = staffContext();

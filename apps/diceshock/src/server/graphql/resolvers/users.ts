@@ -1,15 +1,19 @@
+import type { AdapterAccountType } from "@auth/core/adapters";
 import dbFactory, {
+  accounts,
   boardGamesTable,
   drizzle,
   sessions,
   userBusinessCardTable,
+  userInfoTable,
   users,
 } from "@lib/db";
 import { BoardGame } from "@lib/utils";
 import { z } from "zod/v4";
+import { operator, setHost } from "../../services/trpg/access";
 import type { GQLContext } from "../context";
 import { forbidden, notFound, validationError } from "../errors";
-import { requireAdmin, requireAuth, requireStaff } from "../guards";
+import { requireAuth, requireStaff } from "../guards";
 import { zodToGraphQLError } from "../validate";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -94,6 +98,8 @@ const userFilterSchema = z.object({
   store: z.string().nullable().optional(),
   sortBy: z.string().nullable().optional(),
   sortOrder: z.enum(["ASC", "DESC"]).nullable().optional(),
+  dateFrom: z.string().nullable().optional(),
+  dateTo: z.string().nullable().optional(),
   pagination: z
     .object({
       offset: z.number().int().min(0).optional().default(0),
@@ -336,12 +342,28 @@ export const usersResolvers = {
 
         let userInfoMatchedIds: string[] | null = null;
 
-        if (f.store) {
+        let storeMatchedIds: string[] | null = null;
+        if (f.store || f.dateFrom || f.dateTo) {
+          const start = f.dateFrom ? new Date(f.dateFrom) : null;
+          const end = f.dateTo ? new Date(f.dateTo) : null;
+          if (
+            (start && Number.isNaN(start.getTime())) ||
+            (end && Number.isNaN(end.getTime()))
+          ) {
+            throw validationError("filter", "Invalid date range");
+          }
+          if (end) end.setUTCDate(end.getUTCDate() + 1);
           const storeMatches = await tdb.query.userInfoTable.findMany({
-            where: (ui, { eq }) => eq(ui.preferred_store_id, f.store!),
+            where: (ui, { and, eq, gte, lt }) =>
+              and(
+                f.store ? eq(ui.preferred_store_id, f.store) : undefined,
+                start ? gte(ui.create_at, start) : undefined,
+                end ? lt(ui.create_at, end) : undefined,
+              ),
             columns: { id: true },
           });
-          userInfoMatchedIds = storeMatches.map((u) => u.id);
+          storeMatchedIds = storeMatches.map((u) => u.id);
+          userInfoMatchedIds = storeMatchedIds;
         }
 
         if (trimmedSearch) {
@@ -392,6 +414,13 @@ export const usersResolvers = {
             sqlConds.push(drizzle.inArray(users.id, userInfoMatchedIds));
           }
         }
+        if (storeMatchedIds !== null) {
+          sqlConds.push(
+            storeMatchedIds.length
+              ? drizzle.inArray(users.id, storeMatchedIds)
+              : drizzle.eq(users.id, "__none__"),
+          );
+        }
         if (f.role?.length) {
           sqlConds.push(
             drizzle.inArray(
@@ -425,8 +454,18 @@ export const usersResolvers = {
               }
               conds.push(ops.or(...searchNameConds));
             } else if (userInfoMatchedIds !== null) {
-              if (userInfoMatchedIds.length === 0) return undefined;
-              conds.push(ops.inArray(u.id, userInfoMatchedIds));
+              conds.push(
+                userInfoMatchedIds.length
+                  ? ops.inArray(u.id, userInfoMatchedIds)
+                  : ops.eq(u.id, "__none__"),
+              );
+            }
+            if (storeMatchedIds !== null) {
+              conds.push(
+                storeMatchedIds.length
+                  ? ops.inArray(u.id, storeMatchedIds)
+                  : ops.eq(u.id, "__none__"),
+              );
             }
             if (f.role?.length) {
               conds.push(
@@ -442,9 +481,21 @@ export const usersResolvers = {
             return ops.and(...conds);
           },
           orderBy: (u, { asc, desc }) => {
-            if (f.sortBy === "name") {
-              return f.sortOrder === "ASC" ? asc(u.name) : desc(u.name);
-            }
+            const direction = f.sortOrder === "ASC" ? asc : desc;
+            if (f.sortBy === "name") return direction(u.name);
+            if (f.sortBy === "role") return direction(u.role);
+            if (f.sortBy === "nickname")
+              return direction(
+                drizzle.sql`(SELECT nickname FROM user_info WHERE id = ${u.id})`,
+              );
+            if (f.sortBy === "points")
+              return direction(
+                drizzle.sql`(SELECT points FROM user_info WHERE id = ${u.id})`,
+              );
+            if (f.sortBy === "createdAt")
+              return direction(
+                drizzle.sql`(SELECT create_at FROM user_info WHERE id = ${u.id})`,
+              );
             return desc(u.id);
           },
         });
@@ -772,6 +823,78 @@ export const usersResolvers = {
   },
 
   Mutation: {
+    async updateUser(
+      _source: unknown,
+      args: { input: unknown },
+      ctx: GQLContext,
+    ) {
+      requireStaff(ctx);
+      const input = zodToGraphQLError(
+        z.object({
+          id: z.string().min(1),
+          name: z.string().trim().min(1).optional(),
+          nickname: z.string().trim().min(1).optional(),
+          phone: z
+            .string()
+            .regex(/^1[3-9]\d{9}$/)
+            .optional(),
+        }),
+        args.input,
+      );
+      const tdb = dbFactory(ctx.env.DB);
+      const target = await tdb.query.users.findFirst({
+        where: (u, { eq }) => eq(u.id, input.id),
+        columns: { role: true },
+      });
+      if (!target) throw notFound("User not found");
+      if (
+        ctx.role !== "admin" &&
+        (target.role === "admin" || target.role === "staff")
+      )
+        throw forbidden("Cannot manage a privileged account");
+      if (input.phone) {
+        const duplicate = await tdb.query.userInfoTable.findFirst({
+          where: (ui, { eq }) => eq(ui.phone, input.phone!),
+        });
+        if (duplicate && duplicate.id !== input.id)
+          throw validationError("phone", "Phone already belongs to an account");
+        const existingAccount = await tdb.query.accounts.findFirst({
+          where: (a, { and, eq }) =>
+            and(eq(a.provider, "SMS"), eq(a.providerAccountId, input.phone!)),
+        });
+        if (existingAccount && existingAccount.userId !== input.id)
+          throw validationError("phone", "Phone already belongs to an account");
+      }
+      if (input.name)
+        await tdb
+          .update(users)
+          .set({ name: input.name })
+          .where(drizzle.eq(users.id, input.id));
+      if (input.nickname || input.phone)
+        await tdb
+          .update(userInfoTable)
+          .set({ nickname: input.nickname, phone: input.phone })
+          .where(drizzle.eq(userInfoTable.id, input.id));
+      if (input.phone) {
+        await tdb
+          .delete(accounts)
+          .where(
+            drizzle.and(
+              drizzle.eq(accounts.userId, input.id),
+              drizzle.eq(accounts.provider, "SMS"),
+            ),
+          );
+        await tdb.insert(accounts).values({
+          userId: input.id,
+          type: "credentials" as AdapterAccountType,
+          provider: "SMS",
+          providerAccountId: input.phone,
+        });
+      }
+      const profile = await getUserProfile(ctx, input.id);
+      if (!profile) throw notFound("User not found");
+      return profile;
+    },
     // ── BusinessCards ───────────────────────────────────────────────
 
     async upsertBusinessCard(
@@ -844,6 +967,18 @@ export const usersResolvers = {
       requireStaff(ctx);
       const input = zodToGraphQLError(disableUserSchema, args);
       const tdb = dbFactory(ctx.env.DB);
+      if (input.id === ctx.userId)
+        throw forbidden("Cannot disable your own account");
+      const target = await tdb.query.users.findFirst({
+        where: (u, { eq }) => eq(u.id, input.id),
+        columns: { role: true },
+      });
+      if (!target) throw notFound("User not found");
+      if (
+        ctx.role !== "admin" &&
+        (target.role === "admin" || target.role === "staff")
+      )
+        throw forbidden("Cannot manage a privileged account");
 
       // Verify user exists
       const userProfile = await getUserProfile(ctx, input.id);
@@ -865,6 +1000,16 @@ export const usersResolvers = {
       requireStaff(ctx);
       const input = zodToGraphQLError(disableUserSchema, args);
       const tdb = dbFactory(ctx.env.DB);
+      const target = await tdb.query.users.findFirst({
+        where: (u, { eq }) => eq(u.id, input.id),
+        columns: { role: true },
+      });
+      if (!target) throw notFound("User not found");
+      if (
+        ctx.role !== "admin" &&
+        (target.role === "admin" || target.role === "staff")
+      )
+        throw forbidden("Cannot manage a privileged account");
       await tdb
         .update(users)
         .set({ disabled: false })
@@ -879,7 +1024,7 @@ export const usersResolvers = {
       args: { input: unknown },
       ctx: GQLContext,
     ) {
-      requireAdmin(ctx);
+      requireStaff(ctx);
       const input = zodToGraphQLError(updateRoleSchema, args.input);
 
       if (input.id === ctx.userId) {
@@ -887,6 +1032,33 @@ export const usersResolvers = {
       }
 
       const tdb = dbFactory(ctx.env.DB);
+      const target = await tdb.query.users.findFirst({
+        where: (u, { eq }) => eq(u.id, input.id),
+        columns: { role: true },
+      });
+      if (!target) throw notFound("User not found");
+      if (
+        ctx.role !== "admin" &&
+        (["admin", "staff"].includes(target.role) ||
+          ["ADMIN", "STAFF"].includes(input.role))
+      )
+        throw forbidden("Cannot manage a privileged role");
+
+      if (input.role === "HOST") {
+        await setHost(
+          ctx.db,
+          await operator(ctx.db, ctx.userId!),
+          input.id,
+          true,
+        );
+      } else if (target.role === "host") {
+        await setHost(
+          ctx.db,
+          await operator(ctx.db, ctx.userId!),
+          input.id,
+          false,
+        );
+      }
 
       await tdb
         .update(users)

@@ -54,15 +54,15 @@ it("shows week overlaps in Beijing time, includes end-of-day sessions and exclud
   expect(result.items.map((s) => s.id)).toEqual(["overnight", "within"]);
 });
 
-it("filters review queues and host sessions without broadening store permissions", async () => {
+it("shows review queues across stores to staff", async () => {
   session("pending-a", "a", null, "pending");
   session("pending-b", "b", null, "pending");
   session("published-a", "a", "2030-06-04T14:00:00+08:00");
   const staff = await operator(fixture.db, "staff");
   const pending = await listSessions(fixture.db, { offset: 0, status: "pending", unscheduled: true, hostId: "host" }, staff);
-  expect(pending.items.map((s) => s.id)).toEqual(["pending-a"]);
+  expect(pending.items.map((s) => s.id)).toEqual(["pending-a", "pending-b"]);
   const other = await listSessions(fixture.db, { offset: 0, storeId: "b", hostId: "host" }, staff);
-  expect(other.items).toEqual([]);
+  expect(other.items.map((s) => s.id)).toEqual(["pending-b"]);
 });
 
 it("shares host identity across both stores and preserves local staff grants", async () => {
@@ -79,7 +79,8 @@ it("shares host identity across both stores and preserves local staff grants", a
   const after = await operator(db, "staff");
   expect(after.access.some(a => a.host)).toBe(false);
   expect(after.access.find(a => a.storeId === "a")?.staff).toBe(true);
-  await expect(setHost(db, after, "p1", true)).rejects.toThrow();
+  await setHost(db, after, "p1", true);
+  expect((await operator(db, "p1")).role).toBe("host");
 });
 
 it("assigns the member identity and never overrides hosts", async () => {

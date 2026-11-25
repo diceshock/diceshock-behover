@@ -17,8 +17,8 @@ import { LOCALES } from "@/shared/store-locale";
 import { cfImageUrl } from "@/shared/utils/cfImage";
 import { generateTOTP, generateTotpSecret } from "@/shared/utils/totp";
 import type { GQLContext } from "../context";
-import { internalError, notFound, validationError } from "../errors";
-import { requireAdmin, requireAuth } from "../guards";
+import { forbidden, internalError, notFound, validationError } from "../errors";
+import { requireAdmin, requireAuth, requireStaff } from "../guards";
 import { zodToGraphQLError } from "../validate";
 
 const smsCodeSchema = z.object({
@@ -713,7 +713,7 @@ export const authResolvers = {
       args: { userId: string; password: string },
       ctx: GQLContext,
     ) {
-      requireAdmin(ctx);
+      requireStaff(ctx);
       const { userId, password } = args;
 
       if (password.length < 8) {
@@ -723,9 +723,11 @@ export const authResolvers = {
       // Verify target user exists
       const user = await ctx.db.query.users.findFirst({
         where: (u, { eq }) => eq(u.id, userId),
-        columns: { id: true },
+        columns: { id: true, role: true },
       });
       if (!user) throw notFound("用户不存在");
+      if (ctx.role !== "admin" && user.role !== "host")
+        throw forbidden("只能设置主持人密码");
 
       const { hash, salt, iterations } = await hashPassword(password);
       const now = new Date(Date.now());

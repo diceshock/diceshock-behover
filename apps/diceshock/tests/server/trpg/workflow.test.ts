@@ -57,7 +57,7 @@ async function create(
   );
 }
 describe("TRPG workflow", () => {
-  it("enforces store permissions and does not expose pending sessions", async () => {
+  it("allows staff across stores and does not expose pending sessions", async () => {
     const session = await create({}, "host");
     await expect(publicSession(fixture.db, session.id)).rejects.toThrow(
       "场次未发布",
@@ -72,13 +72,17 @@ describe("TRPG workflow", () => {
         )
       ).items,
     ).toEqual([]);
-    await expect(
-      createSession(
-        fixture.db,
-        await operator(fixture.db, "staff"),
-        input({ storeId: "b", tableId: "tb" }),
-      ),
-    ).rejects.toThrow();
+    const crossStore = await createSession(
+      fixture.db,
+      await operator(fixture.db, "staff"),
+      input({
+        storeId: "b",
+        tableId: "tb",
+        startsAt: new Date(Date.now() + 86400000 * 5).toISOString(),
+        deadline: new Date(Date.now() + 86400000 * 4).toISOString(),
+      }),
+    );
+    expect(crossStore.storeId).toBe("b");
     await expect(
       roster(fixture.db, session.id, await operator(fixture.db, "outsider")),
     ).rejects.toThrow();

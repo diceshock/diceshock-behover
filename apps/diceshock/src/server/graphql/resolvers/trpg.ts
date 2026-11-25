@@ -100,8 +100,7 @@ export const trpgResolvers: ResolverMap = {
         ...profile,
         admin: user.role === "admin",
         canManage: access.canEnterDashboard(user),
-        canHost:
-          access.canEnterDashboard(user) || user.access.some((a) => a.host),
+        canHost: access.canHostAny(user),
       };
     },
     trpgMyRecords: async (_source, args, ctx) => {

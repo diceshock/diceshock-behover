@@ -7,7 +7,7 @@ import dbFactory, {
 import { z } from "zod/v4";
 import type { GQLContext } from "../context";
 import { notFound } from "../errors";
-import { requireAuth, requireStaff } from "../guards";
+import { requireAuth, requireManageableUser, requireStaff } from "../guards";
 import { zodToGraphQLError } from "../validate";
 
 type PlanRow = typeof userMembershipPlansTable.$inferSelect;
@@ -37,13 +37,13 @@ function mapRow(row: PlanRow) {
 
 const addPointsSchema = z.object({
   userId: z.string().min(1),
-  amount: z.number().int(),
+  amount: z.number().int().positive(),
   note: z.string().nullable().optional(),
 });
 
 const deductPointsSchema = z.object({
   userId: z.string().min(1),
-  amount: z.number().int(),
+  amount: z.number().int().positive(),
   note: z.string().nullable().optional(),
 });
 
@@ -91,6 +91,7 @@ export const pointsResolvers = {
     ) {
       requireStaff(ctx);
       const input = zodToGraphQLError(addPointsSchema, args.input);
+      await requireManageableUser(ctx, input.userId);
       const tdb = dbFactory(ctx.env.DB);
 
       const currentBalance = await getCurrentBalance(tdb, input.userId);
@@ -127,6 +128,7 @@ export const pointsResolvers = {
     ) {
       requireStaff(ctx);
       const input = zodToGraphQLError(deductPointsSchema, args.input);
+      await requireManageableUser(ctx, input.userId);
       const tdb = dbFactory(ctx.env.DB);
 
       const currentBalance = await getCurrentBalance(tdb, input.userId);

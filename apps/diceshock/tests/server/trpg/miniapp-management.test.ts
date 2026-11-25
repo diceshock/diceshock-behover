@@ -32,7 +32,7 @@ it('grants dashboard access only to enabled admins and store managers', async()=
  expect(canEnterDashboard(await operator(f.db,'staff'))).toBe(true);
  expect(canEnterDashboard(await operator(f.db,'host'))).toBe(false);
  f.sqlite.exec("UPDATE user SET role='staff' WHERE id='outsider'");
- expect(canEnterDashboard(await operator(f.db,'outsider'))).toBe(false);
+ expect(canEnterDashboard(await operator(f.db,'outsider'))).toBe(true);
  const host=await call('profile',{},'host');expect(host.errors).toBeUndefined();
  expect(host.data?.trpgProfile).toMatchObject({canHost:true,canManage:false});
  f.sqlite.exec("UPDATE user SET disabled=1 WHERE id='staff'");
@@ -48,7 +48,7 @@ it('runs the miniapp submit, return, edit, approve workflow with scoped permissi
  expect((await call('managedSession',{id},null)).errors?.length).toBeGreaterThan(0);
  expect((await call('transition',{id,revision:1,action:'approve'},'host')).errors?.length).toBeGreaterThan(0);
  f.sqlite.exec("UPDATE trpg_access SET store_id='b' WHERE user_id='staff'");
- expect((await call('transition',{id,revision:1,action:'approve'},'staff')).errors?.length).toBeGreaterThan(0);
+ expect((await call('managedSession',{id},'staff')).data?.trpgManagedSession).toMatchObject({canReview:true});
  f.sqlite.exec("UPDATE trpg_access SET store_id='a' WHERE user_id='staff'");
  expect((await call('transition',{id,revision:1,action:'return',reason:'补充介绍'},'staff')).errors).toBeUndefined();
  expect((await call('resubmitSession',{id,revision:2,input:{...i,description:'已补充介绍'}},'host')).errors).toBeUndefined();

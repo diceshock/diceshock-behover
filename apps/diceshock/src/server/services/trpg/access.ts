@@ -23,28 +23,25 @@ export async function operator(db: Database, id: string) {
 }
 export type Operator = Awaited<ReturnType<typeof operator>>;
 export const canEnterDashboard = (actor: Operator) =>
-  actor.role === "admin" ||
-  (actor.role === "staff" && actor.access.some((a) => a.staff));
+  actor.role === "admin" || actor.role === "staff";
 export const canReviewAny = (actor: Operator) =>
-  actor.role === "admin" ||
-  (actor.role === "staff" && actor.access.some((a) => a.staff));
+  actor.role === "admin" || actor.role === "staff";
 export const canReview = (actor: Operator, storeId: string | null) =>
   storeId === null
     ? canReviewAny(actor)
-    : actor.role === "admin" ||
-      (actor.role === "staff" &&
-        actor.access.some((a) => a.storeId === storeId && a.staff));
+    : actor.role === "admin" || actor.role === "staff";
 export const canHostAny = (actor: Operator) =>
-  canReviewAny(actor) || actor.access.some((a) => a.host);
+  canReviewAny(actor) ||
+  actor.role === "host" ||
+  actor.access.some((a) => a.host);
 export const canHost = (actor: Operator, storeId: string | null) =>
   storeId === null
     ? canHostAny(actor)
-    : canReview(actor, storeId) || actor.access.some((a) => a.host);
+    : canReview(actor, storeId) ||
+      actor.role === "host" ||
+      actor.access.some((a) => a.host && a.storeId === storeId);
 export function requireDirectoryReviewer(actor: Operator) {
-  if (
-    actor.role !== "admin" &&
-    !(actor.role === "staff" && actor.access.some((a) => a.staff))
-  )
+  if (actor.role !== "admin" && actor.role !== "staff")
     throw forbidden("没有会员管理权限");
 }
 
@@ -117,8 +114,14 @@ export async function setHost(
   id: string,
   host: boolean,
 ) {
-  if (actor.role !== "admin") throw forbidden("仅管理员可修改主持权限");
+  if (actor.role !== "admin" && actor.role !== "staff")
+    throw forbidden("没有主持权限管理权限");
   const target = await operator(db, id);
+  if (
+    actor.role === "staff" &&
+    (target.role === "admin" || target.role === "staff")
+  )
+    throw forbidden("不能管理高级账号");
   if (!host) {
     await db
       .update(trpgAccess)

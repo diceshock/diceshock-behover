@@ -7,7 +7,7 @@ import dbFactory, {
 import { z } from "zod/v4";
 import type { GQLContext } from "../context";
 import { notFound, validationError } from "../errors";
-import { requireAuth, requireStaff } from "../guards";
+import { requireAuth, requireManageableUser, requireStaff } from "../guards";
 import { zodToGraphQLError } from "../validate";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -186,6 +186,7 @@ export const membershipResolvers = {
     ) {
       requireStaff(ctx);
       const input = zodToGraphQLError(createPlanSchema, args.input);
+      await requireManageableUser(ctx, input.userId);
       const tdb = dbFactory(ctx.env.DB);
 
       const startDate = new Date(input.startDate).getTime();
@@ -223,14 +224,11 @@ export const membershipResolvers = {
 
       // Update points balance if this plan carries points
       if (input.points && input.points !== 0) {
-        const info = await tdb.query.userInfoTable.findFirst({
-          where: (t, { eq }) => eq(t.id, input.userId),
-          columns: { points: true },
-        });
-        const currentPts = info?.points ?? 0;
         await tdb
           .update(userInfoTable)
-          .set({ points: currentPts + input.points })
+          .set({
+            points: drizzle.sql`coalesce(${userInfoTable.points}, 0) + ${input.points}`,
+          })
           .where(drizzle.eq(userInfoTable.id, input.userId));
       }
 
@@ -252,6 +250,7 @@ export const membershipResolvers = {
       if (!current) {
         throw notFound("Membership plan not found");
       }
+      await requireManageableUser(ctx, current.user_id);
 
       const finalType = input.planType
         ? planTypeFromEnum(input.planType)
@@ -325,10 +324,20 @@ export const membershipResolvers = {
       if (!current) {
         throw notFound("Membership plan not found");
       }
+      await requireManageableUser(ctx, current.user_id);
 
       await tdb
         .delete(userMembershipPlansTable)
         .where(drizzle.eq(userMembershipPlansTable.id, input.id));
+
+      if (current.points) {
+        await tdb
+          .update(userInfoTable)
+          .set({
+            points: drizzle.sql`coalesce(${userInfoTable.points}, 0) - ${current.points}`,
+          })
+          .where(drizzle.eq(userInfoTable.id, current.user_id));
+      }
 
       return mapRow(current);
     },
@@ -340,6 +349,7 @@ export const membershipResolvers = {
     ) {
       requireStaff(ctx);
       const input = zodToGraphQLError(deductSchema, args.input);
+      await requireManageableUser(ctx, input.userId);
       const tdb = dbFactory(ctx.env.DB);
 
       const svPlans = await tdb.query.userMembershipPlansTable.findMany({
@@ -356,19 +366,6 @@ export const membershipResolvers = {
           "input.amount",
           `Insufficient balance (current: ${balanceYuan}, deduct: ${deductYuan})`,
         );
-      }
-
-      let remaining = input.amount;
-      for (const plan of svPlans) {
-        if (remaining <= 0) break;
-        const available = plan.amount ?? 0;
-        if (available <= 0) continue;
-        const deductAmount = Math.min(available, remaining);
-        await tdb
-          .update(userMembershipPlansTable)
-          .set({ amount: available - deductAmount, update_at: new Date() })
-          .where(drizzle.eq(userMembershipPlansTable.id, plan.id));
-        remaining -= deductAmount;
       }
 
       const deductionDate = new Date(input.date);

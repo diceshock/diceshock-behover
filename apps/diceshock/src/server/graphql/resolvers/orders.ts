@@ -29,7 +29,6 @@ type OccupancyRow = typeof tableOccupancyTable.$inferSelect & {
   pauseLogs?: PauseLogRow[];
 };
 type PauseLogRow = typeof orderPauseLogsTable.$inferSelect;
-type MembershipPlanRow = typeof userMembershipPlansTable.$inferSelect;
 
 type NormalizedStatus = "ACTIVE" | "PAUSED" | "ENDED" | "SETTLED";
 
@@ -762,24 +761,6 @@ async function applyStoredValueDeduction(
   if (balanceBefore <= 0) return null;
 
   const deductAmount = Math.min(balanceBefore, amount);
-  let remaining = deductAmount;
-  const creditPlans = plans
-    .filter((p): p is MembershipPlanRow =>
-      Boolean(p.plan_type === "stored_value" && (p.amount ?? 0) > 0),
-    )
-    .sort((a, b) => (asMs(a.create_at) ?? 0) - (asMs(b.create_at) ?? 0));
-
-  for (const plan of creditPlans) {
-    if (remaining <= 0) break;
-    const available = plan.amount ?? 0;
-    const amountToDeduct = Math.min(available, remaining);
-    await tdb
-      .update(userMembershipPlansTable)
-      .set({ amount: available - amountToDeduct, update_at: new Date() })
-      .where(drizzle.eq(userMembershipPlansTable.id, plan.id));
-    remaining -= amountToDeduct;
-  }
-
   await tdb.insert(userMembershipPlansTable).values({
     user_id: userId,
     plan_type: "stored_value",
